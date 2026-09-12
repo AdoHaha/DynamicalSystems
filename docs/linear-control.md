@@ -45,6 +45,13 @@ unobservable subspace is proved observable. The quotient input and restricted
 unobservable readout vanish. Complement zero-block identities are proved without
 assuming the complement is invariant. The full four-block form is still pending.
 
+Import `DynamicalSystems.Linear.Hautus` for PBH eigenvector, kernel/range and
+matrix-rank criteria over algebraically closed fields. Both real-matrix
+controllability and observability are proved equivalent to their complexified
+pairs, and the real PBH corollaries quantify over complex eigenvalues. The
+Hautus maps use the sign convention `A - μI`. This module adapts an attributed
+LeanForControl eigenvector argument and uses no custom axioms from that project.
+
 ## Conventions
 
 - Pair order: `(A, B)` for controllability; `(C, A)` for observability.
@@ -57,7 +64,7 @@ assuming the complement is invariant. The full four-block form is still pending.
 
 ## Roadmap
 
-Next are the full four-block decomposition, PBH criteria, trajectory
+Next are the full four-block decomposition, concrete examples, trajectory
 equivalences, Gramians, stabilization and observers, and geometric disturbance
 decoupling. Each addition requires source/statement review, actual Lean proofs,
 and the standard-axiom audit. Missing results are not available assumptions.
