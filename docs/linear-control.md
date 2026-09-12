@@ -74,6 +74,13 @@ the existing `stateTrajectoryRel` and `inputOutputRel`, and the solution satisfi
 pointwise-equal outputs. The general vector-primitive and operator-evaluation
 absolute-continuity helpers are also reusable outside LTI theory.
 
+Import `DynamicalSystems.Linear.ControlledInvariant` and
+`DynamicalSystems.Linear.ConditionedInvariant` for algebraic controlled/conditioned
+invariance, existence of feedback/injection gains, both algebraic dualities, and
+the ISA/CISA subspace algorithms. Finite termination and largest/smallest universal
+properties are proved. The book's trajectory/observer characterizations and sharp
+dimension bounds on the stationary index are not yet asserted.
+
 The generated Verso manual includes a **Linear systems** chapter with these
 conventions and linked theorem statements. Run `lake exe generate-docs` to build it.
 

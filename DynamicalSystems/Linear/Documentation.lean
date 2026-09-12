@@ -2,6 +2,7 @@ import VersoManual
 import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Linear.KalmanDecomposition
 import DynamicalSystems.Linear.Trajectory
+import DynamicalSystems.Linear.ConditionedInvariant
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
@@ -124,6 +125,29 @@ almost-everywhere equality of inputs.
 {docstring LinearSystem.mem_ltiInputOutputRel_iff}
 {docstring LinearSystem.ltiStateTrajectoryRel_existsUnique}
 {docstring LinearSystem.ltiInputOutputRel_existsUnique}
+
+# Geometric invariance
+
+Controlled invariance means `AV ≤ V + range B`; conditioned invariance means
+`A(S ∩ ker C) ≤ S`. Feedback and output-injection witnesses are proved to exist,
+using linear-map lifting and extension. Duality uses algebraic annihilators.
+
+{docstring LinearMap.isControlledInvariant_iff_exists_stateFeedback}
+{docstring LinearMap.isConditionedInvariant_iff_exists_outputInjection}
+{docstring LinearMap.isConditionedInvariant_iff_isControlledInvariant_dualMap}
+{docstring LinearMap.isControlledInvariant_iff_isConditionedInvariant_dualMap}
+
+The decreasing ISA and increasing CISA stabilize in finite dimension, giving the
+largest controlled-invariant subspace inside a constraint and the smallest
+conditioned-invariant subspace containing a prescribed subspace.
+
+{docstring LinearMap.controlledInvariantSeq}
+{docstring LinearMap.isGreatest_controlledInvariantSubspace}
+{docstring LinearMap.conditionedInvariantSeq}
+{docstring LinearMap.isLeast_conditionedInvariantSubspace}
+
+These algebraic results do not yet establish the corresponding trajectory/observer
+characterizations or the book's sharp dimension bounds for the stationary index.
 
 # Sources and scope
 

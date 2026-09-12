@@ -16,6 +16,8 @@ import DynamicalSystems.Linear.KalmanDecomposition
 import DynamicalSystems.Linear.Duality
 import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Linear.Trajectory
+import DynamicalSystems.Linear.ControlledInvariant
+import DynamicalSystems.Linear.ConditionedInvariant
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
