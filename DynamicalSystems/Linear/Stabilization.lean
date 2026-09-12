@@ -132,15 +132,19 @@ decay / attractivity / Lyapunov stability of `t ↦ exp (t A)` for *arbitrary*
 Hurwitz `A` (not only the nilpotent shift `A + 1`) is not yet formalized. It
 would connect `LinearMap.IsHurwitz A` directly to
 `Filter.IsAttractive (l := 𝓝 0) (Φ := fun t x => exp (t • A.toContinuousLinearMap) x) atTop`
-and to `(𝓝 0).IsStableOn` of the same flow. The expected route is a complex
-Jordan/Schur decomposition of the complexification `A.baseChange ℂ`, after
-which each Jordan block contributes `t^k e^{λ t}` with `λ.re < 0`; the finite
-polynomial-times-exponential estimates already present for the nilpotent shift
-(`LinearMap.norm_exp_nilpotent_shift_apply_le`,
-`LinearMap.tendsto_exp_nilpotent_shift_apply`) are the model for that estimate.
-The current slice instead proves the bridge for the explicit target that the
-pole-placement construction produces, which is the case needed by every gain
-existence result here.
+and to `(𝓝 0).IsStableOn` of the same flow. The complex half of this bridge is
+now frozen in the section *The general Hurwitz-to-decay bridge: the complex
+spectral case* below: `LinearMap.tendsto_exp_complex_apply` shows that over a
+finite-dimensional complex normed space every orbit of a Hurwitz endomorphism
+decays, by decomposing the space into generalized eigenspaces. What remains for
+the real statement is the **real-coordinate reduction**: complexify
+`A.baseChange ℂ`, apply the complex theorem there, and transport convergence
+back along a real basis (`exp (t • A) = repr.symm ∘ exp (t • repr.conj A) ∘ repr`).
+This is the next task; it is deliberately not claimed here. In addition, the
+current slice proves the explicit pole-placement target bridge `(X + 1)^n`,
+which is the case needed by every gain existence result here, via the finite
+polynomial-times-exponential estimates (`LinearMap.norm_exp_nilpotent_shift_apply_le`,
+`LinearMap.tendsto_exp_nilpotent_shift_apply`).
 
 The eigenvalue criteria above are also only proved in the necessity direction.
 `LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue` and
@@ -897,5 +901,220 @@ theorem isStabilizable_converse_of_uncontrollableEigenvalue
   exact hF μ hroot
 
 end UncontrollableEigenvalue
+
+/-! ## The general Hurwitz-to-decay bridge: the complex spectral case
+
+The analytic heart of the general bridge: over a finite-dimensional complex
+normed space, if every root of the characteristic polynomial of an endomorphism
+`f` has negative real part, then every trajectory `t ↦ exp (t • f) x` tends to
+zero. The proof decomposes the space into the generalized eigenspaces of `f`
+(`Module.End.iSup_maxGenEigenspace_eq_top`, `Submodule.mem_iSup_iff_exists_finset`),
+on each of which `f - μ` is nilpotent, so the exponential is a finite
+polynomial-times-`exp (t μ)` sum (`exp_nilpotent_apply_eq_sum`), which decays
+because `μ.re < 0`.
+
+This is the hard analytic half of the general Hurwitz-to-decay bridge. The
+remaining step is the *real reduction*: for a real endomorphism `A` on a
+finite-dimensional real normed space, complexify `A` (e.g. transport `A` to
+`Fin n → ℂ` along a real basis and apply `tendsto_exp_complex_apply`), then
+transport the convergence back along the basis isomorphism using the relation
+`exp (t • A) = repr.symm ∘ exp (t • repr.conj A) ∘ repr`. The requested
+real theorems `LinearMap.tendsto_exp_of_isHurwitz` and
+`LinearMap.isStableOn_expFlow_of_isHurwitz` are exactly that reduction; the
+complex lemma below is the reusable core they build on. -/
+
+section ComplexHurwitzDecay
+
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E] [FiniteDimensional ℂ E]
+
+/-- For `a < 0` the polynomial-times-exponential function
+`t ↦ t ^ j * Real.exp (a * t)` tends to zero at `+∞`. This is the scalar engine
+behind the decay of each finite exponential-series term. -/
+lemma tendsto_pow_mul_exp_of_neg (a : ℝ) (ha : a < 0) (j : ℕ) :
+    Tendsto (fun t : ℝ => t ^ j * Real.exp (a * t)) atTop (𝓝 0) := by
+  have hc : 0 < -a := neg_pos.mpr ha
+  have hcomp : Tendsto (fun t : ℝ => ((-a) * t) ^ j * Real.exp (-((-a) * t))) atTop (𝓝 0) :=
+    (Real.tendsto_pow_mul_exp_neg_atTop_nhds_zero j).comp
+      ((tendsto_const_mul_atTop_of_pos hc).mpr tendsto_id)
+  have hfun : (fun t : ℝ => ((-a) * t) ^ j * Real.exp (-((-a) * t))) =
+      fun t : ℝ => (-a)^j * (t ^ j * Real.exp (a * t)) := by
+    funext t
+    rw [mul_pow]
+    have : -((-a) * t) = a * t := by ring
+    rw [this]; ring_nf
+  rw [hfun] at hcomp
+  have h3 := hcomp.const_mul (((-a)^j)⁻¹)
+  rw [mul_zero] at h3
+  simpa only [← mul_assoc, inv_mul_cancel₀ (pow_ne_zero j (ne_of_gt hc)), one_mul] using h3
+
+/-- The complex form of the scalar decay: if `μ.re < 0`, then
+`t ↦ Complex.exp (t * μ) * (t : ℂ) ^ j` tends to zero at `+∞`. -/
+lemma tendsto_exp_mul_pow (μ : ℂ) (hμ : μ.re < 0) (j : ℕ) :
+    Tendsto (fun t : ℝ => Complex.exp (t * μ) * (t : ℂ) ^ j) atTop (𝓝 0) := by
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  have h1 : (fun t : ℝ => ‖Complex.exp (t * μ) * (t : ℂ) ^ j‖) =ᶠ[atTop]
+      fun t : ℝ => t ^ j * Real.exp (μ.re * t) := by
+    filter_upwards [eventually_ge_atTop (0:ℝ)] with t ht
+    have hnorm : ‖(t : ℂ)‖ = |t| := RCLike.norm_ofReal t
+    rw [norm_mul, Complex.norm_exp, norm_pow, hnorm, abs_of_nonneg ht]
+    have hre : (t * μ).re = t * μ.re := by simp [Complex.mul_re]
+    rw [hre, mul_comm t μ.re]; ring
+  exact (tendsto_pow_mul_exp_of_neg μ.re hμ j).congr' h1.symm
+
+/-- A nilpotent continuous endomorphism has a finite exponential series: if
+`N ^ n = 0`, then `exp (t • N) x = ∑_{k < n} (k!)⁻¹ • ((t • N) ^ k) x`. -/
+lemma exp_nilpotent_apply_eq_sum (N : E →L[ℂ] E) {x : E} {n : ℕ}
+    (hN : (N ^ n) x = 0) (t : ℝ) :
+    NormedSpace.exp (t • N) x =
+      ∑ k ∈ Finset.range n, ((k.factorial : ℂ)⁻¹) • ((t • N) ^ k) x := by
+  have hsumm : Summable (fun k : ℕ => ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) :=
+    NormedSpace.expSeries_summable' (t • N)
+  have h1 : NormedSpace.exp (t • N) x =
+      (∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) x := by
+    rw [NormedSpace.exp_eq_tsum ℂ]
+  have h2 : (∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) x =
+      ∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • ((t • N) ^ k) x := by
+    simpa [ContinuousLinearMap.apply_apply] using
+      ContinuousLinearMap.map_tsum (ContinuousLinearMap.apply ℂ E x) hsumm
+  rw [h1, h2]
+  rw [tsum_eq_sum (s := Finset.range n)]
+  intro k hk
+  rw [Finset.mem_range, not_lt] at hk
+  have hNk : (N ^ k) x = 0 := by
+    obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_le hk
+    rw [hd, show n + d = d + n by omega, pow_add, mul_apply_eq_comp, hN, map_zero]
+  rw [smul_pow, _root_.smul_apply, hNk, smul_zero, smul_zero]
+
+/-- **Decay of a single generalized eigenspace.** If `x` is annihilated by a
+power of `f - μ • 1` and `μ.re < 0`, then `t ↦ exp (t • f) x` tends to zero.
+Writing `f = μ + N` with `N` nilpotent, the exponential is `exp (t μ)` times a
+polynomial in `t`, which decays by `tendsto_exp_mul_pow`. -/
+lemma tendsto_exp_apply_of_nilpotent (f : E →ₗ[ℂ] E) (μ : ℂ) (hμ : μ.re < 0)
+    {x : E} {k : ℕ} (hk : ((f - μ • (1 : E →ₗ[ℂ] E)) ^ k) x = 0) :
+    Tendsto (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) x) atTop (𝓝 0) := by
+  set N : E →L[ℂ] E := f.toContinuousLinearMap - μ • (1 : E →L[ℂ] E) with hN
+  have hcoe : (N : E →ₗ[ℂ] E) = f - μ • (1 : E →ₗ[ℂ] E) := by
+    ext y; simp [hN]
+  have hNx : (N ^ k) x = 0 := by
+    change ((N ^ k : E →L[ℂ] E) : E →ₗ[ℂ] E) x = 0
+    rw [ContinuousLinearMap.toLinearMap_pow, hcoe]
+    exact hk
+  have hexpscalar : ∀ t : ℝ, NormedSpace.exp ((t * μ) • (1 : E →L[ℂ] E)) =
+      Complex.exp (t * μ) • (1 : E →L[ℂ] E) := by
+    intro t
+    rw [← Algebra.algebraMap_eq_smul_one (t * μ), ← NormedSpace.algebraMap_exp_comm (t * μ),
+      show NormedSpace.exp (t * μ) = Complex.exp (t * μ) from
+        (congrFun Complex.exp_eq_exp_ℂ (t * μ)).symm,
+      Algebra.algebraMap_eq_smul_one]
+  have hdecomp : (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) x) =
+      fun (t : ℝ) => Complex.exp (t * μ) •
+        (∑ j ∈ Finset.range k, ((j.factorial : ℂ)⁻¹) • ((t • N) ^ j) x) := by
+    funext t
+    have hsplit : t • f.toContinuousLinearMap =
+        (t * μ) • (1 : E →L[ℂ] E) + t • N := by
+      rw [hN]; module
+    rw [hsplit, NormedSpace.exp_add_of_commute_of_mem_ball (𝕂 := ℂ)]
+    · rw [mul_apply_eq_comp, hexpscalar t, exp_nilpotent_apply_eq_sum N hNx t]
+      rw [_root_.smul_apply, one_apply_eq_self, Finset.smul_sum]
+    · rw [← Algebra.algebraMap_eq_smul_one (t * μ)]
+      exact Algebra.commute_algebraMap_left (t * μ) (t • N)
+    · exact (NormedSpace.expSeries_radius_eq_top ℂ (E →L[ℂ] E)).symm ▸ edist_lt_top _ _
+    · exact (NormedSpace.expSeries_radius_eq_top ℂ (E →L[ℂ] E)).symm ▸ edist_lt_top _ _
+  rw [hdecomp]
+  have hterm : ∀ j ∈ Finset.range k,
+      Tendsto (fun t : ℝ => Complex.exp (t * μ) •
+        (((j.factorial : ℂ)⁻¹) • ((t • N) ^ j) x)) atTop (𝓝 0) := by
+    intro j _
+    have hscalar : Tendsto (fun t : ℝ => Complex.exp (t * μ) * (t : ℂ) ^ j) atTop (𝓝 0) :=
+      tendsto_exp_mul_pow μ hμ j
+    have hpow : (fun t : ℝ => Complex.exp (t * μ) •
+          (((j.factorial : ℂ)⁻¹) • ((t • N) ^ j) x)) =
+        fun (t : ℝ) => (Complex.exp (t * μ) * (t : ℂ) ^ j * ((j.factorial : ℂ)⁻¹)) •
+          (N ^ j) x := by
+      funext t
+      rw [smul_pow, _root_.smul_apply, smul_smul]
+      module
+    rw [hpow]
+    have := (hscalar.mul_const ((j.factorial : ℂ)⁻¹)).smul_const ((N ^ j) x)
+    simpa [mul_assoc] using this
+  have hgoal : (fun t : ℝ => Complex.exp (t * μ) •
+        (∑ j ∈ Finset.range k, ((j.factorial : ℂ)⁻¹) • ((t • N) ^ j) x)) =
+      fun (t : ℝ) => ∑ j ∈ Finset.range k, Complex.exp (t * μ) •
+        (((j.factorial : ℂ)⁻¹) • ((t • N) ^ j) x) := by
+    funext t; rw [Finset.smul_sum]
+  rw [hgoal]
+  simpa using tendsto_finsetSum (Finset.range k) hterm
+
+omit [FiniteDimensional ℂ E] in
+/-- A nonzero vector in the generalized eigenspace of `f` at `μ` exhibits `μ` as
+an eigenvalue of `f`: `f - μ • 1` cannot be injective on a nonzero element of its
+eventual kernel. -/
+lemma hasEigenvalue_of_mem_maxGenEigenspace {f : E →ₗ[ℂ] E} {μ : ℂ} {x : E}
+    (hx : x ∈ Module.End.maxGenEigenspace f μ) (hx0 : x ≠ 0) :
+    Module.End.HasEigenvalue f μ := by
+  rw [Module.End.HasEigenvalue, Module.End.HasUnifEigenvalue, Module.End.genEigenspace_one]
+  intro h
+  obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace f μ x).mp hx
+  have hinj : Function.Injective (f - μ • (1 : E →ₗ[ℂ] E)) := LinearMap.ker_eq_bot.mp h
+  have hker : ∀ n, ∀ y, ((f - μ • (1 : E →ₗ[ℂ] E)) ^ n) y = 0 → y = 0 := by
+    intro n
+    induction n with
+    | zero => intro y hy; simpa using hy
+    | succ n ih =>
+      intro y hy
+      rw [pow_succ] at hy
+      change ((f - μ • (1 : E →ₗ[ℂ] E)) ^ n) ((f - μ • (1 : E →ₗ[ℂ] E)) y) = 0 at hy
+      have hay : (f - μ • (1 : E →ₗ[ℂ] E)) y = 0 := ih _ hy
+      exact hinj (by rw [hay, map_zero])
+  exact hx0 (hker k x hk)
+
+/-- **The complex Hurwitz decay theorem.** Let `f` be an endomorphism of a
+finite-dimensional complex normed space all of whose characteristic roots have
+negative real part. Then every orbit `t ↦ exp (t • f) x` of the linear flow
+tends to zero at `+∞`.
+
+The proof decomposes the space into the generalized eigenspaces of `f`
+(`Module.End.iSup_maxGenEigenspace_eq_top`), on each of which `f - μ` is
+nilpotent, so `exp (t • f)` is a finite polynomial-times-`exp (t μ)` sum that
+decays because `Re μ < 0`.
+
+This is the reusable complex core of the general Hurwitz-to-decay bridge. The
+real case is recovered by complexification and change of coordinates; that
+reduction is deliberately *not* claimed here (see the module documentation). -/
+theorem tendsto_exp_complex_apply (f : E →ₗ[ℂ] E)
+    (hf : ∀ z : ℂ, f.charpoly.eval z = 0 → z.re < 0) (x : E) :
+    Tendsto (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) x) atTop (𝓝 0) := by
+  have htop : x ∈ ⨆ μ : ℂ, Module.End.maxGenEigenspace f μ := by
+    rw [Module.End.iSup_maxGenEigenspace_eq_top]; exact Submodule.mem_top
+  obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+    (p := fun μ : ℂ => Module.End.maxGenEigenspace f μ)).mp htop
+  obtain ⟨xμ, hxμ⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+    (fun μ : ℂ => Module.End.maxGenEigenspace f μ) x).mp hs
+  have hsum : x = ∑ μ ∈ s, (xμ μ : E) := hxμ.symm
+  rw [hsum]
+  have hmap : (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap)
+        (∑ μ ∈ s, (xμ μ : E))) =
+      fun t => ∑ μ ∈ s, NormedSpace.exp (t • f.toContinuousLinearMap) (xμ μ : E) := by
+    funext t; rw [map_sum]
+  rw [hmap]
+  have hfin0 := tendsto_finsetSum (x := atTop) s
+      (f := fun (μ : ℂ) (t : ℝ) => NormedSpace.exp (t • f.toContinuousLinearMap) (xμ μ : E))
+      (a := fun _ : ℂ => (0 : E))
+      (fun μ _ => by
+        by_cases hx0 : (xμ μ : E) = 0
+        · rw [hx0]
+          convert tendsto_const_nhds using 1
+          simp
+        · have heig : Module.End.HasEigenvalue f μ :=
+            hasEigenvalue_of_mem_maxGenEigenspace (xμ μ).2 hx0
+          have hroot : f.charpoly.eval μ = 0 :=
+            Polynomial.IsRoot.def.mp ((Module.End.hasEigenvalue_iff_isRoot_charpoly f μ).mp heig)
+          have hre : μ.re < 0 := hf μ hroot
+          obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace f μ (xμ μ)).mp (xμ μ).2
+          exact tendsto_exp_apply_of_nilpotent f μ hre hk)
+  simpa using hfin0
+
+end ComplexHurwitzDecay
 
 end LinearMap
