@@ -23,6 +23,7 @@ import DynamicalSystems.Linear.Gramian
 import DynamicalSystems.Linear.PolePlacement
 import DynamicalSystems.Linear.Stabilization
 import DynamicalSystems.Linear.Observer
+import DynamicalSystems.Linear.DisturbanceDecoupling
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
