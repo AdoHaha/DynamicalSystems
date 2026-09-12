@@ -52,6 +52,13 @@ pairs, and the real PBH corollaries quantify over complex eigenvalues. The
 Hautus maps use the sign convention `A - μI`. This module adapts an attributed
 LeanForControl eigenvector argument and uses no custom axioms from that project.
 
+Import `DynamicalSystems.Linear.Examples.Algebra` for checked double-integrator
+examples, uncontrollable/unobservable variants, coordinate swapping, empty-state
+Kalman tests, and a real rotation whose PBH obstruction uses the eigenvalue `i`.
+
+The generated Verso manual includes a **Linear systems** chapter with these
+conventions and linked theorem statements. Run `lake exe generate-docs` to build it.
+
 ## Conventions
 
 - Pair order: `(A, B)` for controllability; `(C, A)` for observability.
@@ -64,7 +71,7 @@ LeanForControl eigenvector argument and uses no custom axioms from that project.
 
 ## Roadmap
 
-Next are the full four-block decomposition, concrete examples, trajectory
+Next are the full four-block decomposition, analytic and synthesis examples, trajectory
 equivalences, Gramians, stabilization and observers, and geometric disturbance
 decoupling. Each addition requires source/statement review, actual Lean proofs,
 and the standard-axiom audit. Missing results are not available assumptions.
