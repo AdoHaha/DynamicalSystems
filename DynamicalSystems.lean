@@ -12,6 +12,7 @@ import DynamicalSystems.InputOutput.StateSpace
 import DynamicalSystems.Linear.Basic
 import DynamicalSystems.Linear.Subspaces
 import DynamicalSystems.Linear.Kalman
+import DynamicalSystems.Linear.KalmanDecomposition
 import DynamicalSystems.Linear.Duality
 import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow

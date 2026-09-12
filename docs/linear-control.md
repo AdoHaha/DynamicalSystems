@@ -43,7 +43,14 @@ duality, pair invariance under `changeState`, and the two-block decompositions.
 The restricted reachable pair is proved controllable; the quotient by the
 unobservable subspace is proved observable. The quotient input and restricted
 unobservable readout vanish. Complement zero-block identities are proved without
-assuming the complement is invariant. The full four-block form is still pending.
+assuming the complement is invariant.
+
+Import `DynamicalSystems.Linear.KalmanDecomposition` for the combined four-block
+form: a genuine coordinate equivalence, seven zero A blocks, two zero B rows and
+two zero C columns. The controllable–observable quotient is constructed from the
+reachable restriction and its unobservable subspace; both pair properties and
+preservation of D and every Markov parameter `C A^k B` are proved. Continuous-time
+behavior equivalence and minimal-dimension results are not asserted here.
 
 Import `DynamicalSystems.Linear.Hautus` for PBH eigenvector, kernel/range and
 matrix-rank criteria over algebraically closed fields. Both real-matrix
@@ -71,7 +78,7 @@ conventions and linked theorem statements. Run `lake exe generate-docs` to build
 
 ## Roadmap
 
-Next are the full four-block decomposition, analytic and synthesis examples, trajectory
+Next are analytic and synthesis examples, trajectory
 equivalences, Gramians, stabilization and observers, and geometric disturbance
 decoupling. Each addition requires source/statement review, actual Lean proofs,
 and the standard-axiom audit. Missing results are not available assumptions.

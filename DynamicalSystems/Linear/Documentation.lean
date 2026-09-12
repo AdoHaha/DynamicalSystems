@@ -1,5 +1,6 @@
 import VersoManual
 import DynamicalSystems.Linear.Hautus
+import DynamicalSystems.Linear.KalmanDecomposition
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
@@ -71,6 +72,21 @@ invariant.
 {docstring LinearMap.isObservable_iff_isControllable_dualMap}
 {docstring LinearMap.isControllable_reachableRestriction}
 {docstring LinearMap.isObservable_quotientUnobservable}
+
+# Four-block Kalman decomposition
+
+The four-component coordinates are adapted to the reachable space `W`, the unobservable space `N`,
+and their intersection. The forward coordinate map is their sum in the original state space.
+Seven off-diagonal state-map blocks, two input blocks, and two output blocks vanish. The
+controllable–observable quotient of the reachable space preserves `D` and every `C A^k B`.
+This is not yet a proof of continuous-time behavior equivalence or minimal state dimension.
+
+{docstring LinearMap.kalmanEquiv}
+{docstring LinearMap.kalmanEquiv_apply}
+{docstring LinearMap.controllableObservableRealization}
+{docstring LinearMap.isControllable_controllableObservableRealization}
+{docstring LinearMap.isObservable_controllableObservableRealization}
+{docstring LinearMap.controllableObservableRealization_markov}
 
 # PBH / Hautus tests
 
