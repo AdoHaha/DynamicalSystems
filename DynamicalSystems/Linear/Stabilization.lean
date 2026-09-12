@@ -13,6 +13,7 @@ public import Mathlib.Analysis.Normed.Algebra.Exponential
 public import Mathlib.Analysis.SpecialFunctions.Exp
 public import Mathlib.Analysis.SpecialFunctions.Exponential
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
+import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 public import Mathlib.LinearAlgebra.Matrix.Dual
 public import Mathlib.Data.Matrix.Block
 public import Mathlib.LinearAlgebra.Matrix.ToLin
@@ -1116,5 +1117,217 @@ theorem tendsto_exp_complex_apply (f : E →ₗ[ℂ] E)
   simpa using hfin0
 
 end ComplexHurwitzDecay
+
+open scoped Matrix
+
+/-- The coordinatewise real-to-complex inclusion `(ι → ℝ) →ₗ[ℝ] (ι → ℂ)`,
+regarded as a real-linear map. It is an isometry for the sup norm and commutes
+with matrix-vector multiplication, which lets the real exponential be compared
+with the complexified one. -/
+noncomputable def ofRealPi {ι : Type*} : (ι → ℝ) →ₗ[ℝ] (ι → ℂ) where
+  toFun y := fun i => (y i : ℂ)
+  map_add' := by intro a b; ext i; simp
+  map_smul' := by intro c y; ext i; simp [Complex.ofReal_mul]
+
+@[simp] lemma ofRealPi_apply {ι : Type*} (y : ι → ℝ) (i : ι) :
+    ofRealPi y i = (y i : ℂ) := rfl
+
+lemma norm_ofReal_complex (r : ℝ) : ‖(r : ℂ)‖ = ‖r‖ := by
+  rw [Real.norm_eq_abs]; exact RCLike.norm_ofReal r
+
+lemma ofRealPi_norm {ι : Type*} [Fintype ι] (y : ι → ℝ) :
+    ‖ofRealPi y‖ = ‖y‖ := by
+  apply le_antisymm
+  · rw [pi_norm_le_iff_of_nonneg (norm_nonneg _)]
+    intro i
+    rw [ofRealPi_apply, norm_ofReal_complex]
+    exact (pi_norm_le_iff_of_nonneg (norm_nonneg _)).mp le_rfl i
+  · rw [pi_norm_le_iff_of_nonneg (norm_nonneg _)]
+    intro i
+    calc ‖y i‖ = ‖(y i : ℂ)‖ := (norm_ofReal_complex _).symm
+      _ = ‖ofRealPi y i‖ := by rw [ofRealPi_apply]
+      _ ≤ ‖ofRealPi y‖ := (pi_norm_le_iff_of_nonneg (norm_nonneg _)).mp le_rfl i
+
+lemma ofRealPi_mulVec {ι : Type*} [Fintype ι] (M : Matrix ι ι ℝ) (y : ι → ℝ) :
+    ofRealPi (M *ᵥ y) = (M.map (algebraMap ℝ ℂ)) *ᵥ (ofRealPi y) := by
+  ext i
+  have h := RingHom.map_mulVec (algebraMap ℝ ℂ) M y i
+  simpa [ofRealPi, Function.comp_def] using h
+
+variable {ι : Type*} [Fintype ι] [DecidableEq ι]
+
+lemma ofRealPi_exp (M : Matrix ι ι ℝ) (t : ℝ) (y : ι → ℝ) :
+    ofRealPi (NormedSpace.exp (t • (Matrix.toLin' M).toContinuousLinearMap) y) =
+      NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y) := by
+  have hstep : ∀ z : ι → ℝ,
+      ofRealPi ((Matrix.toLin' M).toContinuousLinearMap z) =
+        (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap (ofRealPi z) := by
+    intro z
+    change ofRealPi (M *ᵥ z) = (M.map (algebraMap ℝ ℂ)) *ᵥ ofRealPi z
+    exact ofRealPi_mulVec M z
+  have hpow : ∀ n : ℕ, ∀ z : ι → ℝ,
+      ofRealPi (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) z) =
+        ((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi z) := by
+    intro n
+    induction n with
+    | zero => intro z; simp
+    | succ n ih =>
+      intro z
+      rw [pow_succ']
+      rw [ContinuousLinearMap.mul_apply, ContinuousLinearMap.smul_apply, map_smul]
+      rw [hstep, ih z]
+      rw [← ContinuousLinearMap.smul_apply, ← ContinuousLinearMap.mul_apply, ← pow_succ']
+  have hseries : ∀ n : ℕ,
+      ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)) =
+        ((n.factorial : ℂ)⁻¹) • (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi y)) := by
+    intro n
+    rw [map_smul, hpow n y, ← Complex.ofReal_natCast n.factorial, ← Complex.ofReal_inv]
+    rfl
+  have h1 : HasSum (fun n : ℕ => ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
+      (ofRealPi (NormedSpace.exp (t • (Matrix.toLin' M).toContinuousLinearMap) y)) := by
+    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℝ) (t • (Matrix.toLin' M).toContinuousLinearMap)
+    have h2 := h.mapL (ContinuousLinearMap.apply ℝ (ι → ℝ) y)
+    exact h2.mapL (ofRealPi.toContinuousLinearMap)
+  have h2 : HasSum (fun n : ℕ => ((n.factorial : ℂ)⁻¹) • (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi y)))
+      (NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) := by
+    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℂ) (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap)
+    exact h.mapL (ContinuousLinearMap.apply ℂ (ι → ℂ) (ofRealPi y))
+  have h3 : HasSum (fun n : ℕ => ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
+      (NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) :=
+    h2.congr_fun (fun n => hseries n)
+  exact h1.unique h3
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+
+/-- **The real Hurwitz decay theorem.** If every complex root of the
+complexified characteristic polynomial of a real endomorphism `A` has negative
+real part, then every trajectory `t ↦ exp (t A) x` of the linear flow tends to
+zero at `+∞`.
+
+This is the real reduction of `tendsto_exp_complex_apply`: choose a real basis,
+complexify the coordinate matrix, apply the complex theorem there, and transport
+the convergence back along the basis and the coordinatewise `ofReal` inclusion. -/
+theorem tendsto_exp_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : IsHurwitz A) (x : X) :
+    Tendsto (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x) atTop (𝓝 0) := by
+  let n : ℕ := Module.finrank ℝ X
+  let b : Basis (Fin n) ℝ X := Module.finBasis ℝ X
+  let L : X ≃L[ℝ] (Fin n → ℝ) := b.equivFun.toContinuousLinearEquiv
+  let M : Matrix (Fin n) (Fin n) ℝ := LinearMap.toMatrix b b A
+  let g : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) := (Matrix.toLin' M).toContinuousLinearMap
+  let h : (Fin n → ℂ) →L[ℂ] (Fin n → ℂ) :=
+    (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap
+  have hg : g = L.conjContinuousAlgEquiv A.toContinuousLinearMap := by
+    apply ContinuousLinearMap.ext
+    intro y
+    have hrepr : M *ᵥ b.repr (L.symm y) = b.repr (A (L.symm y)) :=
+      LinearMap.toMatrix_mulVec_repr b b A (L.symm y)
+    have hLy : b.repr (L.symm y) = y := by
+      rw [← Basis.equivFun_apply b (L.symm y)]
+      exact b.equivFun.apply_symm_apply y
+    rw [hLy] at hrepr
+    change M *ᵥ y = L (A.toContinuousLinearMap (L.symm y))
+    rw [hrepr]
+    rw [← Basis.equivFun_apply b (A (L.symm y))]
+    rfl
+  have hchar : h.charpoly = A.charpoly.map (algebraMap ℝ ℂ) := by
+    change (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).charpoly = A.charpoly.map (algebraMap ℝ ℂ)
+    rw [Matrix.charpoly_toLin', Matrix.charpoly_map,
+      ← LinearMap.charpoly_toMatrix (f := A) b]
+  have hf : ∀ z : ℂ, h.charpoly.eval z = 0 → z.re < 0 := by
+    intro z hz
+    rw [hchar] at hz
+    exact hA z hz
+  have hcomplex : Tendsto (fun t : ℝ => NormedSpace.exp (t • h) (ofRealPi (L x))) atTop (𝓝 0) :=
+    tendsto_exp_complex_apply (Matrix.toLin' (M.map (algebraMap ℝ ℂ))) hf (ofRealPi (L x))
+  have hofreal : Tendsto (fun t : ℝ => ofRealPi (NormedSpace.exp (t • g) (L x))) atTop (𝓝 0) := by
+    rw [show (fun t : ℝ => ofRealPi (NormedSpace.exp (t • g) (L x)))
+        = fun t : ℝ => NormedSpace.exp (t • h) (ofRealPi (L x)) from
+      funext (fun t => ofRealPi_exp M t (L x))]
+    exact hcomplex
+  have hmatrix : Tendsto (fun t : ℝ => NormedSpace.exp (t • g) (L x)) atTop (𝓝 0) := by
+    rw [tendsto_zero_iff_norm_tendsto_zero] at hofreal ⊢
+    refine hofreal.congr' ?_
+    filter_upwards with t
+    rw [ofRealPi_norm]
+  have hLexp : ∀ t : ℝ, L (NormedSpace.exp (t • A.toContinuousLinearMap) x)
+      = NormedSpace.exp (t • g) (L x) := by
+    intro t
+    have key := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (L.conjContinuousAlgEquiv)
+      (L.conjContinuousAlgEquiv).continuous (t • A.toContinuousLinearMap)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have hcongr : (L.conjContinuousAlgEquiv) (t • A.toContinuousLinearMap) = t • g := by
+      rw [map_smul, hg.symm]
+    have := congrArg (fun f : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) => f (L x)) key
+    rw [hcongr] at this
+    simpa [ContinuousLinearEquiv.conjContinuousAlgEquiv_apply_apply, g] using this
+  have hfinal : Tendsto (fun t : ℝ => L (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+      atTop (𝓝 0) := by
+    rw [show (fun t : ℝ => L (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+        = fun t : ℝ => NormedSpace.exp (t • g) (L x) from funext hLexp]
+    exact hmatrix
+  have hcomp := (L.symm.continuous.tendsto 0).comp hfinal
+  rw [show L.symm (0 : Fin n → ℝ) = 0 from map_zero _] at hcomp
+  simpa [Function.comp_def, L.symm_apply_apply] using hcomp
+
+/-- **Lyapunov stability of a real Hurwitz flow.** A real endomorphism `A` whose
+complexified characteristic polynomial has only roots in the open left
+half-plane generates a flow `t ↦ exp (t A)` whose origin is stable on `[0, ∞)` in
+the sense of `Filter.IsStableOn`.
+
+The proof invokes the uniform boundedness principle on the family
+`t ↦ exp (t A)` (`t ≥ 0`): the pointwise convergence of
+`tendsto_exp_of_isHurwitz` yields pointwise boundedness, whence a uniform
+operator-norm bound `‖exp (t A)‖ ≤ C` that gives the stability estimate. -/
+theorem isStableOn_expFlow_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : IsHurwitz A) :
+    (𝓝 (0 : X)).IsStableOn
+      (fun (t : ℝ) (x : X) => NormedSpace.exp (t • A.toContinuousLinearMap) x) (Set.Ici 0) := by
+  have hpt : ∀ x : X, ∃ C, ∀ t : {t : ℝ // 0 ≤ t},
+      ‖NormedSpace.exp (t.1 • A.toContinuousLinearMap) x‖ ≤ C := by
+    intro x
+    have hexpcont : Continuous (NormedSpace.exp : (X →L[ℝ] X) → (X →L[ℝ] X)) := by
+      rw [← continuousOn_univ, ← show Metric.eball (0 : X →L[ℝ] X)
+          (NormedSpace.expSeries ℝ (X →L[ℝ] X)).radius = Set.univ by
+        rw [NormedSpace.expSeries_radius_eq_top]; simp]
+      exact NormedSpace.continuousOn_exp (𝕂 := ℝ)
+    have hcont : Continuous fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x :=
+      (ContinuousLinearMap.apply ℝ X x).continuous.comp
+        (hexpcont.comp (continuous_id.smul continuous_const))
+    have hconv := tendsto_exp_of_isHurwitz A hA x
+    obtain ⟨N, hN⟩ := eventually_atTop.mp (hconv.eventually (Metric.ball_mem_nhds 0 one_pos))
+    have hN' : ∀ t : ℝ, N ≤ t → ‖NormedSpace.exp (t • A.toContinuousLinearMap) x‖ < 1 := by
+      intro t ht
+      have h := hN t ht
+      rwa [dist_zero_right] at h
+    obtain ⟨C₁, hC₁⟩ := isCompact_Icc.exists_bound_of_continuousOn hcont.continuousOn
+    refine ⟨max C₁ 1, ?_⟩
+    rintro ⟨t, ht⟩
+    rcases lt_or_ge t N with h | h
+    · exact (hC₁ t ⟨ht, h.le⟩).trans (le_max_left _ _)
+    · exact (hN' t h).le.trans (le_max_right _ _)
+  obtain ⟨C, hC⟩ := banach_steinhaus (g := fun t : {t : ℝ // 0 ≤ t} =>
+      NormedSpace.exp (t.1 • A.toContinuousLinearMap)) hpt
+  have hCnn : 0 ≤ C := le_trans (norm_nonneg _) (hC ⟨0, le_refl 0⟩)
+  have hC1 : 0 < C + 1 := by linarith
+  intro s hs
+  rw [Metric.mem_nhds_iff] at hs
+  obtain ⟨ε, hεpos, hεs⟩ := hs
+  refine ⟨Metric.ball (0 : X) (ε / (C + 1)), Metric.ball_mem_nhds _ (by positivity), ?_⟩
+  intro t ht x hx
+  apply hεs
+  rw [Metric.mem_ball, dist_zero_right] at hx ⊢
+  have hbound : ‖NormedSpace.exp (t • A.toContinuousLinearMap) x‖ ≤ C * ‖x‖ := by
+    calc ‖NormedSpace.exp (t • A.toContinuousLinearMap) x‖
+        = ‖(NormedSpace.exp (t • A.toContinuousLinearMap)) x‖ := rfl
+      _ ≤ ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖ * ‖x‖ :=
+          ContinuousLinearMap.le_opNorm _ _
+      _ ≤ C * ‖x‖ := mul_le_mul_of_nonneg_right (hC ⟨t, Set.mem_Ici.mp ht⟩) (norm_nonneg _)
+  calc ‖NormedSpace.exp (t • A.toContinuousLinearMap) x‖ ≤ C * ‖x‖ := hbound
+    _ ≤ C * (ε / (C + 1)) := mul_le_mul_of_nonneg_left hx.le hCnn
+    _ = ε * (C / (C + 1)) := by ring
+    _ < ε * 1 := by
+        apply mul_lt_mul_of_pos_left _ hεpos
+        rw [div_lt_one hC1]; linarith
+    _ = ε := by ring
+
 
 end LinearMap
