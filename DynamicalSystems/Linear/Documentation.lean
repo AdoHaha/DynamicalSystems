@@ -170,11 +170,12 @@ controllable and observable pairs.
 
 # Pole-placement foundations
 
-The accepted pole-placement foundation records feedback invariance, a real
-quotient obstruction for the converse direction, companion characteristic-polynomial
-infrastructure, the zero-dimensional case, and reusable nonzero/Krylov and
-controlled-span lemmas. The full constructive feedback assignment theorem remains
-an explicitly tracked follow-up obligation.
+The accepted pole-placement material records feedback invariance, a real quotient
+obstruction for the converse direction, companion characteristic-polynomial
+infrastructure, and reusable nonzero/Krylov and controlled-span lemmas. It also
+constructively assigns any monic real polynomial to a controllable single-input
+pair, including the zero-dimensional case. The multi-input assembly remains an
+explicitly tracked follow-up obligation.
 
 {docstring LinearMap.reachableSubspace_add_comp}
 {docstring LinearMap.isControllable_add_comp}
@@ -184,6 +185,7 @@ an explicitly tracked follow-up obligation.
 {docstring LinearMap.isControllable_iff_bijective_kalmanControllabilityMap_single}
 {docstring LinearMap.linearIndependent_krylov_of_isControllable_single}
 {docstring LinearMap.eq_top_of_isControllable_of_map_le}
+{docstring LinearMap.exists_feedback_charpoly_single}
 
 # Sources and scope
 
@@ -192,5 +194,6 @@ especially the structural material of Chapter 3. Proofs reuse mathlib's linear a
 Cayley–Hamilton infrastructure. The Hautus module records its additional proof-development
 reference to Gokhale and Bullo's *LeanForControl*.
 
-Pole placement, stabilization/observers, and disturbance-decoupling synthesis are not yet
-asserted. Those require their own checked bridges and are tracked separately from the results above.
+Multi-input pole-placement assembly, stabilization/observers, and disturbance-decoupling
+synthesis are not yet asserted. Those require their own checked bridges and are tracked
+separately from the results above.
