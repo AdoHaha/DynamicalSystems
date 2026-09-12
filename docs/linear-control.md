@@ -31,6 +31,13 @@ Both subspaces are connected to Mathlib's `Module.End.invtSubmodule` lattice.
 These are algebraic results; equivalence to continuous-time steering and output
 distinguishability is a later, separately tracked obligation.
 
+Import `DynamicalSystems.Linear.Kalman` for finite Krylov descriptions using
+the first `Module.finrank 𝕜 X` powers, including zero-dimensional state spaces.
+`kalmanControllabilityMap` and `kalmanObservabilityMap` give coordinate-free
+range/kernel descriptions, surjectivity/injectivity criteria, and dimension
+criteria. Their basis representations give the usual full matrix-rank tests.
+The finite reduction reuses Mathlib's Cayley–Hamilton remainder theorem.
+
 ## Conventions
 
 - Pair order: `(A, B)` for controllability; `(C, A)` for observability.
@@ -43,7 +50,7 @@ distinguishability is a later, separately tracked obligation.
 
 ## Roadmap
 
-Next are finite Krylov/Kalman criteria, duality and decomposition, trajectory
+Next are duality and decomposition, trajectory
 equivalences, Gramians, stabilization and observers, and geometric disturbance
 decoupling. Each addition requires source/statement review, actual Lean proofs,
 and the standard-axiom audit. Missing results are not available assumptions.
