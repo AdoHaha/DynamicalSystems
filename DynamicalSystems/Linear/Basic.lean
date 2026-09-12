@@ -90,13 +90,11 @@ theorem dynamics_apply (sys : LinearSystem 𝕜 X U Y) (x : X) (u : U) :
     sys.dynamics x u = sys.A x + sys.B u := rfl
 
 /-- With zero input the dynamics reduces to the state map `A`. -/
-@[simp]
 theorem dynamics_zero_input (sys : LinearSystem 𝕜 X U Y) (x : X) :
     sys.dynamics x 0 = sys.A x := by
   simp [dynamics]
 
 /-- From the origin the dynamics is the input map `B` applied to the input. -/
-@[simp]
 theorem dynamics_zero_state (sys : LinearSystem 𝕜 X U Y) (u : U) :
     sys.dynamics 0 u = sys.B u := by
   simp [dynamics]
@@ -122,13 +120,11 @@ theorem readout_apply (sys : LinearSystem 𝕜 X U Y) (x : X) (u : U) :
     sys.readout x u = sys.C x + sys.D u := rfl
 
 /-- With zero input the readout reduces to the output map `C`. -/
-@[simp]
 theorem readout_zero_input (sys : LinearSystem 𝕜 X U Y) (x : X) :
     sys.readout x 0 = sys.C x := by
   simp [readout]
 
 /-- At the origin the readout is the feedthrough map `D` applied to the input. -/
-@[simp]
 theorem readout_zero_state (sys : LinearSystem 𝕜 X U Y) (u : U) :
     sys.readout 0 u = sys.D u := by
   simp [readout]
