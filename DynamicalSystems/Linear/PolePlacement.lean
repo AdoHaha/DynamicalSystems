@@ -878,6 +878,8 @@ pages 73–74 / printed 59–60. -/
 
 section Sufficiency
 
+/-- For a controllable single-input real linear system, every monic real
+polynomial of degree `finrank ℝ X` is obtained by static state feedback. -/
 theorem exists_feedback_charpoly_single [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
     (A : X →ₗ[ℝ] X) (b : ℝ →ₗ[ℝ] X)
     (h : IsControllable A b) (p : ℝ[X]) (hp : p.Monic)
