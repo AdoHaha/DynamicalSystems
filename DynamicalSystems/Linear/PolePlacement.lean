@@ -974,33 +974,240 @@ theorem exists_feedback_charpoly_single [AddCommGroup X] [Module ℝ X] [FiniteD
 end Sufficiency
 
 
-/-! ## Remaining obligation: the multi-input assembly
+/-! ## Multi-input assembly: the controlled chain of Lemma 3.31
 
-The single-input constructive theorem `exists_feedback_charpoly_single` is now
-proved above: for a controllable pair `(A, b)` with `b : ℝ →ₗ[ℝ] X` and any monic
+The single-input constructive theorem `exists_feedback_charpoly_single` is proved
+above: for a controllable pair `(A, b)` with `b : ℝ →ₗ[ℝ] X` and any monic
 `p : ℝ[X]` of degree `finrank ℝ X` there is `f : X →ₗ[ℝ] ℝ` with
 `(A + b.comp f).charpoly = p`.
 
-The multi-input statement (`B : U →ₗ[ℝ] X`, gain `F : X →ₗ[ℝ] U`) is deliberately
-left separate. Its proof is the MIMO reduction of Trentelman–Stoorvogel–Hautus,
-Lemma 3.31:
+The multi-input statement (`B : U →ₗ[ℝ] X`, gain `F : X →ₗ[ℝ] U`) is obtained by
+the MIMO reduction of Trentelman–Stoorvogel–Hautus, Lemma 3.31:
 
 1. Handle `finrank ℝ X = 0` with `exists_feedback_charpoly_of_finrank_zero`.
 2. For `n = finrank ℝ X > 0`, construct an independent controlled chain
-   `x₁ = B u₀`, `x_{k+1} = A x_k + B u_k` (`k < n`). At each step, if
+   `x₀ = 0`, `x_{k+1} = A x_k + B u_k` (`k < n`). At each step, if
    `A x_k + B u ∈ span{x₁, …, x_k}` for every `u : U`, then `A x_k ∈ L`,
    `range B ≤ L` and `L` is `A`-invariant, so
-   `eq_top_of_isControllable_of_map_le` contradicts `finrank L = k < n`.
+   `eq_top_of_isControllable_of_map_le` contradicts `finrank L ≤ k < n`.
 3. Let `F₀` be the unique map with `F₀ x_k = u_k`, so `b = B u₀` is cyclic for
    `A + B.comp F₀` with `x_k = (A + B F₀)^{k-1} b`.
 4. Apply `exists_feedback_charpoly_single` to `(A + B F₀, b)`, obtaining
    `f : X →ₗ[ℝ] ℝ`, and set `F = F₀ + u₀.comp f`; then
    `B.comp F = B.comp F₀ + b.comp f` and the characteristic polynomial is `p`.
 
-The SISO theorem and all of its polynomial/Krylov ingredients (`poleD`, `poleG`,
-`poleH`, `coeff_zero_poleD`, `poleD_congr`, `poleG_succ`, `poleG_coeff`,
-`poleH_coeff_eq`, `poleH_eq`, `poleG_natDegree_le`, `linearIndependent_poleG`)
-are proved in this file without placeholders or custom axioms.
+The controlled chain is formalised below as `exists_controlled_chain`, and the
+multi-input theorem as `exists_feedback_charpoly_of_isControllable`.
 -/
+
+section MIMO
+
+variable [AddCommGroup X] [Module ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+
+/-- **Controlled chain (Trentelman–Stoorvogel–Hautus, Lemma 3.31).** For a
+controllable pair `(A, B)` with `n = finrank ℝ X` there are vectors
+`x 0 = 0, x 1, …, x n` and inputs `u 0, …, u (n-1)` with
+`x (i+1) = A (x i) + B (u i)` such that `x 1, …, x n` are linearly independent.
+
+The proof is the source's induction: given `x 1, …, x k` with
+`L = span{x 1, …, x k}`, if `A (x k) + B u ∈ L` for every `u` then `A (x k) ∈ L`,
+`range B ≤ L` and `L` is `A`-invariant, so controllability forces `L = ⊤`,
+contradicting `finrank L ≤ k < n`. Hence some `u k` leaves `L`, and `x (k+1)` is
+independent of `x 1, …, x k`. -/
+theorem exists_controlled_chain (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : IsControllable A B) :
+    ∃ (x : Fin (Module.finrank ℝ X + 1) → X) (u : Fin (Module.finrank ℝ X) → U),
+      x 0 = 0 ∧
+      (∀ i : Fin (Module.finrank ℝ X), x i.succ = A (x i.castSucc) + B (u i)) ∧
+      LinearIndependent ℝ (fun i : Fin (Module.finrank ℝ X) => x i.succ) := by
+  classical
+  set N : ℕ := Module.finrank ℝ X with hN
+  let Good : (k : ℕ) → Type _ := fun k =>
+    { p : (Fin (k + 1) → X) × (Fin k → U) //
+        p.1 0 = 0 ∧
+        (∀ i : Fin k, p.1 i.succ = A (p.1 i.castSucc) + B (p.2 i)) ∧
+        LinearIndependent ℝ (fun i : Fin k => p.1 i.succ) }
+  have build : ∀ k, k ≤ N → Good k := by
+    intro k
+    induction k with
+    | zero =>
+        intro _
+        refine ⟨(fun _ => 0, Fin.elim0), rfl, ?_, ?_⟩
+        · intro i; exact Fin.elim0 i
+        · exact linearIndependent_empty_type
+    | succ k ih =>
+        intro hk
+        obtain ⟨⟨x, u⟩, hx0, hchain, hind⟩ := ih (Nat.le_of_succ_le hk)
+        have hx0' : x 0 = 0 := hx0
+        have hkN : k < N := Nat.lt_of_succ_le hk
+        set v : Fin k → X := fun i => x i.succ with hv
+        have hv_eq : ∀ i, v i = x i.succ := fun i => rfl
+        set L : Submodule ℝ X := Submodule.span ℝ (Set.range v) with hL
+        have hex : ∃ w : U, A (x (Fin.last k)) + B w ∉ L := by
+          by_contra hc
+          push_neg at hc
+          have hlast : A (x (Fin.last k)) ∈ L := by
+            have := hc 0
+            simpa using this
+          have hB : LinearMap.range B ≤ L := by
+            rintro y ⟨w, rfl⟩
+            have h1 := hc w
+            have h2 : B w = (A (x (Fin.last k)) + B w) - A (x (Fin.last k)) := by
+              abel
+            rw [h2]
+            exact Submodule.sub_mem _ h1 hlast
+          have hA : Submodule.map A L ≤ L := by
+            rw [Submodule.map_le_iff_le_comap, hL, Submodule.span_le]
+            rintro y ⟨i, rfl⟩
+            change A (v i) ∈ Submodule.span ℝ (Set.range v)
+            rw [hv_eq i]
+            by_cases hi : (i.succ : Fin (k + 1)) = Fin.last k
+            · rw [hi]; exact hlast
+            · obtain ⟨j, hj⟩ := Fin.eq_castSucc_of_ne_last hi
+              have hch : x j.succ = A (x j.castSucc) + B (u j) := hchain j
+              have hAj : A (x j.castSucc) = x j.succ - B (u j) := by
+                rw [hch]; abel
+              rw [← hj, hAj]
+              exact Submodule.sub_mem _
+                (Submodule.subset_span (show x j.succ ∈ Set.range v from ⟨j, rfl⟩))
+                (hB ⟨u j, rfl⟩)
+          have htop : L = ⊤ := eq_top_of_isControllable_of_map_le A B h hA hB
+          have hfin : Module.finrank ℝ L = N := by
+            rw [htop, finrank_top, hN]
+          have hle : Module.finrank ℝ L ≤ k := by
+            rw [hL]
+            have := finrank_range_le_card (R := ℝ) v
+            simpa only [Set.finrank, Fintype.card_fin] using this
+          omega
+        let w : U := Classical.choose hex
+        have hw : A (x (Fin.last k)) + B w ∉ L := Classical.choose_spec hex
+        have hw' : A (x (Fin.last k)) + B w ∉ Submodule.span ℝ (Set.range v) := by
+          rwa [hL] at hw
+        refine ⟨(Fin.snoc x (A (x (Fin.last k)) + B w), Fin.snoc u w), ?_, ?_, ?_⟩
+        · dsimp only
+          rw [Fin.snoc_apply_zero, hx0']
+        · intro i
+          dsimp only
+          rcases Fin.eq_castSucc_or_eq_last i with ⟨j, rfl⟩ | rfl
+          · rw [Fin.succ_castSucc, Fin.snoc_castSucc, Fin.snoc_castSucc, Fin.snoc_castSucc]
+            exact hchain j
+          · rw [Fin.succ_last, Fin.snoc_last, Fin.snoc_castSucc, Fin.snoc_last]
+        · have hv' : (fun i : Fin (k + 1) =>
+              (Fin.snoc x (A (x (Fin.last k)) + B w) : Fin (k + 2) → X) i.succ)
+              = (Fin.snoc v (A (x (Fin.last k)) + B w) : Fin (k + 1) → X) := by
+            ext i
+            rcases Fin.eq_castSucc_or_eq_last i with ⟨j, rfl⟩ | rfl
+            · rw [Fin.succ_castSucc, Fin.snoc_castSucc, Fin.snoc_castSucc, hv_eq j]
+            · simp only [Fin.succ_last, Fin.snoc_last]
+          rw [hv']
+          exact LinearIndependent.finSnoc hind hw'
+  obtain ⟨⟨x, u⟩, hx0, hchain, hind⟩ := build N le_rfl
+  exact ⟨x, u, hx0, hchain, hind⟩
+
+/-- **Pole placement (sufficiency), multi-input.** For a controllable pair
+`(A, B)` on a finite-dimensional real state space and any monic real polynomial
+`p` of degree `finrank ℝ X`, there is a real state feedback `F : X →ₗ[ℝ] U`
+with `(A + B.comp F).charpoly = p`.
+
+The proof builds the controlled chain `exists_controlled_chain`, defines `F₀` on
+its basis so that `b = B u₀` is cyclic for `A + B.comp F₀`, applies the
+single-input theorem `exists_feedback_charpoly_single` to `(A + B.comp F₀, b)`,
+and assembles `F = F₀ + u₀.comp f`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 3.29, PDF pages 73–74. -/
+theorem exists_feedback_charpoly_of_isControllable
+    [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : IsControllable A B) (p : ℝ[X]) (hp : p.Monic)
+    (hpdeg : p.natDegree = Module.finrank ℝ X) :
+    ∃ F : X →ₗ[ℝ] U, (A + B.comp F).charpoly = p := by
+  classical
+  by_cases hzero : Module.finrank ℝ X = 0
+  · exact exists_feedback_charpoly_of_finrank_zero A B hzero p hp hpdeg
+  have hNpos : 0 < Module.finrank ℝ X := Nat.pos_of_ne_zero hzero
+  haveI : NeZero (Module.finrank ℝ X) := ⟨hNpos.ne'⟩
+  obtain ⟨x, u, hx0, hchain, hind⟩ := exists_controlled_chain A B h
+  let v : Fin (Module.finrank ℝ X) → X := fun i => x i.succ
+  have hv_eq : ∀ i, v i = x i.succ := fun i => rfl
+  have hv : LinearIndependent ℝ v := hind
+  let vb : Basis (Fin (Module.finrank ℝ X)) ℝ X :=
+    basisOfLinearIndependentOfCardEqFinrank hv (by simp)
+  have hvb : ∀ i, vb i = v i := by
+    intro i
+    change (basisOfLinearIndependentOfCardEqFinrank hv _) i = v i
+    rw [coe_basisOfLinearIndependentOfCardEqFinrank]
+  let f₀ : Fin (Module.finrank ℝ X) → U :=
+    fun i => if hi : (i : ℕ) + 1 < Module.finrank ℝ X then u ⟨(i : ℕ) + 1, hi⟩ else 0
+  let F₀ : X →ₗ[ℝ] U := vb.constr ℝ f₀
+  have hF₀ : ∀ i, F₀ (vb i) = f₀ i := fun i => by
+    simp only [F₀, Basis.constr_basis]
+  let b₀ : X := B (u 0)
+  have hb₀ : vb 0 = b₀ := by
+    rw [hvb 0, hv_eq 0]
+    have hc0 : x ((0 : Fin (Module.finrank ℝ X)).succ)
+        = A (x ((0 : Fin (Module.finrank ℝ X)).castSucc)) + B (u 0) := hchain 0
+    have hx00 : x ((0 : Fin (Module.finrank ℝ X)).castSucc) = 0 := by
+      simpa using hx0
+    rw [hc0, hx00, map_zero, zero_add]
+  let b : ℝ →ₗ[ℝ] X := LinearMap.toSpanSingleton ℝ X b₀
+  have hb : b 1 = b₀ := LinearMap.toSpanSingleton_apply_one ℝ X b₀
+  let T : X →ₗ[ℝ] X := A + B.comp F₀
+  have hrec : ∀ (i : Fin (Module.finrank ℝ X)) (hi : (i : ℕ) + 1 < Module.finrank ℝ X),
+      T (v i) = v ⟨(i : ℕ) + 1, hi⟩ := by
+    intro i hi
+    have hF0i : F₀ (v i) = u ⟨(i : ℕ) + 1, hi⟩ := by
+      have h1 : F₀ (vb i) = f₀ i := hF₀ i
+      rw [hvb i] at h1
+      rw [h1]
+      exact dif_pos hi
+    have hT : T (v i) = A (v i) + B (u ⟨(i : ℕ) + 1, hi⟩) := by
+      simp only [T, LinearMap.add_apply, LinearMap.comp_apply, hF0i]
+    rw [hT, hv_eq i, hv_eq ⟨(i : ℕ) + 1, hi⟩]
+    have hsucc : (i.succ : Fin (Module.finrank ℝ X + 1))
+        = (⟨(i : ℕ) + 1, hi⟩ : Fin (Module.finrank ℝ X)).castSucc := Fin.ext rfl
+    have hch := hchain ⟨(i : ℕ) + 1, hi⟩
+    rw [hsucc]
+    exact hch.symm
+  have krylov : ∀ (i : ℕ) (hi : i < Module.finrank ℝ X),
+      (T ^ i) b₀ = v ⟨i, hi⟩ := by
+    intro i
+    induction i with
+    | zero =>
+        intro hi
+        rw [pow_zero, Module.End.one_eq_id, LinearMap.id_apply]
+        exact (hb₀.symm).trans (hvb 0)
+    | succ i ih =>
+        intro hi
+        rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply]
+        rw [ih (Nat.lt_of_succ_lt hi)]
+        exact hrec ⟨i, Nat.lt_of_succ_lt hi⟩ hi
+  have hcont : IsControllable T b := by
+    rw [isControllable_iff, eq_top_iff, ← vb.span_eq]
+    apply Submodule.span_le.mpr
+    rintro y ⟨i, rfl⟩
+    rw [hvb i]
+    have hvi : v i = (T ^ (i : ℕ)) b₀ := (krylov (i : ℕ) i.isLt).symm
+    rw [hvi]
+    have hsym : (T ^ (i : ℕ)) b₀ = ((T ^ (i : ℕ)).comp b) 1 := by
+      rw [LinearMap.comp_apply, hb]
+    rw [hsym]
+    exact Submodule.mem_iSup_of_mem (i : ℕ) ⟨1, rfl⟩
+  obtain ⟨f, hf⟩ := exists_feedback_charpoly_single T b hcont p hp hpdeg
+  let u₀ : ℝ →ₗ[ℝ] U := LinearMap.toSpanSingleton ℝ U (u 0)
+  have hBu₀ : B.comp u₀ = b := by
+    ext c
+    simp only [LinearMap.comp_apply, u₀, b, b₀, LinearMap.toSpanSingleton_apply,
+      map_smul]
+  refine ⟨F₀ + u₀.comp f, ?_⟩
+  have hBcomp : B.comp (F₀ + u₀.comp f) = B.comp F₀ + b.comp f := by
+    rw [LinearMap.comp_add, ← LinearMap.comp_assoc, hBu₀]
+  have hfinal : A + B.comp (F₀ + u₀.comp f) = (A + B.comp F₀) + b.comp f := by
+    rw [hBcomp]
+    abel
+  rw [hfinal]
+  exact hf
+
+end MIMO
 
 end LinearMap
