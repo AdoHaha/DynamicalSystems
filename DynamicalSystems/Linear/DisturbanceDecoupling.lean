@@ -1,0 +1,631 @@
+/-
+Copyright (c) 2026 Igor Zubrycki. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Igor Zubrycki
+-/
+module
+
+public import DynamicalSystems.Linear.ConditionedInvariant
+public import DynamicalSystems.Linear.Reachability
+
+/-! # Disturbance decoupling: algebraic foundations
+
+This file begins the disturbance-decoupling chapter of Trentelman, Stoorvogel
+and Hautus, *Control Theory for Linear Systems*. It records the exact algebraic
+predicates and their bridges to the accepted controlled- and conditioned-invariant
+subspace API of `DynamicalSystems.Linear.ControlledInvariant` and
+`DynamicalSystems.Linear.ConditionedInvariant`.
+
+## The channel and its Markov parameters
+
+A *disturbance channel* consists of a state map `A : X →ₗ[𝕜] X`, a disturbance
+input map `E : W →ₗ[𝕜] X` and an output map `H : X →ₗ[𝕜] Z`, modelling
+
+```
+x'(t) = A x(t) + E d(t),
+z(t)  = H x(t).
+```
+
+Its `k`-th **impulse-response coefficient** (Markov parameter) is the composite
+
+`LinearMap.disturbanceResponse A E H k = H ∘ A ^ k ∘ E : W →ₗ[𝕜] Z`.
+
+The channel is **disturbance decoupled** when every one of these coefficients
+vanishes, `LinearMap.IsDisturbanceDecoupled A E H`. Over the reals and in finite
+dimension this is exactly the vanishing of the impulse response `t ↦ H e^{tA} E`
+of Trentelman–Stoorvogel–Hautus, equation (4.4), whose derivatives at `0` are
+precisely the Markov parameters `H A ^ k E`; the equivalence is proved below as
+`LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`. The transfer-function
+form and the convolution/input-independence form remain separate obligations,
+documented in the Deferred obligations section below and not claimed here.
+
+## Bridges to invariant subspaces
+
+The algebraic content of the chapter is that decoupling is an invariant-subspace
+existence statement:
+
+* `LinearMap.isDisturbanceDecoupled_iff_reachableSubspace_le_ker`: the channel is
+  decoupled if and only if `⟨A | im E⟩ ≤ ker H`.
+* `LinearMap.isDisturbanceDecoupled_iff_exists_invariant`: the channel is
+  decoupled if and only if there is an `A`-invariant subspace `V` with
+  `im E ≤ V ≤ ker H`. This is Theorem 4.6, in the *least*/*greatest* form: the
+  reachable subspace `⟨A | im E⟩` is the least admissible `V` and the
+  unobservable subspace `⟨ker H | A⟩` is the greatest.
+* `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_exists_controlledInvariant`:
+  disturbance decoupling by static state feedback (Definition 4.7 and
+  Theorem 4.8) holds if and only if there is a *controlled invariant* `V` with
+  `im E ≤ V ≤ ker H`. Both directions are proved.
+* `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_range_le_controlledInvariantSubspace`:
+  in finite dimension this is the compact criterion `im E ≤ V*(ker H)` of
+  Corollary 4.9.
+
+## The conditioned-invariant bridge
+
+The static state-feedback condition above is the `(A, B)`-half of the
+measurement-feedback theory of Chapter 6. A `(C, A, B)`-pair
+(`LinearMap.IsCABPair`) is a pair of subspaces `S ≤ V` with `S` conditioned
+invariant and `V` controlled invariant; it is *between* `im E` and `ker H`
+(`LinearMap.IsCABPairBetween`) when `im E ≤ S` and `V ≤ ker H`. The algebraic
+core of Corollary 6.7 is
+
+`LinearMap.exists_isCABPairBetween_iff`:
+there exists a `(C, A, B)`-pair between `im E` and `ker H` if and only if
+`S*(im E) ≤ V*(ker H)`.
+
+The passage from such a pair to an actual dynamic measurement-feedback
+controller (Theorem 6.4), and hence the full statement of Corollary 6.7, is not
+formalised here.
+
+## The analytic impulse-response bridge
+
+Over the reals and in finite dimension, `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`
+identifies the algebraic predicate with the identical vanishing of the analytic
+impulse response `t ↦ H e^{tA} E`, using the accepted trajectory/unobservability
+bridges of `DynamicalSystems.Linear.Reachability`. This is the sense in which the
+Markov parameters are the derivatives at zero of the impulse response.
+
+## Worked examples
+
+The double integrator `A (x, y) = (y, 0)` exhibits both outcomes:
+`LinearMap.isDisturbanceDecoupled_doubleIntegrator_position` proves that a
+position disturbance is invisible to a velocity readout, while
+`LinearMap.not_isDisturbanceDecoupled_doubleIntegrator_velocity` proves that a
+velocity disturbance is seen by the position readout. These are non-vacuity
+witnesses for the definitions.
+
+## Deferred obligations
+
+The following are deliberately **not** claimed and are the next milestones:
+
+* the transfer-function form `H (sI - A)⁻¹ E = 0` and the convolution form of
+  input-independence, namely that
+  `t ↦ H (exp (tA) x₀ + ∫₀ᵗ exp ((t - s) A) E d(s) ds)` is independent of every
+  locally integrable disturbance `d`;
+* the construction of the dynamic measurement-feedback controller from a
+  `(C, A, B)`-pair and the corresponding closed-loop decoupling theorem
+  (Trentelman–Stoorvogel–Hautus, Theorem 6.4 and Corollary 6.7);
+* disturbance decoupling with internal stability (Section 4.7) and external
+  stabilization (Section 4.8), which need the stability and stabilizability
+  vocabulary.
+
+## Main definitions
+
+* `LinearMap.disturbanceResponse`
+* `LinearMap.IsDisturbanceDecoupled`, `LinearMap.IsStateFeedbackDisturbanceDecoupled`
+* `LinearMap.IsCABPair`, `LinearMap.IsCABPairBetween`
+* `LinearMap.disturbanceSystem`
+
+## Main theorems
+
+* `LinearMap.isDisturbanceDecoupled_iff_reachableSubspace_le_ker`
+* `LinearMap.isDisturbanceDecoupled_iff_range_le_unobservableSubspace`
+* `LinearMap.isDisturbanceDecoupled_iff_exists_invariant`
+* `LinearMap.disturbanceResponse_changeState`, `LinearMap.isDisturbanceDecoupled_changeState_iff`
+* `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_exists_controlledInvariant`
+* `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_range_le_controlledInvariantSubspace`
+* `LinearMap.exists_isCABPairBetween_iff`
+* `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`
+
+## References
+
+* H. L. Trentelman, A. A. Stoorvogel, M. Hautus, *Control Theory for Linear
+  Systems*, Springer, 2001, Section 4.2 (equations (4.3)–(4.4), Theorem 4.6,
+  Definition 4.7, Theorem 4.8, Corollary 4.9) and Section 6.1 (Definition 6.1,
+  Corollary 6.7).
+-/
+
+@[expose] public section
+
+namespace LinearMap
+
+variable {𝕜 X U Y W Z : Type*}
+variable [Field 𝕜]
+variable [AddCommGroup X] [Module 𝕜 X]
+variable [AddCommGroup U] [Module 𝕜 U]
+variable [AddCommGroup Y] [Module 𝕜 Y]
+variable [AddCommGroup W] [Module 𝕜 W]
+variable [AddCommGroup Z] [Module 𝕜 Z]
+
+/-! ## The disturbance channel and its response coefficients -/
+
+/-- The `k`-th coefficient of the disturbance-to-output impulse response, i.e.
+the Markov parameter `H A ^ k E : W →ₗ[𝕜] Z` of the channel
+`x' = A x + E d`, `z = H x`.
+
+These are the derivatives at `0` of the impulse response `t ↦ H e^{tA} E` of
+Trentelman–Stoorvogel–Hautus, equation (4.4). -/
+def disturbanceResponse (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z)
+    (k : ℕ) : W →ₗ[𝕜] Z :=
+  H.comp ((A ^ k).comp E)
+
+/-- Unfolding lemma for `disturbanceResponse`. -/
+theorem disturbanceResponse_apply (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z)
+    (k : ℕ) (w : W) : disturbanceResponse A E H k w = H ((A ^ k) (E w)) := rfl
+
+/-- The zeroth coefficient is the static gain `H E`. -/
+@[simp]
+theorem disturbanceResponse_zero (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    disturbanceResponse A E H 0 = H.comp E := by
+  ext w
+  simp [disturbanceResponse]
+
+/-- The coefficients satisfy `T (k + 1) = T k` with a state map inserted on the
+left, i.e. `H A^{k+1} E = (H A) A^k E`. -/
+theorem disturbanceResponse_succ (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z)
+    (k : ℕ) :
+    disturbanceResponse A E H (k + 1) = (H.comp A).comp ((A ^ k).comp E) := by
+  simp only [disturbanceResponse, pow_succ', Module.End.mul_eq_comp, LinearMap.comp_assoc]
+
+/-- A channel is **disturbance decoupled** when all of its impulse-response
+coefficients vanish, i.e. `H A ^ k E = 0` for every `k : ℕ`.
+
+This is the algebraic form of `T = 0` in
+Trentelman–Stoorvogel–Hautus, Section 4.2. Its equivalence with the vanishing of
+the analytic impulse response `t ↦ H e^{tA} E` over the reals in finite dimension
+is `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`; the equivalence with the
+transfer function `H (sI - A)⁻¹ E` and with input-independence of the output
+trajectory is a separate obligation, stated in the Deferred obligations section. -/
+def IsDisturbanceDecoupled (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) : Prop :=
+  ∀ k : ℕ, disturbanceResponse A E H k = 0
+
+/-- Unfolding lemma for `IsDisturbanceDecoupled`. -/
+theorem isDisturbanceDecoupled_iff (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔
+      ∀ k : ℕ, disturbanceResponse A E H k = 0 := Iff.rfl
+
+/-- Pointwise form of decoupling: `H A ^ k E d = 0` for every `k` and every
+disturbance value `d`. -/
+theorem isDisturbanceDecoupled_iff_forall (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
+    (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔ ∀ k : ℕ, ∀ d : W, H ((A ^ k) (E d)) = 0 := by
+  simp only [IsDisturbanceDecoupled, disturbanceResponse, LinearMap.ext_iff,
+    LinearMap.comp_apply, LinearMap.zero_apply]
+
+/-! ## Bridges to the reachable and unobservable subspaces -/
+
+/-- **Decoupling means the disturbance reachable subspace is unobservable.**
+The channel is disturbance decoupled if and only if the reachable subspace of the
+pair `(A, E)` is contained in the kernel of the output map `H`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 4.6, together with the extremal
+characterisation of the reachable subspace (Corollary 3.3). -/
+theorem isDisturbanceDecoupled_iff_reachableSubspace_le_ker
+    (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔ reachableSubspace A E ≤ ker H := by
+  rw [reachableSubspace, iSup_le_iff]
+  constructor
+  · intro h k
+    rw [range_le_ker_iff]
+    exact h k
+  · intro h k
+    change H.comp ((A ^ k).comp E) = 0
+    rw [← range_le_ker_iff]
+    exact h k
+
+/-- **Decoupling means the disturbance enters the unobservable subspace.** The
+channel is disturbance decoupled if and only if `im E` is contained in the
+unobservable subspace of the pair `(H, A)`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 4.6, via the extremal
+characterisation of the unobservable subspace. -/
+theorem isDisturbanceDecoupled_iff_range_le_unobservableSubspace
+    (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔ range E ≤ unobservableSubspace H A := by
+  rw [unobservableSubspace]
+  constructor
+  · intro h
+    refine le_iInf fun k => ?_
+    rw [range_le_ker_iff]
+    exact h k
+  · intro h k
+    have hk : range E ≤ ker (H.comp (A ^ k)) :=
+      le_trans h (iInf_le (fun k => ker (H.comp (A ^ k))) k)
+    rw [range_le_ker_iff] at hk
+    exact hk
+
+/-! ## The invariant-subspace characterisation (Theorem 4.6) -/
+
+/-- **Theorem 4.6.** The channel is disturbance decoupled if and only if there is
+an `A`-invariant subspace `V` sandwiched between the disturbance image and the
+output kernel, `im E ≤ V ≤ ker H`.
+
+The witness `V := reachableSubspace A E` is the least such subspace and the
+witness `V := unobservableSubspace H A` is the greatest; see
+`reachableSubspace_le_of_invariant_le_ker`. -/
+theorem isDisturbanceDecoupled_iff_exists_invariant
+    (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔
+      ∃ V : Submodule 𝕜 X, range E ≤ V ∧ V ≤ ker H ∧ Submodule.map A V ≤ V := by
+  constructor
+  · intro h
+    exact ⟨reachableSubspace A E, range_le_reachableSubspace A E,
+      (isDisturbanceDecoupled_iff_reachableSubspace_le_ker A E H).mp h,
+      map_reachableSubspace_le A E⟩
+  · rintro ⟨V, hE, hH, hA⟩
+    exact (isDisturbanceDecoupled_iff_reachableSubspace_le_ker A E H).mpr
+      (le_trans (reachableSubspace_le A E hE hA) hH)
+
+/-- Any `A`-invariant subspace `V` sandwiched between `im E` and `ker H`
+contains the reachable subspace `⟨A | im E⟩` and is contained in the
+unobservable subspace `⟨ker H | A⟩`. This is the sandwich that makes
+`reachableSubspace A E` the least and `unobservableSubspace H A` the greatest
+invariant witness of Theorem 4.6. -/
+theorem reachableSubspace_le_of_invariant_le_ker
+    {A : X →ₗ[𝕜] X} {E : W →ₗ[𝕜] X} {H : X →ₗ[𝕜] Z} {V : Submodule 𝕜 X}
+    (hE : range E ≤ V) (hH : V ≤ ker H) (hA : Submodule.map A V ≤ V) :
+    reachableSubspace A E ≤ V ∧ V ≤ unobservableSubspace H A :=
+  ⟨reachableSubspace_le A E hE hA, le_unobservableSubspace H A hH hA⟩
+
+/-- **The greatest invariant witness.** `im E` is contained in the unobservable
+subspace `⟨ker H | A⟩` exactly when the channel is decoupled; that subspace is
+`A`-invariant and contained in `ker H`. Since every `A`-invariant witness inside
+`ker H` is contained in it, this is the greatest admissible witness of
+Theorem 4.6. -/
+theorem isDisturbanceDecoupled_iff_range_le_unobservableSubspace'
+    (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsDisturbanceDecoupled A E H ↔
+      range E ≤ unobservableSubspace H A ∧
+        Submodule.map A (unobservableSubspace H A) ≤ unobservableSubspace H A ∧
+        unobservableSubspace H A ≤ ker H := by
+  rw [isDisturbanceDecoupled_iff_range_le_unobservableSubspace]
+  exact ⟨fun h => ⟨h, map_unobservableSubspace_le H A, unobservableSubspace_le_ker H A⟩,
+    fun h => h.1⟩
+
+/-- **A sufficient condition.** If the state map kills the disturbance image,
+`A (im E) = 0`, and the output map kills it as well, `im E ≤ ker H`, then the
+channel is decoupled. This is the simplest non-vacuous decoupling criterion and
+is used for the double-integrator example below. -/
+theorem isDisturbanceDecoupled_of_map_range_eq_bot
+    (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z)
+    (hAE : Submodule.map A (range E) = ⊥) (hHE : range E ≤ ker H) :
+    IsDisturbanceDecoupled A E H := by
+  intro k
+  ext d
+  cases k with
+  | zero => simpa using mem_ker.mp (hHE ⟨d, rfl⟩)
+  | succ n =>
+    have h0 : A (E d) = 0 := by
+      have : A (E d) ∈ Submodule.map A (range E) := ⟨E d, ⟨d, rfl⟩, rfl⟩
+      rwa [hAE] at this
+    have hk : (A ^ (n + 1)) (E d) = 0 := by
+      rw [pow_succ, Module.End.mul_eq_comp, LinearMap.comp_apply, h0, map_zero]
+    rw [disturbanceResponse_apply, hk, map_zero, LinearMap.zero_apply]
+
+/-! ## Coordinate invariance of the response
+
+The Markov parameters are the matrix entries of the channel in a chosen basis, so
+they are equivariant under a state-space equivalence `e : X' ≃ₗ[𝕜] X`, with
+`A' = e.symm ∘ A ∘ e`, `E' = e.symm ∘ E` and `H' = H ∘ e`. In particular
+decoupling is a coordinate-free property. -/
+
+section ChangeState
+
+variable {X' : Type*} [AddCommGroup X'] [Module 𝕜 X']
+
+/-- The Markov parameters are carried to themselves by a state-space
+equivalence. -/
+theorem disturbanceResponse_changeState (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
+    (H : X →ₗ[𝕜] Z) (e : X' ≃ₗ[𝕜] X) (k : ℕ) :
+    disturbanceResponse (e.symm.conj A) (e.symm.toLinearMap.comp E)
+        (H.comp e.toLinearMap) k =
+      disturbanceResponse A E H k := by
+  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) := fun k =>
+    (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm
+  ext w
+  simp only [disturbanceResponse, LinearMap.comp_apply, LinearEquiv.coe_toLinearMap]
+  rw [hpow k, LinearEquiv.conj_apply]
+  simp
+
+/-- **Decoupling is invariant under a state-space equivalence.** -/
+theorem isDisturbanceDecoupled_changeState_iff (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
+    (H : X →ₗ[𝕜] Z) (e : X' ≃ₗ[𝕜] X) :
+    IsDisturbanceDecoupled (e.symm.conj A) (e.symm.toLinearMap.comp E)
+        (H.comp e.toLinearMap) ↔
+      IsDisturbanceDecoupled A E H := by
+  simp only [IsDisturbanceDecoupled, disturbanceResponse_changeState]
+
+end ChangeState
+
+/-! ## Disturbance decoupling by static state feedback (Theorem 4.8) -/
+
+/-- The system with dynamics `A + B F` is the closed loop obtained from state
+feedback `u = F x + v`. This predicate records that **disturbance decoupling by
+static state feedback** (DDP, Definition 4.7) is achievable: there is a linear map
+`F : X →ₗ[𝕜] U` such that the closed-loop channel `(A + B F, E, H)` is
+decoupled. -/
+def IsStateFeedbackDisturbanceDecoupled (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) : Prop :=
+  ∃ F : X →ₗ[𝕜] U, IsDisturbanceDecoupled (A + B.comp F) E H
+
+/-- Unfolding lemma for `IsStateFeedbackDisturbanceDecoupled`. -/
+theorem isStateFeedbackDisturbanceDecoupled_iff (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsStateFeedbackDisturbanceDecoupled A B E H ↔
+      ∃ F : X →ₗ[𝕜] U, IsDisturbanceDecoupled (A + B.comp F) E H := Iff.rfl
+
+/-- **Theorem 4.8.** Disturbance decoupling by static state feedback is possible
+if and only if there is a *controlled invariant* subspace `V` with
+`im E ≤ V ≤ ker H`.
+
+Both directions are proved. The forward direction uses the feedback
+characterisation of controlled invariance in reverse: an `(A + B F)`-invariant
+subspace is `(A, B)`-invariant. The converse direction uses
+`exists_stateFeedback_of_isControlledInvariant` to make `V` invariant. -/
+theorem isStateFeedbackDisturbanceDecoupled_iff_exists_controlledInvariant
+    (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    IsStateFeedbackDisturbanceDecoupled A B E H ↔
+      ∃ V : Submodule 𝕜 X, range E ≤ V ∧ V ≤ ker H ∧ IsControlledInvariant A B V := by
+  constructor
+  · rintro ⟨F, hF⟩
+    obtain ⟨V, hE, hH, hA⟩ := (isDisturbanceDecoupled_iff_exists_invariant
+      (A + B.comp F) E H).mp hF
+    exact ⟨V, hE, hH, isControlledInvariant_of_exists_stateFeedback ⟨F, hA⟩⟩
+  · rintro ⟨V, hE, hH, hV⟩
+    obtain ⟨F, hF⟩ := exists_stateFeedback_of_isControlledInvariant hV
+    exact ⟨F, (isDisturbanceDecoupled_iff_exists_invariant (A + B.comp F) E H).mpr
+      ⟨V, hE, hH, hF⟩⟩
+
+/-- **Corollary 4.9.** In finite dimension, disturbance decoupling by static
+state feedback is possible if and only if `im E ≤ V*(ker H)`, where `V*(ker H)`
+is the largest controlled invariant subspace contained in `ker H`.
+
+The forward direction uses that every controlled invariant subspace inside
+`ker H` is contained in `V*(ker H)`; the converse takes `V := V*(ker H)`, which
+in finite dimension is controlled invariant and contained in `ker H`. -/
+theorem isStateFeedbackDisturbanceDecoupled_iff_range_le_controlledInvariantSubspace
+    [FiniteDimensional 𝕜 X] (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
+    (H : X →ₗ[𝕜] Z) :
+    IsStateFeedbackDisturbanceDecoupled A B E H ↔
+      range E ≤ controlledInvariantSubspace A B (ker H) := by
+  rw [isStateFeedbackDisturbanceDecoupled_iff_exists_controlledInvariant]
+  constructor
+  · rintro ⟨V, hE, hH, hV⟩
+    exact le_trans hE (le_controlledInvariantSubspace hH hV)
+  · intro h
+    exact ⟨controlledInvariantSubspace A B (ker H), h,
+      controlledInvariantSubspace_le_K A B (ker H),
+      isControlledInvariant_controlledInvariantSubspace A B (ker H)⟩
+
+/-! ## The conditioned-invariant bridge: `(C, A, B)`-pairs
+
+The measurement-feedback theory of Chapter 6 replaces the single controlled
+invariant subspace `V` by a pair `(S, V)` with `S ≤ V`, where `S` is conditioned
+invariant and `V` is controlled invariant. The existence of a pair sandwiched
+between `im E` and `ker H` is precisely the subspace inclusion
+`S*(im E) ≤ V*(ker H)`; this is the algebraic core of Corollary 6.7. -/
+
+/-- A **`(C, A, B)`-pair** of subspaces (Trentelman–Stoorvogel–Hautus,
+Definition 6.1): a pair `S ≤ V` where `S` is `(C, A)`-invariant (conditioned
+invariant) and `V` is `(A, B)`-invariant (controlled invariant). -/
+def IsCABPair (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (S V : Submodule 𝕜 X) : Prop :=
+  S ≤ V ∧ IsConditionedInvariant C A S ∧ IsControlledInvariant A B V
+
+/-- A `(C, A, B)`-pair **between `im E` and `ker H`**: a `(C, A, B)`-pair with
+`im E ≤ S` and `V ≤ ker H`. Such a pair is the subspace certificate used by the
+measurement-feedback disturbance-decoupling theory of Chapter 6. -/
+def IsCABPairBetween (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X) : Prop :=
+  IsCABPair C A B S V ∧ range E ≤ S ∧ V ≤ ker H
+
+/-- Unfolding lemma for `IsCABPair`. -/
+theorem isCABPair_iff (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (S V : Submodule 𝕜 X) :
+    IsCABPair C A B S V ↔
+      S ≤ V ∧ IsConditionedInvariant C A S ∧ IsControlledInvariant A B V := Iff.rfl
+
+/-- Unfolding lemma for `IsCABPairBetween`. -/
+theorem isCABPairBetween_iff (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X) :
+    IsCABPairBetween C A B E H S V ↔
+      IsCABPair C A B S V ∧ range E ≤ S ∧ V ≤ ker H := Iff.rfl
+
+/-- **The algebraic core of Corollary 6.7.** In finite dimension there exists a
+`(C, A, B)`-pair between `im E` and `ker H` if and only if the smallest
+conditioned invariant subspace containing `im E` is contained in the largest
+controlled invariant subspace contained in `ker H`:
+`S*(im E) ≤ V*(ker H)`.
+
+The forward direction is pure order theory on the subspace lattices: `S*(im E)`
+is the least conditioned invariant subspace containing `im E`, and `V*(ker H)`
+is the greatest controlled invariant subspace inside `ker H`. The converse takes
+`(S, V) := (S*(im E), V*(ker H))`, which is a `(C, A, B)`-pair in finite
+dimension by the accepted ISA/CISA termination results.
+
+The passage from such a pair to an actual dynamic measurement-feedback controller
+(Theorem 6.4) is a separate obligation and is not asserted by this theorem. -/
+theorem exists_isCABPairBetween_iff [FiniteDimensional 𝕜 X]
+    (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
+    (H : X →ₗ[𝕜] Z) :
+    (∃ S V : Submodule 𝕜 X, IsCABPairBetween C A B E H S V) ↔
+      conditionedInvariantSubspace C A (range E) ≤
+        controlledInvariantSubspace A B (ker H) := by
+  constructor
+  · rintro ⟨S, V, ⟨hSV, hS, hV⟩, hE, hH⟩
+    exact le_trans (conditionedInvariantSubspace_le hE hS)
+      (le_trans hSV (le_controlledInvariantSubspace hH hV))
+  · intro h
+    refine ⟨conditionedInvariantSubspace C A (range E),
+      controlledInvariantSubspace A B (ker H), ⟨h, ?_, ?_⟩,
+      le_conditionedInvariantSubspace C A (range E),
+      controlledInvariantSubspace_le_K A B (ker H)⟩
+    · exact isConditionedInvariant_conditionedInvariantSubspace C A (range E)
+    · exact isControlledInvariant_controlledInvariantSubspace A B (ker H)
+
+/-! ## Worked example: the double integrator
+
+For the double integrator `A (x, y) = (y, 0)` the position state is killed by
+the dynamics while the velocity state is not. A disturbance entering the position
+is invisible to a velocity readout (possible decoupling), whereas a disturbance
+entering the velocity is seen by a position readout (impossible decoupling). -/
+
+section DoubleIntegrator
+
+/-- The double-integrator state map `(x, y) ↦ (y, 0)` on `ℝ × ℝ`. -/
+def doubleIntegratorStateMap : (ℝ × ℝ) →ₗ[ℝ] (ℝ × ℝ) where
+  toFun p := (p.2, 0)
+  map_add' p q := by ext <;> simp
+  map_smul' c p := by ext <;> simp
+
+/-- Position disturbance map `d ↦ (d, 0)`. -/
+def doubleIntegratorPositionDisturbance : ℝ →ₗ[ℝ] (ℝ × ℝ) := LinearMap.inl ℝ ℝ ℝ
+
+/-- Velocity disturbance map `d ↦ (0, d)`. -/
+def doubleIntegratorVelocityDisturbance : ℝ →ₗ[ℝ] (ℝ × ℝ) := LinearMap.inr ℝ ℝ ℝ
+
+/-- Position readout `(x, y) ↦ x`. -/
+def doubleIntegratorPositionReadout : (ℝ × ℝ) →ₗ[ℝ] ℝ := LinearMap.fst ℝ ℝ ℝ
+
+/-- Velocity readout `(x, y) ↦ y`. -/
+def doubleIntegratorVelocityReadout : (ℝ × ℝ) →ₗ[ℝ] ℝ := LinearMap.snd ℝ ℝ ℝ
+
+@[simp]
+theorem doubleIntegratorStateMap_apply (p : ℝ × ℝ) :
+    doubleIntegratorStateMap p = (p.2, 0) := rfl
+
+@[simp]
+theorem doubleIntegratorPositionDisturbance_apply (d : ℝ) :
+    doubleIntegratorPositionDisturbance d = (d, 0) := rfl
+
+@[simp]
+theorem doubleIntegratorVelocityDisturbance_apply (d : ℝ) :
+    doubleIntegratorVelocityDisturbance d = (0, d) := rfl
+
+@[simp]
+theorem doubleIntegratorPositionReadout_apply (p : ℝ × ℝ) :
+    doubleIntegratorPositionReadout p = p.1 := rfl
+
+@[simp]
+theorem doubleIntegratorVelocityReadout_apply (p : ℝ × ℝ) :
+    doubleIntegratorVelocityReadout p = p.2 := rfl
+
+/-- A position disturbance is decoupled from the velocity readout: the
+dynamics kills the position disturbance before it can reach the velocity state. -/
+theorem isDisturbanceDecoupled_doubleIntegrator_position :
+    IsDisturbanceDecoupled doubleIntegratorStateMap doubleIntegratorPositionDisturbance
+      doubleIntegratorVelocityReadout := by
+  refine isDisturbanceDecoupled_of_map_range_eq_bot _ _ _ ?_ ?_
+  · rw [Submodule.eq_bot_iff]
+    rintro x ⟨q, hq, rfl⟩
+    obtain ⟨d, rfl⟩ := hq
+    simp [doubleIntegratorStateMap]
+  · intro x hx
+    obtain ⟨d, rfl⟩ := hx
+    simp
+
+/-- A velocity disturbance is **not** decoupled from the position readout: after
+one unit of time the position readout sees the disturbance. -/
+theorem not_isDisturbanceDecoupled_doubleIntegrator_velocity :
+    ¬ IsDisturbanceDecoupled doubleIntegratorStateMap doubleIntegratorVelocityDisturbance
+        doubleIntegratorPositionReadout := by
+  intro h
+  have h1 : doubleIntegratorPositionReadout
+      (doubleIntegratorStateMap (doubleIntegratorVelocityDisturbance 1)) = 0 :=
+    LinearMap.congr_fun (h 1) 1
+  norm_num at h1
+
+end DoubleIntegrator
+
+end LinearMap
+
+namespace LinearMap
+
+section Analytic
+
+variable {X W Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable [NormedAddCommGroup W] [NormedSpace ℝ W]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-! ## The analytic impulse-response bridge
+
+The Markov-parameter predicate `IsDisturbanceDecoupled` is the derivative-at-zero
+form of the impulse response of Trentelman–Stoorvogel–Hautus, equation (4.4).
+Over the reals and in finite dimension the two agree: the channel is decoupled
+exactly when the analytic impulse response `t ↦ H e^{tA} E` vanishes identically.
+This is proved by identifying the channel with the accepted LTI system API and
+using the unobservability bridges of `DynamicalSystems.Linear.Reachability`.
+
+The remaining analytic obligation is the *convolution* form: that vanishing of
+the impulse response is equivalent to input-independence of the forced output
+`t ↦ H (exp (tA) x₀ + ∫₀ᵗ exp ((t - s) A) E d(s) ds)` for every locally
+integrable disturbance `d`. -/
+
+/-- The LTI system `x' = A x + E d`, `z = H x` associated with a disturbance
+channel, with the disturbance map as its input map. This is a bookkeeping device
+that lets the accepted trajectory and unobservability API apply verbatim. -/
+noncomputable def disturbanceSystem (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearSystem ℝ X W Z where
+  A := A
+  B := E
+  C := H
+  D := 0
+
+@[simp]
+theorem disturbanceSystem_A (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    (disturbanceSystem A E H).A = A := rfl
+
+@[simp]
+theorem disturbanceSystem_B (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    (disturbanceSystem A E H).B = E := rfl
+
+@[simp]
+theorem disturbanceSystem_C (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    (disturbanceSystem A E H).C = H := rfl
+
+@[simp]
+theorem disturbanceSystem_D (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    (disturbanceSystem A E H).D = 0 := rfl
+
+variable [FiniteDimensional ℝ X]
+
+/-- **Impulse-response form of decoupling.** Over the reals and in finite
+dimension the algebraic predicate `IsDisturbanceDecoupled A E H` is equivalent
+to the identical vanishing of the analytic impulse response
+`t ↦ H (e^{tA} (E d))` for every disturbance direction `d`.
+
+This is the precise sense in which the Markov parameters are the derivatives at
+zero of the impulse response of Trentelman–Stoorvogel–Hautus, equation (4.4). -/
+theorem isDisturbanceDecoupled_iff_forall_expFlow
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    IsDisturbanceDecoupled A E H ↔
+      ∀ d : W, ∀ t : ℝ, H ((disturbanceSystem A E H).expFlow t (E d)) = 0 := by
+  rw [isDisturbanceDecoupled_iff_range_le_unobservableSubspace]
+  constructor
+  · intro h d t
+    have hz : E d ∈ unobservableSubspace H A := h ⟨d, rfl⟩
+    simpa [disturbanceSystem] using
+      LinearSystem.continuousC_expFlow_eq_zero_of_mem_unobservableSubspace
+        (disturbanceSystem A E H) hz t
+  · intro h
+    rw [range_le_iff_comap, eq_top_iff]
+    intro d _
+    change E d ∈ unobservableSubspace H A
+    refine LinearSystem.mem_unobservableSubspace_of_forall_continuousC_expFlow_eq_zero
+      (disturbanceSystem A E H) (T := 1) zero_lt_one ?_
+    intro t _
+    simpa [disturbanceSystem] using h d t
+
+end Analytic
+
+end LinearMap
