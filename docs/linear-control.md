@@ -28,8 +28,8 @@ Import `DynamicalSystems.Linear.Subspaces` for:
 
 The containment and invariance directions are separate reusable lemmas.
 Both subspaces are connected to Mathlib's `Module.End.invtSubmodule` lattice.
-These are algebraic results; equivalence to continuous-time steering and output
-distinguishability is a later, separately tracked obligation.
+These are algebraic results; strictly positive-horizon steering and output
+distinguishability equivalences are supplied by `Linear.Reachability`.
 
 Import `DynamicalSystems.Linear.Kalman` for finite Krylov descriptions using
 the first `Module.finrank 𝕜 X` powers, including zero-dimensional state spaces.
@@ -81,6 +81,14 @@ the ISA/CISA subspace algorithms. Finite termination and largest/smallest univer
 properties are proved. The book's trajectory/observer characterizations and sharp
 dimension bounds on the stationary index are not yet asserted.
 
+Import `DynamicalSystems.Linear.Reachability` for finite-horizon reachable sets,
+output indistinguishability, and their positive-horizon equivalences with the
+algebraic reachable and unobservable subspaces. Import
+`DynamicalSystems.Linear.Gramian` for real inner-product controllability and
+observability Gramians, energy identities, nonnegativity, reachable-set equality,
+and positive-definiteness criteria. These results require strictly positive
+horizons; sharper dimension and matrix basis-change refinements remain future work.
+
 The generated Verso manual includes a **Linear systems** chapter with these
 conventions and linked theorem statements. Run `lake exe generate-docs` to build it.
 
@@ -96,10 +104,9 @@ conventions and linked theorem statements. Run `lake exe generate-docs` to build
 
 ## Roadmap
 
-Next are analytic and synthesis examples, trajectory
-equivalences, Gramians, stabilization and observers, and geometric disturbance
-decoupling. Each addition requires source/statement review, actual Lean proofs,
-and the standard-axiom audit. Missing results are not available assumptions.
+Next are pole placement, stabilization and observers, disturbance decoupling,
+and release examples. Each addition requires source/statement review, actual Lean
+proofs, and the standard-axiom audit. Missing results are not available assumptions.
 
 The surrounding research workspace contains the restartable Pi campaign at
 `automation/linear_control/`; the formal library does not depend on that harness

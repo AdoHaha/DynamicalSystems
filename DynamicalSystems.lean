@@ -18,6 +18,8 @@ import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Linear.Trajectory
 import DynamicalSystems.Linear.ControlledInvariant
 import DynamicalSystems.Linear.ConditionedInvariant
+import DynamicalSystems.Linear.Reachability
+import DynamicalSystems.Linear.Gramian
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

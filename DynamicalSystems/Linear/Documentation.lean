@@ -149,6 +149,22 @@ conditioned-invariant subspace containing a prescribed subspace.
 These algebraic results do not yet establish the corresponding trajectory/observer
 characterizations or the book's sharp dimension bounds for the stationary index.
 
+# Reachability and Gramians
+
+For a strictly positive finite horizon, locally integrable inputs reach exactly the
+algebraic reachable subspace. Two initial states are indistinguishable for every
+admissible input exactly when their difference lies in the algebraic unobservable
+subspace. On real inner-product spaces, the controllability and observability
+Gramians have the expected energy identities and are positive definite exactly for
+controllable and observable pairs.
+
+{docstring LinearSystem.reachableSetAt_eq_reachableSubspace}
+{docstring LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace}
+{docstring LinearSystem.inner_controllabilityGramian}
+{docstring LinearSystem.inner_observabilityGramian}
+{docstring LinearSystem.controllabilityGramian_posDef_iff_isControllable}
+{docstring LinearSystem.observabilityGramian_posDef_iff_isObservable}
+
 # Sources and scope
 
 The organizing reference is Trentelman, Stoorvogel, and Hautus, *Control Theory for Linear Systems*,
@@ -156,6 +172,5 @@ especially the structural material of Chapter 3. Proofs reuse mathlib's linear a
 Cayley–Hamilton infrastructure. The Hautus module records its additional proof-development
 reference to Gokhale and Bullo's *LeanForControl*.
 
-Finite-horizon steering and output-distinguishability equivalences, Gramian criteria, pole
-placement, and disturbance-decoupling synthesis are not yet asserted. Those require their own
-checked bridges and are tracked separately from the results above.
+Pole placement, stabilization/observers, and disturbance-decoupling synthesis are not yet
+asserted. Those require their own checked bridges and are tracked separately from the results above.
