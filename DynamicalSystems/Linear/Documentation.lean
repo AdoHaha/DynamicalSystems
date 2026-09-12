@@ -196,5 +196,8 @@ especially the structural material of Chapter 3. Proofs reuse mathlib's linear a
 Cayley–Hamilton infrastructure. The Hautus module records its additional proof-development
 reference to Gokhale and Bullo's *LeanForControl*.
 
-Stabilization/observers and disturbance-decoupling synthesis are not yet asserted. Those
-require their own checked bridges and are tracked separately from the results above.
+The stabilization/observer foundations now include explicit-target stable/attractive flows,
+complex-spectrum obstruction converses, block separation characteristic-polynomial results,
+and observable observer corollaries. The general Hurwitz-to-decay theorem and converse
+sufficiency halves remain explicit follow-up obligations; disturbance-decoupling synthesis
+still requires its own checked bridges.
