@@ -3,6 +3,8 @@ import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Linear.KalmanDecomposition
 import DynamicalSystems.Linear.Trajectory
 import DynamicalSystems.Linear.ConditionedInvariant
+import DynamicalSystems.Linear.Reachability
+import DynamicalSystems.Linear.Gramian
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
