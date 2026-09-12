@@ -1,6 +1,7 @@
 import VersoManual
 import DynamicalSystems.Basic.Documentation
 import DynamicalSystems.InputOutput.Documentation
+import DynamicalSystems.Linear.Documentation
 import DynamicalSystems.Stability.Documentation
 import DynamicalSystems.Mathlib.Analysis.ODE.Documentation
 
@@ -36,3 +37,4 @@ Lean {leanVersion}[].
 {include 1 DynamicalSystems.Basic.Documentation}
 {include 1 DynamicalSystems.Stability.Documentation}
 {include 1 DynamicalSystems.InputOutput.Documentation}
+{include 1 DynamicalSystems.Linear.Documentation}
