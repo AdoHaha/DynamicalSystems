@@ -502,140 +502,505 @@ theorem eq_top_of_isControllable_of_map_le (A : X →ₗ[ℝ] X) (B : U →ₗ[�
 
 end Krylov
 
-/-! ## Remaining obligation: sufficiency (construction of the feedback)
+/-! ## Polynomial auxiliary for the determinant-free SISO construction
 
-The forward direction of Theorem 3.29 is **not** proved in this file. Its exact
-statement, to be added here as a theorem, is
+The sufficiency direction constructs the feedback through a reversed-polynomial
+auxiliary. Let `p` be the monic target of degree `n` and `q = A.charpoly`. Write
+`p^*` and `q^*` for the coefficient reversals (Mathlib's `Polynomial.reverse`),
+set `ptilde = p^* - 1` (so `ptilde` is divisible by `X`) and
 
-```
-theorem exists_feedback_charpoly_of_isControllable
-    [FiniteDimensional ℝ X] (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
-    (h : IsControllable A B) (p : ℝ[X]) (hp : p.Monic)
+`D = q^* * ∑_{k<n} (-ptilde)^k`.
+
+Because `p^* = 1 + ptilde` and `(1 + x) ∑_{k<n} (-x)^k = 1 - (-x)^n`, the
+polynomial `p^* * D - q^*` is divisible by `X^n`. Hence the coefficients of
+`p^* * D` below degree `n` are exactly those of `q^*`; this is the only
+polynomial identity needed for the triangular recurrence of the construction
+(`poleD_congr`). The auxiliary `D` is used through its low coefficients
+`D.coeff k`, `k < n`, which are the `c_k` of the documented recurrence. -/
+
+section PolynomialAux
+
+/-- The finite geometric identity `(1 + x) ∑_{k<n} (-x)^k = 1 - (-x)^n`, valid
+in any commutative ring. -/
+theorem one_add_mul_sum_neg_pow (x : ℝ[X]) (n : ℕ) :
+    (1 + x) * (∑ k ∈ Finset.range n, (-x) ^ k) = 1 - (-x) ^ n := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+      rw [Finset.sum_range_succ, mul_add, ih, pow_succ]
+      ring
+
+/-- The reversed auxiliary polynomial `D = q^* ∑_{k<n} (-(p^* - 1))^k` used by
+the constructive SISO pole-placement proof. Its low coefficients `D.coeff k`,
+`k < n`, play the role of the recurrence constants `c_k` of the source proof. -/
+noncomputable def poleD (n : ℕ) (p q : ℝ[X]) : ℝ[X] :=
+  q.reverse * ∑ k ∈ Finset.range n, (-(p.reverse - 1)) ^ k
+
+/-- Constant coefficient of a power of a polynomial. -/
+theorem coeff_zero_pow (x : ℝ[X]) (k : ℕ) : (x ^ k).coeff 0 = (x.coeff 0) ^ k := by
+  rw [coeff_zero_eq_eval_zero, eval_pow, ← coeff_zero_eq_eval_zero]
+
+/-- The auxiliary polynomial has constant coefficient `1` when `p` and `q` are
+monic and `n > 0`. This is the fact that the leading coefficient `D.coeff 0` of
+each triangular polynomial `G_i` is `1`, so that the `G_i` are monic. -/
+theorem coeff_zero_poleD {n : ℕ} (hn : 0 < n) {p q : ℝ[X]} (hp : p.Monic)
+    (hq : q.Monic) : (poleD n p q).coeff 0 = 1 := by
+  have hpt : (p.reverse - 1).coeff 0 = 0 := by
+    rw [coeff_sub, coeff_one, coeff_zero_reverse, hp.leadingCoeff]
+    simp
+  have hS : (∑ k ∈ Finset.range n, (-(p.reverse - 1)) ^ k).coeff 0 = 1 := by
+    rw [← lcoeff_apply, map_sum]
+    simp only [lcoeff_apply]
+    rw [Finset.sum_eq_single 0]
+    · simp
+    · intro k _ hk0
+      rw [coeff_zero_pow, coeff_neg, hpt, neg_zero, zero_pow hk0]
+    · intro h0
+      exact absurd (Finset.mem_range.mpr hn) h0
+  rw [poleD, coeff_mul, Finset.sum_eq_single (0, 0)]
+  · simp only [coeff_zero_reverse, hq.leadingCoeff, hS, mul_one]
+  · intro x hx hx0
+    have hx' : x = (0, 0) := by
+      rw [Finset.mem_antidiagonal] at hx
+      ext <;> omega
+    exact absurd hx' hx0
+  · intro h0
+    exact absurd (Finset.mem_antidiagonal.mpr (by norm_num)) h0
+
+/-- **The reversed congruence.** If `p` and `q` are monic of degree `n` and
+`n > 0`, then `p^* * D` and `q^*` agree in every degree below `n`. This is the
+polynomial identity that drives the forward recurrence `c_s` of the
+construction: comparing the degree-`(n-m)` coefficient turns the recurrence into
+the equality `H.coeff m = q.coeff m` for `1 ≤ m ≤ n-1`. -/
+theorem poleD_congr {n : ℕ} {p q : ℝ[X]} (hp : p.Monic) :
+    ∀ t < n, (p.reverse * poleD n p q).coeff t = q.reverse.coeff t := by
+  intro t ht
+  set ptilde : ℝ[X] := p.reverse - 1 with hpt
+  set S : ℝ[X] := ∑ k ∈ Finset.range n, (-ptilde) ^ k with hSdef
+  have hgeom : p.reverse * S = 1 - (-ptilde) ^ n := by
+    have h1 : p.reverse = 1 + ptilde := by rw [hpt]; ring
+    rw [h1, one_add_mul_sum_neg_pow]
+  have hpt0 : ptilde.coeff 0 = 0 := by
+    rw [hpt, coeff_sub, coeff_one, coeff_zero_reverse, hp.leadingCoeff]
+    simp
+  have hX : X ∣ ptilde := X_dvd_iff.mpr hpt0
+  have hXnp : X ^ n ∣ ptilde ^ n := pow_dvd_pow_of_dvd hX n
+  have hXnm : X ^ n ∣ (-ptilde) ^ n := by
+    rw [neg_pow]
+    exact dvd_mul_of_dvd_right hXnp ((-1 : ℝ[X]) ^ n)
+  have hD : poleD n p q = q.reverse * S := by rw [poleD, hSdef]
+  have hmain : p.reverse * poleD n p q = q.reverse * (p.reverse * S) := by
+    rw [hD]; ring
+  have hdiff : p.reverse * poleD n p q - q.reverse = -(q.reverse * (-ptilde) ^ n) := by
+    rw [hmain, hgeom]; ring
+  have hdiv : X ^ n ∣ p.reverse * poleD n p q - q.reverse := by
+    rw [hdiff]
+    exact dvd_neg.mpr (dvd_mul_of_dvd_right hXnm q.reverse)
+  have h := (X_pow_dvd_iff.mp hdiv) t ht
+  rw [coeff_sub, sub_eq_zero] at h
+  exact h
+
+/-- The `i`-th triangular polynomial `G_i` of the SISO construction. It is the
+reversal of the truncation of the auxiliary `D` to degree `i`, i.e.
+`G_i = ∑_{k≤i} (D.coeff k) X^{i-k}`. It is monic of degree `i`, and the low
+coefficients `D.coeff k` are exactly the recurrence constants. -/
+noncomputable def poleG (n : ℕ) (p q : ℝ[X]) (i : ℕ) : ℝ[X] :=
+  ∑ k ∈ Finset.range (i+1), C ((poleD n p q).coeff k) * Polynomial.X ^ (i - k)
+
+/-- The defining recurrence of the triangular polynomials:
+`G_{i+1} = X G_i + c_i` with `c_i = D.coeff (i+1)`. This is the relation that
+makes `y_i = G_i(A) (b 1)` a controlled chain for the feedback to be built. -/
+theorem poleG_succ (n : ℕ) (p q : ℝ[X]) (i : ℕ) :
+    poleG n p q (i+1) = Polynomial.X * poleG n p q i + C ((poleD n p q).coeff (i+1)) := by
+  rw [poleG, poleG, Finset.sum_range_succ, Finset.mul_sum]
+  congr 1
+  · apply Finset.sum_congr rfl
+    intro k hk
+    rw [Finset.mem_range] at hk
+    rw [show i + 1 - k = (i - k) + 1 by omega, pow_succ]
+    ring
+  · simp
+
+/-- Coefficients of the triangular polynomials. For `m ≤ i` the coefficient of
+`X^m` is `D.coeff (i - m)`, and for `m > i` it vanishes. In particular
+`G_i.coeff i = D.coeff 0 = 1` and `G_i` has degree `i`. -/
+theorem poleG_coeff (n : ℕ) (p q : ℝ[X]) (i m : ℕ) :
+    (poleG n p q i).coeff m =
+      if m ≤ i then (poleD n p q).coeff (i - m) else 0 := by
+  rw [poleG, ← lcoeff_apply, map_sum]
+  simp only [lcoeff_apply, coeff_C_mul, coeff_X_pow]
+  by_cases hm : m ≤ i
+  · rw [if_pos hm]
+    rw [Finset.sum_eq_single (i - m)]
+    · rw [if_pos (Nat.sub_sub_self hm).symm, mul_one]
+    · intro k hk hk0
+      have hne : m ≠ i - k := by
+        intro h
+        apply hk0
+        have hk' : k ≤ i := by rw [Finset.mem_range] at hk; omega
+        omega
+      rw [if_neg hne, mul_zero]
+    · intro h0
+      exact absurd (Finset.mem_range.mpr (by omega)) h0
+  · rw [if_neg hm]
+    apply Finset.sum_eq_zero
+    intro k hk
+    rw [Finset.mem_range] at hk
+    have hne : m ≠ i - k := by omega
+    rw [if_neg hne, mul_zero]
+
+/-- The polynomial `H = X G_{n-1} + ∑_{j<n} p_j G_j` whose companion form is
+realised by the constructed feedback. Its coefficients in degrees `1, …, n`
+agree with those of `q = A.charpoly`, so `H - q` is a constant (and `H` is monic
+of degree `n`). -/
+noncomputable def poleH (n : ℕ) (p q : ℝ[X]) : ℝ[X] :=
+  Polynomial.X * poleG n p q (n-1) +
+    ∑ j ∈ Finset.range n, C (p.coeff j) * poleG n p q j
+
+/-- Coefficient of `X * G_{n-1}` in positive degree. -/
+theorem coeff_X_mul_poleG (n : ℕ) (p q : ℝ[X]) {m : ℕ} (hm : 1 ≤ m) :
+    (Polynomial.X * poleG n p q (n-1)).coeff m = (poleG n p q (n-1)).coeff (m-1) := by
+  rw [coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ
+    (fun a b => Polynomial.X.coeff a * (poleG n p q (n-1)).coeff b) m]
+  rw [Finset.sum_eq_single 1]
+  · simp
+  · intro k _ hk1
+    rw [coeff_X, if_neg (Ne.symm hk1), zero_mul]
+  · intro h1
+    exact absurd (Finset.mem_range.mpr (by omega)) h1
+
+/-- Coefficient of the `∑ p_j G_j` part of `H`. -/
+theorem coeff_sum_C_poleG (n : ℕ) (p q : ℝ[X]) (m : ℕ) :
+    (∑ j ∈ Finset.range n, C (p.coeff j) * poleG n p q j).coeff m =
+      ∑ j ∈ Finset.range n,
+        p.coeff j * (if m ≤ j then (poleD n p q).coeff (j - m) else 0) := by
+  rw [← lcoeff_apply, map_sum]
+  apply Finset.sum_congr rfl
+  intro j _
+  rw [lcoeff_apply, coeff_C_mul, poleG_coeff]
+
+/-- **The key coefficient identity of the SISO construction.** For `1 ≤ m ≤ n`,
+the coefficient of `X^m` in `H` equals the coefficient of the reversed-product
+`p^* D` in degree `n - m`. Since `p^* D` agrees with `q^*` below degree `n`
+(`poleD_congr`), this gives `H.coeff m = q.coeff m` in positive degrees. -/
+theorem poleH_coeff_eq (n : ℕ) (p q : ℝ[X]) (hp : p.Monic) (hpn : p.natDegree = n)
+    {m : ℕ} (hm1 : 1 ≤ m) (hmn : m ≤ n) :
+    (poleH n p q).coeff m = (p.reverse * poleD n p q).coeff (n - m) := by
+  rw [poleH, coeff_add, coeff_X_mul_poleG n p q hm1, coeff_sum_C_poleG]
+  have hG : (poleG n p q (n-1)).coeff (m-1) = (poleD n p q).coeff (n-m) := by
+    rw [poleG_coeff, if_pos (by omega : m - 1 ≤ n - 1)]
+    congr 1
+    omega
+  rw [hG]
+  have hL : ∑ j ∈ Finset.range n,
+        p.coeff j * (if m ≤ j then (poleD n p q).coeff (j - m) else 0)
+      = ∑ i ∈ Finset.range (n - m), p.coeff (m + i) * (poleD n p q).coeff i := by
+    nth_rewrite 1 [show n = m + (n - m) by omega]
+    rw [Finset.sum_range_add]
+    have hzero : ∑ j ∈ Finset.range m,
+        p.coeff j * (if m ≤ j then (poleD n p q).coeff (j - m) else 0) = 0 := by
+      apply Finset.sum_eq_zero
+      intro j hj
+      rw [Finset.mem_range] at hj
+      rw [if_neg (by omega), mul_zero]
+    rw [hzero, zero_add]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [Finset.mem_range] at hi
+    rw [if_pos (by omega : m ≤ m + i)]
+    rw [show (m + i) - m = i by omega]
+  rw [hL]
+  have hR : (p.reverse * poleD n p q).coeff (n - m)
+      = ∑ i ∈ Finset.range (n - m + 1), p.coeff (m + i) * (poleD n p q).coeff i := by
+    rw [coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ
+      (fun a b => p.reverse.coeff a * (poleD n p q).coeff b) (n - m)]
+    rw [← Finset.sum_range_reflect
+      (fun k => p.reverse.coeff k * (poleD n p q).coeff ((n - m) - k)) (n - m + 1)]
+    apply Finset.sum_congr rfl
+    intro k hk
+    rw [Finset.mem_range] at hk
+    rw [show n - m + 1 - 1 - k = n - m - k by omega]
+    rw [coeff_reverse, hpn, revAt_le (by omega : n - m - k ≤ n)]
+    rw [show n - (n - m - k) = m + k by omega,
+      show (n - m) - (n - m - k) = k by omega]
+  rw [hR, Finset.sum_range_succ]
+  rw [show p.coeff (m + (n - m)) = 1 by
+    rw [show m + (n - m) = n by omega, ← hpn]
+    exact hp.coeff_natDegree]
+  ring
+
+/-- `H` vanishes above degree `n` when `n > 0` (each `G_j` has degree `j ≤ n-1`
+and `X G_{n-1}` has degree `n`). -/
+theorem poleH_coeff_gt (n : ℕ) (p q : ℝ[X]) {m : ℕ} (hn : 0 < n) (hm : n < m) :
+    (poleH n p q).coeff m = 0 := by
+  rw [poleH, coeff_add, coeff_X_mul_poleG n p q (by omega : 1 ≤ m), coeff_sum_C_poleG]
+  have hG : (poleG n p q (n-1)).coeff (m-1) = 0 := by
+    rw [poleG_coeff, if_neg (by omega : ¬ (m - 1 ≤ n - 1))]
+  rw [hG, zero_add]
+  apply Finset.sum_eq_zero
+  intro j hj
+  rw [Finset.mem_range] at hj
+  rw [if_neg (not_le.mpr (by omega : j < m)), mul_zero]
+
+/-- `H` differs from `q = A.charpoly` by a constant. This is the polynomial
+content of the final companion relation: choosing the last feedback value as the
+negated constant makes `H` equal to `q`, whose evaluation at `b` vanishes by
+Cayley–Hamilton. -/
+theorem poleH_eq (n : ℕ) (p q : ℝ[X]) (hp : p.Monic) (hpn : p.natDegree = n)
+    (hqn : q.natDegree = n) (hn : 0 < n) :
+    poleH n p q = q + C ((poleH n p q).coeff 0 - q.coeff 0) := by
+  ext m
+  by_cases hm : m = 0
+  · subst hm
+    rw [coeff_add, coeff_C, if_pos rfl]
+    ring
+  · have hm1 : 1 ≤ m := Nat.one_le_iff_ne_zero.mpr hm
+    rw [coeff_add, coeff_C, if_neg hm, add_zero]
+    by_cases hmn : m ≤ n
+    · have h1 : (poleH n p q).coeff m = (p.reverse * poleD n p q).coeff (n-m) :=
+        poleH_coeff_eq n p q hp hpn hm1 hmn
+      have h2 : (p.reverse * poleD n p q).coeff (n-m) = q.reverse.coeff (n-m) :=
+        poleD_congr hp (n-m) (by omega)
+      have h3 : q.reverse.coeff (n-m) = q.coeff m := by
+        rw [coeff_reverse, hqn, revAt_le (by omega : n - m ≤ n)]
+        congr 1
+        omega
+      rw [h1, h2, h3]
+    · have h1 : (poleH n p q).coeff m = 0 := poleH_coeff_gt n p q hn (by omega)
+      have h2 : q.coeff m = 0 := coeff_eq_zero_of_natDegree_lt (by rw [hqn]; omega)
+      rw [h1, h2]
+
+/-- Each triangular polynomial `G_i` has degree at most `i`. -/
+theorem poleG_natDegree_le (n : ℕ) (p q : ℝ[X]) (i : ℕ) :
+    (poleG n p q i).natDegree ≤ i := by
+  rw [natDegree_le_iff_coeff_eq_zero]
+  intro N hN
+  rw [poleG_coeff, if_neg (by omega : ¬ (N ≤ i))]
+
+/-- **The triangular family `G_i(A) (b 1)` is linearly independent.** This is
+the key structural input for the companion basis: since each `G_i` is monic of
+degree `i`, the vectors `G_i(A) (b 1)` are triangular over the Krylov basis
+`b, A b, …, A^{n-1} b`, whose independence is
+`linearIndependent_krylov_of_isControllable_single`. -/
+theorem linearIndependent_poleG [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (b : ℝ →ₗ[ℝ] X)
+    (h : IsControllable A b) (n : ℕ) (hnpos : 0 < n) (hnrank : n = Module.finrank ℝ X)
+    (p q : ℝ[X]) (hD0 : (poleD n p q).coeff 0 = 1) :
+    LinearIndependent ℝ (fun i : Fin n => aeval A (poleG n p q i) (b 1)) := by
+  subst hnrank
+  rw [Fintype.linearIndependent_iff]
+  intro c hc
+  by_contra hne
+  push_neg at hne
+  obtain ⟨i1, hi1⟩ := hne
+  let s : Finset (Fin (Module.finrank ℝ X)) := Finset.univ.filter (fun i => c i ≠ 0)
+  have hsne : s.Nonempty := ⟨i1, by simp [s, hi1]⟩
+  let i0 : Fin (Module.finrank ℝ X) := s.max' hsne
+  have hi0 : c i0 ≠ 0 := by
+    have := Finset.max'_mem s hsne
+    simpa [s] using this
+  have hmax : ∀ j : Fin (Module.finrank ℝ X), c j ≠ 0 → j ≤ i0 := by
+    intro j hj
+    exact Finset.le_max' s j (by simp [s, hj])
+  let R : ℝ[X] := ∑ i : Fin (Module.finrank ℝ X), C (c i) * poleG (Module.finrank ℝ X) p q i
+  have hRval : aeval A R (b 1) = 0 := by
+    have h1 : aeval A R =
+        ∑ i : Fin (Module.finrank ℝ X), c i • aeval A (poleG (Module.finrank ℝ X) p q i) := by
+      dsimp only [R]
+      rw [map_sum]
+      apply Finset.sum_congr rfl
+      intro i _
+      rw [map_mul, aeval_C]
+      simp [Algebra.algebraMap_eq_smul_one, smul_mul_assoc]
+    rw [h1]
+    simp only [LinearMap.sum_apply, LinearMap.smul_apply]
+    exact hc
+  have hRdeg : R.natDegree < Module.finrank ℝ X := by
+    have hle : R.natDegree ≤ Module.finrank ℝ X - 1 := by
+      dsimp only [R]
+      refine le_trans (natDegree_sum_le _ _) ?_
+      rw [Finset.fold_max_le]
+      refine ⟨by omega, ?_⟩
+      intro i _
+      exact le_trans (natDegree_C_mul_le _ _)
+        (le_trans (poleG_natDegree_le (Module.finrank ℝ X) p q i) (by omega))
+    omega
+  have hcoeff : R.coeff i0 = 0 := by
+    have hk := linearIndependent_krylov_of_isControllable_single A b h
+    rw [Fintype.linearIndependent_iff] at hk
+    apply hk (fun k : Fin (Module.finrank ℝ X) => R.coeff k)
+    rw [aeval_eq_sum_range' hRdeg A, LinearMap.sum_apply] at hRval
+    simp only [LinearMap.smul_apply] at hRval
+    rw [Fin.sum_univ_eq_sum_range (fun k => R.coeff k • (A ^ k) (b 1))]
+    exact hRval
+  have hRcoeff : R.coeff i0 = c i0 := by
+    dsimp only [R]
+    rw [← lcoeff_apply, map_sum]
+    simp only [lcoeff_apply, coeff_C_mul]
+    rw [Finset.sum_eq_single i0]
+    · rw [poleG_coeff, if_pos le_rfl, Nat.sub_self, hD0, mul_one]
+    · intro j _ hj
+      by_cases hlt : i0 < j
+      · have hcj : c j = 0 := by
+          by_contra hcj
+          exact absurd (hmax j hcj) (not_le.mpr hlt)
+        rw [hcj, zero_mul]
+      · have hji : j < i0 := by omega
+        have hif : ¬ (↑i0 ≤ ↑j) := by omega
+        have hzero : (poleG (Module.finrank ℝ X) p q j).coeff i0 = 0 := by
+          rw [poleG_coeff]
+          exact if_neg hif
+        rw [hzero, mul_zero]
+    · intro h
+      exact absurd (Finset.mem_univ i0) h
+  rw [hRcoeff] at hcoeff
+  exact hi0 hcoeff
+
+end PolynomialAux
+
+/-! ## SISO sufficiency: constructive pole placement
+
+The constructive direction of Trentelman–Stoorvogel–Hautus Theorem 3.29 for a
+single input map `b : ℝ →ₗ[ℝ] X` and a controllable pair `(A, b)`: every monic
+real polynomial `p` of degree `finrank ℝ X` is the characteristic polynomial of
+`A + b.comp f` for a suitable real feedback `f : X →ₗ[ℝ] ℝ`.
+
+The proof builds the triangular Krylov family `G_i(A) (b 1)` from the
+reversed-polynomial auxiliary `poleD`, uses it as a basis, chooses the feedback
+on that basis from the recurrence constants and the constant shift `κ` of
+`poleH` versus `A.charpoly`, and concludes with the determinant-free companion
+characteristic-polynomial computation `charpoly_eq_of_companion`. No
+determinant expansion, complexification, or dimension-zero edge case is left
+implicit.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 3.29 and its proof, PDF
+pages 73–74 / printed 59–60. -/
+
+section Sufficiency
+
+theorem exists_feedback_charpoly_single [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (b : ℝ →ₗ[ℝ] X)
+    (h : IsControllable A b) (p : ℝ[X]) (hp : p.Monic)
     (hpdeg : p.natDegree = Module.finrank ℝ X) :
-    ∃ F : X →ₗ[ℝ] U, (A + B.comp F).charpoly = p
-```
+    ∃ f : X →ₗ[ℝ] ℝ, (A + b.comp f).charpoly = p := by
+  classical
+  by_cases hzero : Module.finrank ℝ X = 0
+  · exact exists_feedback_charpoly_of_finrank_zero A b hzero p hp hpdeg
+  · have hnpos : 0 < Module.finrank ℝ X := Nat.pos_of_ne_zero hzero
+    set n : ℕ := p.natDegree with hn
+    have hnrank : n = Module.finrank ℝ X := by rw [hn]; exact hpdeg
+    have hpn : p.natDegree = n := hn.symm
+    have hnpos' : 0 < n := by rw [hnrank]; exact hnpos
+    set q : ℝ[X] := A.charpoly with hq
+    have hqmonic : q.Monic := by rw [hq]; exact A.charpoly_monic
+    have hqdeg : q.natDegree = n := by
+      rw [hq, A.charpoly_natDegree, ← hnrank]
+    have hD0 : (poleD n p q).coeff 0 = 1 := coeff_zero_poleD hnpos' hp hqmonic
+    have hLI : LinearIndependent ℝ (fun i : Fin n => aeval A (poleG n p q i) (b 1)) :=
+      linearIndependent_poleG A b h n hnpos' hnrank p q hD0
+    haveI : Nonempty (Fin n) := ⟨⟨0, hnpos'⟩⟩
+    let v : Basis (Fin n) ℝ X :=
+      basisOfLinearIndependentOfCardEqFinrank hLI (by rw [Fintype.card_fin]; exact hnrank)
+    have hv : ∀ i : Fin n, v i = aeval A (poleG n p q i) (b 1) := by
+      intro i
+      change (basisOfLinearIndependentOfCardEqFinrank hLI _) i = _
+      rw [coe_basisOfLinearIndependentOfCardEqFinrank]
+    let κ : ℝ := (poleH n p q).coeff 0 - q.coeff 0
+    have hκ : poleH n p q = q + C κ := by
+      rw [poleH_eq n p q hp hpn hqdeg hnpos']
+    let f : X →ₗ[ℝ] ℝ := v.constr ℝ (fun i : Fin n =>
+      if (i : ℕ) + 1 < n then (poleD n p q).coeff ((i : ℕ) + 1) else -κ)
+    have hC : ∀ (c : ℝ) (x : X), (aeval A (C c)) x = c • x := by
+      intro c x
+      rw [aeval_C]
+      simp [Algebra.algebraMap_eq_smul_one]
+    have hb : ∀ r : ℝ, b r = r • (b 1) := fun r => by
+      simpa using (b.map_smul r (1 : ℝ))
+    have hlin : ∀ (i : Fin n) (c : ℝ),
+        A (v i) + c • (b 1) =
+          aeval A (Polynomial.X * poleG n p q (i : ℕ) + C c) (b 1) := by
+      intro i c
+      rw [map_add, LinearMap.add_apply, hC, map_mul, aeval_X, Module.End.mul_eq_comp,
+        LinearMap.comp_apply, ← hv i]
+    have hsum : (∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ))
+        = ∑ j ∈ Finset.range n, C (p.coeff j) * poleG n p q j := by
+      rw [Fin.sum_univ_eq_sum_range (fun j => C (p.coeff j) * poleG n p q j)]
+    have hsum_v : aeval A (∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ)) (b 1)
+        = ∑ j : Fin n, p.coeff (j : ℕ) • v j := by
+      rw [map_sum, LinearMap.sum_apply]
+      apply Finset.sum_congr rfl
+      intro j _
+      rw [map_mul, aeval_C, Module.End.mul_eq_comp, LinearMap.comp_apply, ← hv j]
+      simp [Algebra.algebraMap_eq_smul_one]
+    have hrel : ∀ i : Fin n, (A + b.comp f) (v i) =
+        if h : (i : ℕ) + 1 < n then v ⟨(i : ℕ) + 1, h⟩
+          else -∑ j : Fin n, p.coeff (j : ℕ) • v j := by
+      intro i
+      rw [LinearMap.add_apply, LinearMap.comp_apply]
+      have hfv : f (v i) =
+          if (i : ℕ) + 1 < n then (poleD n p q).coeff ((i : ℕ) + 1) else -κ := by
+        simp only [f, Basis.constr_basis]
+      rw [hfv, hb]
+      split_ifs with hlt
+      · rw [hlin]
+        rw [← poleG_succ n p q (i : ℕ)]
+        rw [← hv ⟨(i : ℕ) + 1, hlt⟩]
+      · have hi : (i : ℕ) = n - 1 := by omega
+        rw [hlin]
+        have hEq : Polynomial.X * poleG n p q (i : ℕ) + C (-κ)
+            = q - ∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ) := by
+          have hbase : Polynomial.X * poleG n p q (i : ℕ)
+              = (Polynomial.X * poleG n p q (n - 1) +
+                    ∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ))
+                - ∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ) := by
+            rw [hi]
+            abel
+          rw [hbase]
+          have hH : Polynomial.X * poleG n p q (n - 1) +
+                ∑ j : Fin n, C (p.coeff (j : ℕ)) * poleG n p q (j : ℕ) = q + C κ := by
+            rw [hsum]
+            rw [← hκ]
+            rfl
+          rw [hH, map_neg]
+          ring
+        rw [hEq]
+        rw [map_sub, LinearMap.sub_apply, hsum_v]
+        have hq0 : aeval A q (b 1) = 0 := by
+          rw [hq, LinearMap.aeval_self_charpoly, LinearMap.zero_apply]
+        rw [hq0, zero_sub]
+    have hchar := charpoly_eq_of_companion p hp (A + b.comp f) v hrel
+    exact ⟨f, hchar⟩
 
-Because `p` is an arbitrary monic `ℝ[X]`, its non-real roots occur in complex
-conjugate pairs, so this is the correct *real* statement; no complex feedback is
-introduced.
+end Sufficiency
 
-### Source proof route (Trentelman–Stoorvogel–Hautus, PDF pages 73–74)
 
-1. **SISO companion form.** For a controllable single-input pair `(A', b)` the
-   vectors `b, A'b, …, (A')^{n-1}b` form a basis (Theorem 3.18). In that basis the
-   matrix of `A'` is the companion matrix, and a row feedback `f` can set its last
-   row arbitrarily. Hence every monic `p` of degree `n` is realised. This step is
-   already the bulk of the work: it needs
-   * the Krylov basis `(A')^k b` and a proof that it is a basis from
-     controllability (equivalently `kalmanControllabilityMap A' b n` is
-     bijective, `Kalman.lean`),
-   * the matrix of `A'` in that basis being the companion matrix, and
-   * `Matrix.charpoly` of the companion matrix. The last point is now discharged
-     by `LinearMap.charpoly_eq_of_companion` above, which proves the companion
-     characteristic polynomial from `PowerBasis.leftMulMatrix` on `AdjoinRoot p`
-     without any determinant expansion.
+/-! ## Remaining obligation: the multi-input assembly
 
-2. **MIMO reduction (Lemma 3.31).** From controllability of `(A, B)` with
-   `n = finrank ℝ X > 0`, construct `u₀, …, u_{n-1} : U` such that
-   `x₁ = B u₀`, `x_{k+1} = A x_k + B u_k` are independent. Then the unique
-   `F₀` with `F₀ x_k = u_k` makes `b = B u₀` cyclic for `A + B F₀`:
-   `x_k = (A + B F₀)^{k-1} b`. Apply step 1 to the single-input pair
-   `(A + B F₀, b)` to obtain `f` with the prescribed characteristic polynomial;
-   the final gain is `F = F₀ + u₀.comp f` (i.e. `F x = F₀ x + f x • u₀`).
-
-3. **Zero dimension.** `finrank ℝ X = 0` must be handled separately before the
-   `B ≠ 0` argument of Lemma 3.31; then `p = 1`, `F = 0`.
-
-### Progress added in the present pass (all proved, no placeholders)
-
-In addition to the feedback-invariance, quotient-obstruction,
-companion-characteristic-polynomial and zero-dimensional pieces, the following
-ingredients of the sufficiency proof are now available:
-
-* `LinearMap.ne_zero_of_isControllable`: controllability on a positive-
-  dimensional state space forces `B ≠ 0` (first step of Lemma 3.31).
-* `LinearMap.isControllable_iff_bijective_kalmanControllabilityMap_single`:
-  for `b : ℝ →ₗ X`, controllability is bijectivity of the Kalman map.
-* `LinearMap.linearIndependent_krylov_of_isControllable_single`: the Krylov
-  vectors `b, A b, …, A^{n-1} b` are a basis (Theorem 3.18 input).
-* `LinearMap.eq_top_of_isControllable_of_map_le`: a proper `A`-invariant
-  subspace containing `range B` cannot exist for a controllable pair, i.e. the
-  key step used to extend a controlled chain (Lemma 3.31 input).
-
-### Remaining gap
-
-The missing piece is the construction of the feedback *and* the MIMO chain. The
-plan below is explicit and avoids the `adjugate`/determinant route entirely; it
-uses only `LinearMap.charpoly_eq_of_companion` (already proved above) and
-Cayley–Hamilton.
-
-**SISO construction in the Krylov basis.** Let `(A, b)` with `b : ℝ →ₗ X` be
-controllable, `n = finrank ℝ X`, `q = A.charpoly`, and let the Krylov basis be
-`e_i = A^i (b 1)`, `i : Fin n` (independence is
-`linearIndependent_krylov_of_isControllable_single`). Write
-`q(t) = t^n + ∑_{j<n} q_j t^j` and the target
-`p(t) = t^n + ∑_{j<n} p_j t^j`. Define constants `c_0, …, c_{n-2}` by the
-*forward triangular recurrence*
-
-  `c_r = (q_{n-1-r} - p_{n-1-r}) - ∑_{k<r} c_k · p_{n-r+k}`,
-  `r = 0, …, n-2`.
-
-Set `G_i(t) = t^i + ∑_{k=0}^{i-1} c_k t^{i-1-k}` (monic of degree `i`) and
-`y_i = G_i(A) (b 1)`. Because `G_{i+1} = t G_i + c_i`, one has the chain
-`y_{i+1} = A y_i + c_i • b 1`, and the `y_i` are triangular over `(e_i)`, hence a
-basis. Define the polynomial
-
-  `h_p(t) = t · G_{n-1}(t) + ∑_{j<n} p_j · G_j(t)`.
-
-Expanding the coefficient of `t^m` (`1 ≤ m ≤ n-1`) in `h_p` gives exactly
-`c_{n-1-m} + p_m + ∑_{k=0}^{n-2-m} c_k p_{m+1+k}`, so the recurrence says that
-`h_p` and `q` have the same coefficients in degrees `1, …, n-1`. Both are monic
-of degree `n`, hence `h_p = q + κ` for the constant `κ`. Cayley–Hamilton gives
-`h_p(A)(b 1) = κ · b 1`, i.e. `A y_{n-1} + ∑_{j<n} p_j y_j = κ · b 1`.
-
-Finally define `f : X →ₗ ℝ` on the basis `(y_i)` by `f (y_i) = c_i` for
-`i < n-1` and `f (y_{n-1}) = -κ` (use `Basis.constr`). Then
-`(A + b.comp f)(y_i) = y_{i+1}` for `i < n-1` and
-`(A + b.comp f)(y_{n-1}) = -∑_{j<n} p_j y_j`, which are exactly the companion
-relations of `p` in the basis `(y_i)`; `LinearMap.charpoly_eq_of_companion`
-applied to `T = A + b.comp f`, `v =` the basis `(y_i)` and `p` yields
+The single-input constructive theorem `exists_feedback_charpoly_single` is now
+proved above: for a controllable pair `(A, b)` with `b : ℝ →ₗ[ℝ] X` and any monic
+`p : ℝ[X]` of degree `finrank ℝ X` there is `f : X →ₗ[ℝ] ℝ` with
 `(A + b.comp f).charpoly = p`.
 
-**MIMO reduction (Lemma 3.31).** With `n = finrank ℝ X > 0` and `(A, B)`
-controllable, build an independent chain `x_0 = 0`, `x_{k+1} = A x_k + B u_k`
-(`x_1 = B u_0`) by induction: at each step, if
-`A x_k + B u ∈ span{x_1, …, x_k}` for *every* `u : U`, then taking `u = 0`
-gives `A x_k ∈ L`, subtracting gives `range B ≤ L`, and the chain relations make
-`L` `A`-invariant; `LinearMap.eq_top_of_isControllable_of_map_le` then forces
-`L = ⊤`, contradicting `finrank L = k < n`. Hence some `u_k` works and the chain
-extends. Then `F₀` defined on the basis `(x_k)` by `F₀ x_k = u_k` satisfies
-`(A + B F₀) x_k = x_{k+1}`, so `x_k = (A + B F₀)^{k-1} (B u₀)`, i.e.
-`(A + B F₀, B u₀)` is a controllable single-input pair. Apply the SISO step to
-that pair (with `b := ℝ →ₗ X, 1 ↦ B u₀`) to get `f : X →ₗ ℝ`, and put
-`F = F₀ + u₀.comp f`; then `B.comp F = B.comp F₀ + b.comp f`, so
-`(A + B.comp F).charpoly = p`.
+The multi-input statement (`B : U →ₗ[ℝ] X`, gain `F : X →ₗ[ℝ] U`) is deliberately
+left separate. Its proof is the MIMO reduction of Trentelman–Stoorvogel–Hautus,
+Lemma 3.31:
 
-**Zero dimension** is already discharged by
-`exists_feedback_charpoly_of_finrank_zero`.
+1. Handle `finrank ℝ X = 0` with `exists_feedback_charpoly_of_finrank_zero`.
+2. For `n = finrank ℝ X > 0`, construct an independent controlled chain
+   `x₁ = B u₀`, `x_{k+1} = A x_k + B u_k` (`k < n`). At each step, if
+   `A x_k + B u ∈ span{x₁, …, x_k}` for every `u : U`, then `A x_k ∈ L`,
+   `range B ≤ L` and `L` is `A`-invariant, so
+   `eq_top_of_isControllable_of_map_le` contradicts `finrank L = k < n`.
+3. Let `F₀` be the unique map with `F₀ x_k = u_k`, so `b = B u₀` is cyclic for
+   `A + B.comp F₀` with `x_k = (A + B F₀)^{k-1} b`.
+4. Apply `exists_feedback_charpoly_single` to `(A + B F₀, b)`, obtaining
+   `f : X →ₗ[ℝ] ℝ`, and set `F = F₀ + u₀.comp f`; then
+   `B.comp F = B.comp F₀ + b.comp f` and the characteristic polynomial is `p`.
 
-### Suggested next Lean steps (in order, all self-contained)
-
-* Define `c : Fin (n-1) → ℝ` (or a `ℕ`-indexed function on `r < n-1`) by the
-  forward recurrence above and prove the coefficient identity for `h_p` by
-  `Finset.sum` manipulation over `Polynomial.coeff`; this is pure polynomial
-  arithmetic and the only remaining non-structural work in the SISO step.
-* Build the basis `(y_i)` with `Basis.mk` from the triangular independence over
-  the Krylov basis and define `f` with `Basis.constr`; verify the two companion
-  relations by the `G_{i+1} = t G_i + c_i` identity and `h_p = q + κ`.
-* Formalise the MIMO chain by strong induction on `k ≤ n`, using `Fin.snoc`
-  together with `LinearIndependent.finSnoc'` and the
-  `eq_top_of_isControllable_of_map_le` lemma above; define `F₀` with
-  `Basis.constr` on the chain basis.
-* Combine and use `exists_feedback_charpoly_of_finrank_zero` for `n = 0`.
-
-The result `exists_feedback_charpoly_of_isControllable` is therefore **not yet**
-proved, and this file does not claim it is. The declarations proved above are
-independently checkable ingredients of the Trentelman–Stoorvogel–Hautus proof.
+The SISO theorem and all of its polynomial/Krylov ingredients (`poleD`, `poleG`,
+`poleH`, `coeff_zero_poleD`, `poleD_congr`, `poleG_succ`, `poleG_coeff`,
+`poleH_coeff_eq`, `poleH_eq`, `poleG_natDegree_le`, `linearIndependent_poleG`)
+are proved in this file without placeholders or custom axioms.
 -/
 
 end LinearMap
