@@ -12,6 +12,7 @@ import DynamicalSystems.InputOutput.StateSpace
 import DynamicalSystems.Linear.Basic
 import DynamicalSystems.Linear.Subspaces
 import DynamicalSystems.Linear.Kalman
+import DynamicalSystems.Linear.Duality
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

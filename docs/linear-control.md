@@ -38,6 +38,13 @@ range/kernel descriptions, surjectivity/injectivity criteria, and dimension
 criteria. Their basis representations give the usual full matrix-rank tests.
 The finite reduction reuses Mathlib's Cayley–Hamilton remainder theorem.
 
+Import `DynamicalSystems.Linear.Duality` for algebraic transpose/annihilator
+duality, pair invariance under `changeState`, and the two-block decompositions.
+The restricted reachable pair is proved controllable; the quotient by the
+unobservable subspace is proved observable. The quotient input and restricted
+unobservable readout vanish. Complement zero-block identities are proved without
+assuming the complement is invariant. The full four-block form is still pending.
+
 ## Conventions
 
 - Pair order: `(A, B)` for controllability; `(C, A)` for observability.
@@ -50,7 +57,7 @@ The finite reduction reuses Mathlib's Cayley–Hamilton remainder theorem.
 
 ## Roadmap
 
-Next are duality and decomposition, trajectory
+Next are the full four-block decomposition, PBH criteria, trajectory
 equivalences, Gramians, stabilization and observers, and geometric disturbance
 decoupling. Each addition requires source/statement review, actual Lean proofs,
 and the standard-axiom audit. Missing results are not available assumptions.
