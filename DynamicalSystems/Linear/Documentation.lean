@@ -1,6 +1,7 @@
 import VersoManual
 import DynamicalSystems.Linear.Hautus
 import DynamicalSystems.Linear.KalmanDecomposition
+import DynamicalSystems.Linear.Trajectory
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
@@ -12,7 +13,7 @@ set_option linter.missingDocs false
 run_cmd do
   Lean.addDocStringCore
     `DynamicalSystems.Linear.Documentation.«the canonical document object name»
-    "Manual chapter for the checked algebraic linear-control APIs."
+    "Manual chapter for the checked linear-control APIs."
 
 #doc (Manual) "Linear systems" =>
 %%%
@@ -20,7 +21,7 @@ tag := "linear-systems"
 htmlSplit := .never
 %%%
 
-This chapter describes the algebraic foundations currently available for finite-dimensional linear
+This chapter describes the algebraic and trajectory foundations currently available for linear
 control. The state, input, and output spaces are separate vector spaces. Coordinates and topology
 are introduced only where needed; the basic subspace definitions do not require finite dimension.
 
@@ -101,6 +102,29 @@ rotation. Both controllability and observability are preserved by complexificati
 {docstring LinearMap.isControllable_iff_hautus_complex}
 {docstring LinearMap.isObservable_iff_hautus_complex}
 
+# Real LTI trajectories
+
+For finite-dimensional real state and input spaces, locally integrable inputs have unique
+continuous integral-solution trajectories. The variation-of-constants curve is absolutely
+continuous on every compact time interval and satisfies the differential equation almost
+everywhere. These are proved results, not premises of the relation adapters.
+
+{docstring LinearSystem.variationOfConstants}
+{docstring LinearSystem.variationOfConstants_absolutelyContinuousOnInterval}
+{docstring LinearSystem.variationOfConstants_ae_hasDerivAt}
+{docstring LinearSystem.variationOfConstants_integral}
+{docstring LinearSystem.integralSolution_unique}
+{docstring LinearSystem.variationOfConstants_isCaratheodorySolutionOn}
+
+The admissible-input relations are exactly restrictions of the existing project relations.
+The readout retains feedthrough, so pointwise output equality is not asserted merely from
+almost-everywhere equality of inputs.
+
+{docstring LinearSystem.mem_ltiStateTrajectoryRel_iff}
+{docstring LinearSystem.mem_ltiInputOutputRel_iff}
+{docstring LinearSystem.ltiStateTrajectoryRel_existsUnique}
+{docstring LinearSystem.ltiInputOutputRel_existsUnique}
+
 # Sources and scope
 
 The organizing reference is Trentelman, Stoorvogel, and Hautus, *Control Theory for Linear Systems*,
@@ -108,6 +132,6 @@ especially the structural material of Chapter 3. Proofs reuse mathlib's linear a
 Cayley–Hamilton infrastructure. The Hautus module records its additional proof-development
 reference to Gokhale and Bullo's *LeanForControl*.
 
-This chapter does not yet assert a completed continuous-time trajectory theory, Gramian criteria,
-pole placement, or disturbance-decoupling synthesis. Those require their own checked bridges and
-are tracked separately from the algebraic results above.
+Finite-horizon steering and output-distinguishability equivalences, Gramian criteria, pole
+placement, and disturbance-decoupling synthesis are not yet asserted. Those require their own
+checked bridges and are tracked separately from the results above.

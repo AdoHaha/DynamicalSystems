@@ -1,9 +1,9 @@
 /-
 Copyright (c) 2026 Igor Zubrycki. All rights reserved.
-Portions copyright (c) 2025 Yizheng Zhu.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Igor Zubrycki
 -/
+/- Portions copyright (c) 2025 Yizheng Zhu; see the adaptation references below. -/
 module
 
 public import DynamicalSystems.Linear.Basic

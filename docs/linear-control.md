@@ -63,6 +63,17 @@ Import `DynamicalSystems.Linear.Examples.Algebra` for checked double-integrator
 examples, uncontrollable/unobservable variants, coordinate swapping, empty-state
 Kalman tests, and a real rotation whose PBH obstruction uses the eigenvalue `i`.
 
+Import `DynamicalSystems.Linear.Trajectory` for finite-dimensional real LTI
+solutions with locally integrable inputs. The operator exponential has derivative,
+semigroup and inverse laws. The variation-of-constants curve is continuous,
+absolutely continuous on every compact interval, solves the differential equation
+almost everywhere, and satisfies the integral equation. Existence and uniqueness
+are proved, not assumed. Exact adapters identify the admissible LTI relations with
+the existing `stateTrajectoryRel` and `inputOutputRel`, and the solution satisfies
+`IsCaratheodorySolutionOn`. Feedthrough is retained: AE-equal inputs need not have
+pointwise-equal outputs. The general vector-primitive and operator-evaluation
+absolute-continuity helpers are also reusable outside LTI theory.
+
 The generated Verso manual includes a **Linear systems** chapter with these
 conventions and linked theorem statements. Run `lake exe generate-docs` to build it.
 
