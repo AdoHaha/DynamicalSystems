@@ -5,6 +5,7 @@ import DynamicalSystems.Linear.Trajectory
 import DynamicalSystems.Linear.ConditionedInvariant
 import DynamicalSystems.Linear.Reachability
 import DynamicalSystems.Linear.Gramian
+import DynamicalSystems.Linear.PolePlacement
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
@@ -166,6 +167,23 @@ controllable and observable pairs.
 {docstring LinearSystem.inner_observabilityGramian}
 {docstring LinearSystem.controllabilityGramian_posDef_iff_isControllable}
 {docstring LinearSystem.observabilityGramian_posDef_iff_isObservable}
+
+# Pole-placement foundations
+
+The accepted pole-placement foundation records feedback invariance, a real
+quotient obstruction for the converse direction, companion characteristic-polynomial
+infrastructure, the zero-dimensional case, and reusable nonzero/Krylov and
+controlled-span lemmas. The full constructive feedback assignment theorem remains
+an explicitly tracked follow-up obligation.
+
+{docstring LinearMap.reachableSubspace_add_comp}
+{docstring LinearMap.isControllable_add_comp}
+{docstring LinearMap.charpoly_eq_of_companion}
+{docstring LinearMap.exists_feedback_charpoly_of_finrank_zero}
+{docstring LinearMap.isControllable_of_forall_exists_feedback_charpoly}
+{docstring LinearMap.isControllable_iff_bijective_kalmanControllabilityMap_single}
+{docstring LinearMap.linearIndependent_krylov_of_isControllable_single}
+{docstring LinearMap.eq_top_of_isControllable_of_map_le}
 
 # Sources and scope
 
