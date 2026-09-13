@@ -168,6 +168,20 @@ stabilizability/detectability equivalences via Kalman complements and pole
 placement. Remaining follow-up scope concerns transfer functions, not these
 static criteria.
 
+## Invariant-submodule restriction and quotient spectra
+
+The restriction/quotient spectrum bridge is formalized in
+`LinearMap.charpoly_restrict_of_invariant`: for an `A`-invariant submodule `V`,
+`A.charpoly = (A|_V).charpoly * (A|_{X/V}).charpoly`, where the quotient factor
+is the existing Mathlib map `Submodule.mapQ V V A`. The spectrum-transfer form
+`LinearMap.charpoly_restrict_dvd_of_invariant` records the divisibility
+`(A|_V).charpoly ∣ A.charpoly`, and the edge cases `V = ⊤` and `V = ⊥` are
+`LinearMap.charpoly_restrict_top` and `LinearMap.charpoly_restrict_bot`. Finally,
+`LinearMap.isHurwitz_restrict_of_hurwitzSubspace` moves `IsHurwitz` from `A` to
+its restriction on the stable subspace `hurwitzSubspace A`, which is the
+invariant-submodule half of the lift into stabilizable/detectable
+decompositions. No new quotient-spectrum API is introduced.
+
 ## Definition of stability
 
 `IsStabilizable A B` means `∃ F, IsHurwitz (A + B.comp F)`. This is exactly the
@@ -1323,6 +1337,170 @@ theorem isDetectable_of_unobservableEigenvalues_hurwitz
 
 end ConversePBH
 
+/-! ## Restriction and quotient characteristic polynomials
+
+For an `A`-invariant submodule `V`, the characteristic polynomial of `A` factors
+exactly as the product of the characteristic polynomial of the restriction
+`A|_V` and that of the induced map on the quotient `X ⧸ V`. This is the
+spectral bridge used to lift properties of `A` to invariant submodules and their
+quotients. The quotient factor is the existing Mathlib map
+`Submodule.mapQ V V A`, so no new quotient-spectrum API is introduced.
+
+Source: Trentelman–Stoorvogel–Hautus, Chapter 2 (invariant subspaces and the
+restriction/quotient constructions used in Sections 4.5–4.6 and Chapter 6). -/
+
+section RestrictCharpoly
+
+/-- **Exact characteristic-polynomial factorization for an invariant submodule.**
+If `V` is invariant under `A`, then
+`A.charpoly = (A|_V).charpoly * (A|_{X/V}).charpoly`, where `A|_{X/V}` is the
+quotient map `Submodule.mapQ V V A`. The proof chooses a complement `Q` of `V`,
+conjugates `A` to the block-upper-triangular operator
+`(v, q) ↦ (A v + π_V A q, π_Q A q)` (whose characteristic polynomial is the
+product by `charpoly_prodMap_of_lower_zero`), identifies the second block with
+the quotient map through `Submodule.quotientEquivOfIsCompl`, and transports the
+characteristic polynomial along both linear equivalences.
+
+The edge cases `V = ⊥` and `V = ⊤` are covered by the universal statement; the
+two companion lemmas below record them explicitly. -/
+theorem charpoly_restrict_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ X)
+    (hV : ∀ x ∈ V, A x ∈ V) :
+    A.charpoly = (A.restrict hV).charpoly *
+      (Submodule.mapQ V V A (fun x hx => hV x hx)).charpoly := by
+  classical
+  obtain ⟨Q, hQ⟩ := Submodule.exists_isCompl V
+  let πV : X →ₗ[ℝ] V := V.projectionOnto Q hQ
+  let πQ : X →ₗ[ℝ] Q := Q.projectionOnto V hQ.symm
+  let A11 : V →ₗ[ℝ] V := A.restrict hV
+  let A12 : Q →ₗ[ℝ] V := πV.comp (A.comp Q.subtype)
+  let A22 : Q →ₗ[ℝ] Q := πQ.comp (A.comp Q.subtype)
+  let e := V.prodEquivOfIsCompl Q hQ
+  let T : V × Q →ₗ[ℝ] V × Q := LinearMap.prod
+    ((A11.comp (LinearMap.fst ℝ V Q)) + (A12.comp (LinearMap.snd ℝ V Q)))
+    (A22.comp (LinearMap.snd ℝ V Q))
+  have hconj : e.symm.conj A = T := by
+    apply LinearMap.ext
+    intro p
+    obtain ⟨v, q⟩ := p
+    rw [LinearEquiv.conj_apply_apply, LinearEquiv.symm_symm]
+    simp only [T, LinearMap.prod_apply, LinearMap.add_apply,
+      LinearMap.comp_apply, LinearMap.fst_apply, LinearMap.snd_apply]
+    rw [Submodule.coe_prodEquivOfIsCompl']
+    rw [Submodule.prodEquivOfIsCompl_symm_apply]
+    rw [map_add, map_add, map_add]
+    congr 1
+    · have h1 : V.projectionOnto Q hQ (A (v : X)) = A11 v := by
+        rw [Submodule.projectionOnto_apply_of_mem_left hQ (hV v v.2)]
+        rfl
+      have h2 : V.projectionOnto Q hQ (A (q : X)) = A12 q := rfl
+      rw [h1, h2]
+      simp only [LinearMap.add_apply, LinearMap.comp_apply, LinearMap.fst_apply,
+        LinearMap.snd_apply]
+    · have h1 : Q.projectionOnto V hQ.symm (A (v : X)) = 0 := by
+        rw [Submodule.projectionOnto_apply_eq_zero_iff]
+        exact hV v v.2
+      have h2 : Q.projectionOnto V hQ.symm (A (q : X)) = A22 q := rfl
+      rw [h1, h2, zero_add]
+      simp only [LinearMap.comp_apply, LinearMap.snd_apply]
+  have hchar1 : A.charpoly = T.charpoly := by
+    rw [← hconj]
+    exact (LinearEquiv.charpoly_conj e.symm A).symm
+  have hTchar : T.charpoly = A11.charpoly * A22.charpoly :=
+    charpoly_prodMap_of_lower_zero A11 A22 A12
+  have hA11 : A11.charpoly = (A.restrict hV).charpoly := rfl
+  let eQ : (X ⧸ V) ≃ₗ[ℝ] Q := Submodule.quotientEquivOfIsCompl V Q hQ
+  have hsymm : ∀ z : Q, eQ.symm z = Submodule.Quotient.mk (z : X) := fun z =>
+    eQ.injective (by rw [LinearEquiv.apply_symm_apply,
+      Submodule.quotientEquivOfIsCompl_apply_mk_right])
+  have hq : eQ.symm.conj A22 = Submodule.mapQ V V A (fun x hx => hV x hx) := by
+    apply LinearMap.ext
+    intro x
+    refine Submodule.Quotient.induction_on (p := V) x ?_
+    intro y
+    show eQ.symm (A22 (eQ (Submodule.Quotient.mk y))) = _
+    rw [Submodule.quotientEquivOfIsCompl_apply_mk]
+    rw [Submodule.mapQ_apply]
+    rw [hsymm (A22 (πQ y))]
+    refine (Submodule.Quotient.eq V).mpr ?_
+    have hdecomp : ((πV y : V) : X) + ((πQ y : Q) : X) = y := by
+      have hh := Submodule.projection_add_projection_eq_self hQ y
+      simpa only [πV, πQ, Submodule.coe_projectionOnto_apply] using hh
+    have hsplit : A ((πQ y : Q) : X) =
+        ((πV (A ((πQ y : Q) : X)) : V) : X) +
+          ((πQ (A ((πQ y : Q) : X)) : Q) : X) := by
+      have hh := Submodule.projection_add_projection_eq_self hQ (A ((πQ y : Q) : X))
+      simpa only [πV, πQ, Submodule.coe_projectionOnto_apply] using hh.symm
+    have hAy : A y = A ((πV y : V) : X) + A ((πQ y : Q) : X) := by
+      conv_lhs => rw [← hdecomp]
+      rw [map_add]
+    have hmem1 : A ((πV y : V) : X) ∈ V := hV _ (πV y).2
+    have hmem2 : ((πV (A ((πQ y : Q) : X)) : V) : X) ∈ V := (πV _).2
+    have hA22 : ((A22 (πQ y) : Q) : X) = (πQ (A ((πQ y : Q) : X)) : Q) := rfl
+    rw [hAy, hsplit]
+    have hsim : (πQ (A ((πQ y : Q) : X)) : X) -
+        (A ((πV y : V) : X) + (((πV (A ((πQ y : Q) : X)) : V) : X) +
+          (πQ (A ((πQ y : Q) : X)) : X))) =
+        - A ((πV y : V) : X) - ((πV (A ((πQ y : Q) : X)) : V) : X) := by abel
+    rw [hA22, hsim]
+    rw [sub_eq_add_neg]
+    exact V.add_mem (V.neg_mem hmem1) (V.neg_mem hmem2)
+  have hchar2 : A22.charpoly =
+      (Submodule.mapQ V V A (fun x hx => hV x hx)).charpoly := by
+    rw [← hq]
+    exact (LinearEquiv.charpoly_conj eQ.symm A22).symm
+  rw [hchar1, hTchar, hA11, hchar2]
+
+/-- The restriction characteristic polynomial divides the ambient one. This is
+the spectrum-transfer form of `charpoly_restrict_of_invariant`: every complex
+root of `(A|_V).charpoly` is a root of `A.charpoly`. It is the form used to move
+`IsHurwitz` from `A` to `A|_V`. -/
+theorem charpoly_restrict_dvd_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ X)
+    (hV : ∀ x ∈ V, A x ∈ V) :
+    (A.restrict hV).charpoly ∣ A.charpoly :=
+  ⟨_, charpoly_restrict_of_invariant A V hV⟩
+
+/-- **Spectrum transfer to an invariant submodule.** If `A` is Hurwitz, then so
+is its restriction `A|_V` to any `A`-invariant submodule `V`. This is the
+general form of `isHurwitz_restrict_of_hurwitzSubspace`: a complex root of the
+restricted characteristic polynomial is a root of the ambient one by
+`charpoly_restrict_dvd_of_invariant`, hence has negative real part. -/
+theorem isHurwitz_restrict_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ X)
+    (hV : ∀ x ∈ V, A x ∈ V) (hA : IsHurwitz A) :
+    IsHurwitz (A.restrict hV) := by
+  intro z hz
+  obtain ⟨q, hq⟩ := charpoly_restrict_dvd_of_invariant A V hV
+  have hz' : (A.charpoly.map (algebraMap ℝ ℂ)).eval z = 0 := by
+    rw [hq, Polynomial.map_mul, Polynomial.eval_mul, hz, zero_mul]
+  exact hA z hz'
+
+/-- Edge case `V = ⊤`: restricting to the whole space does not change the
+characteristic polynomial. The restriction `A|_⊤` is conjugate to `A` along
+`Submodule.topEquiv`. -/
+theorem charpoly_restrict_top (A : X →ₗ[ℝ] X) :
+    (A.restrict (p := ⊤) (q := ⊤) (fun _ _ => Submodule.mem_top)).charpoly = A.charpoly := by
+  have hconj : (Submodule.topEquiv.symm : X ≃ₗ[ℝ] (⊤ : Submodule ℝ X)).conj A =
+      (A.restrict (p := ⊤) (q := ⊤) (fun _ _ => Submodule.mem_top)) := by
+    apply LinearMap.ext
+    intro x
+    rfl
+  rw [← hconj, LinearEquiv.charpoly_conj]
+
+omit [FiniteDimensional ℝ X] in
+/-- Edge case `V = ⊥`: the restriction to the zero subspace is an endomorphism
+of the zero-dimensional space, whose characteristic polynomial is `1`. -/
+theorem charpoly_restrict_bot (A : X →ₗ[ℝ] X) :
+    (A.restrict (p := ⊥) (q := ⊥) (fun _ hx => by
+      rw [Submodule.mem_bot] at hx ⊢; rw [hx, map_zero])).charpoly = 1 := by
+  have h0 : (A.restrict (p := ⊥) (q := ⊥) (fun _ hx => by
+      rw [Submodule.mem_bot] at hx ⊢; rw [hx, map_zero])) =
+      (0 : (⊥ : Submodule ℝ X) →ₗ[ℝ] (⊥ : Submodule ℝ X)) := by
+    apply LinearMap.ext
+    intro x
+    exact Subsingleton.elim _ _
+  rw [h0, LinearMap.charpoly_zero, finrank_bot, pow_zero]
+
+end RestrictCharpoly
+
 /-! ## The general Hurwitz-to-decay bridge: the complex spectral case
 
 The analytic heart of the general bridge: over a finite-dimensional complex
@@ -2042,6 +2220,25 @@ theorem map_hurwitzSubspace_le (A : X →ₗ[ℝ] X) :
   rw [hcoord, ofRealPi_mulVec]
   rw [← Matrix.toLin'_apply]
   exact map_hurwitzComplexSubspace_le A ⟨_, hx, rfl⟩
+
+/-- **Restriction to the Hurwitz subspace of a Hurwitz operator is Hurwitz.**
+If `A` is Hurwitz then its restriction to its stable subspace
+`hurwitzSubspace A` is again Hurwitz. The proof uses the spectrum-transfer
+corollary `charpoly_restrict_dvd_of_invariant`: the characteristic polynomial of
+the restriction divides that of `A`, so every complex root of the restricted
+characteristic polynomial is a root of the ambient one and hence has negative
+real part.
+
+This is the invariant-submodule half of the bridge lifting the Hurwitz-subspace
+foundation into the stabilizable/detectable decompositions: the stable subspace
+inherits the stability of the ambient operator. -/
+theorem isHurwitz_restrict_of_hurwitzSubspace (A : X →ₗ[ℝ] X) (hA : IsHurwitz A) :
+    IsHurwitz (LinearMap.restrict A (p := hurwitzSubspace A) (q := hurwitzSubspace A)
+      fun x hx => map_hurwitzSubspace_le A ⟨x, hx, rfl⟩) := by
+  have hS : ∀ x ∈ hurwitzSubspace A, A x ∈ hurwitzSubspace A :=
+    fun x hx => map_hurwitzSubspace_le A ⟨x, hx, rfl⟩
+  change IsHurwitz (A.restrict hS)
+  exact isHurwitz_restrict_of_invariant A (hurwitzSubspace A) hS hA
 
 /-- **Decay on the complex stable subspace.** For any vector `z` in the complex
 stable subspace of `A`, the complex coordinate flow `t ↦ exp (t A_ℂ) z` tends to
