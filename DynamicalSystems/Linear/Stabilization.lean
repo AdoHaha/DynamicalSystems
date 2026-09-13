@@ -126,37 +126,22 @@ the real characteristic polynomial through `LinearMap.charpoly_baseChange`.
   whenever both diagonal blocks are; a stabilizable and detectable system
   admits such gains `F` and `L`.
 
-## Remaining obligation
+## Completed bridges and remaining scope
 
-The general finite-dimensional theorem that `IsHurwitz A` implies exponential
-decay / attractivity / Lyapunov stability of `t ↦ exp (t A)` for *arbitrary*
-Hurwitz `A` (not only the nilpotent shift `A + 1`) is not yet formalized. It
-would connect `LinearMap.IsHurwitz A` directly to
-`Filter.IsAttractive (l := 𝓝 0) (Φ := fun t x => exp (t • A.toContinuousLinearMap) x) atTop`
-and to `(𝓝 0).IsStableOn` of the same flow. The complex half of this bridge is
-now frozen in the section *The general Hurwitz-to-decay bridge: the complex
-spectral case* below: `LinearMap.tendsto_exp_complex_apply` shows that over a
-finite-dimensional complex normed space every orbit of a Hurwitz endomorphism
-decays, by decomposing the space into generalized eigenspaces. What remains for
-the real statement is the **real-coordinate reduction**: complexify
-`A.baseChange ℂ`, apply the complex theorem there, and transport convergence
-back along a real basis (`exp (t • A) = repr.symm ∘ exp (t • repr.conj A) ∘ repr`).
-This is the next task; it is deliberately not claimed here. In addition, the
-current slice proves the explicit pole-placement target bridge `(X + 1)^n`,
-which is the case needed by every gain existence result here, via the finite
-polynomial-times-exponential estimates (`LinearMap.norm_exp_nilpotent_shift_apply_le`,
-`LinearMap.tendsto_exp_nilpotent_shift_apply`).
+The general finite-dimensional Hurwitz theorem is now formalized:
+`LinearMap.tendsto_exp_of_isHurwitz` gives exponential-flow attractivity and
+`LinearMap.isStableOn_expFlow_of_isHurwitz` gives Lyapunov stability. The proof
+uses the complex generalized-eigenspace theorem
+`LinearMap.tendsto_exp_complex_apply` and a real-coordinate reduction.
 
-The eigenvalue criteria above are also only proved in the necessity direction.
+The PBH criteria are complete in both directions. The necessity results
 `LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue` and
-`LinearMap.isDetectable_converse_of_unobservableEigenvalue` show that a
-stabilizable (resp. detectable) pair has all uncontrollable (resp. unobservable)
-eigenvalues in the open left half-plane. The *sufficiency* halves of
-Trentelman–Stoorvogel–Hautus Theorems 3.32 and 3.38 — that those eigenvalue
-conditions conversely imply stabilizability and detectability — are not
-formalized in this slice. The expected route is the Kalman decomposition
-(Theorem 3.11) together with pole placement on the controllable/observable part,
-as in the source proofs; this is left as a follow-up obligation.
+`LinearMap.isDetectable_converse_of_unobservableEigenvalue`, together with
+`LinearMap.isStabilizable_of_uncontrollableEigenvalues_hurwitz` and
+`LinearMap.isDetectable_of_unobservableEigenvalues_hurwitz`, establish the
+stabilizability/detectability equivalences via Kalman complements and pole
+placement. Remaining follow-up scope concerns dynamic decoupling and transfer
+functions, not these static criteria.
 
 ## Definition of stability
 
