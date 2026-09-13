@@ -35,9 +35,10 @@ vanishes, `LinearMap.IsDisturbanceDecoupled A E H`. Over the reals and in finite
 dimension this is exactly the vanishing of the impulse response `t ↦ H e^{tA} E`
 of Trentelman–Stoorvogel–Hautus, equation (4.4), whose derivatives at `0` are
 precisely the Markov parameters `H A ^ k E`; the equivalence is proved below as
-`LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`. The transfer-function
-form and the convolution/input-independence form remain separate obligations,
-documented in the Deferred obligations section below and not claimed here.
+`LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`. The convolution form of
+input-independence is proved below; the transfer-function form remains a separate
+obligation, documented in the Deferred obligations section below and not claimed
+here.
 
 ## Bridges to invariant subspaces
 
@@ -84,6 +85,35 @@ impulse response `t ↦ H e^{tA} E`, using the accepted trajectory/unobservabili
 bridges of `DynamicalSystems.Linear.Reachability`. This is the sense in which the
 Markov parameters are the derivatives at zero of the impulse response.
 
+## The variation-of-constants / convolution bridge
+
+The forced output of the channel is the variation-of-constants trajectory of the
+associated `LinearSystem` (`LinearMap.forcedOutput`), with the zero-initial-state
+part isolated as `LinearMap.disturbanceContribution`. Its explicit convolution
+form is `LinearMap.forcedOutput_eq_convolution`:
+
+`z(t) = H (e^{(t - t₀)A} x₀) + ∫_{t₀}^{t} H (e^{(t - s)A} E) d(s) ds`,
+
+with impulse response `LinearMap.disturbanceImpulseResponse`, a Bochner integral
+in the (complete) output space. Exact decoupling makes the convolution term vanish
+for every locally integrable disturbance
+(`LinearMap.isDisturbanceDecoupled_disturbanceContribution_eq_zero`), hence makes
+the output independent of the admissible disturbance
+(`LinearMap.isDisturbanceDecoupled_forcedOutput_eq_of_input`). Conversely, if the
+disturbance contribution vanishes for every locally integrable disturbance then
+the channel is decoupled; the proof tests the hypothesis on rectangular pulses and
+uses the fundamental theorem of calculus to recover the impulse response. The two
+directions are combined in
+`LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`.
+
+The convolution bridge and the two implications above are stated for a **complete**
+output space `Z`: completeness is the Bochner-integral regularity hypothesis needed
+to commute the output map `H` with the integral
+(`ContinuousLinearMap.intervalIntegral_comp_comm`). Finite-dimensional output
+spaces, the intended control-theoretic case, are complete. The converse direction
+`LinearMap.isDisturbanceDecoupled_of_forall_disturbanceContribution_eq_zero` does
+not use the convolution bridge and therefore does not need completeness.
+
 ## Worked examples
 
 The double integrator `A (x, y) = (y, 0)` exhibits both outcomes:
@@ -97,10 +127,10 @@ witnesses for the definitions.
 
 The following are deliberately **not** claimed and are the next milestones:
 
-* the transfer-function form `H (sI - A)⁻¹ E = 0` and the convolution form of
-  input-independence, namely that
-  `t ↦ H (exp (tA) x₀ + ∫₀ᵗ exp ((t - s) A) E d(s) ds)` is independent of every
-  locally integrable disturbance `d`;
+* the transfer-function form `H (s I - A)⁻¹ E = 0`. The convolution form of
+  input-independence is now proved, as the impulse response `K(t) = H e^{tA} E`
+  is the Laplace kernel whose transform is the transfer function, but no
+  unproved transfer-function claim is made here;
 * the construction of the dynamic measurement-feedback controller from a
   `(C, A, B)`-pair and the corresponding closed-loop decoupling theorem
   (Trentelman–Stoorvogel–Hautus, Theorem 6.4 and Corollary 6.7);
@@ -114,6 +144,8 @@ The following are deliberately **not** claimed and are the next milestones:
 * `LinearMap.IsDisturbanceDecoupled`, `LinearMap.IsStateFeedbackDisturbanceDecoupled`
 * `LinearMap.IsCABPair`, `LinearMap.IsCABPairBetween`
 * `LinearMap.disturbanceSystem`
+* `LinearMap.disturbanceImpulseResponse`, `LinearMap.disturbanceContribution`,
+  `LinearMap.forcedOutput`
 
 ## Main theorems
 
@@ -125,6 +157,10 @@ The following are deliberately **not** claimed and are the next milestones:
 * `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_range_le_controlledInvariantSubspace`
 * `LinearMap.exists_isCABPairBetween_iff`
 * `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`
+* `LinearMap.forcedOutput_eq_convolution`
+* `LinearMap.isDisturbanceDecoupled_disturbanceContribution_eq_zero`
+* `LinearMap.isDisturbanceDecoupled_forcedOutput_eq_of_input`
+* `LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`
 
 ## References
 
@@ -135,6 +171,9 @@ The following are deliberately **not** claimed and are the next milestones:
 -/
 
 @[expose] public section
+
+open MeasureTheory Filter Topology Set
+open scoped Interval Topology
 
 namespace LinearMap
 
@@ -625,6 +664,312 @@ theorem isDisturbanceDecoupled_iff_forall_expFlow
       (disturbanceSystem A E H) (T := 1) zero_lt_one ?_
     intro t _
     simpa [disturbanceSystem] using h d t
+
+/-! ## The variation-of-constants / convolution bridge
+
+Trentelman–Stoorvogel–Hautus, equations (3.2)–(3.3). For the disturbance channel
+`x' = A x + E d`, `z = H x` and a locally integrable disturbance `d`, the forced
+output from `x(t₀) = x₀` is the variation-of-constants trajectory of the
+associated `LinearSystem`, read through `H`. It has the convolution form
+
+`z(t) = H (exp ((t - t₀) A) x₀) + ∫_{t₀}^{t} K (t - s) d(s) ds`,
+
+with impulse response `K(t) = H ∘ exp (t A) ∘ E`. The Bochner-integral form is
+`forcedOutput_eq_convolution`; exact decoupling makes the whole convolution term
+vanish for every locally integrable disturbance
+(`isDisturbanceDecoupled_disturbanceContribution_eq_zero`), and this is an
+equivalence (`isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`).
+
+The converse is proved by testing the hypothesis on rectangular pulses: the
+response to `1_{(0,δ)} • w` at time `δ + r` is the `δ`-average of
+`u ↦ H (e^{(r+u)A} E w)`, so the fundamental theorem of calculus recovers the
+impulse response `H (e^{rA} E w)` as `δ → 0⁺`. -/
+
+section ConvolutionDefinitions
+
+variable [FiniteDimensional ℝ W]
+
+/-- The disturbance-to-output **impulse response** `K(t) = H e^{tA} E` of the
+channel, evaluated on a disturbance direction `w`. This is the kernel of the
+convolution integral of Trentelman–Stoorvogel–Hautus, equation (3.3), with
+`D = 0`. -/
+noncomputable def disturbanceImpulseResponse (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (t : ℝ) (w : W) : Z :=
+  H ((disturbanceSystem A E H).expFlow t (E w))
+
+/-- The **disturbance contribution** to the output: the forced output from the
+origin, i.e. the readout `H` of the variation-of-constants trajectory of
+`x' = A x + E d` with `x(t₀) = 0`. Together with the free response
+`H (exp ((t - t₀) A) x₀)` it makes up the full forced output. -/
+noncomputable def disturbanceContribution (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (t₀ : ℝ) (d : ℝ → W) (t : ℝ) : Z :=
+  H ((disturbanceSystem A E H).variationOfConstants t₀ 0 d t)
+
+/-- The **forced output** of the disturbance channel from initial state `x₀` at
+time `t₀`: the zero-feedthrough readout `H` of the variation-of-constants
+trajectory of `x' = A x + E d`. -/
+noncomputable def forcedOutput (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (t₀ : ℝ) (x₀ : X) (d : ℝ → W) (t : ℝ) : Z :=
+  (disturbanceSystem A E H).readout
+    ((disturbanceSystem A E H).variationOfConstants t₀ x₀ d t) (d t)
+
+/-- Unfolding lemma for `forcedOutput`: the zero-feedthrough readout is `H`. -/
+@[simp]
+theorem forcedOutput_apply (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (t₀ : ℝ) (x₀ : X) (d : ℝ → W) (t : ℝ) :
+    forcedOutput A E H t₀ x₀ d t =
+      H ((disturbanceSystem A E H).variationOfConstants t₀ x₀ d t) := by
+  simp [forcedOutput, LinearSystem.readout, disturbanceSystem]
+
+/-- The forced output from the origin is exactly the disturbance contribution.
+This is deliberately not a `@[simp]` lemma: `forcedOutput_apply` already rewrites
+the left-hand side to the readout of the variation-of-constants trajectory, so a
+`simp`-normal-form version is obtained by unfolding `disturbanceContribution`. -/
+theorem forcedOutput_zero_initial (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (t₀ : ℝ) (d : ℝ → W) (t : ℝ) :
+    forcedOutput A E H t₀ 0 d t = disturbanceContribution A E H t₀ d t := by
+  simp [forcedOutput, disturbanceContribution, LinearSystem.readout, disturbanceSystem]
+
+omit [FiniteDimensional ℝ W] in
+/-- The exponential flow of the disturbance system is a semigroup in evaluation
+form: `exp (a A) (exp (b A) z) = exp ((a + b) A) z`. -/
+theorem disturbanceSystem_expFlow_add_apply (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (a b : ℝ) (z : X) :
+    (disturbanceSystem A E H).expFlow a ((disturbanceSystem A E H).expFlow b z) =
+      (disturbanceSystem A E H).expFlow (a + b) z := by
+  rw [← mul_apply_eq_comp, LinearSystem.expFlow_add]
+
+end ConvolutionDefinitions
+
+section Convolution
+
+variable [FiniteDimensional ℝ W] [CompleteSpace Z]
+
+/-- **Variation-of-constants / convolution bridge.** The forced output of the
+disturbance channel from `x(t₀) = x₀` under a locally integrable disturbance `d`
+is the free response plus the convolution of the impulse response with `d`:
+
+`z(t) = H (e^{(t - t₀)A} x₀) + ∫_{t₀}^{t} H (e^{(t - s)A} E) d(s) ds`.
+
+Source: Trentelman–Stoorvogel–Hautus, equations (3.2) and (3.3), with `D = 0`.
+The integral is a Bochner integral in the output space. -/
+theorem forcedOutput_eq_convolution (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    {t₀ : ℝ} {x₀ : X} {d : ℝ → W} (hd : LocallyIntegrable d volume) (t : ℝ) :
+    forcedOutput A E H t₀ x₀ d t =
+      H ((disturbanceSystem A E H).expFlow (t - t₀) x₀) +
+        ∫ s in t₀..t, disturbanceImpulseResponse A E H (t - s) (d s) := by
+  have hfd : IntervalIntegrable ((disturbanceSystem A E H).forcing t₀ d) volume t₀ t :=
+    LinearSystem.intervalIntegrable_forcing (disturbanceSystem A E H) t₀ hd t₀ t
+  have hcomp : (∫ s in t₀..t, (disturbanceSystem A E H).continuousC
+        ((disturbanceSystem A E H).expFlow (t - t₀)
+          ((disturbanceSystem A E H).forcing t₀ d s))) =
+      (disturbanceSystem A E H).continuousC
+        ((disturbanceSystem A E H).expFlow (t - t₀)
+          (∫ s in t₀..t, (disturbanceSystem A E H).forcing t₀ d s)) := by
+    simpa only [ContinuousLinearMap.comp_apply] using
+      ContinuousLinearMap.intervalIntegral_comp_comm
+        ((disturbanceSystem A E H).continuousC.comp
+          ((disturbanceSystem A E H).expFlow (t - t₀))) hfd
+  rw [forcedOutput_apply]
+  simp only [LinearSystem.variationOfConstants, map_add]
+  congr 1
+  have hLapp : (disturbanceSystem A E H).continuousC
+        ((disturbanceSystem A E H).expFlow (t - t₀)
+          (∫ s in t₀..t, (disturbanceSystem A E H).forcing t₀ d s)) =
+        H ((disturbanceSystem A E H).expFlow (t - t₀)
+          (∫ s in t₀..t, (disturbanceSystem A E H).forcing t₀ d s)) := by
+    simp [disturbanceSystem]
+  rw [← hLapp, ← hcomp]
+  apply intervalIntegral.integral_congr
+  intro s _
+  have hC : (disturbanceSystem A E H).continuousC
+      ((disturbanceSystem A E H).expFlow (t - t₀)
+        ((disturbanceSystem A E H).forcing t₀ d s)) =
+      H ((disturbanceSystem A E H).expFlow (t - t₀)
+        ((disturbanceSystem A E H).forcing t₀ d s)) := by
+    simp [disturbanceSystem]
+  have hforce : (disturbanceSystem A E H).forcing t₀ d s =
+      (disturbanceSystem A E H).expFlow (-(s - t₀)) (E (d s)) := by
+    simp [disturbanceSystem, LinearSystem.forcing]
+  dsimp only
+  rw [hC, hforce, disturbanceSystem_expFlow_add_apply, disturbanceImpulseResponse]
+  rw [show (t - t₀) + -(s - t₀) = t - s by ring]
+
+omit [FiniteDimensional ℝ W] [CompleteSpace Z] in
+/-- Under exact decoupling the convolution term vanishes identically: for every
+locally integrable disturbance the disturbance contribution to the output is
+zero. This is the input-independence content of `T = 0`. -/
+theorem isDisturbanceDecoupled_convolution_integral_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : IsDisturbanceDecoupled A E H) {d : ℝ → W} (_hd : LocallyIntegrable d volume)
+    (t₀ t : ℝ) :
+    (∫ s in t₀..t, disturbanceImpulseResponse A E H (t - s) (d s)) = 0 := by
+  have hrange : range E ≤ unobservableSubspace H A :=
+    (isDisturbanceDecoupled_iff_range_le_unobservableSubspace A E H).mp h
+  have hfun : (fun s : ℝ => disturbanceImpulseResponse A E H (t - s) (d s)) =
+      fun _ => (0 : Z) := by
+    funext s
+    rw [disturbanceImpulseResponse]
+    simpa using LinearSystem.continuousC_expFlow_eq_zero_of_mem_unobservableSubspace
+      (disturbanceSystem A E H) (hrange ⟨d s, rfl⟩) (t - s)
+  rw [hfun]
+  simp
+
+/-- The convolution form of the disturbance contribution (zero initial state). -/
+theorem disturbanceContribution_eq_convolution (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) {t₀ : ℝ} {d : ℝ → W} (hd : LocallyIntegrable d volume) (t : ℝ) :
+    disturbanceContribution A E H t₀ d t =
+      ∫ s in t₀..t, disturbanceImpulseResponse A E H (t - s) (d s) := by
+  rw [← forcedOutput_zero_initial]
+  simpa using forcedOutput_eq_convolution A E H (t₀ := t₀) (x₀ := 0) (d := d) hd t
+
+/-- **Exact decoupling kills the disturbance contribution.** If the channel is
+disturbance decoupled then the forced output from the origin is zero for every
+locally integrable disturbance and every time. -/
+theorem isDisturbanceDecoupled_disturbanceContribution_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : IsDisturbanceDecoupled A E H) {t₀ : ℝ} {d : ℝ → W}
+    (hd : LocallyIntegrable d volume) (t : ℝ) :
+    disturbanceContribution A E H t₀ d t = 0 := by
+  rw [disturbanceContribution_eq_convolution A E H hd t]
+  exact isDisturbanceDecoupled_convolution_integral_eq_zero A E H h hd t₀ t
+
+/-- **Input independence.** Under exact decoupling the output is independent of
+the admissible disturbance: two locally integrable disturbances with the same
+initial state produce the same output trajectory. -/
+theorem isDisturbanceDecoupled_forcedOutput_eq_of_input
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : IsDisturbanceDecoupled A E H) {t₀ : ℝ} {x₀ : X} {d₁ d₂ : ℝ → W}
+    (hd₁ : LocallyIntegrable d₁ volume) (hd₂ : LocallyIntegrable d₂ volume) (t : ℝ) :
+    forcedOutput A E H t₀ x₀ d₁ t = forcedOutput A E H t₀ x₀ d₂ t := by
+  rw [forcedOutput_eq_convolution A E H hd₁ t, forcedOutput_eq_convolution A E H hd₂ t,
+    isDisturbanceDecoupled_convolution_integral_eq_zero A E H h hd₁ t₀ t,
+    isDisturbanceDecoupled_convolution_integral_eq_zero A E H h hd₂ t₀ t,
+    add_zero]
+
+omit [CompleteSpace Z] in
+/-- **Converse of the convolution criterion.** If the disturbance contribution
+vanishes for every locally integrable disturbance, every initial time and every
+time, then the channel is disturbance decoupled.
+
+The proof tests the hypothesis on rectangular pulses `1_{(0,δ)} • w`: the
+response from the origin at time `δ + r` is the `δ`-average of the continuous
+curve `u ↦ H (e^{(r + u)A} E w)`, so dividing by `δ` and letting `δ → 0⁺` uses
+the fundamental theorem of calculus to recover `H (e^{rA} E w)`. Applying the
+accepted analytic bridge `isDisturbanceDecoupled_iff_forall_expFlow` concludes. -/
+theorem isDisturbanceDecoupled_of_forall_disturbanceContribution_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ∀ (t₀ : ℝ) (d : ℝ → W), LocallyIntegrable d volume →
+      ∀ t : ℝ, disturbanceContribution A E H t₀ d t = 0) :
+    IsDisturbanceDecoupled A E H := by
+  rw [isDisturbanceDecoupled_iff_range_le_unobservableSubspace]
+  intro x hx
+  obtain ⟨w, rfl⟩ := hx
+  let sys := disturbanceSystem A E H
+  refine LinearSystem.mem_unobservableSubspace_of_forall_continuousC_expFlow_eq_zero
+    sys (T := 1) zero_lt_one ?_
+  intro t ht
+  have ht_nonneg : 0 ≤ t := ht.1
+  let φ : ℝ → X := fun u => sys.expFlow (-u) (E w)
+  let F : ℝ → X := fun δ => ∫ u in (0 : ℝ)..δ, φ u
+  let G : ℝ → X := fun δ => sys.expFlow (δ + t) (δ⁻¹ • F δ)
+  have hφ : Continuous φ := by
+    have hExp : Continuous (fun u : ℝ => sys.expFlow (-u)) := by
+      have h := (LinearSystem.continuous_expFlow_sub sys 0).comp continuous_neg
+      simpa only [Function.comp_def, sub_zero] using h
+    exact hExp.clm_apply continuous_const
+  have hF_deriv : HasDerivAt F (E w) 0 := by
+    have h := intervalIntegral.integral_hasDerivAt_right
+      (hφ.intervalIntegrable 0 0)
+      (hφ.stronglyMeasurableAtFilter volume (𝓝 0)) hφ.continuousAt
+    simpa [F, φ] using h
+  have hF_tendsto : Tendsto (fun δ : ℝ => δ⁻¹ • F δ) (𝓝[>] (0 : ℝ)) (𝓝 (E w)) := by
+    have h := hF_deriv.tendsto_slope_zero_right
+    simpa [F] using h
+  have hG : ∀ δ : ℝ, 0 < δ → H (G δ) = 0 := by
+    intro δ hδ
+    let d : ℝ → W := (Set.Ioc (0 : ℝ) δ).indicator (fun _ => w)
+    have hd : LocallyIntegrable d volume :=
+      (locallyIntegrable_const w).indicator measurableSet_Ioc
+    have h0 : H (sys.expFlow (δ + t) (∫ s in (0 : ℝ)..(δ + t), sys.forcing 0 d s)) = 0 := by
+      have hh := h 0 d hd (δ + t)
+      simpa [sys, disturbanceContribution, LinearSystem.variationOfConstants] using hh
+    have hsplit : (∫ s in (0 : ℝ)..(δ + t), sys.forcing 0 d s) =
+        (∫ s in (0 : ℝ)..δ, sys.forcing 0 d s) +
+          ∫ s in δ..(δ + t), sys.forcing 0 d s :=
+      (intervalIntegral.integral_add_adjacent_intervals
+        (LinearSystem.intervalIntegrable_forcing sys 0 hd 0 δ)
+        (LinearSystem.intervalIntegrable_forcing sys 0 hd δ (δ + t))).symm
+    have hsecond : (∫ s in δ..(δ + t), sys.forcing 0 d s) = 0 := by
+      refine intervalIntegral.integral_zero_ae ?_
+      filter_upwards with s hs
+      rw [uIoc_of_le (by linarith)] at hs
+      have hs' : s ∉ Set.Ioc (0 : ℝ) δ := by
+        rw [Set.mem_Ioc] at hs ⊢
+        exact fun h => absurd h.2 (not_le.mpr hs.1)
+      have hds : d s = 0 := by simpa [d] using Set.indicator_of_notMem hs' (fun _ => w)
+      simp [LinearSystem.forcing, hds]
+    have hfirst : (∫ s in (0 : ℝ)..δ, sys.forcing 0 d s) = F δ := by
+      have hcongr : (∫ s in (0 : ℝ)..δ, sys.forcing 0 d s) =
+          ∫ s in (0 : ℝ)..δ, φ s := by
+        apply intervalIntegral.integral_congr_ae
+        filter_upwards with s hs
+        rw [uIoc_of_le (le_of_lt hδ)] at hs
+        have hds : d s = w := by simpa [d] using Set.indicator_of_mem hs (fun _ => w)
+        simp [LinearSystem.forcing, hds, φ, sys, disturbanceSystem]
+      rw [hcongr]
+    have h0' : H (sys.expFlow (δ + t) (F δ)) = 0 := by
+      rw [hsplit, hsecond, add_zero, hfirst] at h0
+      exact h0
+    have hsmul : sys.expFlow (δ + t) (F δ) = δ • G δ := by
+      have h1 : F δ = δ • (δ⁻¹ • F δ) := by
+        rw [smul_smul, mul_inv_cancel₀ (ne_of_gt hδ), one_smul]
+      rw [h1, map_smul]
+    have hz := h0'
+    rw [hsmul, map_smul] at hz
+    exact (smul_eq_zero.mp hz).resolve_left (ne_of_gt hδ)
+  have hFlow : Tendsto (fun δ : ℝ => sys.expFlow (δ + t)) (𝓝[>] (0 : ℝ))
+      (𝓝 (sys.expFlow t)) := by
+    have hcont : Continuous (fun δ : ℝ => sys.expFlow (δ + t)) := by
+      simpa only [sub_neg_eq_add] using LinearSystem.continuous_expFlow_sub sys (-t)
+    have hca : ContinuousAt (fun δ : ℝ => sys.expFlow (δ + t)) 0 := hcont.continuousAt
+    have hle : 𝓝[Set.Ioi (0 : ℝ)] (0 : ℝ) ≤ 𝓝 (0 : ℝ) := nhdsWithin_le_nhds
+    have h := hca.tendsto.mono_left hle
+    simpa using h
+  have hprod : Tendsto G (𝓝[>] (0 : ℝ)) (𝓝 (sys.expFlow t (E w))) := by
+    have hpair : Tendsto (fun δ : ℝ => (sys.expFlow (δ + t), δ⁻¹ • F δ))
+        (𝓝[>] (0 : ℝ)) (𝓝 (sys.expFlow t, E w)) := by
+      rw [nhds_prod_eq]
+      exact hFlow.prodMk hF_tendsto
+    have heval : ContinuousAt (fun p : (X →L[ℝ] X) × X => p.1 p.2)
+        (sys.expFlow t, E w) :=
+      (continuous_fst.clm_apply continuous_snd).continuousAt
+    have := heval.tendsto.comp hpair
+    simpa [G, Function.comp_def] using this
+  have hzero : H (sys.expFlow t (E w)) = 0 := by
+    have htend : Tendsto (fun δ : ℝ => H (G δ)) (𝓝[>] (0 : ℝ))
+        (𝓝 (H (sys.expFlow t (E w)))) := by
+      have := (sys.continuousC.continuous.tendsto (sys.expFlow t (E w))).comp hprod
+      simpa [Function.comp_def, sys, disturbanceSystem] using this
+    have hconst : Tendsto (fun δ : ℝ => H (G δ)) (𝓝[>] (0 : ℝ)) (𝓝 0) := by
+      have hev : (fun δ : ℝ => H (G δ)) =ᶠ[𝓝[>] (0 : ℝ)] (fun _ => (0 : Z)) := by
+        filter_upwards [self_mem_nhdsWithin] with δ hδ
+        exact hG δ hδ
+      exact Tendsto.congr' hev.symm tendsto_const_nhds
+    exact tendsto_nhds_unique htend hconst
+  simpa [sys] using hzero
+
+/-- **Exact decoupling is equivalent to zero disturbance contribution for every
+admissible input.** -/
+theorem isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    IsDisturbanceDecoupled A E H ↔
+      ∀ (t₀ : ℝ) (d : ℝ → W), LocallyIntegrable d volume →
+        ∀ t : ℝ, disturbanceContribution A E H t₀ d t = 0 :=
+  ⟨fun h _ _ hd t => isDisturbanceDecoupled_disturbanceContribution_eq_zero A E H h hd t,
+    fun h => isDisturbanceDecoupled_of_forall_disturbanceContribution_eq_zero A E H h⟩
+
+end Convolution
 
 end Analytic
 
