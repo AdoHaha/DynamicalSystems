@@ -2397,4 +2397,270 @@ theorem hurwitzSubspace_zero : hurwitzSubspace (0 : X →ₗ[ℝ] X) = ⊥ := by
 
 end HurwitzSubspace
 
+/-! ## Stabilizable and detectable spectral subspaces
+
+This section formalises the two spectral subspaces needed for the full geometric
+external-stabilization converse of Trentelman–Stoorvogel–Hautus, Chapter 6:
+
+* `LinearMap.stabilizableSubspace A B = X_g(A) + ⟨A | im B⟩`, the **stabilizable
+  subspace** `Xstab` of Theorem 4.26: the states from which a stable trajectory
+  can be produced. It is the sum of the accepted stable subspace
+  `hurwitzSubspace A` and the reachable subspace `reachableSubspace A B`.
+* `LinearMap.detectableSubspace C A = X_b(A) ∩ ⟨ker C | A⟩`, the **smallest
+  detectability subspace** `Xdet` of Definition 5.10 / Theorem 5.15: the
+  undetectable part of the state space, the intersection of the antistable
+  spectral subspace `unstableSubspace A` with the unobservable subspace
+  `unobservableSubspace C A`.
+
+The three spectral objects are kept distinct: the **stable subspace**
+`hurwitzSubspace A = X_g(A)` is the negative-real-part generalized eigenspace,
+the **stabilizable subspace** is `X_g(A) + ⟨A | im B⟩`, and the **detectable
+subspace** is `X_b(A) ∩ ⟨ker C | A⟩`. Both new subspaces are `A`-invariant.
+
+Following the source we also record the dual pair of "complementary" dynamics
+that make these subspaces useful:
+
+* `LinearMap.isHurwitz_on_stabilizableComplement`: for a stabilizable pair the
+  induced map on `X / ⟨A | im B⟩` — the uncontrollable complement — is Hurwitz
+  (Theorem 4.30 (ii));
+* `LinearMap.isHurwitz_on_detectableComplement`: for a detectable pair the
+  restriction of `A` to the unobservable complement `⟨ker C | A⟩` is Hurwitz
+  (Theorem 5.16 (ii)).
+
+These are the geometric forms of the PBH necessity statements
+`isStabilizable_converse_of_uncontrollableEigenvalue` and
+`isDetectable_converse_of_unobservableEigenvalue`. No claim about Corollary 6.22
+itself is made here.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 4.26, Theorem 4.30, Theorem 5.15
+and Theorem 5.16 (PDF pages 81, 115 and 156 region, printed Sections 4.6
+and 5.2). -/
+
+section StabilizableDetectable
+
+open scoped Matrix
+
+/-- The complex **antistable subspace** of `A`: the sum of the generalized
+eigenspaces of the complexified coordinate operator at the eigenvalues with
+nonnegative real part. It is the spectral complement of `hurwitzComplexSubspace`
+inside the complexified state space. -/
+noncomputable def unstableComplexSubspace (A : X →ₗ[ℝ] X) :
+    Submodule ℂ (Fin (Module.finrank ℝ X) → ℂ) :=
+  ⨆ μ : {μ : ℂ // ¬ μ.re < 0},
+    Module.End.maxGenEigenspace
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1
+
+/-- The **antistable (unstable) subspace** `X_b(A)` of a real endomorphism `A`.
+A vector `x` lies in it exactly when its real coordinates `ofRealPi (b.equivFun x)`
+lie in the complex antistable subspace `unstableComplexSubspace A`. This is the
+spectral object complementary to `hurwitzSubspace A = X_g(A)`; the precise direct
+sum decomposition `X = X_g(A) ⊕ X_b(A)` is not needed by the results below and is
+not claimed here. -/
+noncomputable def unstableSubspace (A : X →ₗ[ℝ] X) : Submodule ℝ X :=
+  ((unstableComplexSubspace A).restrictScalars ℝ).comap
+    (ofRealPi.comp (Module.finBasis ℝ X).equivFun.toLinearMap)
+
+/-- Membership in the antistable subspace, in terms of the real-coordinate
+transport `ofRealPi`. -/
+theorem mem_unstableSubspace {A : X →ₗ[ℝ] X} {x : X} :
+    x ∈ unstableSubspace A ↔
+      ofRealPi ((Module.finBasis ℝ X).equivFun x) ∈ unstableComplexSubspace A := by
+  rw [unstableSubspace, Submodule.mem_comap, Submodule.restrictScalars_mem]
+  rfl
+
+/-- The complex antistable subspace is invariant under the complexified
+coordinate operator: it is a supremum of generalized eigenspaces. -/
+theorem map_unstableComplexSubspace_le (A : X →ₗ[ℝ] X) :
+    Submodule.map (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        (unstableComplexSubspace A) ≤ unstableComplexSubspace A := by
+  rw [unstableComplexSubspace, Submodule.map_iSup]
+  refine iSup_le fun μ => ?_
+  rw [Submodule.map_le_iff_le_comap]
+  intro y hy
+  exact Submodule.mem_iSup_of_mem μ
+    (Module.End.mapsTo_maxGenEigenspace_of_comm (Commute.refl _) μ.1 hy)
+
+/-- **The antistable subspace is `A`-invariant**: `A (unstableSubspace A) ≤
+unstableSubspace A`. The proof mirrors `map_hurwitzSubspace_le`: the complexified
+matrix acts on the complex antistable subspace and `ofRealPi` intertwines the
+real and complexified actions. -/
+theorem map_unstableSubspace_le (A : X →ₗ[ℝ] X) :
+    Submodule.map A (unstableSubspace A) ≤ unstableSubspace A := by
+  rw [Submodule.map_le_iff_le_comap]
+  intro x hx
+  rw [Submodule.mem_comap]
+  rw [mem_unstableSubspace] at hx ⊢
+  have hcoord : (Module.finBasis ℝ X).equivFun (A x) =
+      (hurwitzMatrix A) *ᵥ ((Module.finBasis ℝ X).equivFun x) := by
+    rw [Basis.equivFun_apply, Basis.equivFun_apply]
+    exact (LinearMap.toMatrix_mulVec_repr (Module.finBasis ℝ X) (Module.finBasis ℝ X) A x).symm
+  rw [hcoord, ofRealPi_mulVec]
+  rw [← Matrix.toLin'_apply]
+  exact map_unstableComplexSubspace_le A ⟨_, hx, rfl⟩
+
+/-- The **stabilizable subspace** `Xstab(A, B) = X_g(A) + ⟨A | im B⟩` of
+Trentelman–Stoorvogel–Hautus, Theorem 4.26: the sum of the stable subspace
+`hurwitzSubspace A` and the reachable subspace `reachableSubspace A B`. It is
+the largest subspace each of whose states is the initial state of a stable
+state trajectory. -/
+noncomputable def stabilizableSubspace (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    Submodule ℝ X :=
+  hurwitzSubspace A ⊔ reachableSubspace A B
+
+/-- The **detectable (undetectable) subspace** `Xdet(C, A) = X_b(A) ∩ ⟨ker C | A⟩`
+of Trentelman–Stoorvogel–Hautus, Theorem 5.15: the intersection of the
+antistable subspace `unstableSubspace A` with the unobservable subspace
+`unobservableSubspace C A`. It is the source's smallest detectability subspace;
+the source characterisation that it vanishes exactly when `(C, A)` is detectable
+(Theorem 5.16) is not used or claimed below. -/
+noncomputable def detectableSubspace (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    Submodule ℝ X :=
+  unobservableSubspace C A ⊓ unstableSubspace A
+
+/-- The stable subspace is contained in the stabilizable subspace. -/
+theorem hurwitzSubspace_le_stabilizableSubspace (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    hurwitzSubspace A ≤ stabilizableSubspace A B :=
+  le_sup_left
+
+/-- The reachable subspace is contained in the stabilizable subspace. -/
+theorem reachableSubspace_le_stabilizableSubspace (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    reachableSubspace A B ≤ stabilizableSubspace A B :=
+  le_sup_right
+
+omit [FiniteDimensional ℝ Y] in
+/-- The detectable subspace is contained in the unobservable subspace. -/
+theorem detectableSubspace_le_unobservableSubspace (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    detectableSubspace C A ≤ unobservableSubspace C A :=
+  inf_le_left
+
+omit [FiniteDimensional ℝ Y] in
+/-- The detectable subspace is contained in the antistable subspace. -/
+theorem detectableSubspace_le_unstableSubspace (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    detectableSubspace C A ≤ unstableSubspace A :=
+  inf_le_right
+
+/-- **The stabilizable subspace is `A`-invariant.** It is the sum of two
+`A`-invariant subspaces, the stable subspace and the reachable subspace. -/
+theorem map_stabilizableSubspace_le (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    Submodule.map A (stabilizableSubspace A B) ≤ stabilizableSubspace A B := by
+  rw [stabilizableSubspace, Submodule.map_sup]
+  exact sup_le (le_trans (map_hurwitzSubspace_le A) le_sup_left)
+    (le_trans (map_reachableSubspace_le A B) le_sup_right)
+
+omit [FiniteDimensional ℝ Y] in
+/-- **The detectable subspace is `A`-invariant.** It is the intersection of two
+`A`-invariant subspaces, the unobservable subspace and the antistable subspace. -/
+theorem map_detectableSubspace_le (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    Submodule.map A (detectableSubspace C A) ≤ detectableSubspace C A := by
+  rw [detectableSubspace]
+  exact le_trans (Submodule.map_inf_le A)
+    (inf_le_inf (map_unobservableSubspace_le C A) (map_unstableSubspace_le A))
+
+/-- **Spectrum transfer to the quotient of an invariant submodule.** If `A` is
+Hurwitz, then the induced map `A : X ⧸ V → X ⧸ V` on the quotient by an
+`A`-invariant `V` is Hurwitz. This is the quotient companion of
+`isHurwitz_restrict_of_invariant`, obtained from the exact factorisation
+`charpoly_restrict_of_invariant` (the quotient characteristic polynomial divides
+that of `A`). -/
+theorem isHurwitz_quotient_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ X)
+    (hV : ∀ x ∈ V, A x ∈ V) (hA : IsHurwitz A) :
+    IsHurwitz (Submodule.mapQ V V A (fun x hx => hV x hx)) := by
+  intro z hz
+  have hfac := charpoly_restrict_of_invariant A V hV
+  have hz' : (A.charpoly.map (algebraMap ℝ ℂ)).eval z = 0 := by
+    rw [hfac, Polynomial.map_mul, Polynomial.eval_mul, hz, mul_zero]
+  exact hA z hz'
+
+/-- **The uncontrollable complement of a stabilizable pair is Hurwitz.** If
+`(A, B)` is stabilizable then the map induced by `A` on the quotient
+`X ⧸ ⟨A | im B⟩` is Hurwitz. Equivalently, every unreachable eigenvalue is
+stable, which is Theorem 4.30 (ii) in geometric form.
+
+This is the "complementary restriction" attached to `stabilizableSubspace`:
+removing the reachable (hence stabilizable) directions leaves a Hurwitz map.
+The proof is the PBH necessity statement realised geometrically: a stabilizing
+feedback `F` does not change the induced quotient map because `B F` lands in
+the reachable subspace, and the quotient characteristic polynomial divides the
+Hurwitz characteristic polynomial of `A + B F`. -/
+theorem isHurwitz_on_stabilizableComplement (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : IsStabilizable A B) :
+    IsHurwitz (Submodule.mapQ (reachableSubspace A B) (reachableSubspace A B) A
+      (fun x hx => map_reachableSubspace_le A B ⟨x, hx, rfl⟩)) := by
+  obtain ⟨F, hF⟩ := h
+  let W := reachableSubspace A B
+  have hAW : ∀ x ∈ W, (A + B.comp F) x ∈ W := by
+    intro x hx
+    simp only [LinearMap.add_apply, LinearMap.comp_apply]
+    exact W.add_mem (map_reachableSubspace_le A B ⟨x, hx, rfl⟩)
+      (range_le_reachableSubspace A B ⟨F x, rfl⟩)
+  have hmapQ : Submodule.mapQ W W (A + B.comp F) (fun x hx => hAW x hx) =
+      Submodule.mapQ W W A (fun x hx => map_reachableSubspace_le A B ⟨x, hx, rfl⟩) := by
+    apply LinearMap.ext
+    intro x
+    refine Submodule.Quotient.induction_on (p := W) x ?_
+    intro y
+    rw [Submodule.mapQ_apply, Submodule.mapQ_apply]
+    refine (Submodule.Quotient.eq W).mpr ?_
+    have hB : (A + B.comp F) y - A y = B (F y) := by
+      simp only [LinearMap.add_apply, LinearMap.comp_apply]
+      abel
+    rw [hB]
+    exact range_le_reachableSubspace A B ⟨F y, rfl⟩
+  rw [← hmapQ]
+  exact isHurwitz_quotient_of_invariant (A + B.comp F) W (fun x hx => hAW x hx) hF
+
+omit [FiniteDimensional ℝ Y] in
+/-- **The unobservable complement of a detectable pair is Hurwitz.** If
+`(C, A)` is detectable then the restriction of `A` to the unobservable subspace
+`⟨ker C | A⟩` is Hurwitz, which is Theorem 5.16 (ii) in geometric form.
+
+This is the "complementary restriction" attached to `detectableSubspace`:
+the hidden (unobservable) directions carry a Hurwitz map. The proof is the PBH
+necessity statement realised geometrically: an output injection `L` leaves the
+unobservable subspace invariant, because `C` vanishes on it, so the restriction
+of `A - L C` there is the restriction of `A` and is Hurwitz by
+`isHurwitz_restrict_of_invariant`. -/
+theorem isHurwitz_on_detectableComplement (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X)
+    (h : IsDetectable C A) :
+    IsHurwitz (A.restrict
+      (fun x hx => map_unobservableSubspace_le C A ⟨x, hx, rfl⟩)) := by
+  obtain ⟨L, hL⟩ := h
+  let N := unobservableSubspace C A
+  have hN : ∀ x ∈ N, (A - L.comp C) x ∈ N := by
+    intro x hx
+    simp only [LinearMap.sub_apply, LinearMap.comp_apply]
+    exact N.sub_mem (map_unobservableSubspace_le C A ⟨x, hx, rfl⟩)
+      (by simp [C_eq_zero_of_mem_unobservableSubspace hx])
+  have hrestr : (A - L.comp C).restrict (fun x hx => hN x hx) =
+      A.restrict (fun x hx => map_unobservableSubspace_le C A ⟨x, hx, rfl⟩) := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    simp only [LinearMap.restrict_apply, LinearMap.sub_apply, LinearMap.comp_apply]
+    rw [C_eq_zero_of_mem_unobservableSubspace x.2, map_zero, sub_zero]
+  rw [← hrestr]
+  exact isHurwitz_restrict_of_invariant (A - L.comp C) N (fun x hx => hN x hx) hL
+
+/-- In the zero-dimensional case the stabilizable subspace is the whole
+(trivial) state space: the stable subspace is already `⊤`. -/
+theorem stabilizableSubspace_eq_top_of_subsingleton [Subsingleton X]
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    stabilizableSubspace A B = ⊤ := by
+  rw [stabilizableSubspace, hurwitzSubspace_eq_top_of_subsingleton A]
+  simp
+
+omit [FiniteDimensional ℝ Y] in
+/-- In the zero-dimensional case the detectable subspace is the whole (trivial)
+state space, since every submodule of a subsingleton module is `⊤`; in
+particular it is also `⊥`. -/
+theorem detectableSubspace_eq_top_of_subsingleton [Subsingleton X]
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    detectableSubspace C A = ⊤ := by
+  have hN : unobservableSubspace C A = ⊤ := Subsingleton.elim _ _
+  have hU : unstableSubspace A = ⊤ := Subsingleton.elim _ _
+  rw [detectableSubspace, hN, hU]
+  simp
+
+end StabilizableDetectable
+
 end LinearMap
