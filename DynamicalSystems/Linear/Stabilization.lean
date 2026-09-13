@@ -2661,6 +2661,239 @@ theorem detectableSubspace_eq_top_of_subsingleton [Subsingleton X]
   rw [detectableSubspace, hN, hU]
   simp
 
+/-! ## The stable/antistable direct-sum identity
+
+The stable subspace `X_g(A)` and the antistable subspace `X_b(A)` together span
+the state space. In the complexified coordinates the two index sets
+`{μ | re μ < 0}` and `{μ | ¬ re μ < 0}` exhaust `ℂ`, so the supremum of the
+corresponding generalized eigenspaces is everything
+(`Module.End.iSup_maxGenEigenspace_eq_top`). Transporting that identity back to
+the real state space requires the complex conjugation `star`: the complexified
+matrix has real entries, so `star` intertwines it with itself; consequently each
+of the two coordinate subspaces is `star`-invariant. The real statement follows
+by writing an arbitrary vector in `H ⊔ U` and replacing the two summands by their
+`star`-fixed halves, which are complexifications of real vectors. -/
+
+open scoped Matrix
+
+/-- A real-entry complex matrix commutes with complex conjugation. -/
+theorem star_toLin (A : X →ₗ[ℝ] X) (z : Fin (Module.finrank ℝ X) → ℂ) :
+    star ((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) z) =
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) (star z) := by
+  rw [Matrix.toLin'_apply, Matrix.toLin'_apply]
+  ext i
+  rw [Pi.star_apply, Matrix.mulVec, Matrix.mulVec, dotProduct, dotProduct, star_sum]
+  apply Finset.sum_congr rfl
+  intro j _
+  have hreal : star ((hurwitzMatrix A).map (algebraMap ℝ ℂ) i j) =
+      (hurwitzMatrix A).map (algebraMap ℝ ℂ) i j := by
+    simp [hurwitzMatrix]
+  rw [star_mul, hreal, mul_comm]
+  rfl
+
+omit [FiniteDimensional ℝ X] in
+/-- Complex conjugation is compatible with complex scalar multiplication. -/
+theorem star_smul_pi (μ : ℂ) (w : Fin (Module.finrank ℝ X) → ℂ) :
+    star (μ • w) = star μ • star w := by
+  ext i
+  rw [Pi.star_apply, Pi.smul_apply, Pi.smul_apply, smul_eq_mul, smul_eq_mul, star_mul, mul_comm]
+  rfl
+
+/-- Complex conjugation intertwines `f - μ` with `f - star μ` for the
+complexified real matrix `f`. -/
+theorem star_of_sub_smul (A : X →ₗ[ℝ] X) (μ : ℂ)
+    (w : Fin (Module.finrank ℝ X) → ℂ) :
+    star (((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        - μ • (1 : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ))) w)
+      = ((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        - star μ • (1 : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ)))
+          (star w) := by
+  rw [LinearMap.sub_apply, LinearMap.sub_apply, LinearMap.smul_apply, LinearMap.smul_apply,
+    Module.End.one_apply, Module.End.one_apply, star_sub, star_toLin, star_smul_pi]
+
+/-- Powers of `f - μ` are intertwined with powers of `f - star μ` by complex
+conjugation. -/
+theorem star_pow_of_sub_smul (A : X →ₗ[ℝ] X) (μ : ℂ) (k : ℕ)
+    (w : Fin (Module.finrank ℝ X) → ℂ) :
+    star ((((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        - μ • (1 : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ))) ^ k) w)
+      = ((((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        - star μ • (1 : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ))) ^ k)
+          (star w)) := by
+  induction k generalizing w with
+  | zero => simp
+  | succ k ih =>
+      simp only [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply]
+      rw [star_of_sub_smul A μ
+        ((((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) -
+          μ • (1 : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ]
+            (Fin (Module.finrank ℝ X) → ℂ))) ^ k) w), ih w]
+
+/-- Complex conjugation transports the generalized eigenspace at `μ` to the
+generalized eigenspace at `star μ`. -/
+theorem star_mem_maxGenEigenspace (A : X →ₗ[ℝ] X) (μ : ℂ)
+    {z : Fin (Module.finrank ℝ X) → ℂ}
+    (hz : z ∈ Module.End.maxGenEigenspace
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ) :
+    star z ∈ Module.End.maxGenEigenspace
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) (star μ) := by
+  rw [Module.End.mem_maxGenEigenspace] at hz ⊢
+  obtain ⟨k, hk⟩ := hz
+  exact ⟨k, by rw [← star_pow_of_sub_smul A μ k z, hk, star_zero]⟩
+
+/-- Complex conjugation preserves a supremum of generalized eigenspaces whose
+index predicate is invariant under conjugation. -/
+theorem star_mem_iSup_maxGenEigenspace (A : X →ₗ[ℝ] X) (p : ℂ → Prop)
+    (hp : ∀ μ, p μ → p (star μ))
+    {z : Fin (Module.finrank ℝ X) → ℂ}
+    (hz : z ∈ ⨆ μ : {μ : ℂ // p μ},
+      Module.End.maxGenEigenspace (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1) :
+    star z ∈ ⨆ μ : {μ : ℂ // p μ},
+      Module.End.maxGenEigenspace (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1 := by
+  let g : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))
+  obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+    (p := fun μ : {μ : ℂ // p μ} => Module.End.maxGenEigenspace g μ.1)).mp hz
+  obtain ⟨zμ, hzμ⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+    (fun μ : {μ : ℂ // p μ} => Module.End.maxGenEigenspace g μ.1) z).mp hs
+  rw [← hzμ, star_sum]
+  apply Submodule.sum_mem
+  intro μ hμ
+  exact Submodule.mem_iSup_of_mem ⟨star μ.1, hp μ.1 μ.2⟩
+    (star_mem_maxGenEigenspace A μ.1 (zμ μ).2)
+
+/-- The complex Hurwitz subspace is invariant under complex conjugation. -/
+theorem star_mem_hurwitzComplexSubspace (A : X →ₗ[ℝ] X)
+    {z : Fin (Module.finrank ℝ X) → ℂ} (hz : z ∈ hurwitzComplexSubspace A) :
+    star z ∈ hurwitzComplexSubspace A := by
+  rw [hurwitzComplexSubspace] at hz ⊢
+  exact star_mem_iSup_maxGenEigenspace A (fun μ => μ.re < 0)
+    (fun μ hμ => by have h : (star μ).re = μ.re := Complex.conj_re μ; rwa [h]) hz
+
+/-- The complex antistable subspace is invariant under complex conjugation. -/
+theorem star_mem_unstableComplexSubspace (A : X →ₗ[ℝ] X)
+    {z : Fin (Module.finrank ℝ X) → ℂ} (hz : z ∈ unstableComplexSubspace A) :
+    star z ∈ unstableComplexSubspace A := by
+  rw [unstableComplexSubspace] at hz ⊢
+  exact star_mem_iSup_maxGenEigenspace A (fun μ => ¬ μ.re < 0)
+    (fun μ hμ => by have h : (star μ).re = μ.re := Complex.conj_re μ; rwa [h]) hz
+
+omit [FiniteDimensional ℝ X] in
+/-- A `star`-fixed complex vector is the complexification of a real vector. -/
+theorem exists_ofRealPi_of_star_eq {z : Fin (Module.finrank ℝ X) → ℂ} (h : star z = z) :
+    ∃ a : Fin (Module.finrank ℝ X) → ℝ, ofRealPi a = z := by
+  refine ⟨fun i => (z i).re, ?_⟩
+  ext i
+  have hi : star (z i) = z i := by
+    have := congrFun h i
+    simpa [Pi.star_apply] using this
+  have him : (z i).im = 0 := Complex.conj_eq_iff_im.mp hi
+  simp only [ofRealPi_apply]
+  exact Complex.ext (by simp) (by simp [him])
+
+/-- **Stable/antistable direct-sum identity.** For a real endomorphism `A` of a
+finite-dimensional real state space, the stable subspace `X_g(A)` and the
+antistable subspace `X_b(A)` span the whole space:
+`X_g(A) ⊔ X_b(A) = ⊤`.
+
+This is the real form of the primary decomposition of the complexification into
+the generalized eigenspaces for eigenvalues with negative real part and those
+with nonnegative real part, transported along the real coordinates. It is the
+spectral identity underlying the stabilizable/detectable top characterisations.
+
+Source: Trentelman–Stoorvogel–Hautus, Definition 2.13 and the spectral
+decompositions of Sections 4.6 and 5.2. -/
+theorem hurwitzSubspace_sup_unstableSubspace_eq_top (A : X →ₗ[ℝ] X) :
+    hurwitzSubspace A ⊔ unstableSubspace A = ⊤ := by
+  have hcomplex : hurwitzComplexSubspace A ⊔ unstableComplexSubspace A = ⊤ := by
+    let f : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ) :=
+      Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))
+    have htop : (⨆ μ : ℂ, Module.End.maxGenEigenspace f μ) = ⊤ :=
+      Module.End.iSup_maxGenEigenspace_eq_top f
+    apply le_antisymm le_top
+    rw [← htop]
+    apply iSup_le
+    intro μ
+    by_cases hμ : μ.re < 0
+    · refine le_sup_of_le_left ?_
+      change Module.End.maxGenEigenspace f μ ≤ hurwitzComplexSubspace A
+      rw [hurwitzComplexSubspace]
+      exact le_iSup (fun μ' : {μ : ℂ // μ.re < 0} => Module.End.maxGenEigenspace f μ'.1) ⟨μ, hμ⟩
+    · refine le_sup_of_le_right ?_
+      change Module.End.maxGenEigenspace f μ ≤ unstableComplexSubspace A
+      rw [unstableComplexSubspace]
+      exact le_iSup (fun μ' : {μ : ℂ // ¬ μ.re < 0} => Module.End.maxGenEigenspace f μ'.1) ⟨μ, hμ⟩
+  apply le_antisymm le_top
+  intro x _
+  set φ : X →ₗ[ℝ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    ofRealPi.comp (Module.finBasis ℝ X).equivFun.toLinearMap with hφ
+  have hmem : φ x ∈ hurwitzComplexSubspace A ⊔ unstableComplexSubspace A := by
+    rw [hcomplex]; exact Submodule.mem_top
+  rw [Submodule.mem_sup] at hmem
+  obtain ⟨h, hh, u, hu, hhu⟩ := hmem
+  have hstar_h : star h ∈ hurwitzComplexSubspace A := star_mem_hurwitzComplexSubspace A hh
+  have hstar_u : star u ∈ unstableComplexSubspace A := star_mem_unstableComplexSubspace A hu
+  set h' : Fin (Module.finrank ℝ X) → ℂ := (1/2 : ℂ) • (h + star h) with hh'
+  set u' : Fin (Module.finrank ℝ X) → ℂ := (1/2 : ℂ) • (u + star u) with hu'
+  have hh'mem : h' ∈ hurwitzComplexSubspace A :=
+    Submodule.smul_mem _ _ (Submodule.add_mem _ hh hstar_h)
+  have hu'mem : u' ∈ unstableComplexSubspace A :=
+    Submodule.smul_mem _ _ (Submodule.add_mem _ hu hstar_u)
+  have hz_fixed : star (φ x) = φ x := by
+    rw [hφ]
+    ext i
+    simp [ofRealPi]
+  have hh'fix : star h' = h' := by
+    rw [hh']
+    ext i
+    simp only [Pi.star_apply, Pi.smul_apply, Pi.add_apply]
+    rw [smul_eq_mul, star_mul, star_add, star_star]
+    rw [show star (1/2 : ℂ) = 1/2 by simp]
+    ring
+  have hu'fix : star u' = u' := by
+    rw [hu']
+    ext i
+    simp only [Pi.star_apply, Pi.smul_apply, Pi.add_apply]
+    rw [smul_eq_mul, star_mul, star_add, star_star]
+    rw [show star (1/2 : ℂ) = 1/2 by simp]
+    ring
+  have hsum : h' + u' = φ x := by
+    rw [hh', hu', ← smul_add]
+    rw [show (h + star h) + (u + star u) = (h + u) + star (h + u) by
+      rw [star_add]; abel]
+    rw [hhu, hz_fixed]
+    module
+  obtain ⟨ah, hah⟩ := exists_ofRealPi_of_star_eq hh'fix
+  obtain ⟨au, hau⟩ := exists_ofRealPi_of_star_eq hu'fix
+  have hφin : ∀ a : Fin (Module.finrank ℝ X) → ℝ,
+      φ ((Module.finBasis ℝ X).equivFun.symm a) = ofRealPi a := by
+    intro a
+    rw [hφ]
+    simp only [LinearMap.comp_apply]
+    congr 1
+    exact (Module.finBasis ℝ X).equivFun.apply_symm_apply a
+  have hh'pre : (Module.finBasis ℝ X).equivFun.symm ah ∈
+      Submodule.comap φ ((hurwitzComplexSubspace A).restrictScalars ℝ) := by
+    rw [Submodule.mem_comap, Submodule.restrictScalars_mem, hφin, hah]; exact hh'mem
+  have hu'pre : (Module.finBasis ℝ X).equivFun.symm au ∈
+      Submodule.comap φ ((unstableComplexSubspace A).restrictScalars ℝ) := by
+    rw [Submodule.mem_comap, Submodule.restrictScalars_mem, hφin, hau]; exact hu'mem
+  rw [hurwitzSubspace, unstableSubspace]
+  rw [Submodule.mem_sup]
+  refine ⟨_, hh'pre, _, hu'pre, ?_⟩
+  have hinj : Function.Injective φ := by
+    intro a b hab
+    rw [hφ] at hab
+    simp only [LinearMap.comp_apply] at hab
+    have hfun : (Module.finBasis ℝ X).equivFun a = (Module.finBasis ℝ X).equivFun b := by
+      funext i
+      have hi := congrFun hab i
+      exact_mod_cast (by simpa [ofRealPi] using hi)
+    exact (Module.finBasis ℝ X).equivFun.injective hfun
+  apply hinj
+  rw [map_add, hφin, hφin, hah, hau, hsum]
+
+
 end StabilizableDetectable
 
 end LinearMap
