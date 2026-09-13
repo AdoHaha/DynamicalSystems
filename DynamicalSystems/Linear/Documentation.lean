@@ -17,6 +17,7 @@ open Verso.Genre.Manual.InlineLean
 
 set_option linter.hashCommand false
 set_option linter.missingDocs false
+set_option linter.style.longLine false
 
 -- Verso generates this declaration from `#doc`; give that generated object a docstring too.
 run_cmd do
@@ -272,6 +273,235 @@ eigenvalue `I`, which is why the PBH bridge must complexify.
 {docstring DynamicalSystems.Linear.Examples.rotation_complex_not_observable}
 {docstring DynamicalSystems.Linear.Examples.rotation_real_not_observable}
 
+The nonzero-feedthrough plant has `D = 1`. The innovation subtracts the direct input term, the
+observer error dynamics is independent of `D`, and observability still yields a convergent
+observer.
+
+{docstring DynamicalSystems.Linear.Examples.feedthroughSystem}
+{docstring DynamicalSystems.Linear.Examples.feedthroughSystem_innovation_readout}
+{docstring DynamicalSystems.Linear.Examples.feedthroughSystem_naive_innovation_readout}
+{docstring DynamicalSystems.Linear.Examples.feedthroughSystem_observerError_dynamics}
+{docstring DynamicalSystems.Linear.Examples.feedthroughSystem_exists_stable_observer}
+
+Disturbance decoupling by state feedback is demonstrated in both directions on the double
+integrator, together with the static obstruction that no feedback can remove a direct
+instantaneous term.
+
+{docstring DynamicalSystems.Linear.Examples.not_isStateFeedbackDisturbanceDecoupled_of_apply_ne_zero}
+{docstring DynamicalSystems.Linear.Examples.decoupling_possible_velocity}
+{docstring DynamicalSystems.Linear.Examples.decoupling_impossible_position}
+{docstring DynamicalSystems.Linear.Examples.decoupling_impossible_velocity}
+
+The scalar output filter of the local switching-limited-tracking development is ported and
+connected to the abstract trajectory API by a proved representation bridge.
+
+{docstring DynamicalSystems.Linear.Examples.filterOutput}
+{docstring DynamicalSystems.Linear.Examples.filterOutput_derivative}
+{docstring DynamicalSystems.Linear.Examples.filterSystem}
+{docstring DynamicalSystems.Linear.Examples.filterOutput_eq_variationOfConstants}
+
+# Source-to-theorem ledger
+
+This ledger maps every source statement used by the release to its checked Lean declaration. It
+covers all accepted modules. In the entries, "TST" abbreviates Trentelman, Stoorvogel and
+Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bullo,
+*LeanForControl*, commit `c5cedca904fe7b8168643c428b5cf5fd8b6ebf6d`.
+
+## `DynamicalSystems.Linear.Basic`
+
+* TST equations (2.1)–(2.3) and (3.1): the system data `x' = A x + B u`, `y = C x + D u`;
+  Lean `LinearSystem`, `LinearSystem.dynamics`, `LinearSystem.readout`.
+* State feedback `u = F x + v` (TST Section 3.2): Lean `LinearSystem.stateFeedback`.
+* State equivalence `x = S x̄`, `Ā = S⁻¹ A S`, `B̄ = S⁻¹ B`, `C̄ = C S`, `D̄ = D`
+  (TST (3.8)–(3.9)): Lean `LinearSystem.changeState` and its projection lemmas.
+
+## `DynamicalSystems.Linear.Subspaces`
+
+* Reachable subspace `⟨A | im B⟩` (TST Section 3.2): Lean `LinearMap.reachableSubspace`,
+  `LinearMap.range_le_reachableSubspace`, `LinearMap.reachableSubspace_le`.
+* Unobservable subspace `⟨ker C | A⟩` (TST Section 3.3): Lean
+  `LinearMap.unobservableSubspace`, `LinearMap.unobservableSubspace_le_ker`,
+  `LinearMap.le_unobservableSubspace`.
+* Controllability `⟨A | im B⟩ = X` and observability `⟨ker C | A⟩ = 0`: Lean
+  `LinearMap.IsControllable`, `LinearMap.IsObservable`.
+* Invariance `A V ≤ V` (TST Section 2.4): Lean `Submodule.map A V ≤ V`, bridged to
+  `Module.End.invtSubmodule` by `Module.End.mem_invtSubmodule_iff_map_le`,
+  `LinearMap.reachableSubspace_mem_invtSubmodule`,
+  `LinearMap.unobservableSubspace_mem_invtSubmodule`.
+
+## `DynamicalSystems.Linear.Kalman`
+
+* Kalman rank tests (TST Corollary 3.4(iii) and Theorem 3.8(v)): Lean
+  `LinearMap.kalmanControllabilityMap`, `LinearMap.kalmanObservabilityMap`,
+  `LinearMap.isControllable_iff_surjective_kalmanControllabilityMap`,
+  `LinearMap.isObservable_iff_injective_kalmanObservabilityMap`.
+* Cayley–Hamilton reduction of all powers to the first `dim X` powers (TST Sections 3.2–3.3):
+  Lean `LinearMap.reachableSubspace_eq_iSup_finrank`,
+  `LinearMap.unobservableSubspace_eq_iInf_finrank`.
+
+## `DynamicalSystems.Linear.KalmanDecomposition`
+
+* Kalman controllable/unobservable decomposition and the four-block coordinate change
+  (TST Theorem 3.11 and Exercise 3.7): Lean `LinearMap.kalmanEquiv`,
+  `LinearMap.controllableObservableRealization`, and the vanishing off-diagonal block lemmas.
+* Invariance of the Markov parameters under the realization (TST Theorem 3.10(iii)): Lean
+  `LinearMap.controllableObservableRealization_markov`.
+
+## `DynamicalSystems.Linear.Duality`
+
+* Duality `(A, B)` controllable iff `(Aᵀ, Bᵀ)` observable (TST Section 3.3): Lean
+  `LinearMap.isControllable_iff_isObservable_dualMap`,
+  `LinearMap.isObservable_iff_isControllable_dualMap`.
+* Reachable restriction and unobservable quotient (TST Section 3.4): Lean
+  `LinearMap.isControllable_reachableRestriction`,
+  `LinearMap.isObservable_quotientUnobservable`.
+
+## `DynamicalSystems.Linear.Hautus`
+
+* PBH eigenvalue criteria over an algebraically closed field (TST Theorem 3.13 and
+  equations (3.13)–(3.14)): Lean `LinearMap.isControllable_iff_hautus`,
+  `LinearMap.isObservable_iff_hautus`, adapting LF `isControllable_iff_hautus` and
+  `isObservable_iff_hautus` to the fixed `(C, A)` order.
+* Real complexification bridge for the PBH test (TST Section 3.5, planar-rotation warning):
+  Lean `LinearMap.isControllable_complexify_iff`, `LinearMap.isObservable_complexify_iff`,
+  `LinearMap.isControllable_iff_hautus_complex`, `LinearMap.isObservable_iff_hautus_complex`.
+
+## `DynamicalSystems.Linear.Trajectory`
+
+* Operator exponential and homogeneous solution (TST (2.15)–(2.16)): Lean
+  `LinearSystem.expFlow`, `LinearSystem.homogeneousSolution`,
+  `LinearSystem.hasDerivAt_expFlow_apply_state`.
+* Variation of constants (TST (2.19)): Lean `LinearSystem.variationOfConstants`,
+  `LinearSystem.variationOfConstants_integral`,
+  `LinearSystem.variationOfConstants_ae_hasDerivAt`,
+  `LinearSystem.variationOfConstants_isCaratheodorySolutionOn`.
+* Existence and uniqueness for locally integrable inputs: Lean
+  `LinearSystem.ltiStateTrajectoryRel_existsUnique`,
+  `LinearSystem.ltiInputOutputRel_existsUnique`, with feedthrough retained in
+  `LinearSystem.mem_ltiInputOutputRel_iff`.
+
+## `DynamicalSystems.Linear.ControlledInvariant`
+
+* Controlled invariance `A V ≤ V + im B` (TST Theorem 4.2): Lean
+  `LinearMap.IsControlledInvariant`,
+  `LinearMap.isControlledInvariant_iff_exists_stateFeedback`.
+* Invariant subspace algorithm `V₀ = K`, `V_{k+1} = K ∩ A⁻¹(V_k + im B)` (TST (4.9)): Lean
+  `LinearMap.controlledInvariantSeq`, `LinearMap.isGreatest_controlledInvariantSubspace`.
+* Duality with conditioned invariance (TST Section 4.4): Lean
+  `LinearMap.isControlledInvariant_iff_isConditionedInvariant_dualMap`.
+
+## `DynamicalSystems.Linear.ConditionedInvariant`
+
+* Conditioned invariance `A (S ∩ ker C) ≤ S` (TST Definition 5.1): Lean
+  `LinearMap.IsConditionedInvariant`,
+  `LinearMap.isConditionedInvariant_iff_exists_outputInjection`.
+* Conditioned invariant subspace algorithm `S₀ = E`, `S_{k+1} = E + A(S_k ∩ ker C)`
+  (TST (5.5)–(5.6)): Lean `LinearMap.conditionedInvariantSeq`,
+  `LinearMap.isLeast_conditionedInvariantSubspace`.
+
+## `DynamicalSystems.Linear.Reachability`
+
+* Reachable set equals the algebraic reachable subspace for positive horizons (TST
+  Theorem 3.1): Lean `LinearSystem.reachableSetAt_eq_reachableSubspace`.
+* Indistinguishability `C e^{tA} v = 0` (TST Definition 3.6 and Theorem 3.8(iv)): Lean
+  `LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace`.
+
+## `DynamicalSystems.Linear.Gramian`
+
+* Controllability and observability Gramians and their energy identities (TST Sections 3.2–3.3):
+  Lean `LinearSystem.controllabilityGramian`, `LinearSystem.observabilityGramian`,
+  `LinearSystem.inner_controllabilityGramian`, `LinearSystem.inner_observabilityGramian`.
+* Positive definiteness exactly for controllable/observable pairs: Lean
+  `LinearSystem.controllabilityGramian_posDef_iff_isControllable`,
+  `LinearSystem.observabilityGramian_posDef_iff_isObservable`.
+
+## `DynamicalSystems.Linear.PolePlacement`
+
+* Feedback invariance of the reachable subspace and controllability (TST Theorem 3.29): Lean
+  `LinearMap.reachableSubspace_add_comp`, `LinearMap.isControllable_add_comp`.
+* Companion / characteristic-polynomial infrastructure and the controlled-chain reduction:
+  Lean `LinearMap.charpoly_eq_of_companion`, `LinearMap.exists_controlled_chain`.
+* Full pole placement for monic real polynomials (TST Theorem 3.29): Lean
+  `LinearMap.exists_feedback_charpoly_of_isControllable`,
+  `LinearMap.isControllable_of_forall_exists_feedback_charpoly`.
+
+## `DynamicalSystems.Linear.Stabilization`
+
+* Hurwitz spectral predicate and stabilizability/detectability (TST Sections 3.10–3.11): Lean
+  `LinearMap.IsHurwitz`, `LinearMap.IsStabilizable`, `LinearMap.IsDetectable`.
+* Gain existence from controllability/observability, with the explicit target `(X + 1)^n`: Lean
+  `LinearMap.isStabilizable_of_isControllable`, `LinearMap.isDetectable_of_isObservable`.
+* Hurwitz-to-decay and Lyapunov stability (TST Theorem 3.13 and Section 3.11): Lean
+  `LinearMap.tendsto_exp_of_isHurwitz`, `LinearMap.isStableOn_expFlow_of_isHurwitz`,
+  `LinearMap.exists_stabilizing_feedback_stable_attractive`.
+* PBH converse criteria for uncontrollable/unobservable eigenvalues: Lean
+  `LinearMap.isStabilizable_of_uncontrollableEigenvalues_hurwitz`,
+  `LinearMap.isDetectable_of_unobservableEigenvalues_hurwitz`.
+* Separation-principle block spectrum: Lean `LinearMap.charpoly_blockOperator`,
+  `LinearMap.exists_separation_block_hurwitz`.
+
+## `DynamicalSystems.Linear.Observer`
+
+* Feedthrough-aware innovation `y - C ξ - D u` (TST Section 3.11, equations (3.40)–(3.43)):
+  Lean `LinearSystem.innovation`, `LinearSystem.innovation_readout`.
+* Observer error dynamics `e' = (A - L C) e`, independent of the input and of `D`: Lean
+  `LinearSystem.observerVectorField`, `LinearSystem.observerError_dynamics`,
+  `LinearSystem.observerError_dynamics_stateFeedback`,
+  `LinearSystem.separation_error_independent_of_feedback`.
+* Convergent observer from observability, with a constructed gain: Lean
+  `LinearMap.exists_observer_attractive_of_isObservable`,
+  `LinearMap.exists_observer_stable_attractive_of_isObservable`.
+* Observer-based separation principle: Lean `LinearMap.separation_principle_observer`,
+  `LinearMap.not_unobservableEigenvalue_of_isDetectable`.
+
+## `DynamicalSystems.Linear.DisturbanceDecoupling`
+
+* Markov parameters `H A^k E` and exact decoupling `T = 0` (TST (4.4)): Lean
+  `LinearMap.disturbanceResponse`, `LinearMap.IsDisturbanceDecoupled`.
+* Invariant-subspace characterisation `im E ≤ V ≤ ker H` (TST Theorem 4.6): Lean
+  `LinearMap.isDisturbanceDecoupled_iff_exists_invariant`.
+* State-feedback decoupling and the compact criterion `im E ≤ V*(ker H)` (TST Theorem 4.8
+  and Corollary 4.9): Lean
+  `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_exists_controlledInvariant`,
+  `LinearMap.isStateFeedbackDisturbanceDecoupled_iff_range_le_controlledInvariantSubspace`.
+* `(C, A, B)`-pairs and the algebraic core of Corollary 6.7: Lean
+  `LinearMap.IsCABPairBetween`, `LinearMap.exists_isCABPairBetween_iff`.
+* Analytic impulse response and the variation-of-constants/convolution bridge (TST (3.2)–(3.3)):
+  Lean `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`,
+  `LinearMap.forcedOutput_eq_convolution`,
+  `LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`.
+* Transfer-function/resolvent form under `s > ‖A‖`: Lean
+  `LinearMap.disturbanceTransferFunction_eq_resolvent`,
+  `LinearMap.isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`.
+
+## `DynamicalSystems.Linear.DynamicFeedback`
+
+* Dynamic measurement-feedback controller from a `(C, A, B)`-pair (TST Theorem 6.4): Lean
+  `LinearSystem.DynamicController`, `LinearSystem.exists_dynamicController_of_isCABPairBetween`.
+* Well-posedness of the algebraic loop as invertibility of `1 - D N` (TST Section 6.2): Lean
+  `LinearSystem.DynamicInterconnection.IsWellPosed`.
+* Closed-loop disturbance decoupling (TST Theorem 6.4): Lean
+  `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`.
+
+## `DynamicalSystems.Linear.Examples.Algebra`
+
+* Double integrator controllability and observability (TST Example 3.9 pattern): Lean
+  `DynamicalSystems.Linear.Examples.doubleIntegrator_controllable`,
+  `DynamicalSystems.Linear.Examples.doubleIntegrator_observable`.
+* Non-controllable and non-observable pairs (TST Example 3.5 and Example 3.9): Lean
+  `DynamicalSystems.Linear.Examples.uncontrollable_not_controllable`,
+  `DynamicalSystems.Linear.Examples.unobservable_not_observable`.
+* Real rotation with zero readout: non-real PBH witness (TST Section 3.5): Lean
+  `DynamicalSystems.Linear.Examples.rotation_real_not_observable_hautus`.
+* Nonzero-feedthrough observer (TST Section 3.11): Lean
+  `DynamicalSystems.Linear.Examples.feedthroughSystem_exists_stable_observer`.
+* Possible/impossible disturbance decoupling (TST Theorems 4.6 and 4.8): Lean
+  `DynamicalSystems.Linear.Examples.decoupling_possible_velocity`,
+  `DynamicalSystems.Linear.Examples.decoupling_impossible_position`,
+  `DynamicalSystems.Linear.Examples.decoupling_impossible_velocity`.
+* Scalar filter representation bridge (local switching-limited-tracking project): Lean
+  `DynamicalSystems.Linear.Examples.filterOutput_eq_variationOfConstants`.
+
 # Sources and scope
 
 The organizing reference is Trentelman, Stoorvogel, and Hautus, *Control Theory for Linear Systems*,
@@ -293,8 +523,12 @@ is equivalent to zero disturbance contribution for every locally integrable inpu
 synthesis layer constructs a dynamic measurement-feedback controller from an `IsCABPairBetween`
 certificate and proves the closed loop decoupled.
 
-The documented deferred obligations are: the transfer-function/resolvent form
-`H (s I - A)⁻¹ E = 0`; the converse extraction of a `(C, A, B)`-pair from a decoupled closed
-loop; a measurement disturbance channel `F` in the readout; the spectrum factorization and the
-internal/external stabilization layers; and the final examples/release bridge to a local
-actuator or filter result.
+The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is now proved in both directions
+under the explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is
+not claimed. The documented deferred obligations are: the converse extraction of a `(C, A, B)`-pair
+from a decoupled closed loop; a measurement disturbance channel `F` in the readout; the spectrum
+factorization of the extended system map and the internal/external stabilization layers; and the
+nonlinear theory of Chapters 7–15 together with the algebraic-methods reference of Conte, Moog and
+Perdon. The examples module supplies the nonzero-feedthrough observer, the possible/impossible
+decoupling instances and the proved scalar-filter representation bridge, so the algebraic release
+task is complete modulo the deferred items above.
