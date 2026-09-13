@@ -203,16 +203,17 @@ sufficiency halves remain explicit follow-up obligations; disturbance-decoupling
 now has its algebraic and convolution foundations, while transfer-function and dynamic-controller
 bridges remain open.
 
-Dynamic-feedback foundations now define controller and plant interconnections, algebraic-loop
-well-posedness, resolved signals, closed-loop maps, and zero-disturbance bookkeeping. Full
-dynamic decoupling synthesis, spectrum factorization, and internal/external stabilization remain
-follow-up layers.
+Dynamic-feedback foundations define controller and plant interconnections, algebraic-loop
+well-posedness, resolved signals, and closed-loop maps. The Chapter 6 synthesis layer now
+constructs a decoupling controller from an `IsCABPairBetween` certificate and proves the
+closed-loop decoupling theorem. Converse certificate extraction, spectrum factorization,
+transfer functions, and internal/external stabilization remain follow-up layers.
 
 The disturbance-decoupling foundations now define Markov responses and exact decoupling,
 prove the reachable/unobservable and controlled-invariant characterizations, include the
 finite-dimensional geometric corollary, and record coordinate-invariance and test examples.
-Dynamic measurement-feedback construction and stabilization variants remain follow-up
-obligations. The convolution layer now proves the
+Converse dynamic-controller extraction and stabilization variants remain follow-up obligations.
+The convolution layer now proves the
 variation-of-constants output formula and equivalence between exact decoupling and vanishing
 disturbance contribution for locally integrable inputs; transfer-function and dynamic-controller
 bridges remain open.
