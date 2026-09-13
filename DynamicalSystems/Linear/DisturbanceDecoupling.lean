@@ -7,6 +7,7 @@ module
 
 public import DynamicalSystems.Linear.ConditionedInvariant
 public import DynamicalSystems.Linear.Reachability
+public import Mathlib.Analysis.Normed.Algebra.Spectrum
 
 /-! # Disturbance decoupling: algebraic foundations
 
@@ -36,9 +37,14 @@ dimension this is exactly the vanishing of the impulse response `t ↦ H e^{tA} 
 of Trentelman–Stoorvogel–Hautus, equation (4.4), whose derivatives at `0` are
 precisely the Markov parameters `H A ^ k E`; the equivalence is proved below as
 `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`. The convolution form of
-input-independence is proved below; the transfer-function form remains a separate
-obligation, documented in the Deferred obligations section below and not claimed
-here.
+input-independence is proved below, and the transfer-function form
+`H (s I - A)⁻¹ E = 0` is proved in the transfer-function section in both
+directions: exact decoupling makes the Laplace series vanish
+(`LinearMap.isDisturbanceDecoupled_disturbanceTransferFunction_eq_zero`), for
+`s > ‖A‖` that series is the resolvent expression
+(`LinearMap.disturbanceTransferFunction_eq_resolvent`), and conversely vanishing of
+the resolvent transfer function on `(‖A‖, ∞)` recovers decoupling
+(`LinearMap.isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`).
 
 ## Bridges to invariant subspaces
 
@@ -117,6 +123,31 @@ spaces, the intended control-theoretic case, are complete. The converse directio
 `LinearMap.isDisturbanceDecoupled_of_forall_disturbanceContribution_eq_zero` does
 not use the convolution bridge and therefore does not need completeness.
 
+## The transfer-function / resolvent bridge
+
+The Laplace-domain transfer-function value is defined in series form as
+`LinearMap.disturbanceTransferFunction A E H s w = ∑_n s^{-(n+1)} • H (A^n (E w))`,
+whose coefficients are the Markov parameters. For real `s > ‖A‖` the geometric
+series expansion of the resolvent in the Banach algebra of continuous endomorphisms
+identifies this with the resolvent expression
+`LinearMap.resolventTransferFunction A E H s w = H ((s • 1 - A)⁻¹ (E w))`; the
+precise statement is `LinearMap.disturbanceTransferFunction_eq_resolvent`, with the
+hypotheses `0 < s` and `‖A‖ < s` making `s` lie in the resolvent set. No unqualified
+`H (s I - A)⁻¹ E` identity is asserted.
+
+Exact decoupling makes every Markov parameter vanish, hence makes the transfer
+function vanish unconditionally:
+`LinearMap.isDisturbanceDecoupled_disturbanceTransferFunction_eq_zero`. Conversely,
+if the resolvent transfer function `H (resolvent A s) (E w)` vanishes for every
+real `s > ‖A‖` and every disturbance direction `w`, then the channel is disturbance
+decoupled:
+`LinearMap.isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`.
+The converse uses the finite geometric expansion
+`LinearMap.resolvent_smul_pow_succ_eq_sum` of the resolvent, the limit
+`resolvent → 0` along `atTop`, and induction on the Markov index. Together with the
+resolvent bridge this gives both directions of Trentelman–Stoorvogel–Hautus,
+equation (3.4), under the explicit hypothesis `s > ‖A‖`.
+
 ## Worked examples
 
 The double integrator `A (x, y) = (y, 0)` exhibits both outcomes:
@@ -131,10 +162,15 @@ witnesses for the definitions.
 The following are deliberately **not** claimed here and remain the next
 milestones:
 
-* the transfer-function form `H (s I - A)⁻¹ E = 0`. The convolution form of
-  input-independence is proved here, as the impulse response `K(t) = H e^{tA} E`
-  is the Laplace kernel whose transform is the transfer function, but no
-  unproved transfer-function claim is made here;
+* the transfer-function form `H (s I - A)⁻¹ E = 0` is formalised, in both
+directions and with the explicit hypothesis `s > ‖A‖`, by
+`disturbanceTransferFunction_eq_resolvent`,
+`isDisturbanceDecoupled_disturbanceTransferFunction_eq_zero`,
+`resolvent_smul_pow_succ_eq_sum` and
+`isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`. The
+unqualified all-`s` rational-function statement and the converse from the
+resolvent vanishing *on the whole resolvent set* (rather than on `(‖A‖, ∞)`) are
+not needed for the disturbance-decoupling theory and are not claimed;
 * the converse extraction of a `(C, A, B)`-pair from a decoupled closed loop
   (Trentelman–Stoorvogel–Hautus, Theorem 6.2 and the forward half of
   Theorem 6.6). The synthesis direction (Theorem 6.4) is proved in
@@ -152,6 +188,7 @@ milestones:
 * `LinearMap.disturbanceSystem`
 * `LinearMap.disturbanceImpulseResponse`, `LinearMap.disturbanceContribution`,
   `LinearMap.forcedOutput`
+* `LinearMap.disturbanceTransferFunction`, `LinearMap.resolventTransferFunction`
 
 ## Main theorems
 
@@ -167,6 +204,10 @@ milestones:
 * `LinearMap.isDisturbanceDecoupled_disturbanceContribution_eq_zero`
 * `LinearMap.isDisturbanceDecoupled_forcedOutput_eq_of_input`
 * `LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`
+* `LinearMap.disturbanceTransferFunction_eq_resolvent`
+* `LinearMap.isDisturbanceDecoupled_disturbanceTransferFunction_eq_zero`
+* `LinearMap.resolvent_smul_pow_succ_eq_sum`
+* `LinearMap.isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`
 
 ## References
 
@@ -232,8 +273,9 @@ zero disturbance contribution for every locally integrable disturbance is
 `LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`,
 which yields input-independence via
 `LinearMap.isDisturbanceDecoupled_forcedOutput_eq_of_input`.
-The transfer-function form `H (sI - A)⁻¹ E = 0` remains a separate obligation,
-stated in the Deferred obligations section. -/
+The transfer-function form `H (s I - A)⁻¹ E = 0` is proved in
+the transfer-function section, in both directions and under the explicit
+hypothesis `s > ‖A‖`. -/
 def IsDisturbanceDecoupled (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) : Prop :=
   ∀ k : ℕ, disturbanceResponse A E H k = 0
 
@@ -981,6 +1023,299 @@ theorem isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero
     fun h => isDisturbanceDecoupled_of_forall_disturbanceContribution_eq_zero A E H h⟩
 
 end Convolution
+
+/-! ## The transfer-function / resolvent bridge
+
+Trentelman–Stoorvogel–Hautus, equations (3.3)–(3.4). The Laplace transform of
+the impulse response `K(t) = H e^{tA} E` is the transfer function
+`T(s) = H (s I - A)⁻¹ E`. This section formalises the bridge between the accepted
+impulse-response / convolution API above and the *resolvent* form of the
+transfer function.
+
+The bridge is deliberately **hypothesis-explicit**. The transfer function is the
+series `∑_n s^{-(n+1)} H A^n E`; it is identified with the resolvent expression
+`H (resolvent A s) E` only for real `s > ‖A‖`, where the geometric series
+`resolvent A s = s⁻¹ ∑_n (s⁻¹ A)^n` converges (the resolvent is a unit there). No
+unqualified `H (s I - A)⁻¹ E` identity is asserted. -/
+
+section TransferFunction
+
+open scoped Ring BigOperators
+
+variable [FiniteDimensional ℝ W]
+
+/-- The **transfer-function value** of the disturbance channel
+`x' = A x + E d`, `z = H x` at the Laplace variable `s`, evaluated on a
+disturbance direction `w`: the Laplace series
+
+`∑_{n ≥ 0} s^{-(n+1)} H A^n (E w)`
+
+whose `n`-th coefficient is the Markov parameter `H A^n E` of
+Trentelman–Stoorvogel–Hautus, equation (3.4) with `D = 0`.
+
+This is a genuine (Bochner) infinite sum, defined for every real `s`; the terms
+are those of the Laplace transform of the impulse response `K(t) = H e^{tA} E`.
+The series converges for `s > ‖A‖`, where `resolventTransferFunction` identifies
+it with the resolvent form (`disturbanceTransferFunction_eq_resolvent`). -/
+noncomputable def disturbanceTransferFunction
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (s : ℝ) (w : W) : Z :=
+  ∑' n : ℕ, s⁻¹ ^ (n + 1) • H ((A ^ n) (E w))
+
+/-- The **resolvent form** of the transfer-function value: `H (resolvent A s) (E w)`,
+where `resolvent A s` is the resolvent of the continuous state map, i.e. the
+inverse of `s • 1 - A` when that operator is a unit. This is the literal
+`H (s I - A)⁻¹ E` expression of Trentelman–Stoorvogel–Hautus, equation (3.4); it
+is only identified with the Laplace series for `s > ‖A‖`. -/
+noncomputable def resolventTransferFunction
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (s : ℝ) (w : W) : Z :=
+  H (resolvent A.toContinuousLinearMap s (E w))
+
+/-- The geometric-series expansion of the resolvent in a complete normed ring:
+for `s ≠ 0` with `‖s⁻¹ • T‖ < 1`,
+`(s • 1 - T)⁻¹ʳ = s⁻¹ • ∑_n (s⁻¹ T)^n`. -/
+theorem resolvent_eq_smul_tsum {T : X →L[ℝ] X} {s : ℝ} (hs : s ≠ 0)
+    (h : ‖s⁻¹ • T‖ < 1) :
+    resolvent T s = s⁻¹ • (∑' n : ℕ, (s⁻¹ • T) ^ n) := by
+  have hgeom : (∑' n : ℕ, (s⁻¹ • T) ^ n) = (1 - s⁻¹ • T)⁻¹ʳ :=
+    geom_series_eq_inverse (s⁻¹ • T) h
+  have hu : IsUnit (s • (1 : X →L[ℝ] X)) := by
+    rw [← Algebra.algebraMap_eq_smul_one]
+    exact IsUnit.map (algebraMap ℝ (X →L[ℝ] X)) (isUnit_iff_ne_zero.mpr hs)
+  have hfactor : s • (1 : X →L[ℝ] X) - T = (s • (1 : X →L[ℝ] X)) * (1 - s⁻¹ • T) := by
+    rw [mul_sub, mul_one, smul_mul_assoc, one_mul, smul_smul, mul_inv_cancel₀ hs, one_smul]
+  have hinv : (s • (1 : X →L[ℝ] X))⁻¹ʳ = s⁻¹ • (1 : X →L[ℝ] X) := by
+    have hmul : (s • (1 : X →L[ℝ] X)) * (s⁻¹ • 1) = 1 := by
+      rw [smul_mul_assoc, one_mul, smul_smul, mul_inv_cancel₀ hs, one_smul]
+    rw [← (Ring.inverse_mul_eq_iff_eq_mul (s • 1) 1 (s⁻¹ • 1) hu).mpr hmul.symm, mul_one]
+  rw [resolvent, Algebra.algebraMap_eq_smul_one, hfactor, Ring.inverse_mul (Or.inl hu),
+    ← hgeom, hinv, mul_smul_comm, mul_one]
+
+omit [FiniteDimensional ℝ X] in
+/-- The resolvent satisfies the affine identity `s • R = 1 + A R` whenever `s` lies
+in the resolvent set. This is the recurrence integrated in
+`resolvent_smul_pow_succ_eq_sum`. -/
+theorem smul_resolvent_eq_one_add (T : X →L[ℝ] X) {s : ℝ}
+    (h : s ∈ resolventSet ℝ T) :
+    s • resolvent T s = 1 + T * resolvent T s := by
+  have hmul : (s • (1 : X →L[ℝ] X) - T) * resolvent T s = 1 := by
+    rw [spectrum.resolvent_eq h]
+    have hspec : (↑h.unit : X →L[ℝ] X) = s • (1 : X →L[ℝ] X) - T := by
+      rw [h.unit_spec, Algebra.algebraMap_eq_smul_one]
+    rw [← hspec]
+    exact Units.mul_inv h.unit
+  have hmul' : s • resolvent T s - T * resolvent T s = 1 := by
+    simpa only [sub_mul, smul_mul_assoc, one_mul] using hmul
+  exact (sub_eq_iff_eq_add).mp hmul'
+
+/-- **Finite (geometric) expansion of the resolvent.** For `0 < s` with
+`‖A‖ < s` and every `k : ℕ`,
+
+`s ^ (k + 1) • (s • 1 - A)⁻¹ = ∑_{j ≤ k} s ^ (k - j) • A ^ j + A ^ (k + 1) * (s • 1 - A)⁻¹`.
+
+This is the elementary algebraic core of the converse transfer-function bridge:
+dividing back by `s ^ (k + 1)` and letting `s → ∞` extracts the Markov parameter
+`H A ^ k E`. -/
+theorem resolvent_smul_pow_succ_eq_sum (T : X →L[ℝ] X) {s : ℝ} (hs : 0 < s)
+    (hT : ‖T‖ < s) (k : ℕ) :
+    s ^ (k + 1) • resolvent T s =
+      (∑ j ∈ Finset.range (k + 1), s ^ (k - j) • T ^ j)
+        + T ^ (k + 1) * resolvent T s := by
+  have hmem : s ∈ resolventSet ℝ T := by
+    apply spectrum.mem_resolventSet_of_norm_lt_mul
+    calc ‖T‖ * ‖(1 : X →L[ℝ] X)‖ ≤ ‖T‖ * 1 := by
+          gcongr
+          exact ContinuousLinearMap.norm_id_le
+      _ = ‖T‖ := mul_one _
+      _ < s := hT
+      _ = ‖s‖ := (Real.norm_of_nonneg (le_of_lt hs)).symm
+  have hrec : s • resolvent T s = 1 + T * resolvent T s :=
+    smul_resolvent_eq_one_add T hmem
+  induction k with
+  | zero => simpa using hrec
+  | succ k ih =>
+      rw [pow_succ', ← smul_smul, ih, smul_add, Finset.smul_sum]
+      conv_rhs => rw [Finset.sum_range_succ]
+      rw [add_assoc]
+      congr 1
+      · apply Finset.sum_congr rfl
+        intro j hj
+        have hj' : j ≤ k := Nat.lt_succ_iff.mp (Finset.mem_range.mp hj)
+        rw [smul_smul, ← pow_succ']
+        congr 2
+        omega
+      · rw [← mul_smul_comm, hrec, mul_add, mul_one, ← mul_assoc, ← pow_succ]
+        simp
+
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℝ W] in
+/-- **Exact decoupling kills the transfer function.** If the channel is
+disturbance decoupled then every Markov parameter `H A^n E` vanishes, hence every
+term of the Laplace series vanishes and
+`H (s I - A)⁻¹ E = 0` in the series form, for every `s`. This is the
+forward (and unconditional) half of the transfer-function bridge. -/
+theorem isDisturbanceDecoupled_disturbanceTransferFunction_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : IsDisturbanceDecoupled A E H) (s : ℝ) (w : W) :
+    disturbanceTransferFunction A E H s w = 0 := by
+  rw [disturbanceTransferFunction]
+  have hzero : (fun n : ℕ => s⁻¹ ^ (n + 1) • H ((A ^ n) (E w))) = fun _ => (0 : Z) := by
+    funext n
+    have hn : H ((A ^ n) (E w)) = 0 := by
+      have h0 : disturbanceResponse A E H n w = 0 := LinearMap.congr_fun (h n) w
+      simpa [disturbanceResponse] using h0
+    rw [hn, smul_zero]
+  rw [hzero, tsum_zero]
+
+/-- The continuous state map agrees with the algebraic state map on powers of the
+state operator: `(A ^ n).toContinuousLinearMap = A.toContinuousLinearMap ^ n`. -/
+theorem toContinuousLinearMap_pow_state (A : X →ₗ[ℝ] X) (n : ℕ) :
+    A.toContinuousLinearMap ^ n = (A ^ n).toContinuousLinearMap := by
+  have h1 : A.toContinuousLinearMap = (Module.End.toContinuousLinearMap X) A := by
+    ext x; rfl
+  have h2 : (A ^ n).toContinuousLinearMap = (Module.End.toContinuousLinearMap X) (A ^ n) := by
+    ext x; rfl
+  rw [h1, h2, map_pow]
+
+/-- Evaluation of the continuous state map on a vector agrees with the algebraic
+state map. -/
+@[simp]
+theorem toContinuousLinearMap_apply_state (A : X →ₗ[ℝ] X) (x : X) :
+    A.toContinuousLinearMap x = A x := rfl
+
+omit [FiniteDimensional ℝ W] in
+/-- **The transfer-function / resolvent bridge.** For real `s > ‖A‖` the Laplace
+series `∑_n s^{-(n+1)} H A^n (E w)` converges to the resolvent expression
+`H (resolvent A s) (E w)`. The hypothesis `‖A‖ < s` is exactly what makes the
+geometric series `resolvent A s = s⁻¹ ∑_n (s⁻¹ A)^n` converge and what places
+`s` in the resolvent set of `A`; no unqualified equivalence is claimed.
+
+Source: Trentelman–Stoorvogel–Hautus, equation (3.4). -/
+theorem disturbanceTransferFunction_eq_resolvent
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    {s : ℝ} (hs : 0 < s) (hA : ‖A.toContinuousLinearMap‖ < s) (w : W) :
+    disturbanceTransferFunction A E H s w = resolventTransferFunction A E H s w := by
+  let T : X →L[ℝ] X := A.toContinuousLinearMap
+  have hsne : s ≠ 0 := ne_of_gt hs
+  have hx : ‖s⁻¹ • T‖ < 1 := by
+    rw [norm_smul, norm_inv, Real.norm_of_nonneg (le_of_lt hs), inv_mul_lt_iff₀ hs, mul_one]
+    exact hA
+  have hres : resolvent T s = s⁻¹ • (∑' n : ℕ, (s⁻¹ • T) ^ n) :=
+    resolvent_eq_smul_tsum hsne hx
+  have hsum : Summable (fun n : ℕ => (s⁻¹ • T) ^ n) :=
+    summable_geometric_of_norm_lt_one hx
+  have heval : (∑' n : ℕ, (s⁻¹ • T) ^ n) (E w) =
+      ∑' n : ℕ, ((s⁻¹ • T) ^ n) (E w) :=
+    (ContinuousLinearMap.apply ℝ X (E w)).map_tsum hsum
+  have hsumE : Summable (fun n : ℕ => ((s⁻¹ • T) ^ n) (E w)) :=
+    Summable.mapL (ContinuousLinearMap.apply ℝ X (E w)) hsum
+  have hmapH : H ((∑' n : ℕ, ((s⁻¹ • T) ^ n) (E w))) =
+      ∑' n : ℕ, H (((s⁻¹ • T) ^ n) (E w)) :=
+    (H.toContinuousLinearMap).map_tsum hsumE
+  have hterm : ∀ n : ℕ, H (((s⁻¹ • T) ^ n) (E w)) =
+      s⁻¹ ^ n • H ((A ^ n) (E w)) := by
+    intro n
+    rw [smul_pow, _root_.smul_apply, map_smul, toContinuousLinearMap_pow_state,
+      toContinuousLinearMap_apply_state]
+  rw [resolventTransferFunction, disturbanceTransferFunction, hres,
+    _root_.smul_apply, map_smul, heval, hmapH,
+    ← tsum_const_smul'' (f := fun n : ℕ => H (((s⁻¹ • T) ^ n) (E w))) s⁻¹]
+  apply tsum_congr
+  intro n
+  rw [hterm n, pow_succ', ← smul_smul]
+
+omit [FiniteDimensional ℝ W] in
+/-- **Converse transfer-function bridge.** If the resolvent transfer function
+`H (resolvent A s) (E w)` vanishes for every real `s > ‖A‖` and every disturbance
+direction `w`, then the channel is disturbance decoupled.
+
+The proof expands the resolvent as
+`s ^ (k + 1) • (s • 1 - A)⁻¹ = ∑_{j ≤ k} s ^ (k - j) A ^ j + A ^ (k + 1) (s • 1 - A)⁻¹`
+(`resolvent_smul_pow_succ_eq_sum`), applies `H (· (E w))`, uses the vanishing
+hypothesis to kill the left-hand side, lets `s → ∞` along the reals
+(`resolvent_tendsto_cobounded`) and inducts on `k` to recover every Markov
+parameter `H A ^ k E`. -/
+theorem isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero
+    (A : X →ₗ[ℝ] X) (E : W →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ∀ s : ℝ, ‖A.toContinuousLinearMap‖ < s → ∀ w : W,
+      resolventTransferFunction A E H s w = 0) :
+    IsDisturbanceDecoupled A E H := by
+  have hzero : ∀ (w : W) (s : ℝ), ‖A.toContinuousLinearMap‖ < s →
+      H (resolvent A.toContinuousLinearMap s (E w)) = 0 := by
+    intro w s hs
+    have := h s hs w
+    simpa [resolventTransferFunction] using this
+  have hR : Tendsto (fun s : ℝ => resolvent A.toContinuousLinearMap s) atTop
+      (𝓝 (0 : X →L[ℝ] X)) :=
+    (spectrum.resolvent_tendsto_cobounded A.toContinuousLinearMap).mono_left
+      IsOrderBornology.atTop_le_cobounded
+  intro m
+  ext w
+  change H ((A ^ m) (E w)) = 0
+  induction m using Nat.strong_induction_on with
+  | _ m ih =>
+    have htail : Tendsto (fun s : ℝ =>
+        H ((A.toContinuousLinearMap ^ (m + 1))
+          (resolvent A.toContinuousLinearMap s (E w)))) atTop (𝓝 0) := by
+      have hEv : Tendsto (fun s : ℝ => resolvent A.toContinuousLinearMap s (E w))
+          atTop (𝓝 0) :=
+        ((ContinuousLinearMap.apply ℝ X (E w)).continuous.tendsto 0).comp hR
+      have hcont : Continuous (fun x : X =>
+          (H.toContinuousLinearMap.comp (A.toContinuousLinearMap ^ (m + 1))) x) :=
+        (H.toContinuousLinearMap.comp (A.toContinuousLinearMap ^ (m + 1))).continuous
+      have := (hcont.tendsto 0).comp hEv
+      simpa only [ContinuousLinearMap.comp_apply, LinearMap.coe_toContinuousLinearMap',
+        Function.comp_def, map_zero] using this
+    have hsum : ∀ s : ℝ,
+        (∑ j ∈ Finset.range (m + 1), s ^ (m - j) • H ((A ^ j) (E w))) =
+          H ((A ^ m) (E w)) := by
+      intro s
+      rw [Finset.sum_eq_single m]
+      · simp
+      · intro j hj hjm
+        have hjlt : j < m := by
+          have := Finset.mem_range.mp hj
+          omega
+        rw [ih j hjlt, smul_zero]
+      · intro hm
+        exact absurd (Finset.mem_range.mpr (Nat.lt_succ_self m)) hm
+    have hF : Tendsto (fun s : ℝ =>
+        (∑ j ∈ Finset.range (m + 1), s ^ (m - j) • H ((A ^ j) (E w)))
+          + H ((A.toContinuousLinearMap ^ (m + 1))
+              (resolvent A.toContinuousLinearMap s (E w))))
+        atTop (𝓝 (H ((A ^ m) (E w)))) := by
+      have hsumT : Tendsto (fun s : ℝ =>
+          ∑ j ∈ Finset.range (m + 1), s ^ (m - j) • H ((A ^ j) (E w)))
+          atTop (𝓝 (H ((A ^ m) (E w)))) := by
+        simpa only [hsum] using tendsto_const_nhds (x := H ((A ^ m) (E w)))
+      simpa using hsumT.add htail
+    have heq : (fun s : ℝ =>
+        (∑ j ∈ Finset.range (m + 1), s ^ (m - j) • H ((A ^ j) (E w)))
+          + H ((A.toContinuousLinearMap ^ (m + 1))
+              (resolvent A.toContinuousLinearMap s (E w))))
+        =ᶠ[atTop] fun _ => (0 : Z) := by
+      filter_upwards [eventually_gt_atTop ‖A.toContinuousLinearMap‖] with s hs
+      have hspos : 0 < s := lt_of_le_of_lt (norm_nonneg _) hs
+      let Φ : (X →L[ℝ] X) →L[ℝ] Z :=
+        H.toContinuousLinearMap.comp (ContinuousLinearMap.apply ℝ X (E w))
+      have hΦ : Φ (resolvent A.toContinuousLinearMap s) = 0 := by
+        change H (resolvent A.toContinuousLinearMap s (E w)) = 0
+        exact hzero w s hs
+      have hexp := congrArg Φ
+        (resolvent_smul_pow_succ_eq_sum A.toContinuousLinearMap hspos hs m)
+      simp only [Φ, map_smul, map_add, map_sum, ContinuousLinearMap.comp_apply,
+        ContinuousLinearMap.apply_apply, LinearMap.coe_toContinuousLinearMap',
+        mul_apply_eq_comp, toContinuousLinearMap_pow_state,
+        toContinuousLinearMap_apply_state, hΦ, smul_zero] at hexp
+      rw [toContinuousLinearMap_pow_state A (m + 1)]
+      exact hexp.symm
+    have h0 : Tendsto (fun s : ℝ =>
+        (∑ j ∈ Finset.range (m + 1), s ^ (m - j) • H ((A ^ j) (E w)))
+          + H ((A.toContinuousLinearMap ^ (m + 1))
+              (resolvent A.toContinuousLinearMap s (E w))))
+        atTop (𝓝 0) :=
+      (tendsto_const_nhds (x := (0 : Z))).congr' heq.symm
+    exact tendsto_nhds_unique hF h0
+
+end TransferFunction
 
 end Analytic
 
