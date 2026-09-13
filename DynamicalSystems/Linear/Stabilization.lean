@@ -138,7 +138,11 @@ The general finite-dimensional Hurwitz theorem is now formalized:
 `LinearMap.tendsto_exp_of_isHurwitz` gives exponential-flow attractivity and
 `LinearMap.isStableOn_expFlow_of_isHurwitz` gives Lyapunov stability. The proof
 uses the complex generalized-eigenspace theorem
-`LinearMap.tendsto_exp_complex_apply` and a real-coordinate reduction.
+`LinearMap.tendsto_exp_complex_apply` and a real-coordinate reduction. The
+quantitative operator-norm bound `‖exp (t A)‖ ≤ C * exp (-γ * t)` is
+`LinearMap.exists_exponential_norm_bound_of_isHurwitz`, obtained from the
+operator-norm convergence `LinearMap.tendsto_norm_exp_of_isHurwitz` and the
+gometric step `LinearMap.norm_exp_le_mul_pow_floor`.
 
 The PBH criteria are complete in both directions. The necessity results
 `LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue` and
@@ -1729,5 +1733,203 @@ theorem isStableOn_expFlow_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : IsHurwitz A)
         rw [div_lt_one hC1]; linarith
     _ = ε := by ring
 
+
+/-- The operator norm of an endomorphism of a finite-dimensional real space is
+controlled by its values on a basis: `‖T‖ ≤ ∑ i, ‖coord i‖ * ‖T (b i)‖`. This is
+the elementary substitute for compactness of the unit ball in the finite
+dimension argument that upgrades pointwise convergence to norm convergence. -/
+theorem opNorm_le_sum_coord_mul {ι : Type*} [Fintype ι] (b : Basis ι ℝ X)
+    (T : X →L[ℝ] X) :
+    ‖T‖ ≤ ∑ i, ‖(b.coord i).toContinuousLinearMap‖ * ‖T (b i)‖ := by
+  apply ContinuousLinearMap.opNorm_le_bound
+  · exact Finset.sum_nonneg fun i _ => mul_nonneg (norm_nonneg _) (norm_nonneg _)
+  · intro x
+    have hx : ∑ i, (b.coord i x) • b i = x := by
+      simpa only [Basis.coord_apply] using b.sum_repr x
+    calc ‖T x‖ = ‖T (∑ i, (b.coord i x) • b i)‖ := by rw [hx]
+      _ = ‖∑ i, (b.coord i x) • T (b i)‖ := by
+            congr 1
+            rw [map_sum]
+            exact Finset.sum_congr rfl fun i _ => by rw [map_smul]
+      _ ≤ ∑ i, ‖(b.coord i x) • T (b i)‖ := norm_sum_le _ _
+      _ = ∑ i, ‖b.coord i x‖ * ‖T (b i)‖ := by simp [norm_smul]
+      _ ≤ ∑ i, (‖(b.coord i).toContinuousLinearMap‖ * ‖x‖) * ‖T (b i)‖ := by
+            apply Finset.sum_le_sum
+            intro i _
+            apply mul_le_mul_of_nonneg_right _ (norm_nonneg _)
+            simpa using (b.coord i).toContinuousLinearMap.le_opNorm x
+      _ = (∑ i, ‖(b.coord i).toContinuousLinearMap‖ * ‖T (b i)‖) * ‖x‖ := by
+            rw [Finset.sum_mul]
+            exact Finset.sum_congr rfl fun i _ => by ring
+
+/-- **Operator-norm convergence of a Hurwitz flow.** For a real Hurwitz
+endomorphism `A` the operator norms `‖exp (t A)‖` tend to zero at `+∞`, not just
+each orbit. The finite-dimensional argument writes an arbitrary vector in a basis
+and bounds the operator norm by the sum of the norms of the images of the basis
+vectors, each of which tends to zero by `tendsto_exp_of_isHurwitz`. -/
+theorem tendsto_norm_exp_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : IsHurwitz A) :
+    Tendsto (fun t : ℝ => ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖) atTop (𝓝 0) := by
+  classical
+  let b : Basis (Fin (Module.finrank ℝ X)) ℝ X := Module.finBasis ℝ X
+  have hterm : ∀ i, Tendsto (fun t : ℝ =>
+      ‖(b.coord i).toContinuousLinearMap‖ *
+        ‖NormedSpace.exp (t • A.toContinuousLinearMap) (b i)‖) atTop (𝓝 0) := by
+    intro i
+    have h := ((tendsto_exp_of_isHurwitz A hA (b i)).norm).const_mul
+      (‖(b.coord i).toContinuousLinearMap‖)
+    simpa using h
+  have hsum : Tendsto (fun t : ℝ => ∑ i,
+      ‖(b.coord i).toContinuousLinearMap‖ *
+        ‖NormedSpace.exp (t • A.toContinuousLinearMap) (b i)‖) atTop (𝓝 0) := by
+    simpa using tendsto_finsetSum Finset.univ (fun i _ => hterm i)
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le'
+    (tendsto_const_nhds : Tendsto (fun _ : ℝ => (0 : ℝ)) atTop (𝓝 0)) hsum ?_ ?_
+  · filter_upwards with t
+    exact norm_nonneg _
+  · filter_upwards with t
+    exact opNorm_le_sum_coord_mul b _
+
+/-- The natural-power formula for the exponential in a real Banach algebra,
+stated with the natural scalar action so that no `NormedAlgebra ℚ` instance is
+required. -/
+lemma exp_nsmul_real {𝔸 : Type*} [NormedRing 𝔸] [NormedAlgebra ℝ 𝔸] [CompleteSpace 𝔸]
+    (n : ℕ) (x : 𝔸) : NormedSpace.exp (n • x) = NormedSpace.exp x ^ n := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      rw [succ_nsmul, NormedSpace.exp_add_of_commute_of_mem_ball (𝕂 := ℝ)
+        ((Commute.refl x).smul_left n)
+        ((NormedSpace.expSeries_radius_eq_top ℝ 𝔸).symm ▸ edist_lt_top _ _)
+        ((NormedSpace.expSeries_radius_eq_top ℝ 𝔸).symm ▸ edist_lt_top _ _), ih, pow_succ]
+
+/-- **Geometric decay from one small step.** If `T > 0` and `‖exp (T A)‖ ≤ 1/2`
+while `exp (s A)` is bounded by `B` for `s ∈ [0, T]`, then the operator norm of
+`exp (t A)` decays geometrically: writing `t = n T + s` with `n = ⌊t/T⌋₊` and
+`s ∈ [0, T)`, the semigroup law factorises `exp (t A) = exp (T A)^n exp (s A)` and
+the first factor is bounded by `(1/2)^n`. -/
+theorem norm_exp_le_mul_pow_floor (A : X →ₗ[ℝ] X) {T B : ℝ} (hTpos : 0 < T)
+    (hB : ∀ s ∈ Set.Icc (0 : ℝ) T,
+      ‖NormedSpace.exp (s • A.toContinuousLinearMap)‖ ≤ B)
+    (hhalf : ‖NormedSpace.exp (T • A.toContinuousLinearMap)‖ ≤ (1 : ℝ) / 2)
+    {t : ℝ} (ht : 0 ≤ t) :
+    ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖ ≤
+      B * (1 / 2 : ℝ) ^ (⌊t / T⌋₊) := by
+  set n : ℕ := ⌊t / T⌋₊ with hn
+  set s : ℝ := t - n * T with hs
+  have hnt : (n : ℝ) ≤ t / T := by
+    rw [hn]; exact Nat.floor_le (div_nonneg ht hTpos.le)
+  have hnt' : t / T < (n : ℝ) + 1 := by
+    rw [hn]; exact Nat.lt_floor_add_one (t / T)
+  have hnT_le : (n : ℝ) * T ≤ t := by
+    have := mul_le_mul_of_nonneg_right hnt hTpos.le
+    rwa [div_mul_cancel₀ t hTpos.ne'] at this
+  have ht_lt : t < ((n : ℝ) + 1) * T := by
+    have := mul_lt_mul_of_pos_right hnt' hTpos
+    rwa [div_mul_cancel₀ t hTpos.ne'] at this
+  have hs0 : 0 ≤ s := by rw [hs]; linarith
+  have hsT : s < T := by rw [hs]; nlinarith [ht_lt]
+  have ht_eq : t = (n : ℝ) * T + s := by rw [hs]; ring
+  have hcomm : Commute (((n : ℝ) * T) • A.toContinuousLinearMap)
+      (s • A.toContinuousLinearMap) :=
+    ((Commute.refl A.toContinuousLinearMap).smul_left ((n : ℝ) * T)).smul_right s
+  have hdec : NormedSpace.exp (t • A.toContinuousLinearMap) =
+      (NormedSpace.exp (T • A.toContinuousLinearMap)) ^ n *
+        NormedSpace.exp (s • A.toContinuousLinearMap) := by
+    have hsplit : t • A.toContinuousLinearMap =
+        ((n : ℝ) * T) • A.toContinuousLinearMap + s • A.toContinuousLinearMap := by
+      rw [← add_smul, ht_eq]
+    rw [hsplit]
+    rw [NormedSpace.exp_add_of_commute_of_mem_ball (𝕂 := ℝ) hcomm
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)]
+    rw [show ((n : ℝ) * T) • A.toContinuousLinearMap =
+        n • (T • A.toContinuousLinearMap) by rw [mul_smul, Nat.cast_smul_eq_nsmul],
+      exp_nsmul_real]
+  have hPown : ‖(NormedSpace.exp (T • A.toContinuousLinearMap)) ^ n‖ ≤
+      (1 / 2 : ℝ) ^ n := by
+    rcases Nat.eq_zero_or_pos n with hn0 | hnpos
+    · rw [hn0, pow_zero, pow_zero]
+      exact ContinuousLinearMap.opNorm_le_bound _ (by norm_num) (fun x => by simp)
+    · calc ‖(NormedSpace.exp (T • A.toContinuousLinearMap)) ^ n‖
+          ≤ ‖NormedSpace.exp (T • A.toContinuousLinearMap)‖ ^ n :=
+            norm_pow_le' _ hnpos
+        _ ≤ (1 / 2 : ℝ) ^ n := pow_le_pow_left₀ (norm_nonneg _) hhalf n
+  calc ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖
+      = ‖(NormedSpace.exp (T • A.toContinuousLinearMap)) ^ n *
+          NormedSpace.exp (s • A.toContinuousLinearMap)‖ := by rw [hdec]
+    _ ≤ ‖(NormedSpace.exp (T • A.toContinuousLinearMap)) ^ n‖ *
+          ‖NormedSpace.exp (s • A.toContinuousLinearMap)‖ := norm_mul_le _ _
+    _ ≤ ((1 / 2 : ℝ) ^ n) * B :=
+          mul_le_mul hPown (hB s ⟨hs0, hsT.le⟩) (norm_nonneg _) (by positivity)
+    _ = B * (1 / 2 : ℝ) ^ n := by ring
+
+/-- **Quantitative exponential decay of a real Hurwitz flow.** For a real
+endomorphism `A` of a finite-dimensional real normed space all of whose complex
+eigenvalues lie in the open left half-plane, there are constants `C > 0` and
+`γ > 0` with `‖exp (t A)‖ ≤ C * exp (-γ t)` for every `t ≥ 0`.
+
+The proof chooses `T > 0` with `‖exp (T A)‖ ≤ 1/2` from the operator-norm
+convergence `tendsto_norm_exp_of_isHurwitz`; the semigroup law then decomposes
+`t = n T + s` and the geometric factor `(1/2)^n` is turned into `exp (-γ t)` with
+`γ = log 2 / T`, while continuity on `[0, T]` bounds `exp (s A)` uniformly. -/
+theorem exists_exponential_norm_bound_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : IsHurwitz A) :
+    ∃ C : ℝ, 0 < C ∧ ∃ γ : ℝ, 0 < γ ∧
+      ∀ t : ℝ, 0 ≤ t →
+        ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖ ≤ C * Real.exp (-γ * t) := by
+  have hnorm := tendsto_norm_exp_of_isHurwitz A hA
+  have hhalf : ∀ᶠ t : ℝ in atTop,
+      ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖ ≤ (1 : ℝ) / 2 := by
+    filter_upwards [hnorm.eventually
+      (Metric.ball_mem_nhds (0 : ℝ) (show (0 : ℝ) < 1 / 2 by norm_num))]
+      with t ht
+    rw [dist_zero_right, Real.norm_eq_abs, abs_of_nonneg (norm_nonneg _)] at ht
+    exact ht.le
+  obtain ⟨T, hT1, hTle⟩ := ((eventually_ge_atTop (1 : ℝ)).and hhalf).exists
+  have hTpos : 0 < T := lt_of_lt_of_le one_pos hT1
+  have hexpcont : Continuous (NormedSpace.exp : (X →L[ℝ] X) → (X →L[ℝ] X)) := by
+    rw [← continuousOn_univ, ← show Metric.eball (0 : X →L[ℝ] X)
+        (NormedSpace.expSeries ℝ (X →L[ℝ] X)).radius = Set.univ by
+      rw [NormedSpace.expSeries_radius_eq_top]; simp]
+    exact NormedSpace.continuousOn_exp (𝕂 := ℝ)
+  have hcont : Continuous (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap)) :=
+    hexpcont.comp (continuous_id.smul continuous_const)
+  obtain ⟨B, hB⟩ := isCompact_Icc.exists_bound_of_continuousOn hcont.continuousOn
+  have hBnn : 0 ≤ B := le_trans (norm_nonneg _) (hB 0 ⟨le_refl 0, hTpos.le⟩)
+  refine ⟨2 * max B 1, mul_pos two_pos (lt_of_lt_of_le one_pos (le_max_right B 1)),
+    Real.log 2 / T, div_pos (Real.log_pos (by norm_num)) hTpos, ?_⟩
+  intro t ht
+  have hγpos : 0 < Real.log 2 / T :=
+    div_pos (Real.log_pos (by norm_num)) hTpos
+  have hgeom : (1 / 2 : ℝ) ^ (⌊t / T⌋₊) ≤ 2 * Real.exp (-(Real.log 2 / T) * t) := by
+    have hlt_floor : t / T < (⌊t / T⌋₊ : ℝ) + 1 := Nat.lt_floor_add_one (t / T)
+    have ht_lt : t < ((⌊t / T⌋₊ : ℝ) + 1) * T := by
+      have := mul_lt_mul_of_pos_right hlt_floor hTpos
+      rwa [div_mul_cancel₀ t hTpos.ne'] at this
+    have hkey : (Real.log 2 / T) * t < ((⌊t / T⌋₊ : ℝ) + 1) * Real.log 2 := by
+      calc (Real.log 2 / T) * t < (Real.log 2 / T) * (((⌊t / T⌋₊ : ℝ) + 1) * T) :=
+            mul_lt_mul_of_pos_left ht_lt hγpos
+        _ = ((⌊t / T⌋₊ : ℝ) + 1) * Real.log 2 := by
+            field_simp
+    have hexp_lt : Real.exp (-(((⌊t / T⌋₊ : ℝ) + 1) * Real.log 2)) <
+        Real.exp (-(Real.log 2 / T) * t) := by
+      apply Real.exp_lt_exp.mpr
+      linarith
+    have hexp_eq : Real.exp (-(((⌊t / T⌋₊ : ℝ) + 1) * Real.log 2)) =
+        (1 / 2 : ℝ) ^ (⌊t / T⌋₊ + 1) := by
+      rw [show -(((⌊t / T⌋₊ : ℝ) + 1) * Real.log 2) =
+          ((⌊t / T⌋₊ + 1 : ℕ) : ℝ) * (-(Real.log 2)) by push_cast; ring]
+      rw [Real.exp_nat_mul, Real.exp_neg, Real.exp_log (by norm_num : (0 : ℝ) < 2)]
+      norm_num
+    rw [hexp_eq] at hexp_lt
+    calc (1 / 2 : ℝ) ^ ⌊t / T⌋₊ = 2 * (1 / 2 : ℝ) ^ (⌊t / T⌋₊ + 1) := by
+          rw [pow_succ]; ring
+      _ ≤ 2 * Real.exp (-(Real.log 2 / T) * t) :=
+          mul_le_mul_of_nonneg_left hexp_lt.le (by norm_num)
+  calc ‖NormedSpace.exp (t • A.toContinuousLinearMap)‖
+      ≤ B * (1 / 2 : ℝ) ^ (⌊t / T⌋₊) := norm_exp_le_mul_pow_floor A hTpos hB hTle ht
+    _ ≤ max B 1 * (2 * Real.exp (-(Real.log 2 / T) * t)) :=
+          mul_le_mul (le_max_left B 1) hgeom (by positivity)
+            (le_trans hBnn (le_max_left B 1))
+    _ = 2 * max B 1 * Real.exp (-(Real.log 2 / T) * t) := by ring
 
 end LinearMap
