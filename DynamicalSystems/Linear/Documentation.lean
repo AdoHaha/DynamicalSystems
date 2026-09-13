@@ -528,8 +528,9 @@ certificate and proves the closed loop decoupled.
 
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
-The exact zero-response geometric criterion is formalized; the remaining deferred obligation is
-the stronger stabilizable/detectable-subspace Corollary 6.22 external-stability converse, together
+The exact zero-response geometric criterion and the stabilizable/detectable-subspace Corollary 6.22
+foundation (including spectral direct sum and both top-characterization equivalences) are formalized;
+the remaining deferred obligation is the full geometric external-stability converse, together
 with the nonlinear theory of Chapters 7–15 and the
 algebraic-methods reference of Conte, Moog and Perdon. The examples module supplies the
 nonzero-feedthrough observer, possible/impossible decoupling instances, and the proved scalar-filter
