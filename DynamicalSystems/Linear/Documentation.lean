@@ -260,8 +260,9 @@ invertibility of `1 - D N`.
 The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
 explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, the
 spectrum/internal-stability layer, and the Hurwitz-to-external-impulse-response stability
-sufficient direction are formalized. Full nonzero-`F` synthesis and the stronger BIBO/geometric
-external-stability converse remain deferred.
+sufficient direction and its BIBO/integrability consequence are formalized. Nonzero-`F` synthesis
+is formalized under an explicit factorization hypothesis; only the geometric necessary-and-
+sufficient external-stability converse remains deferred.
 
 # Algebraic examples
 
@@ -527,8 +528,8 @@ certificate and proves the closed loop decoupled.
 
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
-The remaining deferred obligations are full nonzero-`F` synthesis, the stronger BIBO/geometric
-external-stability converse, and the nonlinear theory of Chapters 7–15 together with the
+The remaining deferred obligations are the geometric necessary-and-sufficient external-stability
+converse and the nonlinear theory of Chapters 7–15 together with the
 algebraic-methods reference of Conte, Moog and Perdon. The examples module supplies the
 nonzero-feedthrough observer, possible/impossible decoupling instances, and the proved scalar-filter
 representation bridge.
