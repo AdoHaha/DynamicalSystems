@@ -258,9 +258,10 @@ invertibility of `1 - D N`.
 {docstring LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween}
 
 The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
-explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, and
-the spectrum/internal-stability layer are formalized. Full nonzero-`F` synthesis and external
-stabilization remain deferred.
+explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, the
+spectrum/internal-stability layer, and the Hurwitz-to-external-impulse-response stability
+sufficient direction are formalized. Full nonzero-`F` synthesis and the stronger BIBO/geometric
+external-stability converse remain deferred.
 
 # Algebraic examples
 
@@ -526,7 +527,8 @@ certificate and proves the closed loop decoupled.
 
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
-The remaining deferred obligations are full nonzero-`F` synthesis, external stabilization, and
-the nonlinear theory of Chapters 7–15 together with the algebraic-methods reference of Conte,
-Moog and Perdon. The examples module supplies the nonzero-feedthrough observer, possible/impossible
-decoupling instances, and the proved scalar-filter representation bridge.
+The remaining deferred obligations are full nonzero-`F` synthesis, the stronger BIBO/geometric
+external-stability converse, and the nonlinear theory of Chapters 7–15 together with the
+algebraic-methods reference of Conte, Moog and Perdon. The examples module supplies the
+nonzero-feedthrough observer, possible/impossible decoupling instances, and the proved scalar-filter
+representation bridge.
