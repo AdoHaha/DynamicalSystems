@@ -2896,4 +2896,364 @@ theorem hurwitzSubspace_sup_unstableSubspace_eq_top (A : X →ₗ[ℝ] X) :
 
 end StabilizableDetectable
 
+open scoped TensorProduct
+
+/-- Rectangular version of `ofRealPi_mulVec`. -/
+lemma ofRealPi_mulVec_rect {ι κ : Type*} [Fintype ι]
+    (M : Matrix κ ι ℝ) (y : ι → ℝ) :
+    ofRealPi (M *ᵥ y) = (M.map (algebraMap ℝ ℂ)) *ᵥ (ofRealPi y) := by
+  ext i
+  have h := RingHom.map_mulVec (algebraMap ℝ ℂ) M y i
+  simpa [ofRealPi, Function.comp_def] using h
+
+/-- Matrix transport of generalized eigenspaces. -/
+theorem map_toLin'_maxGenEigenspace {m n : ℕ}
+    (M : Matrix (Fin m) (Fin n) ℂ) (A : Matrix (Fin n) (Fin n) ℂ)
+    (T : Matrix (Fin m) (Fin m) ℂ) (μ : ℂ)
+    (h : M * A = T * M) :
+    Submodule.map (Matrix.toLin' M)
+        (Module.End.maxGenEigenspace (Matrix.toLin' A) μ) ≤
+      Module.End.maxGenEigenspace (Matrix.toLin' T) μ := by
+  rw [Submodule.map_le_iff_le_comap]
+  intro z hz
+  rw [Submodule.mem_comap] at *
+  rw [Module.End.mem_maxGenEigenspace] at hz ⊢
+  obtain ⟨k, hk⟩ := hz
+  refine ⟨k, ?_⟩
+  have hMA : (Matrix.toLin' M).comp (Matrix.toLin' A) =
+      (Matrix.toLin' T).comp (Matrix.toLin' M) := by
+    rw [← Matrix.toLin'_mul, ← Matrix.toLin'_mul, h]
+  have hcomm : (Matrix.toLin' M).comp (Matrix.toLin' A - μ • 1) =
+      (Matrix.toLin' T - μ • 1).comp (Matrix.toLin' M) := by
+    rw [LinearMap.comp_sub, LinearMap.sub_comp, hMA]
+    ext v
+    simp [LinearMap.comp_apply]
+  have hind : ∀ j,
+      ((Matrix.toLin' T - μ • (1 : (Fin m → ℂ) →ₗ[ℂ] (Fin m → ℂ))) ^ j)
+        ((Matrix.toLin' M) z) =
+      (Matrix.toLin' M)
+        (((Matrix.toLin' A - μ • (1 : (Fin n → ℂ) →ₗ[ℂ] (Fin n → ℂ))) ^ j) z) := by
+    intro j
+    induction j with
+    | zero => simp
+    | succ j ih =>
+        rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, ih,
+          ← LinearMap.comp_apply, ← hcomm, LinearMap.comp_apply]
+        rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply]
+  rw [hind k, hk, map_zero]
+
+/-- Coordinate naturality of a real linear map. -/
+theorem ofRealPi_equivFun_toLin'_apply {Z : Type*} [AddCommGroup Z] [Module ℝ Z]
+    [FiniteDimensional ℝ Z] (f : X →ₗ[ℝ] Z) (x : X) :
+    (Matrix.toLin'
+        ((LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ Z) f).map
+          (algebraMap ℝ ℂ)))
+      (ofRealPi ((Module.finBasis ℝ X).equivFun x)) =
+    ofRealPi ((Module.finBasis ℝ Z).equivFun (f x)) := by
+  rw [Matrix.toLin'_apply, ← ofRealPi_mulVec_rect]
+  change ofRealPi ((LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ Z) f) *ᵥ
+    (Module.finBasis ℝ X).repr x) = ofRealPi ((Module.finBasis ℝ Z).repr (f x))
+  rw [LinearMap.toMatrix_mulVec_repr]
+
+/-- The characteristic polynomial of the complexified coordinate operator is the
+complexified characteristic polynomial of `A`. -/
+theorem charpoly_hurwitzMatrix_map_eq (A : X →ₗ[ℝ] X) :
+    (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))).charpoly =
+      A.charpoly.map (algebraMap ℝ ℂ) := by
+  change (Matrix.toLin'
+    ((LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A).map
+      (algebraMap ℝ ℂ))).charpoly = A.charpoly.map (algebraMap ℝ ℂ)
+  rw [Matrix.charpoly_toLin', Matrix.charpoly_map,
+    ← LinearMap.charpoly_toMatrix (f := A) (Module.finBasis ℝ X)]
+
+/-- A Hurwitz operator has no unstable generalized eigenspaces in coordinates. -/
+theorem unstableComplexSubspace_eq_bot_of_isHurwitz (A : X →ₗ[ℝ] X)
+    (hA : IsHurwitz A) : unstableComplexSubspace A = ⊥ := by
+  rw [unstableComplexSubspace, iSup_eq_bot]
+  intro μ
+  rw [Submodule.eq_bot_iff]
+  intro z hz
+  by_contra hz0
+  have heig := hasEigenvalue_of_mem_maxGenEigenspace hz hz0
+  have hroot : (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))).charpoly.IsRoot μ.1 :=
+    (Module.End.hasEigenvalue_iff_isRoot_charpoly _ _).mp heig
+  rw [charpoly_hurwitzMatrix_map_eq] at hroot
+  exact μ.2 (hA μ.1 hroot)
+
+/-- `ofRealPi` is injective. -/
+lemma ofRealPi_injective {ι : Type*} : Function.Injective (ofRealPi (ι := ι)) := by
+  intro a b hab
+  have hsub : ofRealPi (a - b) = 0 := by rw [map_sub, hab, sub_self]
+  exact sub_eq_zero.mp (ofRealPi_eq_zero hsub)
+
+/-- A Hurwitz operator has trivial unstable subspace. -/
+theorem unstableSubspace_eq_bot_of_isHurwitz (A : X →ₗ[ℝ] X)
+    (hA : IsHurwitz A) : unstableSubspace A = ⊥ := by
+  rw [unstableSubspace, unstableComplexSubspace_eq_bot_of_isHurwitz A hA,
+    Submodule.restrictScalars_bot, Submodule.comap_bot, LinearMap.ker_eq_bot]
+  exact ofRealPi_injective.comp (Module.finBasis ℝ X).equivFun.injective
+
+
+
+
+/-- Forward direction: a stabilizable pair has full stabilizable subspace. -/
+theorem stabilizableSubspace_eq_top_of_isStabilizable (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : IsStabilizable A B) : stabilizableSubspace A B = ⊤ := by
+  have hle : unstableSubspace A ≤ reachableSubspace A B := by
+    intro x hx
+    let R : Submodule ℝ X := reachableSubspace A B
+    have _ : IsClosed (R : Set X) := R.closed_of_finiteDimensional
+    let T : (X ⧸ R) →ₗ[ℝ] (X ⧸ R) :=
+      Submodule.mapQ R R A (fun x hx => map_reachableSubspace_le A B ⟨x, hx, rfl⟩)
+    have hT : IsHurwitz T := isHurwitz_on_stabilizableComplement A B h
+    have hUT : unstableComplexSubspace T = ⊥ := unstableComplexSubspace_eq_bot_of_isHurwitz T hT
+    let q : X →ₗ[ℝ] (X ⧸ R) := R.mkQ
+    have hqA : q.comp A = T.comp q := by
+      simpa only [q, T] using
+        (Submodule.mapQ_mkQ (p := R) (q := R) (f := A) (h := fun x hx =>
+          map_reachableSubspace_le A B ⟨x, hx, rfl⟩)).symm
+    have hmat : LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ (X ⧸ R)) q *
+        LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A =
+        LinearMap.toMatrix (Module.finBasis ℝ (X ⧸ R)) (Module.finBasis ℝ (X ⧸ R)) T *
+        LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ (X ⧸ R)) q := by
+      rw [← LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ X) (v₂ := Module.finBasis ℝ X)
+            (v₃ := Module.finBasis ℝ (X ⧸ R)) q A,
+        hqA, LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ X)
+          (v₂ := Module.finBasis ℝ (X ⧸ R)) (v₃ := Module.finBasis ℝ (X ⧸ R)) T q]
+    have hmatc : (LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ (X ⧸ R)) q).map
+          (algebraMap ℝ ℂ) *
+        (LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A).map
+          (algebraMap ℝ ℂ) =
+        (LinearMap.toMatrix (Module.finBasis ℝ (X ⧸ R)) (Module.finBasis ℝ (X ⧸ R)) T).map
+          (algebraMap ℝ ℂ) *
+        (LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ (X ⧸ R)) q).map
+          (algebraMap ℝ ℂ) := by
+      rw [← Matrix.map_mul, ← Matrix.map_mul, hmat]
+    have hmap : Submodule.map
+        (Matrix.toLin' ((LinearMap.toMatrix (Module.finBasis ℝ X)
+          (Module.finBasis ℝ (X ⧸ R)) q).map (algebraMap ℝ ℂ)))
+        (unstableComplexSubspace A) ≤ unstableComplexSubspace T := by
+      rw [unstableComplexSubspace, Submodule.map_iSup]
+      refine iSup_le fun μ => ?_
+      rw [unstableComplexSubspace]
+      exact le_iSup_of_le μ (map_toLin'_maxGenEigenspace _ _ _ μ.1 hmatc)
+    have hzx : ofRealPi ((Module.finBasis ℝ X).equivFun x) ∈ unstableComplexSubspace A := by
+      rwa [mem_unstableSubspace] at hx
+    have hmem : (Matrix.toLin' ((LinearMap.toMatrix (Module.finBasis ℝ X)
+        (Module.finBasis ℝ (X ⧸ R)) q).map (algebraMap ℝ ℂ)))
+        (ofRealPi ((Module.finBasis ℝ X).equivFun x)) ∈ unstableComplexSubspace T :=
+      hmap ⟨_, hzx, rfl⟩
+    rw [hUT, Submodule.mem_bot] at hmem
+    have hqx : ofRealPi ((Module.finBasis ℝ (X ⧸ R)).equivFun (q x)) = 0 := by
+      rw [← ofRealPi_equivFun_toLin'_apply q x]
+      exact hmem
+    have hz : (Module.finBasis ℝ (X ⧸ R)).equivFun (q x) = 0 := ofRealPi_eq_zero hqx
+    have hq0 : q x = 0 :=
+      (Module.finBasis ℝ (X ⧸ R)).equivFun.injective (by rw [hz, map_zero])
+    change x ∈ R
+    rw [← Submodule.ker_mkQ R]
+    exact hq0
+  rw [stabilizableSubspace]
+  apply le_antisymm le_top
+  calc ⊤ = hurwitzSubspace A ⊔ unstableSubspace A :=
+        (hurwitzSubspace_sup_unstableSubspace_eq_top A).symm
+    _ ≤ hurwitzSubspace A ⊔ reachableSubspace A B := sup_le_sup_left hle _
+
+
+
+open scoped TensorProduct
+
+/-- A left eigenvector annihilating the input map annihilates the whole
+reachable subspace. -/
+theorem apply_eq_zero_of_left_eigenvector_mem_reachableSubspace
+    {E F : Type*} [AddCommGroup E] [Module ℂ E] [AddCommGroup F] [Module ℂ F]
+    (A : E →ₗ[ℂ] E) (B : F →ₗ[ℂ] E) (η : E →ₗ[ℂ] ℂ) (μ : ℂ)
+    (hA : η.comp A = μ • η) (hB : η.comp B = 0) {x : E}
+    (hx : x ∈ reachableSubspace A B) : η x = 0 := by
+  have hgen : ∀ k (u : F), η ((A ^ k) (B u)) = 0 := by
+    intro k u
+    induction k with
+    | zero => simpa using congrArg (fun f : F →ₗ[ℂ] ℂ => f u) hB
+    | succ k ih =>
+        have h1 : η (A ((A ^ k) (B u))) = μ * η ((A ^ k) (B u)) := by
+          have := congrArg (fun f : E →ₗ[ℂ] ℂ => f ((A ^ k) (B u))) hA
+          simpa [LinearMap.comp_apply, LinearMap.smul_apply] using this
+        rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, h1, ih, mul_zero]
+  rw [reachableSubspace] at hx
+  obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+    (p := fun k : ℕ => LinearMap.range ((A ^ k).comp B))).mp hx
+  obtain ⟨xk, hxk⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+    (fun k : ℕ => LinearMap.range ((A ^ k).comp B)) x).mp hs
+  rw [← hxk, map_sum]
+  apply Finset.sum_eq_zero
+  intro k hk
+  obtain ⟨u, hu⟩ := LinearMap.mem_range.mp (xk k).2
+  rw [← hu]
+  exact hgen k u
+
+
+
+/-- A left eigenvector annihilates every generalized eigenspace at a different
+eigenvalue. -/
+theorem apply_eq_zero_of_left_eigenvector_mem_maxGenEigenspace
+    {E : Type*} [AddCommGroup E] [Module ℂ E]
+    (A : E →ₗ[ℂ] E) (η : E →ₗ[ℂ] ℂ) {μ ν : ℂ}
+    (hA : η.comp A = μ • η) (hν : ν ≠ μ) {z : E}
+    (hz : z ∈ Module.End.maxGenEigenspace A ν) : η z = 0 := by
+  have hstep : η.comp (A - ν • 1) = (μ - ν) • η := by
+    rw [Module.End.one_eq_id, LinearMap.comp_sub, hA, LinearMap.comp_smul, LinearMap.comp_id]
+    ext v
+    simp only [LinearMap.sub_apply, LinearMap.smul_apply]
+    module
+  have hpow : ∀ k, η.comp ((A - ν • 1) ^ k) = (μ - ν) ^ k • η := by
+    intro k
+    induction k with
+    | zero => simp [Module.End.one_eq_id]
+    | succ k ih =>
+        rw [pow_succ, Module.End.mul_eq_comp, ← LinearMap.comp_assoc, ih,
+          LinearMap.smul_comp, hstep, smul_smul, pow_succ]
+  obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace A ν z).mp hz
+  have h := congrArg (fun f : E →ₗ[ℂ] ℂ => f z) (hpow k)
+  simp only [LinearMap.comp_apply, LinearMap.smul_apply] at h
+  rw [hk, map_zero] at h
+  rcases smul_eq_zero.mp h.symm with h0 | h0
+  · exact absurd h0 (pow_ne_zero k (sub_ne_zero.mpr hν.symm))
+  · exact h0
+
+
+theorem baseChange_eq_basis : (Module.finBasis ℝ X).baseChange ℂ =
+    Algebra.TensorProduct.basis ℂ (Module.finBasis ℝ X) := by
+  ext i
+  simp [Module.Basis.baseChange_apply, Algebra.TensorProduct.basis_apply]
+
+/-- The coordinate equivalence of the base-changed basis intertwines `A.baseChange ℂ`
+with the complexified coordinate matrix. -/
+theorem baseChange_repr_comp (A : X →ₗ[ℝ] X) :
+    ((Module.finBasis ℝ X).baseChange ℂ).equivFun.toLinearMap.comp (A.baseChange ℂ) =
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))).comp
+        ((Module.finBasis ℝ X).baseChange ℂ).equivFun.toLinearMap := by
+  apply LinearMap.ext
+  intro z
+  rw [LinearMap.comp_apply, LinearMap.comp_apply]
+  change ((Module.finBasis ℝ X).baseChange ℂ).repr ((A.baseChange ℂ) z) =
+    (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+      (((Module.finBasis ℝ X).baseChange ℂ).repr z)
+  rw [baseChange_eq_basis,
+    ← LinearMap.toMatrix_mulVec_repr (Algebra.TensorProduct.basis ℂ (Module.finBasis ℝ X))
+      (Algebra.TensorProduct.basis ℂ (Module.finBasis ℝ X)) (A.baseChange ℂ) z,
+    LinearMap.toMatrix_baseChange, Matrix.toLin'_apply]
+  rfl
+
+
+
+open scoped TensorProduct
+
+
+/-- The coordinate equivalence of the base-changed basis sends `1 ⊗ x` to the
+real coordinates of `x`. -/
+theorem baseChange_equivFun_symm_one_tmul (x : X) :
+    ((Module.finBasis ℝ X).baseChange ℂ).equivFun.symm
+      (ofRealPi ((Module.finBasis ℝ X).equivFun x)) = (1 : ℂ) ⊗ₜ[ℝ] x := by
+  rw [Basis.equivFun_symm_apply]
+  conv_rhs => rw [← (Module.finBasis ℝ X).sum_equivFun x, TensorProduct.tmul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  rw [Module.Basis.baseChange_apply]
+  simp only [ofRealPi_apply]
+  rw [TensorProduct.tmul_smul]
+  rfl
+
+/-- Reverse direction: a full stabilizable subspace makes the pair stabilizable. -/
+theorem isStabilizable_of_stabilizableSubspace_eq_top (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : stabilizableSubspace A B = ⊤) : IsStabilizable A B := by
+  apply isStabilizable_of_uncontrollableEigenvalues_hurwitz
+  intro μ hμ
+  by_contra hμre
+  obtain ⟨η, hηne, hηA, hηB⟩ := hμ
+  let Φ : (ℂ ⊗[ℝ] X) ≃ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    ((Module.finBasis ℝ X).baseChange ℂ).equivFun
+  let Φs : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (ℂ ⊗[ℝ] X) := Φ.symm.toLinearMap
+  let ηc : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] ℂ := η.comp Φs
+  have hsymm : Φs.comp (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) =
+      (A.baseChange ℂ).comp Φs := by
+    apply LinearMap.ext
+    intro z
+    simp only [LinearMap.comp_apply]
+    apply Φ.injective
+    rw [show Φ (Φs ((Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) z)) =
+        (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) z by
+      exact Φ.apply_symm_apply _]
+    change (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) z =
+      (Φ.toLinearMap.comp (A.baseChange ℂ)) (Φs z)
+    rw [baseChange_repr_comp A, LinearMap.comp_apply]
+    exact (congrArg (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+      (Φ.apply_symm_apply z)).symm
+  have hηc : ηc.comp (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) = μ • ηc := by
+    rw [show ηc.comp (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) =
+        η.comp (Φs.comp (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))) by
+      rw [LinearMap.comp_assoc]]
+    rw [hsymm, ← LinearMap.comp_assoc, hηA, LinearMap.smul_comp]
+  have hker : hurwitzComplexSubspace A ≤ LinearMap.ker ηc := by
+    rw [hurwitzComplexSubspace]
+    refine iSup_le fun ν => ?_
+    intro z hz
+    rw [LinearMap.mem_ker]
+    exact apply_eq_zero_of_left_eigenvector_mem_maxGenEigenspace
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) ηc hηc
+      (fun hνμ => hμre (hνμ ▸ ν.2)) hz
+  have hH : ∀ a ∈ hurwitzSubspace A, η ((1 : ℂ) ⊗ₜ[ℝ] a) = 0 := by
+    intro a ha
+    have hφ : ofRealPi ((Module.finBasis ℝ X).equivFun a) ∈ hurwitzComplexSubspace A := by
+      rwa [mem_hurwitzSubspace] at ha
+    rw [← baseChange_equivFun_symm_one_tmul a]
+    exact hker hφ
+  have hR : ∀ b ∈ reachableSubspace A B, η ((1 : ℂ) ⊗ₜ[ℝ] b) = 0 := by
+    intro b hb
+    have hmem : (1 : ℂ) ⊗ₜ[ℝ] b ∈
+        reachableSubspace (A.baseChange ℂ) (B.baseChange ℂ) := by
+      rw [reachableSubspace] at hb ⊢
+      obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+        (p := fun k : ℕ => LinearMap.range ((A ^ k).comp B))).mp hb
+      obtain ⟨bk, hbk⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+        (fun k : ℕ => LinearMap.range ((A ^ k).comp B)) b).mp hs
+      rw [← hbk, TensorProduct.tmul_sum]
+      apply Submodule.sum_mem
+      intro k hk
+      obtain ⟨u, hu⟩ := LinearMap.mem_range.mp (bk k).2
+      rw [← hu]
+      have hgen : (1 : ℂ) ⊗ₜ[ℝ] (((A ^ k) ∘ₗ B) u) =
+          ((A.baseChange ℂ) ^ k) ((B.baseChange ℂ) ((1 : ℂ) ⊗ₜ[ℝ] u)) := by
+        rw [← LinearMap.baseChange_pow]
+        rw [show ((A ^ k).baseChange ℂ) ((B.baseChange ℂ) ((1 : ℂ) ⊗ₜ[ℝ] u)) =
+            (((A ^ k).baseChange ℂ).comp (B.baseChange ℂ)) ((1 : ℂ) ⊗ₜ[ℝ] u) from rfl]
+        rw [← LinearMap.baseChange_comp, LinearMap.baseChange_tmul]
+      rw [hgen]
+      exact Submodule.mem_iSup_of_mem k ⟨(1 : ℂ) ⊗ₜ[ℝ] u, rfl⟩
+    exact apply_eq_zero_of_left_eigenvector_mem_reachableSubspace
+      (A.baseChange ℂ) (B.baseChange ℂ) η μ hηA hηB hmem
+  have hηzero : η = 0 := by
+    apply ((Module.finBasis ℝ X).baseChange ℂ).ext
+    intro j
+    rw [Module.Basis.baseChange_apply]
+    have hx : ((Module.finBasis ℝ X) j) ∈ hurwitzSubspace A ⊔ reachableSubspace A B := by
+      rw [← stabilizableSubspace, h]; trivial
+    rw [Submodule.mem_sup] at hx
+    obtain ⟨a, ha, b, hb, hab⟩ := hx
+    rw [← hab, TensorProduct.tmul_add]
+    change η ((1 : ℂ) ⊗ₜ[ℝ] a + (1 : ℂ) ⊗ₜ[ℝ] b) = 0
+    rw [map_add, hH a ha, hR b hb, add_zero]
+  exact hηne hηzero
+
+
+
+
+/-- Top-characterization of stabilizability: the pair `(A, B)` is stabilizable
+exactly when its stabilizable subspace is the whole state space. -/
+theorem isStabilizable_iff_stabilizableSubspace_eq_top (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    IsStabilizable A B ↔ stabilizableSubspace A B = ⊤ :=
+  ⟨stabilizableSubspace_eq_top_of_isStabilizable A B,
+   isStabilizable_of_stabilizableSubspace_eq_top A B⟩
+
+
+
 end LinearMap
