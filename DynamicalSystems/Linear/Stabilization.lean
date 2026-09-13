@@ -1334,6 +1334,144 @@ theorem isDetectable_of_unobservableEigenvalues_hurwitz
   · exact hAN μ h1
   · exact hLP μ h2
 
+/-- **Detectability from a Hurwitz unobservable restriction.** If the restriction
+of `A` to the unobservable subspace `N = ⟨ker C | A⟩` is Hurwitz, then `(C, A)`
+is detectable. The output injection is constructed exactly as in
+`isDetectable_of_unobservableEigenvalues_hurwitz`: split `X = N ⊕ P`, observe
+that `(C|_P, π_P A|_P)` is observable, stabilise the `P`-block, and assemble the
+block-triangular closed loop `A - L C` whose two diagonal blocks are `A|_N`
+(Hurwitz by hypothesis) and the stabilised `P`-block. -/
+theorem isDetectable_of_isHurwitz_unobservableRestriction (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X)
+    (hAN : IsHurwitz (unobservableRestrictionA C A)) : IsDetectable C A := by
+  classical
+  obtain ⟨P, hP⟩ := Submodule.exists_isCompl (unobservableSubspace C A)
+  let N := unobservableSubspace C A
+  let πN : X →ₗ[ℝ] N := N.projectionOnto P hP
+  let πP : X →ₗ[ℝ] P := P.projectionOnto N hP.symm
+  let AN : N →ₗ[ℝ] N := unobservableRestrictionA C A
+  let CP : P →ₗ[ℝ] Y := C.comp P.subtype
+  let AP : P →ₗ[ℝ] P := πP.comp (A.comp P.subtype)
+  let ANP : P →ₗ[ℝ] N := πN.comp (A.comp P.subtype)
+  have hAN' : IsHurwitz AN := hAN
+  have hπNN : ∀ n : N, (N.projectionOnto P hP) (n : X) = n := by
+    intro n; exact Submodule.projectionOnto_apply_of_mem_left hP n.2
+  have hπNP : ∀ p : P, (N.projectionOnto P hP) (p : X) = 0 := by
+    intro p; exact Submodule.projectionOnto_apply_right hP p
+  have hπPN : ∀ n : N, (P.projectionOnto N hP.symm) (n : X) = 0 := by
+    intro n; exact Submodule.projectionOnto_apply_right hP.symm n
+  have hπPP : ∀ p : P, (P.projectionOnto N hP.symm) (p : X) = p := by
+    intro p; exact Submodule.projectionOnto_apply_of_mem_left hP.symm p.2
+  have hπNA : ∀ n : N, (N.projectionOnto P hP) (A (n : X)) = AN n := by
+    intro n
+    have hmem : A (n : X) ∈ N := map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
+    rw [show (N.projectionOnto P hP) (A (n:X)) = ⟨A (n:X), hmem⟩ from
+      Submodule.projectionOnto_apply_of_mem_left hP hmem]
+    apply Subtype.ext
+    simp [AN, unobservableRestrictionA, LinearMap.restrict_apply]
+  have hπPA : ∀ n : N, (P.projectionOnto N hP.symm) (A (n : X)) = 0 := by
+    intro n
+    rw [Submodule.projectionOnto_apply_eq_zero_iff]
+    exact map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
+  have hπP_A : (P.projectionOnto N hP.symm).comp A = AP.comp (P.projectionOnto N hP.symm) := by
+    apply LinearMap.ext; intro x
+    show (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
+    have hdecomp : ((πN x : X) + (πP x : X)) = x := by
+      have hh := Submodule.projection_add_projection_eq_self hP x
+      simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
+    calc (P.projectionOnto N hP.symm) (A x)
+        = (P.projectionOnto N hP.symm) (A ((πN x : X) + (πP x : X))) := by rw [hdecomp]
+      _ = (P.projectionOnto N hP.symm) (A (πN x : X) + A (πP x : X)) := by rw [map_add]
+      _ = (P.projectionOnto N hP.symm) (A (πN x : X)) +
+            (P.projectionOnto N hP.symm) (A (πP x : X)) := by rw [map_add]
+      _ = AP ((P.projectionOnto N hP.symm) x) := by
+          have hz : (P.projectionOnto N hP.symm) (A (πN x : X)) = 0 := by
+            rw [Submodule.projectionOnto_apply_eq_zero_iff]
+            exact map_unobservableSubspace_le C A ⟨_, (πN x).2, rfl⟩
+          rw [hz, zero_add]
+          rfl
+  have hobs : IsObservable CP AP := by
+    rw [isObservable_iff, Submodule.eq_bot_iff]
+    intro p hp
+    rw [mem_unobservableSubspace] at hp
+    have hpow : ∀ k, (AP ^ k) p = (P.projectionOnto N hP.symm) ((A ^ k) p) := by
+      intro k
+      induction k with
+      | zero => simpa using hπPP p
+      | succ k ih =>
+          rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, ih]
+          have h2 := congrArg (fun f : X →ₗ[ℝ] P => f ((A ^ k) p)) hπP_A
+          simpa only [LinearMap.comp_apply, pow_succ', Module.End.mul_eq_comp] using h2.symm
+    have hpN : (p : X) ∈ N := by
+      rw [mem_unobservableSubspace]
+      intro k
+      have hk : CP ((AP ^ k) p) = 0 := hp k
+      have hsplit : ((πN ((A ^ k) p) : X) + (πP ((A ^ k) p) : X)) = (A ^ k) p := by
+        have hh := Submodule.projection_add_projection_eq_self hP ((A ^ k) p)
+        simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
+      calc C ((A ^ k) p)
+          = C ((πN ((A ^ k) p) : X) + (πP ((A ^ k) p) : X)) := by rw [hsplit]
+        _ = C (πN ((A ^ k) p) : X) + C (πP ((A ^ k) p) : X) := by rw [map_add]
+        _ = 0 := by
+            have h1 : C (πN ((A ^ k) p) : X) = 0 :=
+              C_eq_zero_of_mem_unobservableSubspace (πN ((A ^ k) p)).2
+            have h2 : C (πP ((A ^ k) p) : X) = 0 := by
+              rw [← hpow k]
+              simpa [CP] using hk
+            rw [h1, h2, add_zero]
+    have hmem : (p : X) ∈ N ⊓ P := ⟨hpN, p.2⟩
+    rw [hP.inf_eq_bot] at hmem
+    exact Subtype.ext (by simpa using hmem)
+  obtain ⟨LP, hLP⟩ := isDetectable_of_isObservable CP AP hobs
+  let L : Y →ₗ[ℝ] X := P.subtype.comp LP
+  refine ⟨L, ?_⟩
+  let e := N.prodEquivOfIsCompl P hP
+  let T' : N × P →ₗ[ℝ] N × P := LinearMap.prod
+    ((AN.comp (LinearMap.fst ℝ N P)) + (ANP.comp (LinearMap.snd ℝ N P)))
+    ((AP - LP.comp CP).comp (LinearMap.snd ℝ N P))
+  have hconj : e.symm.conj (A - L.comp C) = T' := by
+    apply LinearMap.ext
+    intro pp
+    obtain ⟨n, p⟩ := pp
+    rw [LinearEquiv.conj_apply_apply]
+    rw [Submodule.prodEquivOfIsCompl_symm_apply]
+    rw [LinearEquiv.symm_symm, Submodule.coe_prodEquivOfIsCompl']
+    apply Prod.ext
+    · apply Subtype.ext
+      simp only [LinearMap.sub_apply, LinearMap.add_apply, LinearMap.comp_apply,
+        LinearMap.prod_apply, Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [map_sub]
+      rw [show C ((n : X) + (p : X)) = C (p : X) by
+        rw [map_add, C_eq_zero_of_mem_unobservableSubspace n.2, zero_add]]
+      rw [map_add, map_add]
+      rw [show (N.projectionOnto P hP) (A (n:X)) = AN n from hπNA n]
+      rw [show (N.projectionOnto P hP) (A (p:X)) = ANP p from rfl]
+      rw [show (N.projectionOnto P hP) (L (C (p:X))) = 0 from by
+        change (N.projectionOnto P hP) ((LP (C (p:X))) : X) = 0
+        exact hπNP (LP (C (p:X)))]
+      abel
+    · apply Subtype.ext
+      simp only [LinearMap.sub_apply, LinearMap.add_apply, LinearMap.comp_apply,
+        LinearMap.prod_apply, Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [map_sub]
+      rw [show C ((n : X) + (p : X)) = C (p : X) by
+        rw [map_add, C_eq_zero_of_mem_unobservableSubspace n.2, zero_add]]
+      rw [map_add, map_add]
+      rw [show (P.projectionOnto N hP.symm) (A (n:X)) = 0 from hπPA n]
+      rw [show (P.projectionOnto N hP.symm) (A (p:X)) = AP p from rfl]
+      rw [show (P.projectionOnto N hP.symm) (L (C (p:X))) = LP (C (p:X)) from by
+        change (P.projectionOnto N hP.symm) ((LP (C (p:X))) : X) = LP (C (p:X))
+        exact hπPP (LP (C (p:X)))]
+      simp [CP]
+  refine fun μ hμ => ?_
+  have hchar : (A - L.comp C).charpoly = T'.charpoly := by
+    rw [← LinearEquiv.charpoly_conj e.symm (A - L.comp C), hconj]
+  have hTchar : T'.charpoly = AN.charpoly * (AP - LP.comp CP).charpoly :=
+    charpoly_prodMap_of_lower_zero _ _ _
+  rw [hchar, hTchar] at hμ
+  simp only [Polynomial.map_mul, Polynomial.eval_mul] at hμ
+  rcases mul_eq_zero.mp hμ with h1 | h2
+  · exact hAN' μ h1
+  · exact hLP μ h2
 
 end ConversePBH
 
@@ -3254,6 +3392,298 @@ theorem isStabilizable_iff_stabilizableSubspace_eq_top (A : X →ₗ[ℝ] X) (B 
   ⟨stabilizableSubspace_eq_top_of_isStabilizable A B,
    isStabilizable_of_stabilizableSubspace_eq_top A B⟩
 
+
+
+/-! ## Disjointness of the stable and antistable spectral subspaces
+
+This section establishes that the stable subspace `X_g(A)` and the antistable
+subspace `X_b(A)` are disjoint, complementing the accepted spanning identity
+`hurwitzSubspace_sup_unstableSubspace_eq_top`. Together they show that the
+stable/antistable decomposition is direct; this is the assertion behind the
+direct sum `X = X_g(A) ⊕ X_b(A)`.
+
+At the complexified coordinate level the two subspaces are suprema of the
+generalized eigenspaces for the disjoint index sets `{re μ < 0}` and
+`{re μ ≥ 0}`. Mathlib's `iSupIndep.disjoint_biSup_biSup` applies to the
+independent family `Module.End.maxGenEigenspace`. Transporting along the
+injective real-coordinate map gives the real statement. -/
+
+/-- The complex stable and antistable coordinate subspaces are disjoint, being
+suprema of generalized eigenspaces over the disjoint index sets `re < 0` and
+`re ≥ 0`. -/
+theorem disjoint_hurwitzComplexSubspace_unstableComplexSubspace (A : X →ₗ[ℝ] X) :
+    Disjoint (hurwitzComplexSubspace A) (unstableComplexSubspace A) := by
+  let F := Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))
+  have hf : iSupIndep (Module.End.maxGenEigenspace F) :=
+    Module.End.independent_maxGenEigenspace F
+  have hd := hf.disjoint_biSup_biSup (s := {μ : ℂ | μ.re < 0})
+    (t := {μ : ℂ | ¬ μ.re < 0}) (by
+      rw [Set.disjoint_left]
+      intro μ h1 h2
+      exact h2 h1)
+  simpa only [hurwitzComplexSubspace, unstableComplexSubspace, iSup_subtype,
+    Set.mem_ofPred_eq] using hd
+
+/-- The real stable and antistable subspaces are disjoint. Both are preimages of
+the corresponding disjoint complex coordinate subspaces under the same injective
+real-coordinate map, and preimage preserves infima. -/
+theorem disjoint_hurwitzSubspace_unstableSubspace (A : X →ₗ[ℝ] X) :
+    Disjoint (hurwitzSubspace A) (unstableSubspace A) := by
+  have hc : hurwitzComplexSubspace A ⊓ unstableComplexSubspace A = ⊥ :=
+    disjoint_iff.mp (disjoint_hurwitzComplexSubspace_unstableComplexSubspace A)
+  rw [disjoint_iff, hurwitzSubspace, unstableSubspace, ← Submodule.comap_inf,
+    ← Submodule.restrictScalars_inf, hc, Submodule.restrictScalars_bot, Submodule.comap_bot,
+    LinearMap.ker_eq_bot]
+  exact ofRealPi_injective.comp (Module.finBasis ℝ X).equivFun.injective
+
+/-- The stable/antistable decomposition is direct: `X = X_g(A) ⊕ X_b(A)`. -/
+theorem isCompl_hurwitzSubspace_unstableSubspace (A : X →ₗ[ℝ] X) :
+    IsCompl (hurwitzSubspace A) (unstableSubspace A) :=
+  ⟨disjoint_hurwitzSubspace_unstableSubspace A,
+   codisjoint_iff.mpr (hurwitzSubspace_sup_unstableSubspace_eq_top A)⟩
+
+/-- Dimension additivity of the direct stable/antistable decomposition. -/
+theorem finrank_hurwitzSubspace_add_finrank_unstableSubspace (A : X →ₗ[ℝ] X) :
+    Module.finrank ℝ (hurwitzSubspace A) + Module.finrank ℝ (unstableSubspace A) =
+      Module.finrank ℝ X :=
+  Submodule.finrank_add_eq_of_isCompl (isCompl_hurwitzSubspace_unstableSubspace A)
+
+/-! ## Restriction transport for the spectral subspaces
+
+The generalized eigenspaces of `A` restricted to an `A`-invariant subspace `p`
+map into the generalized eigenspaces of `A`, so the stable and antistable
+spectral subspaces of `A|_p` map into the corresponding spectral subspaces of
+`A`. This is the forward (image) half of
+`map p.subtype '' X_b(A|_p) = X_b(A) ⊓ p`. -/
+
+/-- Coordinate-matrix transport for an arbitrary supremum of generalized
+eigenspaces of `A` restricted to an invariant `p`. -/
+theorem map_iSup_maxGenEigenspace_restrict_le
+    (A : X →ₗ[ℝ] X) (p : Submodule ℝ X) (hp : ∀ x ∈ p, A x ∈ p) (q : ℂ → Prop) :
+    Submodule.map
+        (Matrix.toLin' ((LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ X)
+          p.subtype).map (algebraMap ℝ ℂ)))
+        (⨆ μ : {μ : ℂ // q μ},
+          Module.End.maxGenEigenspace
+            (Matrix.toLin' ((hurwitzMatrix (A.restrict hp)).map (algebraMap ℝ ℂ))) μ.1) ≤
+      ⨆ μ : {μ : ℂ // q μ},
+        Module.End.maxGenEigenspace
+          (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1 := by
+  have hsub : A.comp p.subtype = p.subtype.comp (A.restrict hp) := by
+    ext x
+    rfl
+  have hmat : LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A *
+        LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ X) p.subtype =
+      LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ X) p.subtype *
+        LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ p) (A.restrict hp) := by
+    rw [← LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ p) (v₂ := Module.finBasis ℝ X)
+          (v₃ := Module.finBasis ℝ X) A p.subtype, hsub,
+      LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ p) (v₂ := Module.finBasis ℝ p)
+        (v₃ := Module.finBasis ℝ X) p.subtype (A.restrict hp)]
+  have hmatc :
+      (LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ X) p.subtype).map
+          (algebraMap ℝ ℂ) *
+        (LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ p) (A.restrict hp)).map
+          (algebraMap ℝ ℂ) =
+      (LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A).map
+          (algebraMap ℝ ℂ) *
+        (LinearMap.toMatrix (Module.finBasis ℝ p) (Module.finBasis ℝ X) p.subtype).map
+          (algebraMap ℝ ℂ) := by
+    rw [← Matrix.map_mul, ← Matrix.map_mul, hmat]
+  rw [Submodule.map_iSup]
+  refine iSup_le fun ν => ?_
+  exact le_iSup_of_le ν (map_toLin'_maxGenEigenspace _ _ _ ν.1 hmatc)
+
+/-- **Forward stable transport.** The image of the stable subspace of the
+restriction `A|_p` under the inclusion `p ↪ X` lies in the stable subspace of
+`A`. -/
+theorem map_hurwitzSubspace_restrict_le (A : X →ₗ[ℝ] X) (p : Submodule ℝ X)
+    (hp : ∀ x ∈ p, A x ∈ p) :
+    Submodule.map p.subtype (hurwitzSubspace (A.restrict hp)) ≤ hurwitzSubspace A := by
+  rw [Submodule.map_le_iff_le_comap]
+  intro y hy
+  rw [Submodule.mem_comap]
+  rw [mem_hurwitzSubspace] at hy ⊢
+  rw [← ofRealPi_equivFun_toLin'_apply p.subtype y]
+  exact map_iSup_maxGenEigenspace_restrict_le A p hp (fun μ => μ.re < 0)
+    ⟨_, hy, rfl⟩
+
+/-- **Forward antistable transport.** The image of the antistable subspace of
+the restriction `A|_p` under the inclusion `p ↪ X` lies in the antistable
+subspace of `A`. -/
+theorem map_unstableSubspace_restrict_le (A : X →ₗ[ℝ] X) (p : Submodule ℝ X)
+    (hp : ∀ x ∈ p, A x ∈ p) :
+    Submodule.map p.subtype (unstableSubspace (A.restrict hp)) ≤ unstableSubspace A := by
+  rw [Submodule.map_le_iff_le_comap]
+  intro y hy
+  rw [Submodule.mem_comap]
+  rw [mem_unstableSubspace] at hy ⊢
+  rw [← ofRealPi_equivFun_toLin'_apply p.subtype y]
+  exact map_iSup_maxGenEigenspace_restrict_le A p hp (fun μ => ¬ μ.re < 0)
+    ⟨_, hy, rfl⟩
+
+/-! ## The converse of the Hurwitz/unstable-subspace equivalence
+
+The accepted direction `unstableSubspace_eq_bot_of_isHurwitz` says that a
+Hurwitz operator has trivial antistable subspace. The converse is needed to
+deduce stability of an operator from the vanishing of its antistable part. It
+follows from the fact that the complexified coordinate antistable subspace is
+nonzero as soon as the complexified operator has a non-Hurwitz eigenvalue, and
+from the correspondence between the real and complexified antistable subspaces
+via `star`-invariance. -/
+
+/-- A real operator has trivial antistable subspace exactly when its
+complexified coordinate antistable subspace is trivial. -/
+theorem unstableSubspace_eq_bot_iff_unstableComplexSubspace_eq_bot (A : X →ₗ[ℝ] X) :
+    unstableSubspace A = ⊥ ↔ unstableComplexSubspace A = ⊥ := by
+  constructor
+  · intro h
+    by_contra hc
+    obtain ⟨z, hz, hz0⟩ := Submodule.exists_mem_ne_zero_of_ne_bot hc
+    have hstar : star z ∈ unstableComplexSubspace A := star_mem_unstableComplexSubspace A hz
+    have hsum : z + star z ∈ unstableComplexSubspace A :=
+      Submodule.add_mem _ hz hstar
+    have hdiff : (Complex.I : ℂ) • (z - star z) ∈ unstableComplexSubspace A :=
+      Submodule.smul_mem _ _ (Submodule.sub_mem _ hz hstar)
+    have hfix_sum : star (z + star z) = z + star z := by
+      rw [star_add, star_star, add_comm]
+    have hfix_diff : star ((Complex.I : ℂ) • (z - star z)) = (Complex.I : ℂ) • (z - star z) := by
+      have hI : star (Complex.I : ℂ) = -(Complex.I : ℂ) :=
+        (by simp only [Complex.star_def, Complex.conj_I] :
+          star (Complex.I : ℂ) = -(Complex.I : ℂ))
+      rw [star_smul, star_sub, star_star, hI]
+      module
+    have hz0' : z + star z ≠ 0 ∨ (Complex.I : ℂ) • (z - star z) ≠ 0 := by
+      by_contra hcon
+      simp only [not_or, not_not] at hcon
+      obtain ⟨h1, h2⟩ := hcon
+      apply hz0
+      have hz_eq : z = -star z := add_eq_zero_iff_eq_neg.mp h1
+      have hz_eq' : star z = -z := by
+        have := congrArg star hz_eq
+        simp only [star_neg, star_star] at this
+        exact this
+      have h2' : z + z = 0 := by
+        have h3 : z - star z = 0 := by
+          rw [smul_eq_zero] at h2
+          rcases h2 with hh | hh
+          · exact absurd hh Complex.I_ne_zero
+          · exact hh
+        rw [hz_eq'] at h3
+        simpa using h3
+      exact (smul_eq_zero.mp (by rw [two_smul]; exact h2')).resolve_left
+        (by norm_num : (2 : ℂ) ≠ 0)
+    rcases hz0' with h1 | h2
+    · obtain ⟨a, ha⟩ := exists_ofRealPi_of_star_eq hfix_sum
+      have hxmem : (Module.finBasis ℝ X).equivFun.symm a ∈ unstableSubspace A := by
+        rw [mem_unstableSubspace, LinearEquiv.apply_symm_apply, ha]
+        exact hsum
+      have hx0 : (Module.finBasis ℝ X).equivFun.symm a ≠ 0 := by
+        intro h0
+        apply h1
+        have ha0 : a = 0 := by
+          rw [← (Module.finBasis ℝ X).equivFun.apply_symm_apply a, h0, map_zero]
+        rw [← ha, ha0, map_zero]
+      exact hx0 (by rw [h] at hxmem; exact hxmem)
+    · obtain ⟨a, ha⟩ := exists_ofRealPi_of_star_eq hfix_diff
+      have hxmem : (Module.finBasis ℝ X).equivFun.symm a ∈ unstableSubspace A := by
+        rw [mem_unstableSubspace, LinearEquiv.apply_symm_apply, ha]
+        exact hdiff
+      have hx0 : (Module.finBasis ℝ X).equivFun.symm a ≠ 0 := by
+        intro h0
+        apply h2
+        have ha0 : a = 0 := by
+          rw [← (Module.finBasis ℝ X).equivFun.apply_symm_apply a, h0, map_zero]
+        rw [← ha, ha0, map_zero]
+      exact hx0 (by rw [h] at hxmem; exact hxmem)
+  · intro h
+    rw [unstableSubspace, h, Submodule.restrictScalars_bot, Submodule.comap_bot,
+      LinearMap.ker_eq_bot]
+    exact ofRealPi_injective.comp (Module.finBasis ℝ X).equivFun.injective
+
+/-- An operator with trivial antistable subspace is Hurwitz. -/
+theorem isHurwitz_of_unstableSubspace_eq_bot (A : X →ₗ[ℝ] X)
+    (h : unstableSubspace A = ⊥) : IsHurwitz A := by
+  intro μ hμ
+  by_contra hμre
+  have hUc : unstableComplexSubspace A ≠ ⊥ := by
+    intro hbot
+    have heig : Module.End.HasEigenvalue
+        (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ :=
+      (Module.End.hasEigenvalue_iff_isRoot_charpoly _ μ).mpr (by
+        rw [charpoly_hurwitzMatrix_map_eq]; exact hμ)
+    obtain ⟨v, hv⟩ := heig.exists_hasEigenvector
+    have hv0 : v ≠ 0 := hv.2
+    have hveig : v ∈ Module.End.maxGenEigenspace
+        (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ := by
+      rw [Module.End.mem_maxGenEigenspace]
+      refine ⟨1, ?_⟩
+      rw [pow_one]
+      simp only [LinearMap.sub_apply, LinearMap.smul_apply, Module.End.one_apply,
+        Module.End.mem_eigenspace_iff.mp hv.1, sub_self]
+    have hmem : v ∈ unstableComplexSubspace A := by
+      rw [unstableComplexSubspace]
+      exact Submodule.mem_iSup_of_mem ⟨μ, hμre⟩ hveig
+    exact hv0 (by rw [hbot] at hmem; exact hmem)
+  exact hUc ((unstableSubspace_eq_bot_iff_unstableComplexSubspace_eq_bot A).mp h)
+
+/-- **Top-characterization of detectability.** The pair `(C, A)` is detectable
+exactly when its detectable (undetectable) subspace
+`Xdet(C, A) = X_b(A) ∩ ⟨ker C | A⟩` is trivial.
+
+The forward direction uses the accepted Hurwitz unobservable complement: the
+restriction `A|_N` to `N = ⟨ker C | A⟩` is Hurwitz, so its antistable part
+vanishes; the stable/antistable direct sum for `A|_N` and the forward stable
+transport `map N.subtype (X_g(A|_N)) ≤ X_g(A)` then give `N ≤ X_g(A)`, whence
+`Xdet = X_b(A) ∩ N ≤ X_b(A) ∩ X_g(A) = 0` by disjointness.
+
+The reverse direction first uses the forward antistable transport to deduce
+`X_b(A|_N) = 0` from `Xdet = 0`, then the converse Hurwitz/unstable-subspace
+equivalence to obtain `IsHurwitz (A|_N)`, and finally
+`isDetectable_of_isHurwitz_unobservableRestriction` to construct the output
+injection.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 5.16 (equivalences (i) and
+(iii)). -/
+theorem isDetectable_iff_detectableSubspace_eq_bot (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    IsDetectable C A ↔ detectableSubspace C A = ⊥ := by
+  let N := unobservableSubspace C A
+  let hN : ∀ x ∈ N, A x ∈ N := fun _ hx => map_unobservableSubspace_le C A ⟨_, hx, rfl⟩
+  have hrestrict : unobservableRestrictionA C A = A.restrict hN := rfl
+  constructor
+  · intro h
+    have hAN : IsHurwitz (unobservableRestrictionA C A) :=
+      isHurwitz_on_detectableComplement C A h
+    have hUN : unstableSubspace (unobservableRestrictionA C A) = ⊥ :=
+      unstableSubspace_eq_bot_of_isHurwitz _ hAN
+    have hHN : hurwitzSubspace (unobservableRestrictionA C A) = ⊤ := by
+      have hsup := hurwitzSubspace_sup_unstableSubspace_eq_top (unobservableRestrictionA C A)
+      rw [hUN, sup_bot_eq] at hsup
+      exact hsup
+    have hmap := map_hurwitzSubspace_restrict_le A N hN
+    rw [← hrestrict, hHN, Submodule.map_subtype_top] at hmap
+    rw [detectableSubspace]
+    apply le_bot_iff.mp
+    calc N ⊓ unstableSubspace A ≤ hurwitzSubspace A ⊓ unstableSubspace A :=
+          inf_le_inf hmap le_rfl
+      _ = ⊥ := disjoint_iff.mp (disjoint_hurwitzSubspace_unstableSubspace A)
+  · intro h
+    have hUN : unstableSubspace (unobservableRestrictionA C A) = ⊥ := by
+      rw [Submodule.eq_bot_iff]
+      intro x hx
+      rw [hrestrict] at hx
+      have hxmap : ((N.subtype) x) ∈
+          Submodule.map N.subtype (unstableSubspace (A.restrict hN)) :=
+        ⟨x, hx, rfl⟩
+      have hsub := map_unstableSubspace_restrict_le A N hN hxmap
+      have hmem : ((N.subtype) x) ∈ detectableSubspace C A := by
+        rw [detectableSubspace]
+        exact ⟨x.2, hsub⟩
+      rw [h] at hmem
+      exact Subtype.ext (by simpa using hmem)
+    have hAN : IsHurwitz (unobservableRestrictionA C A) :=
+      isHurwitz_of_unstableSubspace_eq_bot _ hUN
+    exact isDetectable_of_isHurwitz_unobservableRestriction C A hAN
 
 
 end LinearMap
