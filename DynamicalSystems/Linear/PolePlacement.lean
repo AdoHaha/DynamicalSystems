@@ -49,15 +49,27 @@ conjugate pairs. No complex feedback is introduced.
   `AdjoinRoot`/`PowerBasis` without determinant expansion.
 * `LinearMap.exists_feedback_charpoly_of_finrank_zero`: the zero-dimensional
   case of the sufficiency direction.
+* `LinearMap.exists_feedback_charpoly_single`: the constructive sufficiency
+  direction for a single input map `b : ℝ →ₗ[ℝ] X`. The proof builds the
+  triangular Krylov basis `G_i(A) (b 1)` from the reversed-polynomial auxiliary
+  `poleD` and concludes with the determinant-free companion computation
+  `charpoly_eq_of_companion`.
+* `LinearMap.exists_controlled_chain` and
+  `LinearMap.exists_feedback_charpoly_of_isControllable`: the multi-input
+  sufficiency assembly via the controlled chain of Lemma 3.31, reducing the
+  general `(A, B)` case to the single-input theorem.
 * `LinearMap.ne_zero_of_isControllable`,
   `LinearMap.isControllable_iff_bijective_kalmanControllabilityMap_single`,
   `LinearMap.linearIndependent_krylov_of_isControllable_single` and
   `LinearMap.eq_top_of_isControllable_of_map_le`: verified ingredients of the
   constructive sufficiency proof (Lemma 3.31 and Theorem 3.18 inputs).
 
-The sufficiency direction — constructing `F` for a prescribed `p` — is the
-remaining obligation; it is documented at the bottom of this file, together with
-an explicit, determinant-free construction.
+Both directions of the pole-placement theorem are therefore proved: the
+necessity quotient obstruction
+`LinearMap.isControllable_of_forall_exists_feedback_charpoly` and the
+constructive sufficiency theorems above, which cover single- and multi-input
+finite-dimensional real pairs as well as the zero-dimensional case. No
+determinant expansion, complex feedback, or assumed canonical form is used.
 
 ## References
 
@@ -407,7 +419,7 @@ theorem exists_feedback_charpoly_of_finrank_zero [FiniteDimensional ℝ X]
 
 end ZeroDim
 
-/-! ## Towards sufficiency: nonzero input and the single-input Krylov basis
+/-! ## Ingredients for sufficiency: nonzero input and the single-input Krylov basis
 
 The sufficiency proof of Theorem 3.29 starts from a controllable pair. We record
 here two elementary but reusable facts used by the constructive part.

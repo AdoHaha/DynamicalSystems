@@ -83,11 +83,17 @@ exponential series of a nilpotent shift.
   `LinearMap.exists_stabilizing_feedback_stable_attractive`: a controllable pair
   has a feedback whose closed loop is attractive (resp. asymptotically stable),
   with both the gain and the dynamic property derived rather than assumed.
+* `LinearMap.tendsto_exp_complex_apply`: the complex generalized-eigenspace
+  decay theorem, and its real reduction
+  `LinearMap.tendsto_exp_of_isHurwitz` with the Lyapunov-stability companion
+  `LinearMap.isStableOn_expFlow_of_isHurwitz`.
 
-The decay bridge above is stated for the explicit pole-placement target
-`(X + 1)^n`, which is what the gain constructions realise; the *general*
-spectral theorem "`IsHurwitz A` ⇒ every trajectory of `x' = A x` decays" is not
-proved here (see the note at the end of this section).
+The explicit-target bridge above is what the gain constructions realise. The
+*general* spectral theorem "`IsHurwitz A` ⇒ every trajectory of `x' = A x`
+decays" is also proved in this file, by the complex generalized-eigenspace
+argument `LinearMap.tendsto_exp_complex_apply` followed by a real-coordinate
+reduction (`LinearMap.tendsto_exp_of_isHurwitz`,
+`LinearMap.isStableOn_expFlow_of_isHurwitz`).
 
 ## Converse criteria: unobservable and uncontrollable eigenvalues
 
@@ -140,8 +146,8 @@ The PBH criteria are complete in both directions. The necessity results
 `LinearMap.isStabilizable_of_uncontrollableEigenvalues_hurwitz` and
 `LinearMap.isDetectable_of_unobservableEigenvalues_hurwitz`, establish the
 stabilizability/detectability equivalences via Kalman complements and pole
-placement. Remaining follow-up scope concerns dynamic decoupling and transfer
-functions, not these static criteria.
+placement. Remaining follow-up scope concerns transfer functions, not these
+static criteria.
 
 ## Definition of stability
 
@@ -547,7 +553,7 @@ end ExponentialDecay
 
 /-! ## From pole placement to exponential decay
 
-The remaining step transfers the algebraic characteristic-polynomial identity
+This section transfers the algebraic characteristic-polynomial identity
 `(A + B F).charpoly = (X + 1)^n` to the nilpotency `(A + B F + 1)^n = 0` and
 then applies the decay bridge above. -/
 
@@ -1309,15 +1315,14 @@ on each of which `f - μ` is nilpotent, so the exponential is a finite
 polynomial-times-`exp (t μ)` sum (`exp_nilpotent_apply_eq_sum`), which decays
 because `μ.re < 0`.
 
-This is the hard analytic half of the general Hurwitz-to-decay bridge. The
-remaining step is the *real reduction*: for a real endomorphism `A` on a
-finite-dimensional real normed space, complexify `A` (e.g. transport `A` to
-`Fin n → ℂ` along a real basis and apply `tendsto_exp_complex_apply`), then
-transport the convergence back along the basis isomorphism using the relation
-`exp (t • A) = repr.symm ∘ exp (t • repr.conj A) ∘ repr`. The requested
-real theorems `LinearMap.tendsto_exp_of_isHurwitz` and
-`LinearMap.isStableOn_expFlow_of_isHurwitz` are exactly that reduction; the
-complex lemma below is the reusable core they build on. -/
+This is the hard analytic half of the general Hurwitz-to-decay bridge, and it is
+completed below. The real reduction complexifies `A` (transporting it to
+`Fin n → ℂ` along a real basis), applies `tendsto_exp_complex_apply`, and
+transports the convergence back along the basis isomorphism using the relation
+`exp (t • A) = repr.symm ∘ exp (t • repr.conj A) ∘ repr`. The real theorems
+`LinearMap.tendsto_exp_of_isHurwitz` and
+`LinearMap.isStableOn_expFlow_of_isHurwitz` are exactly that reduction and are
+proved later in this section. -/
 
 section ComplexHurwitzDecay
 
@@ -1476,8 +1481,8 @@ nilpotent, so `exp (t • f)` is a finite polynomial-times-`exp (t μ)` sum that
 decays because `Re μ < 0`.
 
 This is the reusable complex core of the general Hurwitz-to-decay bridge. The
-real case is recovered by complexification and change of coordinates; that
-reduction is deliberately *not* claimed here (see the module documentation). -/
+real case is recovered by complexification and change of coordinates in
+`LinearMap.tendsto_exp_of_isHurwitz`, proved below. -/
 theorem tendsto_exp_complex_apply (f : E →ₗ[ℂ] E)
     (hf : ∀ z : ℂ, f.charpoly.eval z = 0 → z.re < 0) (x : E) :
     Tendsto (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) x) atTop (𝓝 0) := by

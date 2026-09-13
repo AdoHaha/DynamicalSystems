@@ -6,6 +6,11 @@ import DynamicalSystems.Linear.ConditionedInvariant
 import DynamicalSystems.Linear.Reachability
 import DynamicalSystems.Linear.Gramian
 import DynamicalSystems.Linear.PolePlacement
+import DynamicalSystems.Linear.Stabilization
+import DynamicalSystems.Linear.Observer
+import DynamicalSystems.Linear.DisturbanceDecoupling
+import DynamicalSystems.Linear.DynamicFeedback
+import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
@@ -189,31 +194,107 @@ reduction.
 {docstring LinearMap.exists_controlled_chain}
 {docstring LinearMap.exists_feedback_charpoly_of_isControllable}
 
+# Stabilization, observers, and the Hurwitz bridge
+
+For a real endomorphism the *Hurwitz* predicate records that every complex root of its
+characteristic polynomial has negative real part. Gain existence is a theorem, not a
+hypothesis: controllability produces a stabilizing state feedback and observability produces a
+stabilizing output injection, both by pole placement on the target `(X + 1)^n`. The general
+Hurwitz-to-decay bridge is proved by a complex generalized-eigenspace argument followed by a
+real-coordinate reduction, and connects the spectral predicate to `Filter.IsAttractive` and
+`Filter.IsStableOn`.
+
+{docstring LinearMap.IsHurwitz}
+{docstring LinearMap.IsStabilizable}
+{docstring LinearMap.IsDetectable}
+{docstring LinearMap.isStabilizable_of_isControllable}
+{docstring LinearMap.isDetectable_of_isObservable}
+{docstring LinearMap.tendsto_exp_of_isHurwitz}
+{docstring LinearMap.isStableOn_expFlow_of_isHurwitz}
+{docstring LinearMap.exists_stabilizing_feedback_stable_attractive}
+{docstring LinearMap.isStabilizable_of_uncontrollableEigenvalues_hurwitz}
+{docstring LinearMap.isDetectable_of_unobservableEigenvalues_hurwitz}
+
+The separation principle is the block-operator statement for the observer-based controller,
+combining a stabilizing state feedback with a convergent observer.
+
+{docstring LinearMap.charpoly_blockOperator}
+{docstring LinearMap.exists_separation_block_hurwitz}
+
+The Luenberger observer uses the feedthrough-aware innovation `y - C ξ - D u`, so the error
+dynamics `e' = (A - L C) e` is independent of the input and of the state-feedback gain.
+Observability yields a convergent observer, again with the gain constructed rather than
+assumed.
+
+{docstring LinearSystem.innovation}
+{docstring LinearSystem.observerError_dynamics}
+{docstring LinearMap.exists_observer_stable_attractive_of_isObservable}
+{docstring LinearMap.separation_principle_observer}
+
+# Disturbance decoupling and dynamic measurement feedback
+
+A disturbance channel is decoupled when every Markov parameter `H A^k E` vanishes. This is
+characterised by invariant subspaces and by the analytic impulse response, and, through the
+variation-of-constants formula, by the vanishing of the disturbance contribution for every
+locally integrable input.
+
+{docstring LinearMap.disturbanceResponse}
+{docstring LinearMap.IsDisturbanceDecoupled}
+{docstring LinearMap.isDisturbanceDecoupled_iff_exists_invariant}
+{docstring LinearMap.exists_isCABPairBetween_iff}
+{docstring LinearMap.isDisturbanceDecoupled_iff_forall_expFlow}
+{docstring LinearMap.forcedOutput_eq_convolution}
+{docstring LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero}
+
+The Chapter 6 synthesis layer constructs a dynamic controller from a `(C, A, B)`-pair
+certificate and proves the closed loop decoupled. Well-posedness of the algebraic loop is the
+invertibility of `1 - D N`.
+
+{docstring LinearSystem.DynamicController}
+{docstring LinearSystem.DynamicInterconnection.IsWellPosed}
+{docstring LinearSystem.DynamicInterconnection.closedLoopSystem}
+{docstring LinearSystem.exists_dynamicController_of_isCABPairBetween}
+{docstring LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween}
+
+The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
+transfer-function form `H (s I - A)⁻¹ E = 0`, a measurement disturbance channel `F`, and the
+spectrum/internal-stability layers remain deferred obligations.
+
+# Algebraic examples
+
+These concrete algebraic examples exercise the pair API. In particular the planar rotation with
+zero readout is not observable, and the failure is witnessed at the non-real complex
+eigenvalue `I`, which is why the PBH bridge must complexify.
+
+{docstring DynamicalSystems.Linear.Examples.doubleIntegrator_controllable}
+{docstring DynamicalSystems.Linear.Examples.uncontrollable_not_controllable}
+{docstring DynamicalSystems.Linear.Examples.unobservable_not_observable}
+{docstring DynamicalSystems.Linear.Examples.rotation_complex_not_observable}
+{docstring DynamicalSystems.Linear.Examples.rotation_real_not_observable}
+
 # Sources and scope
 
 The organizing reference is Trentelman, Stoorvogel, and Hautus, *Control Theory for Linear Systems*,
-especially the structural material of Chapter 3. Proofs reuse mathlib's linear algebra and
+especially the structural material of Chapters 3–6. Proofs reuse mathlib's linear algebra and
 Cayley–Hamilton infrastructure. The Hautus module records its additional proof-development
 reference to Gokhale and Bullo's *LeanForControl*.
 
-The stabilization/observer foundations now include explicit-target stable/attractive flows,
-complex-spectrum obstruction converses, block separation characteristic-polynomial results,
-and observable observer corollaries. The general Hurwitz-to-decay theorem and converse
-sufficiency halves remain explicit follow-up obligations; disturbance-decoupling synthesis
-now has its algebraic and convolution foundations, while transfer-function and dynamic-controller
-bridges remain open.
+Constructive pole placement is complete in both directions, for single- and multi-input
+finite-dimensional real pairs. The stabilization layer proves gain existence from
+controllability (and, dually, from observability), the explicit-target decay bridge, the general
+Hurwitz-to-decay and Lyapunov-stability theorem, the PBH converse criteria for uncontrollable
+and unobservable eigenvalues, and the observer-based separation principle. The Luenberger
+observer uses the feedthrough-aware innovation and its error dynamics is independent of the
+input and the state-feedback gain.
 
-Dynamic-feedback foundations define controller and plant interconnections, algebraic-loop
-well-posedness, resolved signals, and closed-loop maps. The Chapter 6 synthesis layer now
-constructs a decoupling controller from an `IsCABPairBetween` certificate and proves the
-closed-loop decoupling theorem. Converse certificate extraction, spectrum factorization,
-transfer functions, and internal/external stabilization remain follow-up layers.
+Disturbance decoupling is characterised algebraically, geometrically, and by the analytic
+impulse response, and the variation-of-constants/convolution bridge proves that exact decoupling
+is equivalent to zero disturbance contribution for every locally integrable input. The Chapter 6
+synthesis layer constructs a dynamic measurement-feedback controller from an `IsCABPairBetween`
+certificate and proves the closed loop decoupled.
 
-The disturbance-decoupling foundations now define Markov responses and exact decoupling,
-prove the reachable/unobservable and controlled-invariant characterizations, include the
-finite-dimensional geometric corollary, and record coordinate-invariance and test examples.
-Converse dynamic-controller extraction and stabilization variants remain follow-up obligations.
-The convolution layer now proves the
-variation-of-constants output formula and equivalence between exact decoupling and vanishing
-disturbance contribution for locally integrable inputs; transfer-function and dynamic-controller
-bridges remain open.
+The documented deferred obligations are: the transfer-function/resolvent form
+`H (s I - A)⁻¹ E = 0`; the converse extraction of a `(C, A, B)`-pair from a decoupled closed
+loop; a measurement disturbance channel `F` in the readout; the spectrum factorization and the
+internal/external stabilization layers; and the final examples/release bridge to a local
+actuator or filter result.

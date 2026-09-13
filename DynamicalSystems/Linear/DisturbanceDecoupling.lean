@@ -74,8 +74,11 @@ there exists a `(C, A, B)`-pair between `im E` and `ker H` if and only if
 `S*(im E) ≤ V*(ker H)`.
 
 The passage from such a pair to an actual dynamic measurement-feedback
-controller (Theorem 6.4), and hence the full statement of Corollary 6.7, is not
-formalised here.
+controller (Theorem 6.4) is formalised in the separate module
+`DynamicalSystems.Linear.DynamicFeedback`, as
+`LinearSystem.exists_dynamicController_of_isCABPairBetween` and the closed-loop
+decoupling theorem
+`LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`.
 
 ## The analytic impulse-response bridge
 
@@ -125,18 +128,21 @@ witnesses for the definitions.
 
 ## Deferred obligations
 
-The following are deliberately **not** claimed and are the next milestones:
+The following are deliberately **not** claimed here and remain the next
+milestones:
 
 * the transfer-function form `H (s I - A)⁻¹ E = 0`. The convolution form of
-  input-independence is now proved, as the impulse response `K(t) = H e^{tA} E`
+  input-independence is proved here, as the impulse response `K(t) = H e^{tA} E`
   is the Laplace kernel whose transform is the transfer function, but no
   unproved transfer-function claim is made here;
-* the construction of the dynamic measurement-feedback controller from a
-  `(C, A, B)`-pair and the corresponding closed-loop decoupling theorem
-  (Trentelman–Stoorvogel–Hautus, Theorem 6.4 and Corollary 6.7);
-* disturbance decoupling with internal stability (Section 4.7) and external
-  stabilization (Section 4.8), which need the stability and stabilizability
-  vocabulary.
+* the converse extraction of a `(C, A, B)`-pair from a decoupled closed loop
+  (Trentelman–Stoorvogel–Hautus, Theorem 6.2 and the forward half of
+  Theorem 6.6). The synthesis direction (Theorem 6.4) is proved in
+  `DynamicalSystems.Linear.DynamicFeedback`;
+* a measurement disturbance channel `F : D →ₗ[𝕜] Y` in the readout; only the
+  state disturbance `E` is modelled here;
+* the spectrum factorization of the extended system map and the internal and
+  external stabilization results of Sections 6.3–6.4 and 4.7–4.8.
 
 ## Main definitions
 
@@ -221,9 +227,13 @@ coefficients vanish, i.e. `H A ^ k E = 0` for every `k : ℕ`.
 This is the algebraic form of `T = 0` in
 Trentelman–Stoorvogel–Hautus, Section 4.2. Its equivalence with the vanishing of
 the analytic impulse response `t ↦ H e^{tA} E` over the reals in finite dimension
-is `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`; the equivalence with the
-transfer function `H (sI - A)⁻¹ E` and with input-independence of the output
-trajectory is a separate obligation, stated in the Deferred obligations section. -/
+is `LinearMap.isDisturbanceDecoupled_iff_forall_expFlow`; its equivalence with
+zero disturbance contribution for every locally integrable disturbance is
+`LinearMap.isDisturbanceDecoupled_iff_forall_disturbanceContribution_eq_zero`,
+which yields input-independence via
+`LinearMap.isDisturbanceDecoupled_forcedOutput_eq_of_input`.
+The transfer-function form `H (sI - A)⁻¹ E = 0` remains a separate obligation,
+stated in the Deferred obligations section. -/
 def IsDisturbanceDecoupled (A : X →ₗ[𝕜] X) (E : W →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) : Prop :=
   ∀ k : ℕ, disturbanceResponse A E H k = 0
 
@@ -492,7 +502,8 @@ is the greatest controlled invariant subspace inside `ker H`. The converse takes
 dimension by the accepted ISA/CISA termination results.
 
 The passage from such a pair to an actual dynamic measurement-feedback controller
-(Theorem 6.4) is a separate obligation and is not asserted by this theorem. -/
+(Theorem 6.4) is not asserted by this theorem; it is constructed in the separate
+module `DynamicalSystems.Linear.DynamicFeedback`. -/
 theorem exists_isCABPairBetween_iff [FiniteDimensional 𝕜 X]
     (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X) (E : W →ₗ[𝕜] X)
     (H : X →ₗ[𝕜] Z) :
@@ -605,10 +616,10 @@ exactly when the analytic impulse response `t ↦ H e^{tA} E` vanishes identical
 This is proved by identifying the channel with the accepted LTI system API and
 using the unobservability bridges of `DynamicalSystems.Linear.Reachability`.
 
-The remaining analytic obligation is the *convolution* form: that vanishing of
-the impulse response is equivalent to input-independence of the forced output
+The *convolution* form is proved below: vanishing of the impulse response is
+equivalent to input-independence of the forced output
 `t ↦ H (exp (tA) x₀ + ∫₀ᵗ exp ((t - s) A) E d(s) ds)` for every locally
-integrable disturbance `d`. -/
+integrable disturbance `d`, through the variation-of-constants formula. -/
 
 /-- The LTI system `x' = A x + E d`, `z = H x` associated with a disturbance
 channel, with the disturbance map as its input map. This is a bookkeeping device
