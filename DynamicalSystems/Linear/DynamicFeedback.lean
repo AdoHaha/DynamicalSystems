@@ -95,7 +95,8 @@ block operator of Trentelman–Stoorvogel–Hautus, equation (6.3):
 ## Scope
 
 This file contains the algebraic foundations of Chapter 6 together with the
-**dynamic decoupling synthesis** of Theorem 6.4 / Corollary 6.7, so the
+**dynamic decoupling synthesis** of Theorem 6.4 / Corollary 6.7 and the
+**geometric extraction (necessity)** of Theorem 6.2 / Theorem 6.6, so the
 following is now claimed and proved here:
 
 * a `(C, A, B)`-pair between `im E` and `ker H` yields the controller `(6.7)`
@@ -105,12 +106,23 @@ following is now claimed and proved here:
   `N` of Lemma 6.3 is constructed abstractly as
   `exists_outputFeedback_of_isCABPair`;
 
-The following remain the next milestones and are *not* claimed here, so that no
-unproved strengthening is read into the present declarations:
-
 * the converse (necessity) extraction of a `(C, A, B)`-pair from a decoupled
-  closed loop (Theorem 6.2 and the forward half of Theorem 6.6), i.e. passing
-  from an extended invariant subspace to its intersection/projection;
+  closed loop (Theorem 6.2 and the forward half of Theorem 6.6): passing from an
+  `Ae`-invariant extended subspace to its intersection `i(Ve)` and projection
+  `p(Ve)` yields a `(C, A, B)`-pair between `im E` and `ker H`
+  (`isCABPair_extendedIntersection_extendedProjection`,
+  `exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled`). Together with
+  the synthesis direction this gives the full Theorem 6.6 equivalence for a
+  strictly proper plant
+  (`exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween`);
+
+For a strictly proper plant the two directions combine into the exact
+Theorem 6.6 equivalence. The extraction below only needs well-posedness, so it
+also applies to plants with a control feedthrough; the synthesis direction at
+present requires `D = 0`. The following remain the next milestones and are *not*
+claimed here, so that no unproved strengthening is read into the present
+declarations:
+
 * a measurement disturbance channel `F : D →ₗ[𝕜] Y` in the readout; only the
   state disturbance `E` is modelled at this stage, and the output channel `H`
   is the controlled-output map;
@@ -134,6 +146,8 @@ unproved strengthening is read into the present declarations:
 * `DynamicInterconnection.closedLoopMap`, `disturbanceMap`, `outputMap`
 * `DynamicInterconnection.closedLoopSystem`
 * `DynamicInterconnection.IsClosedLoopDisturbanceDecoupled`
+* `DynamicInterconnection.extendedIntersection`,
+  `DynamicInterconnection.extendedProjection`
 * `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`
 
 ## Main results
@@ -147,6 +161,9 @@ unproved strengthening is read into the present declarations:
 * `LinearSystem.exists_outputFeedback_of_isCABPair`
 * `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`
 * `LinearSystem.exists_dynamicController_of_isCABPairBetween`
+* `DynamicInterconnection.isCABPair_extendedIntersection_extendedProjection`
+* `DynamicInterconnection.exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled`
+* `LinearSystem.exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween`
 
 ## References
 
@@ -734,6 +751,158 @@ end Analytic
 
 end DynamicInterconnection
 
+/-! ## The converse: extended geometry and the necessity direction
+
+Section 6.1 of Trentelman–Stoorvogel–Hautus associates with a subspace `Ve` of
+the extended state space `X × W` the two subspaces of the original state space
+
+`i(Ve) = {x | (x, 0) ∈ Ve}`,  `p(Ve) = {x | ∃ w, (x, w) ∈ Ve}`
+
+(equations (6.5)–(6.6)): `i(Ve)` is the intersection of `Ve` with the
+`X`-plane and `p(Ve)` is its projection onto that plane. Theorem 6.2 states that
+if `Ve` is invariant under an extended system mapping, then `(i(Ve), p(Ve))` is a
+`(C, A, B)`-pair. This is the geometric extraction used in the necessity direction
+of disturbance decoupling by measurement feedback (the `⇒` half of Theorem 6.6):
+a decoupled closed loop supplies an `Ae`-invariant `Ve` between `im Ee` and
+`ker He`, whose intersection and projection then form a `(C, A, B)`-pair between
+`im E` and `ker H`.
+
+The extraction is purely algebraic and does not require a strictly proper plant:
+only well-posedness of the interconnection is used, so that the resolved
+measurement of `(x, 0)` vanishes when `C x = 0`. -/
+
+namespace DynamicInterconnection
+
+variable (ic : DynamicInterconnection 𝕜 X U Y W D Z)
+
+/-- The **intersection** `i(Ve)` of an extended subspace `Ve ≤ X × W` with the
+`X`-plane: `i(Ve) = {x : X | (x, 0) ∈ Ve}`.
+
+Source: Trentelman–Stoorvogel–Hautus, equation (6.6). -/
+def extendedIntersection (Ve : Submodule 𝕜 (X × W)) : Submodule 𝕜 X :=
+  Ve.comap (LinearMap.inl 𝕜 X W)
+
+theorem mem_extendedIntersection {Ve : Submodule 𝕜 (X × W)} {x : X} :
+    x ∈ extendedIntersection Ve ↔ (x, 0) ∈ Ve := by
+  rw [extendedIntersection, Submodule.mem_comap, LinearMap.inl_apply]
+
+/-- The **projection** `p(Ve)` of an extended subspace `Ve ≤ X × W` onto the
+`X`-plane: `p(Ve) = {x : X | ∃ w : W, (x, w) ∈ Ve}`.
+
+Source: Trentelman–Stoorvogel–Hautus, equation (6.5). -/
+def extendedProjection (Ve : Submodule 𝕜 (X × W)) : Submodule 𝕜 X :=
+  Ve.map (LinearMap.fst 𝕜 X W)
+
+theorem mem_extendedProjection {Ve : Submodule 𝕜 (X × W)} {x : X} :
+    x ∈ extendedProjection Ve ↔ ∃ w : W, (x, w) ∈ Ve := by
+  constructor
+  · intro hx
+    obtain ⟨p, hp, rfl⟩ := Submodule.mem_map.mp hx
+    exact ⟨p.2, by simpa using hp⟩
+  · rintro ⟨w, hw⟩
+    exact Submodule.mem_map.mpr ⟨(x, w), hw, rfl⟩
+
+/-- **Theorem 6.2 (conditioned invariance of the intersection).** If `Ve` is
+invariant under the closed-loop map `Ae`, then its intersection `i(Ve)` with the
+`X`-plane is `(C, A)`-invariant.
+
+For `x ∈ i(Ve) ∩ ker C` the resolved measurement of `(x, 0)` vanishes, so
+`Ae (x, 0) = (A x, 0) ∈ Ve`. -/
+theorem isConditionedInvariant_extendedIntersection
+    (h : ic.IsWellPosed) (Ve : Submodule 𝕜 (X × W))
+    (hVe : Submodule.map (ic.closedLoopMap h) Ve ≤ Ve) :
+    LinearMap.IsConditionedInvariant ic.plant.C ic.plant.A
+      (extendedIntersection Ve) := by
+  rw [LinearMap.isConditionedInvariant_iff]
+  intro y hy
+  obtain ⟨x, hx, rfl⟩ := Submodule.mem_map.mp hy
+  obtain ⟨hxS, hxC⟩ := Submodule.mem_inf.mp hx
+  rw [mem_extendedIntersection]
+  have hxV : (x, 0) ∈ Ve := (mem_extendedIntersection).mp hxS
+  have hAe : ic.closedLoopMap h (x, 0) ∈ Ve := hVe ⟨(x, 0), hxV, rfl⟩
+  have hy0 : ic.solvedMeasurement h (x, 0) = 0 := by
+    apply h.1
+    rw [ic.loopMap_solvedMeasurement h (x, 0), map_zero]
+    simp only [loopForcing_apply, map_zero, add_zero]
+    exact LinearMap.mem_ker.mp hxC
+  have hu0 : ic.solvedInput h (x, 0) = 0 := by
+    rw [ic.solvedInput_apply, hy0]
+    simp
+  have hAe0 : ic.closedLoopMap h (x, 0) = (ic.plant.A x, 0) := by
+    rw [ic.closedLoopMap_apply, hu0, hy0]
+    simp
+  simpa [hAe0] using hAe
+
+/-- **Theorem 6.2 (controlled invariance of the projection).** If `Ve` is
+invariant under the closed-loop map `Ae`, then its projection `p(Ve)` onto the
+`X`-plane contains `A p(Ve)` modulo the input channel `im B`.
+
+For `(x, w) ∈ Ve` the first component of `Ae (x, w)` is `A x + B u`, so
+`A x ∈ p(Ve) + im B`. -/
+theorem isControlledInvariant_extendedProjection
+    (h : ic.IsWellPosed) (Ve : Submodule 𝕜 (X × W))
+    (hVe : Submodule.map (ic.closedLoopMap h) Ve ≤ Ve) :
+    LinearMap.IsControlledInvariant ic.plant.A ic.plant.B
+      (extendedProjection Ve) := by
+  rw [LinearMap.isControlledInvariant_iff]
+  intro y hy
+  obtain ⟨x, hx, rfl⟩ := Submodule.mem_map.mp hy
+  obtain ⟨w, hw⟩ := (mem_extendedProjection).mp hx
+  have hAe : ic.closedLoopMap h (x, w) ∈ Ve := hVe ⟨(x, w), hw, rfl⟩
+  have hmemV : ic.plant.A x + ic.plant.B (ic.solvedInput h (x, w)) ∈
+      extendedProjection Ve := by
+    refine Submodule.mem_map.mpr ⟨ic.closedLoopMap h (x, w), hAe, ?_⟩
+    simp
+  have hsub : (ic.plant.A x + ic.plant.B (ic.solvedInput h (x, w))) -
+      ic.plant.B (ic.solvedInput h (x, w)) ∈
+      extendedProjection Ve ⊔ LinearMap.range ic.plant.B :=
+    Submodule.sub_mem_sup hmemV (LinearMap.mem_range.mpr ⟨ic.solvedInput h (x, w), rfl⟩)
+  rwa [add_sub_cancel_right] at hsub
+
+/-- **Theorem 6.2.** An `Ae`-invariant subspace `Ve` of the extended state space
+gives rise to a `(C, A, B)`-pair `(i(Ve), p(Ve))`, the intersection and the
+projection of `Ve`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 6.2. -/
+theorem isCABPair_extendedIntersection_extendedProjection
+    (h : ic.IsWellPosed) (Ve : Submodule 𝕜 (X × W))
+    (hVe : Submodule.map (ic.closedLoopMap h) Ve ≤ Ve) :
+    LinearMap.IsCABPair ic.plant.C ic.plant.A ic.plant.B
+      (extendedIntersection Ve) (extendedProjection Ve) := by
+  refine ⟨?_, ic.isConditionedInvariant_extendedIntersection h Ve hVe,
+    ic.isControlledInvariant_extendedProjection h Ve hVe⟩
+  intro x hx
+  exact (mem_extendedProjection).mpr ⟨0, (mem_extendedIntersection).mp hx⟩
+
+/-- **Necessity half of Theorem 6.6.** A well-posed, disturbance-decoupled
+dynamic measurement-feedback interconnection yields a `(C, A, B)`-pair between
+`im E` and `ker H`.
+
+By Theorem 4.6 the decoupling supplies an `Ae`-invariant extended subspace `Ve`
+with `im Ee ≤ Ve ≤ ker He`; its intersection `i(Ve)` and projection `p(Ve)` form
+the required `(C, A, B)`-pair by Theorem 6.2, and the two inclusions transfer
+because `Ee d = (E d, 0)` and `He (x, w) = H x`. -/
+theorem exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled
+    (h : ic.IsWellPosed) (hdec : ic.IsClosedLoopDisturbanceDecoupled h) :
+    ∃ S V : Submodule 𝕜 X,
+      LinearMap.IsCABPairBetween ic.plant.C ic.plant.A ic.plant.B ic.E ic.H S V := by
+  obtain ⟨Ve, hEe, hHe, hVe⟩ :=
+    (LinearMap.isDisturbanceDecoupled_iff_exists_invariant
+      (ic.closedLoopMap h) ic.disturbanceMap ic.outputMap).mp hdec
+  refine ⟨extendedIntersection Ve, extendedProjection Ve,
+    ic.isCABPair_extendedIntersection_extendedProjection h Ve hVe, ?_, ?_⟩
+  · rintro _ ⟨d, rfl⟩
+    rw [mem_extendedIntersection]
+    exact hEe ⟨d, ic.disturbanceMap_apply d⟩
+  · intro x hx
+    obtain ⟨w, hw⟩ := (mem_extendedProjection).mp hx
+    have h0 : ic.H x = 0 := by
+      have := LinearMap.mem_ker.mp (hHe hw)
+      rwa [ic.outputMap_apply] at this
+    exact LinearMap.mem_ker.mpr h0
+
+end DynamicInterconnection
+
 /-! ## Dynamic decoupling synthesis (Chapter 6)
 
 This section implements the constructive direction of
@@ -956,6 +1125,32 @@ theorem exists_dynamicController_of_isCABPairBetween
   exact ⟨cabPairController sys F G N,
     isClosedLoopDisturbanceDecoupled_of_isCABPairBetween sys hD E H S V hpair F G N hF hG hN
       ((cabPairInterconnection sys (cabPairController sys F G N) E H).isWellPosed_of_D_eq_zero hD)⟩
+
+/-- **Theorem 6.6 (necessity and sufficiency) for a strictly proper plant.**
+Disturbance decoupling by dynamic measurement feedback is possible if and only
+if there is a `(C, A, B)`-pair between `im E` and `ker H`.
+
+The sufficiency direction is the constructive synthesis of Theorem 6.4
+(`exists_dynamicController_of_isCABPairBetween`); the necessity direction
+extracts the pair from an invariant extended subspace of a decoupled closed loop
+(`exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled`). The claim is
+stated for a strictly proper plant, where well-posedness is automatic: the
+extraction only needs well-posedness, while the synthesis uses `D = 0`. -/
+theorem exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    (∃ ctrl : DynamicController 𝕜 X Y U,
+        (cabPairInterconnection sys ctrl E H).IsClosedLoopDisturbanceDecoupled
+          ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)) ↔
+      ∃ S V : Submodule 𝕜 X,
+        LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V := by
+  constructor
+  · rintro ⟨ctrl, hdec⟩
+    let ic := cabPairInterconnection sys ctrl E H
+    have hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+    exact ic.exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled hwp hdec
+  · rintro ⟨S, V, hpair⟩
+    exact exists_dynamicController_of_isCABPairBetween sys hD E H S V hpair
 
 end Synthesis
 
