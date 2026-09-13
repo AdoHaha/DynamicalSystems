@@ -215,11 +215,19 @@ is a `(C, A, B)`-pair between `im E` and `ker H`. The extraction direction is
 bridge between the identically vanishing forced response and the Markov-parameter
 predicate is
 `DynamicInterconnection.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF`.
-The *full* external-stabilization Corollary 6.22
-(`im E ⊂ V*(ker H) + Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`) is **not** claimed:
-it needs the stabilizable and undetectable subspaces `Xstab`/`Xdet` and their
-spectral characterisations, which are not available in the pinned library and
-are recorded as the gap `external-stability-subspaces`. In particular the
+The *geometric subspace conditions* of the full external-stabilization
+Corollary 6.22 (`im E ⊂ V*(ker H) + Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`) are
+recorded by `LinearSystem.ExternalStabilizationConditions` and are now extracted
+from the certificate and from the exact external zero response
+(`LinearSystem.externalStabilizationConditions_of_isCABPairBetween`,
+`LinearSystem.externalStabilizationConditions_of_externalStability`); the
+integrated form is
+`LinearSystem.externalStability_iff_geometricCertificate_and_conditions`. The
+remaining analytic direction — a merely stable *nonzero* transfer function —
+still requires the trajectory characterisation
+`W_g(ker H) = V*(ker H) + Xstab` (Trentelman Theorem 4.37) and the
+quotient-spectrum transfer lemma (Lemma 4.35), which are not available in the
+pinned library. In particular the
 zero-response predicate above must not be read as BIBO/external asymptotic
 stability; the two are separated by
 `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`,
@@ -312,7 +320,10 @@ documented future roadmap.
 * `LinearSystem.exists_biboStable_cabPair_gains`
 * `DynamicInterconnection.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF`
 * `LinearSystem.exists_isCABPairBetween_of_externalStability`
+* `LinearSystem.externalStabilizationConditions_of_isCABPairBetween`
+* `LinearSystem.externalStabilizationConditions_of_externalStability`
 * `LinearSystem.externalStability_iff_geometricCertificate`
+* `LinearSystem.externalStability_iff_geometricCertificate_and_conditions`
 * `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`
 
 ## References
@@ -2759,6 +2770,112 @@ theorem externalStability_iff_geometricCertificate
     have hdecF : ic.IsClosedLoopDisturbanceDecoupledWithF hwp :=
       (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp rfl).mpr hdec'
     exact (ic.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF hwp).mpr hdecF
+
+/-! ### The geometric subspace conditions of Corollary 6.22
+
+The full geometric external-stabilization criterion of
+Trentelman–Stoorvogel–Hautus, Corollary 6.22, states that an externally
+stabilizing controller exists exactly when
+
+* `im E ≤ V*(ker H) + Xstab` (`Xstab = stabilizableSubspace A B`), and
+* `S*(im E) ∩ Xdet ≤ ker H` (`S* = conditionedInvariantSubspace C A`,
+  `Xdet = detectableSubspace C A`).
+
+The two inclusions are recorded by
+`ExternalStabilizationConditions`; the accepted
+`(C, A, B)`-pair certificate already entails both, and the necessary-direction
+extraction `externalStabilizationConditions_of_externalStability` obtains them
+from the exact external zero response. The genuinely analytic converse (a stable
+but nonzero transfer function) additionally requires the trajectory
+characterisation `W_g(ker H) = V*(ker H) + Xstab` (Theorem 4.37) and the
+quotient-spectrum transfer lemma (Lemma 4.35); those are **not** available and are
+recorded in the handoff rather than assumed. -/
+
+/-- **The geometric subspace conditions of Corollary 6.22.** The disturbance
+image lies in the sum of the largest controlled invariant subspace inside
+`ker H` and the stabilizable subspace, and dually the smallest conditioned
+invariant subspace containing `im E` meets the detectable subspace inside
+`ker H`.
+
+Source: Trentelman–Stoorvogel–Hautus, Corollary 6.22, displays (6.30) and
+(6.32) (PDF pages 159–160 / printed pages 145–146). -/
+def ExternalStabilizationConditions (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) : Prop :=
+  LinearMap.range E ≤
+      LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H) ⊔
+        LinearMap.stabilizableSubspace sys.A sys.B ∧
+    LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace sys.C sys.A ≤ LinearMap.ker H
+
+omit [FiniteDimensional ℝ D] in
+/-- **A `(C, A, B)`-pair entails the two Corollary 6.22 conditions.** This is the
+order-theoretic half of the Corollary: `im E ≤ S ≤ V*(ker H)`, and
+`S*(im E) ∩ Xdet ≤ S*(im E) ≤ S ≤ V ≤ ker H` because `S*(im E)` is the least
+conditioned invariant subspace containing `im E` and `V*(ker H)` is the greatest
+controlled invariant subspace inside `ker H`.
+
+Source: Trentelman–Stoorvogel–Hautus, Corollary 6.22 and the proof of
+Lemma 6.21 (PDF pages 159–160 / printed pages 145–146). -/
+theorem externalStabilizationConditions_of_isCABPairBetween
+    (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (S V : Submodule ℝ X)
+    (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V) :
+    ExternalStabilizationConditions sys E H := by
+  obtain ⟨⟨hSV, hS, hV⟩, hE, hH⟩ := hpair
+  refine ⟨?_, ?_⟩
+  · calc LinearMap.range E ≤ S := hE
+      _ ≤ V := hSV
+      _ ≤ LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H) :=
+            LinearMap.le_controlledInvariantSubspace hH hV
+      _ ≤ LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H) ⊔
+            LinearMap.stabilizableSubspace sys.A sys.B := le_sup_left
+  · calc LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E) ⊓
+          LinearMap.detectableSubspace sys.C sys.A
+        ≤ LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E) := inf_le_left
+      _ ≤ S := LinearMap.conditionedInvariantSubspace_le hE hS
+      _ ≤ V := hSV
+      _ ≤ LinearMap.ker H := hH
+
+omit [FiniteDimensional ℝ D] in
+/-- **Necessity of the Corollary 6.22 conditions from exact external zero
+response.** The accepted extraction of a `(C, A, B)`-pair from the identically
+vanishing forced response is combined with
+`externalStabilizationConditions_of_isCABPairBetween` to obtain both Corollary
+6.22 inclusions. This is the necessary direction under the stronger
+zero-response premise; the converse from a merely stable nonzero transfer
+function is not claimed (see the section note). -/
+theorem externalStabilizationConditions_of_externalStability
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ExternalStability sys hD E H) :
+    ExternalStabilizationConditions sys E H := by
+  obtain ⟨S, V, hpair⟩ := exists_isCABPairBetween_of_externalStability sys hD E H h
+  exact externalStabilizationConditions_of_isCABPairBetween sys E H S V hpair
+
+omit [FiniteDimensional ℝ D] in
+/-- **Integrated geometric external-stability criterion.** The exact external
+zero-response property of the strictly proper plant is equivalent to the
+conjunction of the accepted `(C, A, B)`-pair certificate and the two geometric
+subspace conditions of Corollary 6.22. The forward direction extracts both the
+pair (`exists_isCABPairBetween_of_externalStability`, equivalently
+`externalStability_iff_geometricCertificate`) and the stabilizable/detectable
+inclusions (`externalStabilizationConditions_of_externalStability`); the backward
+direction synthesises the controller from the pair through the accepted
+Theorem 6.6 equivalence.
+
+Because a `(C, A, B)`-pair entails the two inclusions, the conjunction is
+logically equivalent to the pair certificate alone; it is stated explicitly so
+that the Corollary 6.22 conditions are part of the certified output of the
+theorem. -/
+theorem externalStability_iff_geometricCertificate_and_conditions
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    ExternalStability sys hD E H ↔
+      GeometricCertificate sys E H ∧ ExternalStabilizationConditions sys E H := by
+  constructor
+  · intro h
+    exact ⟨(externalStability_iff_geometricCertificate sys hD E H).mp h,
+      externalStabilizationConditions_of_externalStability sys hD E H h⟩
+  · rintro ⟨hgc, _⟩
+    exact (externalStability_iff_geometricCertificate sys hD E H).mpr hgc
 
 /-- **BIBO stability and external zero response from a stabilising certificate.**
 Suppose the geometric certificate `(S, V)` is equipped with gains `F`, `G`, `N`
