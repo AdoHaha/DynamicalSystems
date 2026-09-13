@@ -6,6 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Linear.DisturbanceDecoupling
+public import DynamicalSystems.Linear.Stabilization
 public import DynamicalSystems.Linear.Trajectory
 
 /-! # Dynamic measurement-feedback: algebraic foundations
@@ -96,6 +97,17 @@ block operator of Trentelman–Stoorvogel–Hautus, equation (6.3):
 
 (`closedLoopMap_of_D_eq_zero`).
 
+## Closed-loop spectrum factorization and internal stability
+
+Under `D = 0` the controller (6.7) is an observer-based controller. In the
+observer-error coordinates `(x, e) = (x, x - w)` its closed loop is block upper
+triangular with state-feedback block `A + B F` and observer-error block
+`A + G C`, so `χ(Ae) = χ(A + B F) · χ(A + G C)` and the closed loop is Hurwitz —
+hence internally asymptotically stable — as soon as both blocks are. The
+observer-error coordinate change is `observerErrorEquiv`; the sign convention is
+that the injection `+G C` of (6.7) is the contract's `A - L.comp C` with
+`L = -G` (`observerErrorBlock_eq`).
+
 ## Scope
 
 This file contains the algebraic foundations of Chapter 6 together with the
@@ -120,6 +132,22 @@ following is now claimed and proved here:
   strictly proper plant
   (`exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween`);
 
+* the **closed-loop spectrum factorization and internal-stability layer** of
+  Sections 6.3–6.4 for the controller (6.7): for a strictly proper plant the
+  extended closed-loop map is similar, via the observer-error coordinate change
+  `observerErrorEquiv` `(x, w) ↦ (x, x - w)`, to the separation-principle block
+  operator `[[A + B F, -B (F - N C)], [0, A + G C]]`
+  (`cabPairController_closedLoopMap_conj`); hence
+  `χ(Ae) = χ(A + B F) · χ(A + G C)`
+  (`charpoly_closedLoopMap_cabPairController`), the closed loop is Hurwitz as
+  soon as `A + B F` and `A + G C` are
+  (`isHurwitz_closedLoopMap_cabPairController`), and it is internally
+  asymptotically stable in the senses of `Filter.IsStableOn` and
+  `Filter.IsAttractive`
+  (`isStableOn_closedLoopSystem_cabPairController`,
+  `isAttractive_closedLoopSystem_cabPairController`,
+  `isAsymptoticallyStable_closedLoopSystem_cabPairController`);
+
 For a strictly proper plant the two directions combine into the exact
 Theorem 6.6 equivalence. The extraction below only needs well-posedness, so it
 also applies to plants with a control feedthrough; the synthesis direction at
@@ -132,10 +160,6 @@ declarations:
   zero-channel and zero-disturbance reductions and the closed-loop disturbance
   bookkeeping are formalised here, but no nonzero-`F` decoupling existence
   theorem is claimed (the synthesis of Theorem 6.4 fixes `F = 0`);
-* the spectrum factorization of the extended system mapping and the internal
-  stability results of Sections 6.3–6.4 (`σ (Ae) = σ (A + B F) ∪ σ (A + G C)`),
-  which require a stabilizability/detectability calculus that is likewise not
-  claimed here;
 * the transfer-function form of decoupling and the external stabilization of
   Section 6.6;
 * nonlinear (Conte–Moog–Perdon) dynamic feedback, which stays in the documented
@@ -161,6 +185,7 @@ declarations:
 * `DynamicInterconnection.extendedIntersection`,
   `DynamicInterconnection.extendedProjection`
 * `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`
+* `LinearSystem.observerErrorEquiv`: the observer-error coordinate change
 
 ## Main results
 
@@ -183,6 +208,15 @@ declarations:
 * `DynamicInterconnection.isCABPair_extendedIntersection_extendedProjection`
 * `DynamicInterconnection.exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled`
 * `LinearSystem.exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween`
+* `LinearSystem.observerErrorBlock_eq`
+* `LinearSystem.cabPairController_closedLoopMap_conj`
+* `LinearSystem.charpoly_closedLoopMap_cabPairController`
+* `LinearSystem.isHurwitz_closedLoopMap_cabPairController`
+* `LinearSystem.isStableOn_closedLoopSystem_cabPairController`
+* `LinearSystem.isAttractive_closedLoopSystem_cabPairController`
+* `LinearSystem.isAsymptoticallyStable_closedLoopSystem_cabPairController`
+* `LinearSystem.exists_hurwitz_cabPair_gains`
+* `LinearSystem.exists_hurwitz_closedLoopMap_of_isControllable_isObservable`
 
 ## References
 
@@ -1449,5 +1483,295 @@ theorem exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween
     exact exists_dynamicController_of_isCABPairBetween sys hD E H S V hpair
 
 end Synthesis
+
+section ObserverErrorEquiv
+
+variable {X : Type*} [AddCommGroup X] [Module ℝ X]
+
+/-- The **observer-error coordinate change** `(x, w) ↦ (x, x - w)` on the
+extended state space `X × X`. It is an involution, so it is its own inverse. In
+these coordinates the closed loop of the observer-based controller (6.7) becomes
+block upper triangular with state-feedback block `A + B F` and observer-error
+block `A + G C`.
+
+Sign convention: the second coordinate is the observer error `e = x - w`
+(`x` the plant state, `w` the controller state). The controller (6.7) injects the
+measurement through `+G C`, so the error block is `A + G C`; the Luenberger form
+`A - L.comp C` of the task contract is recovered by the substitution `L = -G`
+(see `observerErrorBlock_eq`). -/
+noncomputable def observerErrorEquiv (X : Type*) [AddCommGroup X] [Module ℝ X] :
+    (X × X) ≃ₗ[ℝ] (X × X) where
+  toFun p := (p.1, p.1 - p.2)
+  invFun p := (p.1, p.1 - p.2)
+  left_inv p := by rcases p with ⟨x, w⟩; simp
+  right_inv p := by rcases p with ⟨x, e⟩; simp
+  map_add' p q := by
+    rcases p with ⟨x₁, w₁⟩; rcases q with ⟨x₂, w₂⟩
+    simp only [Prod.mk_add_mk]
+    abel_nf
+  map_smul' c p := by
+    rcases p with ⟨x, w⟩
+    ext <;> simp [smul_sub]
+
+@[simp]
+theorem observerErrorEquiv_apply (p : X × X) :
+    observerErrorEquiv X p = (p.1, p.1 - p.2) := rfl
+
+@[simp]
+theorem observerErrorEquiv_symm_apply (p : X × X) :
+    (observerErrorEquiv X).symm p = (p.1, p.1 - p.2) := rfl
+
+end ObserverErrorEquiv
+
+section RealClosedLoopSpectrumAlgebra
+
+variable {X U Y Z D : Type*}
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [AddCommGroup Z] [Module ℝ Z]
+variable [AddCommGroup D] [Module ℝ D]
+
+omit [FiniteDimensional ℝ X] in
+/-- **Sign convention.** The observer-error block of the controller (6.7) is the
+output injection `A + G C`. It agrees with the contract's Luenberger error
+`A - L.comp C` under the gain substitution `L = -G`. -/
+theorem observerErrorBlock_eq (sys : LinearSystem ℝ X U Y) (G : Y →ₗ[ℝ] X) :
+    sys.A + G.comp sys.C = sys.A - (-G).comp sys.C := by
+  rw [LinearMap.neg_comp]
+  abel
+
+omit [FiniteDimensional ℝ X] in
+/-- **Closed-loop similarity to the separation block operator.** For a strictly
+proper plant (`D = 0`) the closed loop of the controller (6.7) is similar, via
+the observer-error coordinate change `observerErrorEquiv`, to the block
+upper-triangular operator
+
+`[[A + B F, -B (F - N C)], [0, A + G C]]`.
+
+The state-feedback block is `A + B F` and the observer-error block is `A + G C`;
+the off-diagonal block feeds the observer error back into the plant but does not
+enter the characteristic polynomial.
+
+Source: Trentelman–Stoorvogel–Hautus, Section 6.3, the closed-loop matrix
+preceding the internal-stability results. -/
+theorem cabPairController_closedLoopMap_conj (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed) :
+    (observerErrorEquiv X).conj
+      ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopMap hwp) =
+      LinearMap.blockOperator (sys.A + sys.B.comp F)
+        (-(sys.B.comp (F - N.comp sys.C))) (sys.A + G.comp sys.C) := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  change (observerErrorEquiv X).conj (ic.closedLoopMap hwp) = _
+  apply LinearMap.ext
+  intro p
+  obtain ⟨x, e⟩ := p
+  rw [LinearEquiv.conj_apply_apply]
+  simp only [observerErrorEquiv_symm_apply, observerErrorEquiv_apply]
+  rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, x - e)]
+  apply Prod.ext
+  · simp only [ic, cabPairInterconnection, cabPairController, LinearMap.blockOperator_apply,
+      LinearMap.add_apply, LinearMap.sub_apply, LinearMap.comp_apply, map_sub,
+      LinearMap.neg_apply]
+    abel
+  · simp only [ic, cabPairInterconnection, cabPairController, LinearMap.blockOperator_apply,
+      LinearMap.add_apply, LinearMap.sub_apply, LinearMap.comp_apply, map_sub,
+      LinearMap.neg_apply]
+    abel
+
+/-- `IsHurwitz` depends only on the characteristic polynomial. -/
+theorem isHurwitz_of_charpoly_eq {T S : X →ₗ[ℝ] X}
+    (h : T.charpoly = S.charpoly) (hS : LinearMap.IsHurwitz S) : LinearMap.IsHurwitz T := by
+  intro z hz
+  apply hS z
+  rwa [h] at hz
+
+/-- **Closed-loop characteristic-polynomial factorization.** For a strictly
+proper plant (`D = 0`) the characteristic polynomial of the extended closed-loop
+map of the controller (6.7) factors as the product of the state-feedback and
+observer-error characteristic polynomials:
+
+`χ(Ae) = χ(A + B F) · χ(A + G C)`.
+
+Consequently the complex spectrum of the closed loop is the union
+`σ(A + B F) ∪ σ(A + G C)` of the two block spectra. -/
+theorem charpoly_closedLoopMap_cabPairController (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed) :
+    ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopMap
+        hwp).charpoly =
+      (sys.A + sys.B.comp F).charpoly * (sys.A + G.comp sys.C).charpoly := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hconj := cabPairController_closedLoopMap_conj sys hD E H F G N hwp
+  change (ic.closedLoopMap hwp).charpoly = _
+  rw [← LinearEquiv.charpoly_conj (observerErrorEquiv X) (ic.closedLoopMap hwp), hconj,
+    LinearMap.charpoly_blockOperator]
+
+/-- **Hurwitz decomposition of the extended closed loop.** For a strictly proper
+plant (`D = 0`), if the state-feedback block `A + B F` and the observer-error
+block `A + G C` are both Hurwitz then so is the whole extended closed-loop map.
+This is the spectral content of the separation principle for the dynamic
+controller (6.7), read off the characteristic-polynomial factorization. -/
+theorem isHurwitz_closedLoopMap_cabPairController (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    LinearMap.IsHurwitz
+      ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopMap hwp) := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hchar : (ic.closedLoopMap hwp).charpoly =
+      (LinearMap.blockOperator (sys.A + sys.B.comp F)
+        (-(sys.B.comp (F - N.comp sys.C))) (sys.A + G.comp sys.C)).charpoly := by
+    rw [charpoly_closedLoopMap_cabPairController sys hD E H F G N hwp,
+      LinearMap.charpoly_blockOperator]
+  exact isHurwitz_of_charpoly_eq hchar
+    (LinearMap.isHurwitz_blockOperator _ _ _ hF hG)
+
+end RealClosedLoopSpectrumAlgebra
+
+section RealClosedLoopSpectrumAnalytic
+
+open Filter
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- **Exponential attractivity of the extended closed loop.** For a strictly
+proper plant (`D = 0`), if the state-feedback and observer-error blocks are
+Hurwitz then every closed-loop trajectory of the controller (6.7) tends to the
+origin: the extended closed-loop flow is attractive at `0`. The decay is derived
+from the spectral Hurwitz hypothesis through the accepted real Hurwitz decay
+theorem `LinearMap.tendsto_exp_of_isHurwitz`; no decay is assumed. -/
+theorem isAttractive_closedLoopSystem_cabPairController (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    Filter.IsAttractive (l := nhds (0 : X × X))
+      (Φ := fun (t : ℝ) (p : X × X) =>
+        ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopSystem
+          hwp).expFlow t p) (l' := atTop) := by
+  have hH := isHurwitz_closedLoopMap_cabPairController sys hD E H F G N hwp hF hG
+  refine Filter.Eventually.of_forall (fun p => ?_)
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hgoal : (fun t : ℝ => (ic.closedLoopSystem hwp).expFlow t p) =
+      fun t : ℝ => NormedSpace.exp (t • (ic.closedLoopMap hwp).toContinuousLinearMap) p := by
+    funext t
+    simp [LinearSystem.expFlow, LinearSystem.continuousA]
+  rw [hgoal]
+  convert LinearMap.tendsto_exp_of_isHurwitz (ic.closedLoopMap hwp) hH p using 1
+
+/-- **Lyapunov stability of the extended closed loop.** Under the same
+hypotheses, the extended closed-loop flow of the controller (6.7) is Lyapunov
+stable at the origin in the sense of `Filter.IsStableOn`. The uniform bound is
+supplied by the accepted theorem `LinearMap.isStableOn_expFlow_of_isHurwitz`. -/
+theorem isStableOn_closedLoopSystem_cabPairController (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    (nhds (0 : X × X)).IsStableOn
+      (fun (t : ℝ) (p : X × X) =>
+        ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopSystem
+          hwp).expFlow t p) (Set.Ici 0) := by
+  have hH := isHurwitz_closedLoopMap_cabPairController sys hD E H F G N hwp hF hG
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hgoal : (fun (t : ℝ) (p : X × X) => (ic.closedLoopSystem hwp).expFlow t p) =
+      fun (t : ℝ) (p : X × X) =>
+        NormedSpace.exp (t • (ic.closedLoopMap hwp).toContinuousLinearMap) p := by
+    funext t p
+    simp [LinearSystem.expFlow, LinearSystem.continuousA]
+  rw [hgoal]
+  convert LinearMap.isStableOn_expFlow_of_isHurwitz (ic.closedLoopMap hwp) hH using 1
+
+/-- **Internal asymptotic stability of the extended closed loop.** Combining
+`isStableOn_closedLoopSystem_cabPairController` and
+`isAttractive_closedLoopSystem_cabPairController`, the closed loop of the
+controller (6.7) is asymptotically stable at the extended origin whenever the
+state-feedback block `A + B F` and the observer-error block `A + G C` are
+Hurwitz. -/
+theorem isAsymptoticallyStable_closedLoopSystem_cabPairController
+    (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    (nhds (0 : X × X)).IsStableOn
+        (fun (t : ℝ) (p : X × X) =>
+          ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopSystem
+            hwp).expFlow t p) (Set.Ici 0) ∧
+      Filter.IsAttractive (l := nhds (0 : X × X))
+        (Φ := fun (t : ℝ) (p : X × X) =>
+          ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopSystem
+            hwp).expFlow t p) (l' := atTop) :=
+  ⟨isStableOn_closedLoopSystem_cabPairController sys hD E H F G N hwp hF hG,
+    isAttractive_closedLoopSystem_cabPairController sys hD E H F G N hwp hF hG⟩
+
+end RealClosedLoopSpectrumAnalytic
+
+section RealClosedLoopSpectrumExistence
+
+variable {X U Y : Type*}
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+
+/-- **Existence of stabilizing gains.** A controllable and observable plant
+admits a state-feedback gain `F` and an output-injection gain `G` for which both
+the state-feedback block `A + B F` and the observer-error block `A + G C` are
+Hurwitz. The gains are produced by the accepted stabilization and detection
+theorems, so the hypotheses of the Hurwitz decomposition and internal-stability
+results are satisfiable and those results are not vacuous. -/
+theorem exists_hurwitz_cabPair_gains (sys : LinearSystem ℝ X U Y)
+    (hcont : LinearMap.IsControllable sys.A sys.B)
+    (hobs : LinearMap.IsObservable sys.C sys.A) :
+    ∃ F : X →ₗ[ℝ] U, ∃ G : Y →ₗ[ℝ] X,
+      LinearMap.IsHurwitz (sys.A + sys.B.comp F) ∧
+        LinearMap.IsHurwitz (sys.A + G.comp sys.C) := by
+  obtain ⟨F, hF⟩ := LinearMap.isStabilizable_of_isControllable sys.A sys.B hcont
+  obtain ⟨L, hL⟩ := LinearMap.isDetectable_of_isObservable sys.C sys.A hobs
+  refine ⟨F, -L, hF, ?_⟩
+  rw [show sys.A + (-L).comp sys.C = sys.A - L.comp sys.C by
+    rw [LinearMap.neg_comp]; abel]
+  exact hL
+
+/-- **A controllable and observable strictly proper plant admits a dynamic
+controller whose closed loop is Hurwitz.** This packages the gain existence with
+the Hurwitz decomposition of the controller (6.7), showing that the internal
+stability layer applies to a nonempty class of plants. The controller state
+space is `X` and the constructed gain `N` is zero. -/
+theorem exists_hurwitz_closedLoopMap_of_isControllable_isObservable
+    {Z D : Type*} [AddCommGroup Z] [Module ℝ Z] [AddCommGroup D] [Module ℝ D]
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hcont : LinearMap.IsControllable sys.A sys.B)
+    (hobs : LinearMap.IsObservable sys.C sys.A) :
+    ∃ F : X →ₗ[ℝ] U, ∃ G : Y →ₗ[ℝ] X, ∃ N : Y →ₗ[ℝ] U,
+      LinearMap.IsHurwitz
+        ((cabPairInterconnection sys (cabPairController sys F G N) E H).closedLoopMap
+          ((cabPairInterconnection sys (cabPairController sys F G N) E H).isWellPosed_of_D_eq_zero
+            hD)) := by
+  obtain ⟨F, G, hF, hG⟩ := exists_hurwitz_cabPair_gains sys hcont hobs
+  refine ⟨F, G, 0, ?_⟩
+  exact isHurwitz_closedLoopMap_cabPairController sys hD E H F G 0 _ hF hG
+
+end RealClosedLoopSpectrumExistence
 
 end LinearSystem
