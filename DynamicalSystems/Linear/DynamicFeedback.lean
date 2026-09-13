@@ -2919,4 +2919,217 @@ theorem bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz
 
 end GeometricExternalZeroResponse
 
+/-! ## The trajectory/spectral external-stability bridge
+
+Trentelman–Stoorvogel–Hautus, Theorem 4.37 and Lemma 4.35, characterise the
+states from which the controlled output can be made stable by a state feedback
+through `W_g(ker H) = V*(ker H) + Xstab`. The analytic content of Lemma 4.35 is
+that a quotient-spectrum condition transfers to a decay statement for the
+controlled-output trajectory. This section records that bridge.
+
+The reusable core is `clm_map_exp_smul`: for continuous linear maps `L`, `A`,
+`B` with `L ∘ A = B ∘ L`, the exponential of `A` pushes forward along `L` to the
+exponential of `B`. Specialising to the quotient `X ⧸ V` by an `A`-invariant
+subspace `V` gives `tendsto_readout_exp_of_isHurwitz_mapQ`: if the readout `H`
+vanishes on `V` and the induced map on `X ⧸ V` is Hurwitz, then the readout of
+any `A`-trajectory decays. The state-feedback form
+`tendsto_readout_exp_of_isHurwitz_quotient_on` restricts to an `(A + B F)`-
+invariant subspace `W` containing the disturbance image, so only the quotient
+`W / V` need be Hurwitz.
+
+The remaining source obligation — constructing the feedback `F` of Lemma 4.38
+from `im E ≤ V*(ker H) + Xstab` so that `σ(A_F | W_g/V*) ⊂ C_g` — is **not**
+formalised here; it is recorded as the handoff item. These theorems supply the
+analytic half of the bridge with the spectral hypothesis explicit. -/
+
+set_option linter.style.haveILetI false
+
+set_option maxHeartbeats 800000 in
+-- The infinite-sum manipulation in the exponential push-forward lemma needs a
+-- larger heartbeat budget than the default.
+/-- **Push-forward of the exponential along an intertwining continuous linear
+map.** If `L ∘ A = B ∘ L` for continuous linear maps over `ℝ`, then applying
+`L` commutes with the one-parameter exponential groups,
+`L (exp (t • A) x) = exp (t • B) (L x)`.
+
+This is the general form of the quotient-spectrum-to-trajectory step: the
+exponential series pushes forward because `L` is continuous and intertwines the
+powers `A^n` and `B^n`; uniqueness of the sum then identifies the two sides. -/
+theorem clm_map_exp_smul
+    {X Y : Type*}
+    [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
+    [NormedAddCommGroup Y] [NormedSpace ℝ Y] [CompleteSpace Y]
+    (L : X →L[ℝ] Y) (A : X →L[ℝ] X) (B : Y →L[ℝ] Y)
+    (h : L.comp A = B.comp L) (t : ℝ) (x : X) :
+    L (NormedSpace.exp (t • A) x) = NormedSpace.exp (t • B) (L x) := by
+  have hscalar : ∀ y : X, L ((t • A) y) = (t • B) (L y) := by
+    intro y
+    have hy : L (A y) = B (L y) := congrFun (congrArg DFunLike.coe h) y
+    simp only [smul_apply, map_smul, hy]
+  have hpow : ∀ n : ℕ, ∀ y : X, L (((t • A) ^ n) y) = ((t • B) ^ n) (L y) := by
+    intro n
+    induction n with
+    | zero => intro y; simp
+    | succ n ih =>
+      intro y
+      rw [pow_succ, pow_succ, mul_apply_eq_comp, ih, hscalar, mul_apply_eq_comp]
+  have hAtsum : NormedSpace.exp (t • A) x =
+      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • A) ^ n) x) := by
+    conv_lhs => rw [NormedSpace.exp_eq_tsum ℝ]
+    change ((ContinuousLinearMap.apply ℝ X x)
+      (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (t • A) ^ n)) = _
+    rw [ContinuousLinearMap.map_tsum]
+    · apply tsum_congr; intro n
+      rw [map_smul, ContinuousLinearMap.apply_apply]
+    · exact NormedSpace.expSeries_summable_of_mem_ball' (t • A)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+  have hBtsum : NormedSpace.exp (t • B) (L x) =
+      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • B) ^ n) (L x)) := by
+    conv_lhs => rw [NormedSpace.exp_eq_tsum ℝ]
+    change ((ContinuousLinearMap.apply ℝ Y (L x))
+      (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (t • B) ^ n)) = _
+    rw [ContinuousLinearMap.map_tsum]
+    · apply tsum_congr; intro n
+      rw [map_smul, ContinuousLinearMap.apply_apply]
+    · exact NormedSpace.expSeries_summable_of_mem_ball' (t • B)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (Y →L[ℝ] Y)).symm ▸ edist_lt_top _ _)
+  rw [hAtsum, hBtsum]
+  change L (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • A) ^ n) x)) =
+    ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • B) ^ n) (L x))
+  rw [ContinuousLinearMap.map_tsum]
+  · apply tsum_congr; intro n
+    rw [map_smul, hpow n]
+  · have hball : (t • A) ∈ Metric.eball (0 : X →L[ℝ] X)
+        (NormedSpace.expSeries ℝ (X →L[ℝ] X)).radius :=
+      (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _
+    have hmap := (NormedSpace.expSeries_summable_of_mem_ball' (t • A) hball).mapL
+      ((ContinuousLinearMap.apply ℝ X) x)
+    simpa only [ContinuousLinearMap.apply_apply, smul_apply] using hmap
+
+section TrajectorySpectralBridge
+
+variable {X Z : Type*}
+    [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+    [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- **Quotient-spectrum readout decay.** Let `V` be an `A`-invariant subspace on
+which the readout `H` vanishes, and suppose the induced map
+`A : X ⧸ V → X ⧸ V` is Hurwitz. Then the controlled output of every
+`A`-trajectory decays:
+`t ↦ H (exp (t • A) x)` tends to `0` at `+∞`.
+
+This is the analytic content of Trentelman–Stoorvogel–Hautus, Lemma 4.35: the
+readout factors through the quotient because `V ≤ ker H`, the exponential
+pushes forward along the quotient map by `clm_map_exp_smul`, and the quotient
+trajectory decays by the accepted real Hurwitz decay theorem
+`LinearMap.tendsto_exp_of_isHurwitz`. No stability of the readout is assumed. -/
+theorem tendsto_readout_exp_of_isHurwitz_mapQ
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (V : Submodule ℝ X)
+    (hV : V ≤ V.comap A) (hVH : V ≤ LinearMap.ker H)
+    (hH : LinearMap.IsHurwitz (V.mapQ V A hV)) (x : X) :
+    Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+      atTop (nhds 0) := by
+  haveI : IsClosed (V : Set X) := V.closed_of_finiteDimensional
+  letI : IsTopologicalRing ((X ⧸ V) →L[ℝ] (X ⧸ V)) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  let q : X →L[ℝ] X ⧸ V := V.mkQ.toContinuousLinearMap
+  let Aq : X ⧸ V →ₗ[ℝ] X ⧸ V := V.mapQ V A hV
+  have hqA : q.comp A.toContinuousLinearMap = Aq.toContinuousLinearMap.comp q := by
+    ext y
+    change V.mkQ (A y) = Aq (V.mkQ y)
+    exact (congrFun (congrArg DFunLike.coe (Submodule.mapQ_mkQ V V A (h := hV))) y).symm
+  let Hbar : X ⧸ V →ₗ[ℝ] Z := Submodule.liftQ V H hVH
+  have hHbar : Hbar.comp V.mkQ = H := Submodule.liftQ_mkQ V H hVH
+  have hdesc : ∀ y : X, H y = Hbar (V.mkQ y) := by
+    intro y
+    have := congrFun (congrArg DFunLike.coe hHbar) y
+    exact this.symm
+  have hflow : ∀ t : ℝ, q (NormedSpace.exp (t • A.toContinuousLinearMap) x) =
+      NormedSpace.exp (t • Aq.toContinuousLinearMap) (q x) := by
+    intro t
+    exact clm_map_exp_smul q A.toContinuousLinearMap Aq.toContinuousLinearMap hqA t x
+  have hqconv : Tendsto (fun t : ℝ =>
+      NormedSpace.exp (t • Aq.toContinuousLinearMap) (q x)) atTop (nhds 0) :=
+    LinearMap.tendsto_exp_of_isHurwitz Aq hH (q x)
+  have hHcont : Continuous (Hbar.toContinuousLinearMap) :=
+    Hbar.toContinuousLinearMap.continuous
+  have hcomp := hHcont.tendsto 0 |>.comp hqconv
+  rw [map_zero] at hcomp
+  refine hcomp.congr' (Filter.Eventually.of_forall fun t => ?_)
+  simp only [Function.comp_apply]
+  rw [hdesc (NormedSpace.exp (t • A.toContinuousLinearMap) x), ← hflow t]
+  rfl
+
+variable {U D : Type*}
+    [NormedAddCommGroup U] [NormedSpace ℝ U]
+    [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- **State-feedback external stabilization.** Let `F` be a state-feedback gain
+for which the closed loop preserves an invariant subspace `W` containing the
+disturbance image `im E`, and let `V ≤ W` be a closed-loop-invariant subspace
+with `V ≤ ker H`. If the map induced by `A + B F` on the quotient `W / V` is
+Hurwitz, then the closed-loop controlled output of every disturbance direction
+decays: `t ↦ H (exp (t • (A + B F)) (E d))` tends to `0` at `+∞`.
+
+This is the state-feedback form of Lemma 4.35 (the sufficiency step of
+Theorem 4.39): the disturbance enters through `im E ≤ W`, `W` is closed-loop
+invariant, the readout vanishes on `V`, and only the quotient `W / V` carries the
+spectral stability hypothesis. The construction of such an `F` from the
+geometric condition `im E ≤ V*(ker H) + Xstab` (Lemma 4.38) is the remaining
+source obligation and is not assumed here. -/
+theorem tendsto_readout_exp_of_isHurwitz_quotient_on
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (V W : Submodule ℝ X) (F : X →ₗ[ℝ] U)
+    (hW : Submodule.map (A + B.comp F) W ≤ W)
+    (hV : Submodule.map (A + B.comp F) V ≤ V)
+    (hVH : V ≤ LinearMap.ker H)
+    (hE : LinearMap.range E ≤ W)
+    (hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ (V.comap W.subtype) (V.comap W.subtype)
+        ((A + B.comp F).restrict (fun x hx => hW ⟨x, hx, rfl⟩))
+        (fun x hx => by simpa using hV ⟨(x : X), hx, rfl⟩)))
+    (d : D) :
+    Tendsto (fun t : ℝ => H (NormedSpace.exp
+      (t • (A + B.comp F).toContinuousLinearMap) (E d))) atTop (nhds 0) := by
+  let VW : Submodule ℝ W := V.comap W.subtype
+  let AW : W →ₗ[ℝ] W := (A + B.comp F).restrict (fun x hx => hW ⟨x, hx, rfl⟩)
+  let HW : W →ₗ[ℝ] Z := H.comp W.subtype
+  have hVW' : VW ≤ VW.comap AW := by
+    intro x hx
+    change (A + B.comp F) (x : X) ∈ V
+    exact hV ⟨(x : X), hx, rfl⟩
+  have hVWH : VW ≤ LinearMap.ker HW := by
+    intro x hx
+    exact hVH hx
+  have hxW : E d ∈ W := hE ⟨d, rfl⟩
+  letI : IsTopologicalRing (W →L[ℝ] W) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  have hmain := tendsto_readout_exp_of_isHurwitz_mapQ AW HW VW hVW' hVWH hQ ⟨E d, hxW⟩
+  have hsub : W.subtype.toContinuousLinearMap.comp AW.toContinuousLinearMap =
+      (A + B.comp F).toContinuousLinearMap.comp W.subtype.toContinuousLinearMap := by
+    ext x
+    rfl
+  have hflow : ∀ t : ℝ,
+      W.subtype.toContinuousLinearMap
+        (NormedSpace.exp (t • AW.toContinuousLinearMap) ⟨E d, hxW⟩) =
+      NormedSpace.exp (t • (A + B.comp F).toContinuousLinearMap) (E d) := by
+    intro t
+    have := clm_map_exp_smul W.subtype.toContinuousLinearMap AW.toContinuousLinearMap
+      (A + B.comp F).toContinuousLinearMap hsub t ⟨E d, hxW⟩
+    simpa using this
+  have hgoal : (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) (E d))) =
+      fun t : ℝ => HW (NormedSpace.exp (t • AW.toContinuousLinearMap) ⟨E d, hxW⟩) := by
+    funext t
+    rw [← hflow t]
+    rfl
+  rw [hgoal]
+  exact hmain
+
+end TrajectorySpectralBridge
+
 end LinearSystem
