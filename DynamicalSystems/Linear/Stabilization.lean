@@ -95,6 +95,21 @@ argument `LinearMap.tendsto_exp_complex_apply` followed by a real-coordinate
 reduction (`LinearMap.tendsto_exp_of_isHurwitz`,
 `LinearMap.isStableOn_expFlow_of_isHurwitz`).
 
+## The Hurwitz (stable) subspace
+
+* `LinearMap.hurwitzSubspace`: the finite-dimensional real stable subspace
+  `X_g(A)` — the real form of the sum of the complex generalized eigenspaces of
+  `A` at the eigenvalues with negative real part, transported to the state space
+  through the canonical real basis and `ofRealPi`.
+* `LinearMap.map_hurwitzSubspace_le`: the stable subspace is `A`-invariant.
+* `LinearMap.tendsto_exp_restrict_hurwitzSubspace`: the exponential flow of `A`
+  decays to zero on the stable subspace, reusing the generalized-eigenspace
+  decay engine behind `exists_exponential_norm_bound_of_isHurwitz`.
+* `LinearMap.hurwitzSubspace_eq_top_of_subsingleton`: in the zero-dimensional
+  case the stable subspace is the whole space.
+* `LinearMap.hurwitzSubspace_zero`: the zero operator has trivial stable
+  subspace, since its only eigenvalue `0` is not in the open left half-plane.
+
 ## Converse criteria: unobservable and uncontrollable eigenvalues
 
 * `LinearMap.IsUnobservableEigenvalue`: the real pair `(C, A)` has an
@@ -1931,5 +1946,258 @@ theorem exists_exponential_norm_bound_of_isHurwitz (A : X →ₗ[ℝ] X) (hA : I
           mul_le_mul (le_max_left B 1) hgeom (by positivity)
             (le_trans hBnn (le_max_left B 1))
     _ = 2 * max B 1 * Real.exp (-(Real.log 2 / T) * t) := by ring
+
+/-! ## The Hurwitz (stable) subspace of a real endomorphism
+
+For a real endomorphism `A` of a finite-dimensional real vector space the stable
+subspace `X_g(A)` (Trentelman–Stoervogel–Hautus, Definition 2.13 and the
+decomposition used in Sections 4.6 and 6) is the direct sum of the generalized
+eigenspaces of the complexification of `A` at the eigenvalues with negative real
+part. Because that set of eigenvalues is invariant under complex conjugation, the
+corresponding complex subspace is the complexification of a canonical real
+subspace; we realize it by transporting along a real basis of the state space.
+
+The construction uses the existing complex generalized-eigenspace API
+(`Module.End.maxGenEigenspace`) on the coordinate space `Fin n → ℂ` and the
+real-coordinate transport `ofRealPi` (used already by
+`LinearMap.tendsto_exp_of_isHurwitz`). Concretely:
+
+* `hurwitzMatrix A` is the real matrix of `A` in the canonical basis
+  `Module.finBasis ℝ X`.
+* `hurwitzComplexSubspace A` is the sum of the generalized eigenspaces of the
+  complexified matrix at the eigenvalues with negative real part.
+* `hurwitzSubspace A` pulls that complex subspace back to `X` along the real
+  coordinates `x ↦ ofRealPi (b.equivFun x)`.
+
+`LinearMap.map_hurwitzSubspace_le` proves that the stable subspace is
+`A`-invariant, and `LinearMap.tendsto_exp_restrict_hurwitzSubspace` proves that
+the exponential flow decays on it. The zero operator has trivial stable subspace
+and the zero-dimensional case is the whole space, both made explicit below. -/
+
+section HurwitzSubspace
+
+open scoped Matrix
+
+/-- The matrix of a real endomorphism `A` with respect to the canonical basis
+`Module.finBasis ℝ X` of the finite-dimensional real state space. This is the
+coordinate representation used to complexify `A` term by term. -/
+noncomputable def hurwitzMatrix (A : X →ₗ[ℝ] X) :
+    Matrix (Fin (Module.finrank ℝ X)) (Fin (Module.finrank ℝ X)) ℝ :=
+  LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ X) A
+
+/-- The complex **stable subspace** of `A`: the direct sum of the generalized
+eigenspaces of the complexified coordinate operator at the eigenvalues with
+negative real part. This is the coordinate form of `X_g(A)` over `ℂ`. -/
+noncomputable def hurwitzComplexSubspace (A : X →ₗ[ℝ] X) :
+    Submodule ℂ (Fin (Module.finrank ℝ X) → ℂ) :=
+  ⨆ μ : {μ : ℂ // μ.re < 0},
+    Module.End.maxGenEigenspace
+      (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1
+
+/-- The **Hurwitz (stable) subspace** of a real endomorphism `A`. A vector `x`
+lies in it exactly when its real coordinates `ofRealPi (b.equivFun x)` lie in the
+complex stable subspace `hurwitzComplexSubspace A`. This is the canonical real
+form of `X_g(A)`, and agrees with the direct sum of the real generalized
+eigenspaces for the eigenvalues with negative real part. -/
+noncomputable def hurwitzSubspace (A : X →ₗ[ℝ] X) : Submodule ℝ X :=
+  ((hurwitzComplexSubspace A).restrictScalars ℝ).comap
+    (ofRealPi.comp (Module.finBasis ℝ X).equivFun.toLinearMap)
+
+/-- Membership in the Hurwitz subspace, in terms of the real-coordinate
+transport `ofRealPi`: `x ∈ hurwitzSubspace A` iff the complex coordinates of `x`
+lie in `hurwitzComplexSubspace A`. -/
+theorem mem_hurwitzSubspace {A : X →ₗ[ℝ] X} {x : X} :
+    x ∈ hurwitzSubspace A ↔
+      ofRealPi ((Module.finBasis ℝ X).equivFun x) ∈ hurwitzComplexSubspace A := by
+  rw [hurwitzSubspace, Submodule.mem_comap, Submodule.restrictScalars_mem]
+  rfl
+
+/-- The complex stable subspace is invariant under the complexified coordinate
+operator: it is a supremum of generalized eigenspaces, each of which is mapped
+into itself. -/
+theorem map_hurwitzComplexSubspace_le (A : X →ₗ[ℝ] X) :
+    Submodule.map (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ)))
+        (hurwitzComplexSubspace A) ≤ hurwitzComplexSubspace A := by
+  rw [hurwitzComplexSubspace, Submodule.map_iSup]
+  refine iSup_le fun μ => ?_
+  rw [Submodule.map_le_iff_le_comap]
+  intro y hy
+  exact Submodule.mem_iSup_of_mem μ
+    (Module.End.mapsTo_maxGenEigenspace_of_comm (Commute.refl _) μ.1 hy)
+
+/-- **The Hurwitz subspace is `A`-invariant**: `A (hurwitzSubspace A) ≤
+hurwitzSubspace A`. The complexified matrix acts on the complex stable subspace
+by `map_hurwitzComplexSubspace_le`; `ofRealPi` intertwines the real matrix action
+with the complexified one, so the pull-back is invariant as well. -/
+theorem map_hurwitzSubspace_le (A : X →ₗ[ℝ] X) :
+    Submodule.map A (hurwitzSubspace A) ≤ hurwitzSubspace A := by
+  rw [Submodule.map_le_iff_le_comap]
+  intro x hx
+  rw [Submodule.mem_comap]
+  rw [mem_hurwitzSubspace] at hx ⊢
+  have hcoord : (Module.finBasis ℝ X).equivFun (A x) =
+      (hurwitzMatrix A) *ᵥ ((Module.finBasis ℝ X).equivFun x) := by
+    rw [Basis.equivFun_apply, Basis.equivFun_apply]
+    exact (LinearMap.toMatrix_mulVec_repr (Module.finBasis ℝ X) (Module.finBasis ℝ X) A x).symm
+  rw [hcoord, ofRealPi_mulVec]
+  rw [← Matrix.toLin'_apply]
+  exact map_hurwitzComplexSubspace_le A ⟨_, hx, rfl⟩
+
+/-- **Decay on the complex stable subspace.** For any vector `z` in the complex
+stable subspace of `A`, the complex coordinate flow `t ↦ exp (t A_ℂ) z` tends to
+zero. Writing `z` as a finite sum of vectors in generalized eigenspaces for the
+stable eigenvalues, each summand decays by `tendsto_exp_apply_of_nilpotent`. -/
+theorem tendsto_exp_of_mem_hurwitzComplexSubspace (A : X →ₗ[ℝ] X)
+    {z : Fin (Module.finrank ℝ X) → ℂ} (hz : z ∈ hurwitzComplexSubspace A) :
+    Tendsto (fun t : ℝ =>
+      NormedSpace.exp (t • (Matrix.toLin'
+        ((hurwitzMatrix A).map (algebraMap ℝ ℂ))).toContinuousLinearMap) z)
+      atTop (𝓝 0) := by
+  let f : (Fin (Module.finrank ℝ X) → ℂ) →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))
+  obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+    (p := fun μ : {μ : ℂ // μ.re < 0} => Module.End.maxGenEigenspace f μ.1)).mp hz
+  obtain ⟨zμ, hzμ⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+    (fun μ : {μ : ℂ // μ.re < 0} => Module.End.maxGenEigenspace f μ.1) z).mp hs
+  rw [hzμ.symm]
+  have hmap : (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap)
+        (∑ μ ∈ s, (zμ μ : Fin (Module.finrank ℝ X) → ℂ))) =
+      fun t => ∑ μ ∈ s, NormedSpace.exp (t • f.toContinuousLinearMap)
+        (zμ μ : Fin (Module.finrank ℝ X) → ℂ) := by
+    funext t; rw [map_sum]
+  rw [hmap]
+  have hfin := tendsto_finsetSum (x := atTop) s
+    (f := fun (μ : {μ : ℂ // μ.re < 0}) (t : ℝ) =>
+      NormedSpace.exp (t • f.toContinuousLinearMap) (zμ μ : Fin (Module.finrank ℝ X) → ℂ))
+    (a := fun _ : {μ : ℂ // μ.re < 0} => (0 : Fin (Module.finrank ℝ X) → ℂ))
+    (fun μ _ => by
+      by_cases h0 : (zμ μ : Fin (Module.finrank ℝ X) → ℂ) = 0
+      · rw [h0]; simp
+      · obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace f μ.1 (zμ μ)).mp (zμ μ).2
+        exact tendsto_exp_apply_of_nilpotent f μ.1 μ.2 hk)
+  simpa using hfin
+
+/-- **The exponential flow decays on the Hurwitz subspace.** If `x` lies in the
+stable subspace of `A`, then `t ↦ exp (t A) x` tends to zero at `+∞`. This is the
+restriction of the general Hurwitz decay theorem
+`LinearMap.tendsto_exp_of_isHurwitz` to the stable spectral part; it is the
+qualitative form of the accepted quantitative bound
+`LinearMap.exists_exponential_norm_bound_of_isHurwitz` applied to that part. -/
+theorem tendsto_exp_restrict_hurwitzSubspace (A : X →ₗ[ℝ] X) {x : X}
+    (hx : x ∈ hurwitzSubspace A) :
+    Tendsto (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x) atTop (𝓝 0) := by
+  classical
+  let n : ℕ := Module.finrank ℝ X
+  let b : Basis (Fin n) ℝ X := Module.finBasis ℝ X
+  let L : X ≃L[ℝ] (Fin n → ℝ) := b.equivFun.toContinuousLinearEquiv
+  let M : Matrix (Fin n) (Fin n) ℝ := LinearMap.toMatrix b b A
+  let g : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) := (Matrix.toLin' M).toContinuousLinearMap
+  let h : (Fin n → ℂ) →L[ℂ] (Fin n → ℂ) :=
+    (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap
+  have hLx : L x = (Module.finBasis ℝ X).equivFun x := rfl
+  have hxy : ofRealPi (L x) ∈ hurwitzComplexSubspace A := by
+    rw [mem_hurwitzSubspace] at hx
+    rwa [hLx]
+  have hcomplex : Tendsto (fun t : ℝ => NormedSpace.exp (t • h) (ofRealPi (L x))) atTop (𝓝 0) :=
+    tendsto_exp_of_mem_hurwitzComplexSubspace A hxy
+  have hg : g = L.conjContinuousAlgEquiv A.toContinuousLinearMap := by
+    apply ContinuousLinearMap.ext
+    intro y
+    have hrepr : M *ᵥ b.repr (L.symm y) = b.repr (A (L.symm y)) :=
+      LinearMap.toMatrix_mulVec_repr b b A (L.symm y)
+    have hLy : b.repr (L.symm y) = y := by
+      rw [← Basis.equivFun_apply b (L.symm y)]
+      exact b.equivFun.apply_symm_apply y
+    rw [hLy] at hrepr
+    change M *ᵥ y = L (A.toContinuousLinearMap (L.symm y))
+    rw [hrepr]
+    rw [← Basis.equivFun_apply b (A (L.symm y))]
+    rfl
+  have hofreal : Tendsto (fun t : ℝ => ofRealPi (NormedSpace.exp (t • g) (L x))) atTop (𝓝 0) := by
+    rw [show (fun t : ℝ => ofRealPi (NormedSpace.exp (t • g) (L x)))
+        = fun t : ℝ => NormedSpace.exp (t • h) (ofRealPi (L x)) from
+      funext (fun t => ofRealPi_exp M t (L x))]
+    exact hcomplex
+  have hmatrix : Tendsto (fun t : ℝ => NormedSpace.exp (t • g) (L x)) atTop (𝓝 0) := by
+    rw [tendsto_zero_iff_norm_tendsto_zero] at hofreal ⊢
+    refine hofreal.congr' ?_
+    filter_upwards with t
+    rw [ofRealPi_norm]
+  have hLexp : ∀ t : ℝ, L (NormedSpace.exp (t • A.toContinuousLinearMap) x)
+      = NormedSpace.exp (t • g) (L x) := by
+    intro t
+    have key := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (L.conjContinuousAlgEquiv)
+      (L.conjContinuousAlgEquiv).continuous (t • A.toContinuousLinearMap)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have hcongr : (L.conjContinuousAlgEquiv) (t • A.toContinuousLinearMap) = t • g := by
+      rw [map_smul, hg.symm]
+    have := congrArg (fun f : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) => f (L x)) key
+    rw [hcongr] at this
+    simpa [ContinuousLinearEquiv.conjContinuousAlgEquiv_apply_apply, g] using this
+  have hfinal : Tendsto (fun t : ℝ => L (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+      atTop (𝓝 0) := by
+    rw [show (fun t : ℝ => L (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+        = fun t : ℝ => NormedSpace.exp (t • g) (L x) from funext hLexp]
+    exact hmatrix
+  have hcomp := (L.symm.continuous.tendsto 0).comp hfinal
+  rw [show L.symm (0 : Fin n → ℝ) = 0 from map_zero _] at hcomp
+  simpa [Function.comp_def, L.symm_apply_apply] using hcomp
+
+/-- On a zero-dimensional real space every submodule is the whole space, so the
+Hurwitz subspace is `⊤` in the zero-dimensional case. -/
+theorem hurwitzSubspace_eq_top_of_subsingleton [Subsingleton X] (A : X →ₗ[ℝ] X) :
+    hurwitzSubspace A = ⊤ :=
+  Subsingleton.elim _ _
+
+/-- The generalized eigenspace of the zero endomorphism at a nonzero eigenvalue
+is trivial: `(0 - μ • 1)^k = (-μ)^k • 1` is an invertible scalar multiple of the
+identity. -/
+theorem maxGenEigenspace_zero_of_ne_zero {E : Type*} [AddCommGroup E] [Module ℂ E]
+    {μ : ℂ} (hμ : μ ≠ 0) :
+    Module.End.maxGenEigenspace (0 : E →ₗ[ℂ] E) μ = ⊥ := by
+  rw [Submodule.eq_bot_iff]
+  intro x hx
+  obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace (0 : E →ₗ[ℂ] E) μ x).mp hx
+  have hc : (0 : E →ₗ[ℂ] E) - μ • (1 : E →ₗ[ℂ] E) = (-μ) • (1 : E →ₗ[ℂ] E) := by
+    ext y; simp
+  have h1 : (((0 : E →ₗ[ℂ] E) - μ • (1 : E →ₗ[ℂ] E)) ^ k) =
+      ((-μ : ℂ) ^ k) • (1 : E →ₗ[ℂ] E) := by
+    rw [hc, smul_pow, one_pow]
+  have h2 := congrArg (fun f : E →ₗ[ℂ] E => f x) h1
+  rw [h2] at hk
+  have hk' : ((-μ : ℂ) ^ k) • x = 0 := hk
+  exact (smul_eq_zero.mp hk').resolve_left (pow_ne_zero k (neg_ne_zero.mpr hμ))
+
+/-- The coordinatewise real-to-complex inclusion `ofRealPi` is injective. -/
+theorem ofRealPi_eq_zero {ι : Type*} {y : ι → ℝ} (h : ofRealPi y = 0) : y = 0 := by
+  funext i
+  have := congrFun h i
+  simpa [ofRealPi] using this
+
+/-- **The zero operator has trivial stable subspace.** The only eigenvalue of the
+zero operator is `0`, which is not in the open left half-plane, so
+`hurwitzSubspace 0 = ⊥`; equivalently, the constant flow `exp (t • 0) x = x` does
+not decay for nonzero `x`. -/
+theorem hurwitzSubspace_zero : hurwitzSubspace (0 : X →ₗ[ℝ] X) = ⊥ := by
+  have hsub : hurwitzComplexSubspace (0 : X →ₗ[ℝ] X) = ⊥ := by
+    rw [hurwitzComplexSubspace, iSup_eq_bot]
+    intro μ
+    have hM : hurwitzMatrix (0 : X →ₗ[ℝ] X) = 0 := by simp [hurwitzMatrix]
+    rw [hM]
+    simp only [Matrix.map_zero, map_zero]
+    exact maxGenEigenspace_zero_of_ne_zero (by
+      intro h
+      have hlt : μ.1.re < 0 := μ.2
+      rw [h] at hlt
+      simp at hlt)
+  rw [hurwitzSubspace, hsub, Submodule.restrictScalars_bot]
+  rw [Submodule.eq_bot_iff]
+  intro x hx
+  rw [Submodule.mem_comap] at hx
+  simp only [Submodule.mem_bot, LinearMap.comp_apply] at hx
+  have hy : (Module.finBasis ℝ X).equivFun x = 0 := ofRealPi_eq_zero hx
+  exact (Module.finBasis ℝ X).equivFun.injective (by rw [hy, map_zero])
+
+end HurwitzSubspace
 
 end LinearMap
