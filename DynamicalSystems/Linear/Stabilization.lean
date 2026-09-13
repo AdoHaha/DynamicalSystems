@@ -903,6 +903,416 @@ theorem isStabilizable_converse_of_uncontrollableEigenvalue
 
 end UncontrollableEigenvalue
 
+/-! ## The converse PBH criteria: gain existence
+
+The necessity halves of the PBH criteria were proved above: a stabilizing
+gain cannot move an uncontrollable eigenvalue, and an output injection cannot
+move an unobservable eigenvalue. This section proves the *sufficiency* halves
+of Trentelman–Stoorvogel–Hautus Theorem 3.32 and Theorem 3.38: if every
+uncontrollable eigenvalue is already Hurwitz then a stabilizing state feedback
+exists, and dually for detectability.
+
+The construction chooses a complement `Q` of the reachable subspace `W`,
+applies multi-input pole placement to the controllable restriction
+`(A|_W, B|_W)`, and leaves the unreachable block untouched. The
+characteristic polynomial of the closed loop is the product of the two block
+characteristic polynomials (`charpoly_prodMap_of_lower_zero`), and the
+hypothesis on uncontrollable eigenvalues supplies the Hurwitz property of the
+unreachable block. The detectability statement is the dual construction with a
+complement of the unobservable subspace. -/
+
+section ConversePBH
+
+open scoped TensorProduct
+
+/-- **Characteristic polynomial of a block upper-triangular operator.** On a
+product `W × Q`, the operator `(w, q) ↦ (f w + k q, g q)` has characteristic
+polynomial `f.charpoly * g.charpoly`. This is the algebraic form of the
+two-block Kalman decomposition used to combine the controllable and
+uncontrollable parts of a system. -/
+theorem charpoly_prodMap_of_lower_zero {W Q : Type*}
+    [AddCommGroup W] [Module ℝ W] [FiniteDimensional ℝ W]
+    [AddCommGroup Q] [Module ℝ Q] [FiniteDimensional ℝ Q]
+    (f : W →ₗ[ℝ] W) (g : Q →ₗ[ℝ] Q) (k : Q →ₗ[ℝ] W) :
+    (LinearMap.prod ((f.comp (LinearMap.fst ℝ W Q)) + (k.comp (LinearMap.snd ℝ W Q)))
+      (g.comp (LinearMap.snd ℝ W Q))).charpoly = f.charpoly * g.charpoly := by
+  classical
+  let bW : Module.Basis (Fin (Module.finrank ℝ W)) ℝ W := Module.finBasis ℝ W
+  let bQ : Module.Basis (Fin (Module.finrank ℝ Q)) ℝ Q := Module.finBasis ℝ Q
+  let b := bW.prod bQ
+  let T : W × Q →ₗ[ℝ] W × Q := LinearMap.prod
+    ((f.comp (LinearMap.fst ℝ W Q)) + (k.comp (LinearMap.snd ℝ W Q)))
+    (g.comp (LinearMap.snd ℝ W Q))
+  have hmat : LinearMap.toMatrix b b T = Matrix.fromBlocks (LinearMap.toMatrix bW bW f)
+      (LinearMap.toMatrix bQ bW k) 0 (LinearMap.toMatrix bQ bQ g) := by
+    ext i j
+    rcases i with a | b' <;> rcases j with c | d
+    · simp [b, T, LinearMap.toMatrix_apply, Module.Basis.prod_repr_inl]
+    · simp [b, T, LinearMap.toMatrix_apply, Module.Basis.prod_repr_inl]
+    · simp [b, T, LinearMap.toMatrix_apply, Module.Basis.prod_repr_inr]
+    · simp [b, T, LinearMap.toMatrix_apply, Module.Basis.prod_repr_inr]
+  rw [← LinearMap.charpoly_toMatrix (f := T) b, hmat, Matrix.charpoly_fromBlocks_zero₂₁,
+    LinearMap.charpoly_toMatrix (f := f) bW, LinearMap.charpoly_toMatrix (f := g) bQ]
+
+
+/-- **Sufficiency of the PBH stabilizability criterion.** If every
+uncontrollable eigenvalue of `(A, B)` has negative real part, then there is a
+state feedback `F` with `A + B.comp F` Hurwitz. The feedback is constructed, not
+assumed: pole placement stabilises the controllable restriction of `(A, B)`
+while the complement block is already Hurwitz by hypothesis.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 3.32 (the `⇐` direction). -/
+theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : ∀ μ : ℂ, IsUncontrollableEigenvalue A B μ → μ.re < 0) :
+    IsStabilizable A B := by
+  classical
+  obtain ⟨Q, hQ⟩ := Submodule.exists_isCompl (reachableSubspace A B)
+  let W := reachableSubspace A B
+  let πW : X →ₗ[ℝ] W := W.projectionOnto Q hQ
+  let πQ : X →ₗ[ℝ] Q := Q.projectionOnto W hQ.symm
+  let A11 : W →ₗ[ℝ] W := reachableRestrictionA A B
+  let B1 : U →ₗ[ℝ] W := reachableRestrictionB A B
+  let A12 : Q →ₗ[ℝ] W := πW.comp (A.comp Q.subtype)
+  let A22 : Q →ₗ[ℝ] Q := πQ.comp (A.comp Q.subtype)
+  have hπWA : ∀ w : W, (W.projectionOnto Q hQ) (A (w : X)) = A11 w := by
+    intro w
+    have hmem : A (w : X) ∈ W := map_reachableSubspace_le A B ⟨_, w.2, rfl⟩
+    rw [show (W.projectionOnto Q hQ) (A (w:X)) = ⟨A (w:X), hmem⟩ from
+      Submodule.projectionOnto_apply_of_mem_left hQ hmem]
+    apply Subtype.ext
+    simp [A11, reachableRestrictionA, LinearMap.restrict_apply]
+  have hπWB : ∀ u : U, (W.projectionOnto Q hQ) (B u) = B1 u := by
+    intro u
+    have hmem : B u ∈ W := range_le_reachableSubspace A B ⟨u, rfl⟩
+    rw [show (W.projectionOnto Q hQ) (B u) = ⟨B u, hmem⟩ from
+      Submodule.projectionOnto_apply_of_mem_left hQ hmem]
+    apply Subtype.ext
+    simp [B1, reachableRestrictionB, LinearMap.codRestrict_apply]
+  have hπQA : ∀ w : W, (Q.projectionOnto W hQ.symm) (A (w : X)) = 0 := by
+    intro w
+    rw [Submodule.projectionOnto_apply_eq_zero_iff]
+    exact map_reachableSubspace_le A B ⟨_, w.2, rfl⟩
+  have hπWw : ∀ w : W, (W.projectionOnto Q hQ) (w : X) = w := by
+    intro w
+    exact Submodule.projectionOnto_apply_of_mem_left hQ w.2
+  have hπWq : ∀ q : Q, (W.projectionOnto Q hQ) (q : X) = 0 := by
+    intro q
+    exact Submodule.projectionOnto_apply_right hQ q
+  have hdecomp : ∀ x : X, ((πW x : X) + (πQ x : X)) = x := by
+    intro x
+    have hh := Submodule.projection_add_projection_eq_self hQ x
+    simpa only [πW, πQ, Submodule.coe_projectionOnto_apply] using hh
+  have hπQ_A : πQ.comp A = A22.comp πQ := by
+    apply LinearMap.ext
+    intro x
+    show πQ (A x) = A22 (πQ x)
+    calc πQ (A x)
+        = πQ (A ((πW x : X) + (πQ x : X))) := by rw [hdecomp]
+      _ = πQ (A (πW x : X) + A (πQ x : X)) := by rw [map_add]
+      _ = πQ (A (πW x : X)) + πQ (A (πQ x : X)) := by rw [map_add]
+      _ = A22 (πQ x) := by
+          have hmem : A (πW x : X) ∈ W := map_reachableSubspace_le A B ⟨_, (πW x).2, rfl⟩
+          have hz : πQ (A (πW x : X)) = 0 := by
+            rw [Submodule.projectionOnto_apply_eq_zero_iff]; exact hmem
+          rw [hz, zero_add]; rfl
+  have hπQ_B : πQ.comp B = 0 := by
+    apply LinearMap.ext
+    intro u
+    show πQ (B u) = 0
+    rw [Submodule.projectionOnto_apply_eq_zero_iff]
+    exact range_le_reachableSubspace A B ⟨u, rfl⟩
+  have hA22 : IsHurwitz A22 := by
+    intro μ hμ
+    set A22c : (ℂ ⊗[ℝ] Q) →ₗ[ℂ] (ℂ ⊗[ℝ] Q) := A22.baseChange ℂ with hA22c
+    have hchar : A22c.charpoly = A22.charpoly.map (algebraMap ℝ ℂ) :=
+      LinearMap.charpoly_baseChange A22 ℂ
+    have hroot : A22c.charpoly.IsRoot μ := by rw [hchar]; exact hμ
+    have hroot' : A22c.dualMap.charpoly.IsRoot μ := by
+      rw [charpoly_dualMap_ofField]; exact hroot
+    have heig : Module.End.HasEigenvalue A22c.dualMap μ :=
+      (Module.End.hasEigenvalue_iff_isRoot_charpoly A22c.dualMap μ).mpr hroot'
+    obtain ⟨ξ, hξ⟩ := heig.exists_hasEigenvector
+    have hξne : ξ ≠ 0 := hξ.2
+    have hξeig : A22c.dualMap ξ = μ • ξ := Module.End.mem_eigenspace_iff.mp hξ.1
+    have hξcomp : ξ.comp A22c = μ • ξ := by
+      apply LinearMap.ext
+      intro v
+      show ξ (A22c v) = (μ • ξ) v
+      have hh := congrArg (fun (f : (ℂ ⊗[ℝ] Q) →ₗ[ℂ] ℂ) => f v) hξeig
+      simpa [LinearMap.dualMap_apply'] using hh
+    let η : (ℂ ⊗[ℝ] X) →ₗ[ℂ] ℂ := ξ.comp (πQ.baseChange ℂ)
+    have hηne : η ≠ 0 := by
+      have hright : (πQ.baseChange ℂ).comp (Q.subtype.baseChange ℂ) = LinearMap.id := by
+        rw [← LinearMap.baseChange_comp, Submodule.projectionOnto_comp_subtype, LinearMap.baseChange_id]
+      have hsurj : Function.Surjective (πQ.baseChange ℂ) := by
+        intro y
+        exact ⟨(Q.subtype.baseChange ℂ) y, by
+          have hh := congrArg (fun f : (ℂ ⊗[ℝ] Q) →ₗ[ℂ] (ℂ ⊗[ℝ] Q) => f y) hright
+          simpa using hh⟩
+      intro hη0
+      apply hξne
+      apply LinearMap.ext
+      intro y
+      show ξ y = 0
+      obtain ⟨z, rfl⟩ := hsurj y
+      have hz := congrArg (fun f : (ℂ ⊗[ℝ] X) →ₗ[ℂ] ℂ => f z) hη0
+      simpa [η, LinearMap.comp_apply] using hz
+    have hηA : η.comp (A.baseChange ℂ) = μ • η := by
+      have hbase : (πQ.baseChange ℂ).comp (A.baseChange ℂ) =
+          (A22.baseChange ℂ).comp (πQ.baseChange ℂ) := by
+        have hh := congrArg (fun f : X →ₗ[ℝ] Q => f.baseChange ℂ) hπQ_A
+        simpa only [LinearMap.baseChange_comp] using hh
+      apply LinearMap.ext
+      intro v
+      show η ((A.baseChange ℂ) v) = (μ • η) v
+      calc η ((A.baseChange ℂ) v)
+          = ξ ((πQ.baseChange ℂ) ((A.baseChange ℂ) v)) := rfl
+        _ = ξ (((πQ.baseChange ℂ).comp (A.baseChange ℂ)) v) := rfl
+        _ = ξ (((A22.baseChange ℂ).comp (πQ.baseChange ℂ)) v) := by rw [hbase]
+        _ = ξ ((A22.baseChange ℂ) ((πQ.baseChange ℂ) v)) := rfl
+        _ = (ξ.comp (A22.baseChange ℂ)) ((πQ.baseChange ℂ) v) := rfl
+        _ = (μ • ξ) ((πQ.baseChange ℂ) v) := by rw [hξcomp]
+        _ = (μ • η) v := rfl
+    have hηB : η.comp (B.baseChange ℂ) = 0 := by
+      have hbase : (πQ.baseChange ℂ).comp (B.baseChange ℂ) = 0 := by
+        have hh := congrArg (fun f : U →ₗ[ℝ] Q => f.baseChange ℂ) hπQ_B
+        simpa only [LinearMap.baseChange_comp, LinearMap.baseChange_zero] using hh
+      rw [show η.comp (B.baseChange ℂ) =
+        ξ.comp ((πQ.baseChange ℂ).comp (B.baseChange ℂ)) by rw [LinearMap.comp_assoc]]
+      rw [hbase, LinearMap.comp_zero]
+    exact h μ ⟨η, hηne, hηA, hηB⟩
+  obtain ⟨F1, hF1⟩ := isStabilizable_of_isControllable A11 B1
+    (isControllable_reachableRestriction A B)
+  refine ⟨F1.comp πW, ?_⟩
+  let e := W.prodEquivOfIsCompl Q hQ
+  let T' : W × Q →ₗ[ℝ] W × Q := LinearMap.prod
+    ((A11 + B1.comp F1).comp (LinearMap.fst ℝ W Q) + A12.comp (LinearMap.snd ℝ W Q))
+    (A22.comp (LinearMap.snd ℝ W Q))
+  have hconj : e.symm.conj (A + B.comp (F1.comp πW)) = T' := by
+    apply LinearMap.ext
+    intro p
+    obtain ⟨w, q⟩ := p
+    rw [LinearEquiv.conj_apply_apply]
+    rw [Submodule.prodEquivOfIsCompl_symm_apply]
+    rw [LinearEquiv.symm_symm, Submodule.coe_prodEquivOfIsCompl']
+    apply Prod.ext
+    · apply Subtype.ext
+      simp only [LinearMap.add_apply, LinearMap.comp_apply, LinearMap.prod_apply,
+        Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [show (W.projectionOnto Q hQ) ((w : X) + (q : X)) = w by
+        rw [map_add, hπWw w, hπWq q, add_zero]]
+      rw [map_add, map_add, map_add]
+      rw [hπWA w]
+      rw [show (W.projectionOnto Q hQ) (A (q:X)) = A12 q from rfl]
+      rw [hπWB (F1 w)]
+      abel
+    · apply Subtype.ext
+      simp only [LinearMap.add_apply, LinearMap.comp_apply, LinearMap.prod_apply,
+        Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [show (W.projectionOnto Q hQ) ((w : X) + (q : X)) = w by
+        rw [map_add, hπWw w, hπWq q, add_zero]]
+      rw [map_add, map_add, map_add]
+      rw [show (Q.projectionOnto W hQ.symm) (A (w:X)) = 0 from hπQA w]
+      rw [show (Q.projectionOnto W hQ.symm) (A (q:X)) = A22 q from rfl]
+      rw [show (Q.projectionOnto W hQ.symm) (B (F1 w)) = 0 from by
+        rw [Submodule.projectionOnto_apply_eq_zero_iff]
+        exact range_le_reachableSubspace A B ⟨_, rfl⟩]
+      rw [zero_add, add_zero]
+  refine fun μ hμ => ?_
+  have hchar : (A + B.comp (F1.comp πW)).charpoly = T'.charpoly := by
+    rw [← LinearEquiv.charpoly_conj e.symm (A + B.comp (F1.comp πW)), hconj]
+  have hTchar : T'.charpoly = (A11 + B1.comp F1).charpoly * A22.charpoly :=
+    charpoly_prodMap_of_lower_zero _ _ _
+  rw [hchar, hTchar] at hμ
+  simp only [Polynomial.map_mul, Polynomial.eval_mul] at hμ
+  rcases mul_eq_zero.mp hμ with h1 | h2
+  · exact hF1 μ h1
+  · exact hA22 μ h2
+
+
+/-- **Sufficiency of the PBH detectability criterion.** If every unobservable
+eigenvalue of `(C, A)` has negative real part, then there is an output injection
+`L` with `A - L.comp C` Hurwitz. This is the dual of
+`isStabilizable_of_uncontrollableEigenvalues_hurwitz` and likewise constructs
+the gain.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 3.38 (the `⇐` direction). -/
+theorem isDetectable_of_unobservableEigenvalues_hurwitz
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X)
+    (h : ∀ μ : ℂ, IsUnobservableEigenvalue C A μ → μ.re < 0) :
+    IsDetectable C A := by
+  classical
+  obtain ⟨P, hP⟩ := Submodule.exists_isCompl (unobservableSubspace C A)
+  let N := unobservableSubspace C A
+  let πN : X →ₗ[ℝ] N := N.projectionOnto P hP
+  let πP : X →ₗ[ℝ] P := P.projectionOnto N hP.symm
+  let AN : N →ₗ[ℝ] N := unobservableRestrictionA C A
+  let CP : P →ₗ[ℝ] Y := C.comp P.subtype
+  let AP : P →ₗ[ℝ] P := πP.comp (A.comp P.subtype)
+  let ANP : P →ₗ[ℝ] N := πN.comp (A.comp P.subtype)
+  have hsub : A.comp N.subtype = N.subtype.comp AN := by
+    apply LinearMap.ext; intro n
+    simp [AN, unobservableRestrictionA, LinearMap.restrict_apply]
+  have hAN : IsHurwitz AN := by
+    intro μ hμ
+    set ANc : (ℂ ⊗[ℝ] N) →ₗ[ℂ] (ℂ ⊗[ℝ] N) := AN.baseChange ℂ with hANc
+    have hchar : ANc.charpoly = AN.charpoly.map (algebraMap ℝ ℂ) :=
+      LinearMap.charpoly_baseChange AN ℂ
+    have hroot : ANc.charpoly.IsRoot μ := by rw [hchar]; exact hμ
+    have heig : Module.End.HasEigenvalue ANc μ :=
+      (Module.End.hasEigenvalue_iff_isRoot_charpoly ANc μ).mpr hroot
+    obtain ⟨v, hv⟩ := heig.exists_hasEigenvector
+    have hvne : v ≠ 0 := hv.2
+    have hveig : ANc v = μ • v := Module.End.mem_eigenspace_iff.mp hv.1
+    have hleft : (πN.baseChange ℂ).comp (N.subtype.baseChange ℂ) = LinearMap.id := by
+      rw [← LinearMap.baseChange_comp, Submodule.projectionOnto_comp_subtype,
+        LinearMap.baseChange_id]
+    have hinj : Function.Injective (N.subtype.baseChange ℂ) :=
+      Function.LeftInverse.injective (g := πN.baseChange ℂ) (fun y => by
+        have hh := congrArg (fun f : (ℂ ⊗[ℝ] N) →ₗ[ℂ] (ℂ ⊗[ℝ] N) => f y) hleft
+        simpa using hh)
+    refine h μ ⟨(N.subtype.baseChange ℂ) v, ?_, ?_, ?_⟩
+    · intro hzero; exact hvne (hinj (by rw [hzero, map_zero]))
+    · have hcomp : (A.comp N.subtype).baseChange ℂ = (N.subtype.comp AN).baseChange ℂ := by
+        rw [hsub]
+      calc (A.baseChange ℂ) ((N.subtype.baseChange ℂ) v)
+          = ((A.comp N.subtype).baseChange ℂ) v := by
+              rw [LinearMap.baseChange_comp]; rfl
+        _ = ((N.subtype.comp AN).baseChange ℂ) v := by rw [hcomp]
+        _ = (N.subtype.baseChange ℂ) (ANc v) := by
+              rw [LinearMap.baseChange_comp]; rfl
+        _ = (N.subtype.baseChange ℂ) (μ • v) := by rw [hveig]
+        _ = μ • ((N.subtype.baseChange ℂ) v) := by rw [map_smul]
+    · have hcomp : (C.comp N.subtype).baseChange ℂ = 0 := by
+        rw [unobservableRestrictionA_C_eq_zero, LinearMap.baseChange_zero]
+      calc (C.baseChange ℂ) ((N.subtype.baseChange ℂ) v)
+          = ((C.comp N.subtype).baseChange ℂ) v := by
+              rw [LinearMap.baseChange_comp]; rfl
+        _ = 0 := by rw [hcomp, LinearMap.zero_apply]
+  have hπNN : ∀ n : N, (N.projectionOnto P hP) (n : X) = n := by
+    intro n; exact Submodule.projectionOnto_apply_of_mem_left hP n.2
+  have hπNP : ∀ p : P, (N.projectionOnto P hP) (p : X) = 0 := by
+    intro p; exact Submodule.projectionOnto_apply_right hP p
+  have hπPN : ∀ n : N, (P.projectionOnto N hP.symm) (n : X) = 0 := by
+    intro n; exact Submodule.projectionOnto_apply_right hP.symm n
+  have hπPP : ∀ p : P, (P.projectionOnto N hP.symm) (p : X) = p := by
+    intro p; exact Submodule.projectionOnto_apply_of_mem_left hP.symm p.2
+  have hπNA : ∀ n : N, (N.projectionOnto P hP) (A (n : X)) = AN n := by
+    intro n
+    have hmem : A (n : X) ∈ N := map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
+    rw [show (N.projectionOnto P hP) (A (n:X)) = ⟨A (n:X), hmem⟩ from
+      Submodule.projectionOnto_apply_of_mem_left hP hmem]
+    apply Subtype.ext
+    simp [AN, unobservableRestrictionA, LinearMap.restrict_apply]
+  have hπPA : ∀ n : N, (P.projectionOnto N hP.symm) (A (n : X)) = 0 := by
+    intro n
+    rw [Submodule.projectionOnto_apply_eq_zero_iff]
+    exact map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
+  have hπP_A : (P.projectionOnto N hP.symm).comp A = AP.comp (P.projectionOnto N hP.symm) := by
+    apply LinearMap.ext; intro x
+    show (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
+    have hdecomp : ((πN x : X) + (πP x : X)) = x := by
+      have hh := Submodule.projection_add_projection_eq_self hP x
+      simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
+    calc (P.projectionOnto N hP.symm) (A x)
+        = (P.projectionOnto N hP.symm) (A ((πN x : X) + (πP x : X))) := by rw [hdecomp]
+      _ = (P.projectionOnto N hP.symm) (A (πN x : X) + A (πP x : X)) := by rw [map_add]
+      _ = (P.projectionOnto N hP.symm) (A (πN x : X)) +
+            (P.projectionOnto N hP.symm) (A (πP x : X)) := by rw [map_add]
+      _ = AP ((P.projectionOnto N hP.symm) x) := by
+          have hz : (P.projectionOnto N hP.symm) (A (πN x : X)) = 0 := by
+            rw [Submodule.projectionOnto_apply_eq_zero_iff]
+            exact map_unobservableSubspace_le C A ⟨_, (πN x).2, rfl⟩
+          rw [hz, zero_add]
+          rfl
+  have hobs : IsObservable CP AP := by
+    rw [isObservable_iff, Submodule.eq_bot_iff]
+    intro p hp
+    rw [mem_unobservableSubspace] at hp
+    have hpow : ∀ k, (AP ^ k) p = (P.projectionOnto N hP.symm) ((A ^ k) p) := by
+      intro k
+      induction k with
+      | zero => simpa using hπPP p
+      | succ k ih =>
+          rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, ih]
+          have h2 := congrArg (fun f : X →ₗ[ℝ] P => f ((A ^ k) p)) hπP_A
+          simpa only [LinearMap.comp_apply, pow_succ', Module.End.mul_eq_comp] using h2.symm
+    have hpN : (p : X) ∈ N := by
+      rw [mem_unobservableSubspace]
+      intro k
+      have hk : CP ((AP ^ k) p) = 0 := hp k
+      have hsplit : ((πN ((A ^ k) p) : X) + (πP ((A ^ k) p) : X)) = (A ^ k) p := by
+        have hh := Submodule.projection_add_projection_eq_self hP ((A ^ k) p)
+        simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
+      calc C ((A ^ k) p)
+          = C ((πN ((A ^ k) p) : X) + (πP ((A ^ k) p) : X)) := by rw [hsplit]
+        _ = C (πN ((A ^ k) p) : X) + C (πP ((A ^ k) p) : X) := by rw [map_add]
+        _ = 0 := by
+            have h1 : C (πN ((A ^ k) p) : X) = 0 :=
+              C_eq_zero_of_mem_unobservableSubspace (πN ((A ^ k) p)).2
+            have h2 : C (πP ((A ^ k) p) : X) = 0 := by
+              rw [← hpow k]
+              simpa [CP] using hk
+            rw [h1, h2, add_zero]
+    have hmem : (p : X) ∈ N ⊓ P := ⟨hpN, p.2⟩
+    rw [hP.inf_eq_bot] at hmem
+    exact Subtype.ext (by simpa using hmem)
+  obtain ⟨LP, hLP⟩ := isDetectable_of_isObservable CP AP hobs
+  let L : Y →ₗ[ℝ] X := P.subtype.comp LP
+  refine ⟨L, ?_⟩
+  let e := N.prodEquivOfIsCompl P hP
+  let T' : N × P →ₗ[ℝ] N × P := LinearMap.prod
+    ((AN.comp (LinearMap.fst ℝ N P)) + (ANP.comp (LinearMap.snd ℝ N P)))
+    ((AP - LP.comp CP).comp (LinearMap.snd ℝ N P))
+  have hconj : e.symm.conj (A - L.comp C) = T' := by
+    apply LinearMap.ext
+    intro pp
+    obtain ⟨n, p⟩ := pp
+    rw [LinearEquiv.conj_apply_apply]
+    rw [Submodule.prodEquivOfIsCompl_symm_apply]
+    rw [LinearEquiv.symm_symm, Submodule.coe_prodEquivOfIsCompl']
+    apply Prod.ext
+    · apply Subtype.ext
+      simp only [LinearMap.sub_apply, LinearMap.add_apply, LinearMap.comp_apply,
+        LinearMap.prod_apply, Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [map_sub]
+      rw [show C ((n : X) + (p : X)) = C (p : X) by
+        rw [map_add, C_eq_zero_of_mem_unobservableSubspace n.2, zero_add]]
+      rw [map_add, map_add]
+      rw [show (N.projectionOnto P hP) (A (n:X)) = AN n from hπNA n]
+      rw [show (N.projectionOnto P hP) (A (p:X)) = ANP p from rfl]
+      rw [show (N.projectionOnto P hP) (L (C (p:X))) = 0 from by
+        change (N.projectionOnto P hP) ((LP (C (p:X))) : X) = 0
+        exact hπNP (LP (C (p:X)))]
+      abel
+    · apply Subtype.ext
+      simp only [LinearMap.sub_apply, LinearMap.add_apply, LinearMap.comp_apply,
+        LinearMap.prod_apply, Function.prod_apply, LinearMap.fst_apply, LinearMap.snd_apply, T']
+      rw [map_sub]
+      rw [show C ((n : X) + (p : X)) = C (p : X) by
+        rw [map_add, C_eq_zero_of_mem_unobservableSubspace n.2, zero_add]]
+      rw [map_add, map_add]
+      rw [show (P.projectionOnto N hP.symm) (A (n:X)) = 0 from hπPA n]
+      rw [show (P.projectionOnto N hP.symm) (A (p:X)) = AP p from rfl]
+      rw [show (P.projectionOnto N hP.symm) (L (C (p:X))) = LP (C (p:X)) from by
+        change (P.projectionOnto N hP.symm) ((LP (C (p:X))) : X) = LP (C (p:X))
+        exact hπPP (LP (C (p:X)))]
+      simp [CP]
+  refine fun μ hμ => ?_
+  have hchar : (A - L.comp C).charpoly = T'.charpoly := by
+    rw [← LinearEquiv.charpoly_conj e.symm (A - L.comp C), hconj]
+  have hTchar : T'.charpoly = AN.charpoly * (AP - LP.comp CP).charpoly :=
+    charpoly_prodMap_of_lower_zero _ _ _
+  rw [hchar, hTchar] at hμ
+  simp only [Polynomial.map_mul, Polynomial.eval_mul] at hμ
+  rcases mul_eq_zero.mp hμ with h1 | h2
+  · exact hAN μ h1
+  · exact hLP μ h2
+
+
+end ConversePBH
+
 /-! ## The general Hurwitz-to-decay bridge: the complex spectral case
 
 The analytic heart of the general bridge: over a finite-dimensional complex
