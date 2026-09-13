@@ -158,8 +158,13 @@ declarations:
 * the **decoupling synthesis theorem for a nonzero measurement disturbance
   channel** `F`: the channel itself, its resolved measured signal and input, the
   zero-channel and zero-disturbance reductions and the closed-loop disturbance
-  bookkeeping are formalised here, but no nonzero-`F` decoupling existence
-  theorem is claimed (the synthesis of Theorem 6.4 fixes `F = 0`);
+  bookkeeping are formalised here, and the observer-form synthesis
+  (`isClosedLoopDisturbanceDecoupledWithF_of_observerGain`,
+  `exists_dynamicController_withF_of_isCABPairBetween`) decouples the full
+  `F`-channel whenever the state disturbance is a function of the measurement
+  disturbance (`G F = -E`, equivalently `ker F ≤ ker E`). The source's
+  Theorem 6.4 is the `F = 0` case, and unconditional nonzero-`F` decoupling is
+  not claimed because that factorization is not automatic;
 * the transfer-function form of decoupling and the external stabilization of
   Section 6.6;
 * nonlinear (Conte–Moog–Perdon) dynamic feedback, which stays in the documented
@@ -173,6 +178,8 @@ declarations:
 * `DynamicInterconnection.loopMap`, `DynamicInterconnection.IsWellPosed`,
   `DynamicInterconnection.loopInv`
 * `DynamicInterconnection.solvedMeasurement`, `DynamicInterconnection.solvedInput`
+* `DynamicInterconnection.loopInv_of_D_eq_zero`,
+  `DynamicInterconnection.disturbanceMeasurement_of_D_eq_zero`
 * `DynamicInterconnection.disturbanceMeasurement`,
   `DynamicInterconnection.measuredSignal`, `DynamicInterconnection.disturbanceInput`,
   `DynamicInterconnection.resolvedInput`
@@ -184,7 +191,8 @@ declarations:
   `DynamicInterconnection.IsClosedLoopDisturbanceDecoupledWithF`
 * `DynamicInterconnection.extendedIntersection`,
   `DynamicInterconnection.extendedProjection`
-* `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`
+* `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`,
+  `LinearSystem.measurementInterconnection`
 * `LinearSystem.observerErrorEquiv`: the observer-error coordinate change
 
 ## Main results
@@ -205,6 +213,8 @@ declarations:
 * `LinearSystem.exists_outputFeedback_of_isCABPair`
 * `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`
 * `LinearSystem.exists_dynamicController_of_isCABPairBetween`
+* `LinearSystem.isClosedLoopDisturbanceDecoupledWithF_of_observerGain`
+* `LinearSystem.exists_dynamicController_withF_of_isCABPairBetween`
 * `DynamicInterconnection.isCABPair_extendedIntersection_extendedProjection`
 * `DynamicInterconnection.exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled`
 * `LinearSystem.exists_dynamicController_disturbanceDecoupled_iff_isCABPairBetween`
@@ -648,8 +658,10 @@ every disturbance. The constructions below reduce to the channel-free resolved
 measurement and control when `F = 0`, and to the resolved measurement and control
 of the extended state when `d = 0`.
 
-The full channel-decoupling synthesis theorem for nonzero `F` is **not** claimed
-here: only the signal, reduction and bookkeeping identities are proved. -/
+The full channel-decoupling synthesis theorem for nonzero `F` is proved in the
+synthesis section below (`isClosedLoopDisturbanceDecoupledWithF_of_observerGain`)
+under the observer factorization hypothesis; here only the signal, reduction and
+bookkeeping identities are established. -/
 
 /-- The **disturbance contribution to the measurement**, the part of the resolved
 measurement proportional to the disturbance, `(1 - D N)⁻¹ F d : D →ₗ[𝕜] Y`. -/
@@ -851,6 +863,15 @@ theorem isWellPosed_of_D_eq_zero (hD : ic.plant.D = 0) : ic.IsWellPosed := by
   rw [IsWellPosed, ic.loopMap_eq_one_of_D_eq_zero hD]
   exact Function.bijective_id
 
+/-- For a strictly proper plant the loop inverse is the identity. -/
+theorem loopInv_of_D_eq_zero (hD : ic.plant.D = 0) (h : ic.IsWellPosed) :
+    ic.loopInv h = 1 := by
+  have h1 := ic.loopMap_loopInv h
+  rw [ic.loopMap_eq_one_of_D_eq_zero hD] at h1
+  change (1 : Y →ₗ[𝕜] Y) * ic.loopInv h = (1 : Y →ₗ[𝕜] Y) at h1
+  rw [one_mul] at h1
+  exact h1
+
 /-- For a strictly proper plant the resolved measurement is the plant output
 `C x`. -/
 theorem solvedMeasurement_of_D_eq_zero (hD : ic.plant.D = 0) (h : ic.IsWellPosed)
@@ -867,6 +888,15 @@ theorem solvedInput_of_D_eq_zero (hD : ic.plant.D = 0) (h : ic.IsWellPosed)
     (p : X × W) :
     ic.solvedInput h p = ic.controller.M p.2 + ic.controller.N (ic.plant.C p.1) := by
   rw [solvedInput_apply, ic.solvedMeasurement_of_D_eq_zero hD h p]
+
+/-- For a strictly proper plant the measurement-disturbance contribution to the
+measurement is the raw channel `F d`, since the loop inverse is the identity. -/
+theorem disturbanceMeasurement_of_D_eq_zero (hD : ic.plant.D = 0) (h : ic.IsWellPosed) :
+    ic.disturbanceMeasurement h = ic.F := by
+  ext d
+  apply h.1
+  change ic.loopMap (ic.loopInv h (ic.F d)) = ic.loopMap (ic.F d)
+  rw [← LinearMap.comp_apply, ic.loopMap_loopInv h, ic.loopMap_eq_one_of_D_eq_zero hD]
 
 /-- **The classical block operator.** For a strictly proper plant (`D = 0`) the
 closed-loop state map is the block operator of
@@ -953,9 +983,10 @@ The predicate `IsClosedLoopDisturbanceDecoupled` above is the state-disturbance
 predicate built from `disturbanceMap`. With the measurement disturbance `F` the
 correct closed-loop disturbance channel is `disturbanceMapWithF`, and the scoped
 predicate `IsClosedLoopDisturbanceDecoupledWithF` records decoupling for that
-channel. Its only use below is the zero-channel reduction to the accepted
-predicate: the full channel-decoupling synthesis theorem for nonzero `F` is
-**not** claimed. -/
+channel. The synthesis section below proves the nonzero-`F` decoupling theorem
+`isClosedLoopDisturbanceDecoupledWithF_of_observerGain` and its existence form
+`exists_dynamicController_withF_of_isCABPairBetween`, under a factorization
+hypothesis on the disturbance channel. -/
 
 /-- The closed-loop **with the measurement disturbance channel**: the controlled
 output is independent of the disturbance when every Markov parameter of the
@@ -1336,6 +1367,21 @@ theorem cabPairInterconnection_F (sys : LinearSystem 𝕜 X U Y)
     (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
     (cabPairInterconnection sys ctrl E H).F = 0 := rfl
 
+/-- The dynamic measurement-feedback interconnection with an **explicit**
+measurement-disturbance channel `F : D →ₗ[𝕜] Y`. It generalises
+`cabPairInterconnection`, which is the special case `F = 0`, and is the
+interconnection on which the nonzero-`F` synthesis is carried out. -/
+def measurementInterconnection (sys : LinearSystem 𝕜 X U Y)
+    (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (F : D →ₗ[𝕜] Y)
+    (H : X →ₗ[𝕜] Z) : DynamicInterconnection 𝕜 X U Y X D Z :=
+  ⟨sys, ctrl, E, F, H⟩
+
+@[simp]
+theorem measurementInterconnection_F (sys : LinearSystem 𝕜 X U Y)
+    (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (F : D →ₗ[𝕜] Y)
+    (H : X →ₗ[𝕜] Z) :
+    (measurementInterconnection sys ctrl E F H).F = F := rfl
+
 /-- **Theorem 6.4 / Corollary 6.7 (synthesis).** For a strictly proper plant
 (`D = 0`), any `(C, A, B)`-pair `(S, V)` between `im E` and `ker H`, together
 with gains `F`, `G`, `N` satisfying
@@ -1411,9 +1457,9 @@ theorem isClosedLoopDisturbanceDecoupled_of_isCABPairBetween
 
 /-- **The synthesis also satisfies the extended decoupling predicate.** Because
 the controller (6.7) is built with a zero measurement-disturbance channel, its
-closed loop is disturbance decoupled for the extended channel as well. This is
-the only sense in which the synthesis touches the `F`-channel; no nonzero-`F`
-decoupling statement is made. -/
+closed loop is disturbance decoupled for the extended channel as well. The
+nonzero-`F` generalization is the observer-form theorem
+`isClosedLoopDisturbanceDecoupledWithF_of_observerGain` below. -/
 theorem isClosedLoopDisturbanceDecoupledWithF_of_isCABPairBetween
     (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
     (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
@@ -1431,6 +1477,107 @@ theorem isClosedLoopDisturbanceDecoupledWithF_of_isCABPairBetween
   exact (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp hF0).mpr
     (isClosedLoopDisturbanceDecoupled_of_isCABPairBetween sys hD E H S V hpair F G N
       hF hG hN hwp)
+
+/-- **Nonzero-`F` decoupling synthesis (observer form).** Let `V` be a subspace
+with `(A + B F_v) V ≤ V`, `im E ≤ V` and `V ≤ ker H`, and suppose the state
+disturbance is a function of the measurement disturbance: there is an output map
+`G` with `G F = -E`, i.e. `E d = -G (F d)` for every disturbance value `d`.
+Then the observer-based controller
+`w' = (A + B F_v + G C) w - G y`, `u = F_v w` (the `cabPairController` with
+zero measurement feedthrough) has a closed loop that is decoupled for the full
+measurement-disturbance channel `disturbanceMapWithF`.
+
+Indeed, the observer error `e = w - x` then satisfies the disturbance-free
+equation `e' = (A + G C) e`, so the diagonal subspace `{(x, x) | x ∈ V}` is
+`closedLoopMap`-invariant, contains the image of `disturbanceMapWithF` and lies
+in `ker outputMap`. The factorization `G F = -E` is the extra hypothesis that is
+missing when `F ≠ 0`; it is equivalent to `ker F ≤ ker E`. -/
+theorem isClosedLoopDisturbanceDecoupledWithF_of_observerGain
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (F : D →ₗ[𝕜] Y) (H : X →ₗ[𝕜] Z) (V : Submodule 𝕜 X)
+    (Fv : X →ₗ[𝕜] U) (G : Y →ₗ[𝕜] X)
+    (hV : Submodule.map (sys.A + sys.B.comp Fv) V ≤ V)
+    (hE : LinearMap.range E ≤ V) (hH : V ≤ LinearMap.ker H)
+    (hGF : G.comp F = -E)
+    (hwp : (measurementInterconnection sys (cabPairController sys Fv G 0) E F
+      H).IsWellPosed) :
+    (measurementInterconnection sys (cabPairController sys Fv G 0) E F
+      H).IsClosedLoopDisturbanceDecoupledWithF hwp := by
+  let ic : DynamicInterconnection 𝕜 X U Y X D Z :=
+    measurementInterconnection sys (cabPairController sys Fv G 0) E F H
+  have hBe : ∀ d : D, ic.disturbanceMapWithF hwp d = (E d, E d) := by
+    intro d
+    have hdm : ic.disturbanceMeasurement hwp d = F d := by
+      rw [ic.disturbanceMeasurement_apply, ic.loopInv_of_D_eq_zero hD hwp]
+      simp [ic, measurementInterconnection]
+    have hdi : ic.disturbanceInput hwp d = 0 := by
+      rw [ic.disturbanceInput_apply, hdm]
+      simp [ic, measurementInterconnection, cabPairController]
+    have hGFd := LinearMap.congr_fun hGF d
+    simp only [LinearMap.comp_apply, LinearMap.neg_apply] at hGFd
+    rw [ic.disturbanceMapWithF_apply, hdi, hdm]
+    simp only [map_zero, add_zero]
+    apply Prod.ext
+    · rfl
+    · change (cabPairController sys Fv G 0).L (F d) = E d
+      simp only [cabPairController, LinearMap.sub_apply, LinearMap.comp_apply,
+        LinearMap.zero_apply]
+      rw [hGFd]
+      simp
+  have hAe : ∀ x : X, ic.closedLoopMap hwp (x, x) =
+      ((sys.A + sys.B.comp Fv) x, (sys.A + sys.B.comp Fv) x) := by
+    intro x
+    rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, x)]
+    apply Prod.ext <;>
+      simp only [ic, measurementInterconnection, cabPairController, LinearMap.add_apply,
+        LinearMap.comp_apply, LinearMap.zero_apply, LinearMap.sub_apply,
+        map_zero] <;> abel
+  refine (LinearMap.isDisturbanceDecoupled_iff_exists_invariant
+    (ic.closedLoopMap hwp) (ic.disturbanceMapWithF hwp) ic.outputMap).mpr ?_
+  let diag : V →ₗ[𝕜] X × X := V.subtype.prod V.subtype
+  refine ⟨LinearMap.range diag, ?_, ?_, ?_⟩
+  · rintro _ ⟨d, rfl⟩
+    rw [hBe d]
+    exact ⟨⟨E d, hE ⟨d, rfl⟩⟩, rfl⟩
+  · rintro _ ⟨v, rfl⟩
+    rw [LinearMap.mem_ker, ic.outputMap_apply]
+    exact LinearMap.mem_ker.mp (hH v.2)
+  · rintro _ ⟨q, hq, rfl⟩
+    obtain ⟨v, rfl⟩ := hq
+    change ic.closedLoopMap hwp ((v : X), (v : X)) ∈ LinearMap.range diag
+    rw [hAe (v : X)]
+    exact ⟨⟨(sys.A + sys.B.comp Fv) (v : X), hV ⟨(v : X), v.2, rfl⟩⟩, rfl⟩
+
+/-- **Nonzero-`F` dynamic decoupling synthesis.** For a strictly proper plant
+(`D = 0`), a `(C, A, B)`-pair between `im E` and `ker H` together with the
+factorization `G F = -E` of the state disturbance through the measurement
+disturbance yields a finite-dimensional dynamic measurement-feedback controller
+which is well posed and whose closed loop is decoupled for the **full**
+measurement-disturbance channel `disturbanceMapWithF`.
+
+The controller is the observer form `w' = (A + B F_v + G C) w - G y`, `u = F_v w`
+of `isClosedLoopDisturbanceDecoupledWithF_of_observerGain`, with `F_v` supplied
+by the controlled invariance of `V`. The hypothesis `G F = -E` is the extra
+requirement for this observer-form synthesis: the measurement disturbance must
+determine the state disturbance, so that the observer error can be made
+disturbance-free. It is satisfied in particular when `F` is injective, and it
+reduces to `E = 0` when `F = 0`. The accepted zero-channel theorem
+`exists_dynamicController_of_isCABPairBetween` is the `F = 0` case; no
+unconditional nonzero-`F` statement is made. -/
+theorem exists_dynamicController_withF_of_isCABPairBetween
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (F : D →ₗ[𝕜] Y) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V)
+    (hfac : ∃ G : Y →ₗ[𝕜] X, G.comp F = -E) :
+    ∃ ctrl : DynamicController 𝕜 X Y U,
+      (measurementInterconnection sys ctrl E F H).IsClosedLoopDisturbanceDecoupledWithF
+        ((measurementInterconnection sys ctrl E F H).isWellPosed_of_D_eq_zero hD) := by
+  obtain ⟨⟨hSV, -, hV⟩, hE, hH⟩ := hpair
+  obtain ⟨Fv, hFv⟩ := LinearMap.exists_stateFeedback_of_isControlledInvariant hV
+  obtain ⟨G, hGF⟩ := hfac
+  refine ⟨cabPairController sys Fv G 0, ?_⟩
+  exact isClosedLoopDisturbanceDecoupledWithF_of_observerGain sys hD E F H V Fv G
+    hFv (hE.trans hSV) hH hGF _
 
 /-- **Theorem 6.6 / Corollary 6.7 (existence of a decoupling controller).** For a
 strictly proper plant (`D = 0`), a `(C, A, B)`-pair between `im E` and `ker H`
