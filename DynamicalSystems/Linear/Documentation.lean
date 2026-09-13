@@ -200,10 +200,14 @@ The stabilization/observer foundations now include explicit-target stable/attrac
 complex-spectrum obstruction converses, block separation characteristic-polynomial results,
 and observable observer corollaries. The general Hurwitz-to-decay theorem and converse
 sufficiency halves remain explicit follow-up obligations; disturbance-decoupling synthesis
-still requires its own checked bridges.
+now has its algebraic and convolution foundations, while transfer-function and dynamic-controller
+bridges remain open.
 
 The disturbance-decoupling foundations now define Markov responses and exact decoupling,
 prove the reachable/unobservable and controlled-invariant characterizations, include the
 finite-dimensional geometric corollary, and record coordinate-invariance and test examples.
-Dynamic measurement-feedback construction, convolution/input-independence, and stabilization
-variants remain follow-up obligations.
+Dynamic measurement-feedback construction and stabilization variants remain follow-up
+obligations. The convolution layer now proves the
+variation-of-constants output formula and equivalence between exact decoupling and vanishing
+disturbance contribution for locally integrable inputs; transfer-function and dynamic-controller
+bridges remain open.
