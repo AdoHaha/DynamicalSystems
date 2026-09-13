@@ -92,17 +92,25 @@ block operator of Trentelman–Stoorvogel–Hautus, equation (6.3):
 
 (`closedLoopMap_of_D_eq_zero`).
 
-## Scope and deferred obligations
+## Scope
 
-This file deliberately stops at the **foundations**. The following are *not*
-claimed here and remain the next milestones; they are recorded so that no
+This file contains the algebraic foundations of Chapter 6 together with the
+**dynamic decoupling synthesis** of Theorem 6.4 / Corollary 6.7, so the
+following is now claimed and proved here:
+
+* a `(C, A, B)`-pair between `im E` and `ker H` yields the controller `(6.7)`
+  with state space `W = X`, and its closed loop is disturbance decoupled
+  (`exists_dynamicController_of_isCABPairBetween`,
+  `isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`). The output feedback
+  `N` of Lemma 6.3 is constructed abstractly as
+  `exists_outputFeedback_of_isCABPair`;
+
+The following remain the next milestones and are *not* claimed here, so that no
 unproved strengthening is read into the present declarations:
 
-* the full dynamic decoupling synthesis: that a `(C, A, B)`-pair between
-  `im E` and `ker H` yields a controller with `T = 0` (Theorem 6.6 and
-  Corollary 6.7). The algebraic core `exists_isCABPairBetween_iff` already lives
-  in `DynamicalSystems.Linear.DisturbanceDecoupling`, but the passage from a
-  pair to the controller above is not formalised here;
+* the converse (necessity) extraction of a `(C, A, B)`-pair from a decoupled
+  closed loop (Theorem 6.2 and the forward half of Theorem 6.6), i.e. passing
+  from an extended invariant subspace to its intersection/projection;
 * a measurement disturbance channel `F : D →ₗ[𝕜] Y` in the readout; only the
   state disturbance `E` is modelled at this stage, and the output channel `H`
   is the controlled-output map;
@@ -126,6 +134,7 @@ unproved strengthening is read into the present declarations:
 * `DynamicInterconnection.closedLoopMap`, `disturbanceMap`, `outputMap`
 * `DynamicInterconnection.closedLoopSystem`
 * `DynamicInterconnection.IsClosedLoopDisturbanceDecoupled`
+* `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`
 
 ## Main results
 
@@ -135,6 +144,9 @@ unproved strengthening is read into the present declarations:
 * `DynamicInterconnection.closedLoopSystem_dynamics_zero_disturbance`
 * `DynamicInterconnection.closedLoopMap_of_D_eq_zero`
 * `DynamicInterconnection.closedLoopSystem_variationOfConstants_zero`
+* `LinearSystem.exists_outputFeedback_of_isCABPair`
+* `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`
+* `LinearSystem.exists_dynamicController_of_isCABPairBetween`
 
 ## References
 
@@ -721,5 +733,230 @@ theorem closedLoopSystem_variationOfConstants_eq_homogeneous (h : ic.IsWellPosed
 end Analytic
 
 end DynamicInterconnection
+
+/-! ## Dynamic decoupling synthesis (Chapter 6)
+
+This section implements the constructive direction of
+Trentelman–Stoorvogel–Hautus, Theorem 6.4 and Corollary 6.7: from a
+`(C, A, B)`-pair `(S, V)` between `im E` and `ker H` we build the controller
+`(6.7)`
+
+`w' = (A + B F + G C - B N C) w + (B N - G) y`, `u = (F - N C) w + N y`,
+
+with state space `W = X`, and prove that its closed loop is disturbance
+decoupled. The three gain maps are the ones supplied by the accepted
+geometric-invariance API (`exists_stateFeedback_of_isControlledInvariant`,
+`exists_outputInjection_of_isConditionedInvariant`) together with the output
+feedback `N` of Lemma 6.3 (`exists_outputFeedback_of_isCABPair`). -/
+
+section Synthesis
+
+variable {𝕜 X U Y Z D : Type*}
+variable [Field 𝕜]
+variable [AddCommGroup X] [Module 𝕜 X]
+variable [AddCommGroup U] [Module 𝕜 U]
+variable [AddCommGroup Y] [Module 𝕜 Y]
+variable [AddCommGroup Z] [Module 𝕜 Z]
+variable [AddCommGroup D] [Module 𝕜 D]
+
+/-- **Lemma 6.3 (output feedback).** If `S ≤ V`, `S` is `(C, A)`-invariant and
+`V` is `(A, B)`-invariant, then there is an output feedback `N : Y →ₗ[𝕜] U`
+with `(A + B N C) S ≤ V`.
+
+The map `S ∋ s ↦ A s mod V` vanishes on `S ∩ ker C` (conditioned invariance),
+so it descends through `C|_S`; its range lies in the range of `B mod V`
+(controlled invariance), so it lifts through `B`. Extending the resulting map
+from `C S` to all of `Y` gives `N`.
+
+Source: Trentelman–Stoorvogel–Hautus, Lemma 6.3. -/
+theorem exists_outputFeedback_of_isCABPair
+    {C : X →ₗ[𝕜] Y} {A : X →ₗ[𝕜] X} {B : U →ₗ[𝕜] X} {S V : Submodule 𝕜 X}
+    (hSV : S ≤ V) (hS : LinearMap.IsConditionedInvariant C A S)
+    (hV : LinearMap.IsControlledInvariant A B V) :
+    ∃ N : Y →ₗ[𝕜] U, Submodule.map (A + B.comp (N.comp C)) S ≤ V := by
+  let f : S →ₗ[𝕜] X ⧸ V := V.mkQ.comp (A.comp S.subtype)
+  let g : U →ₗ[𝕜] X ⧸ V := V.mkQ.comp B
+  have hker : LinearMap.ker (C.comp S.subtype) ≤ LinearMap.ker f := by
+    intro x hx
+    rw [LinearMap.mem_ker] at hx ⊢
+    rw [LinearMap.comp_apply] at hx
+    change V.mkQ (A (x : X)) = 0
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    exact hSV (hS ⟨x, Submodule.mem_inf.mpr ⟨x.2, hx⟩, rfl⟩)
+  have hrange : LinearMap.range f ≤ LinearMap.range g := by
+    rintro _ ⟨s, rfl⟩
+    have hAv : A (s : X) ∈ V ⊔ LinearMap.range B := hV ⟨(s : X), hSV s.2, rfl⟩
+    rw [Submodule.mem_sup] at hAv
+    obtain ⟨v, hv, w, hw, hvw⟩ := hAv
+    obtain ⟨u, rfl⟩ := hw
+    refine ⟨u, ?_⟩
+    have hA : V.mkQ (A (s : X)) = V.mkQ (B u) := by
+      rw [← hvw, map_add, Submodule.mkQ_apply, (Submodule.Quotient.mk_eq_zero V).mpr hv,
+        zero_add]
+    exact hA.symm
+  let fbar : S ⧸ LinearMap.ker (C.comp S.subtype) →ₗ[𝕜] X ⧸ V :=
+    (LinearMap.ker (C.comp S.subtype)).liftQ f hker
+  let e := (C.comp S.subtype).quotKerEquivRange
+  let ψ : LinearMap.range (C.comp S.subtype) →ₗ[𝕜] X ⧸ V := fbar.comp e.symm.toLinearMap
+  have hψrange : LinearMap.range ψ ≤ LinearMap.range g := by
+    have h1 : LinearMap.range ψ = LinearMap.range fbar := by
+      dsimp only [ψ]
+      rw [LinearMap.range_comp, LinearMap.range_eq_top.mpr e.symm.surjective,
+        Submodule.map_top]
+    have h2 : LinearMap.range fbar = LinearMap.range f := by
+      dsimp only [fbar]
+      exact Submodule.range_liftQ (LinearMap.ker (C.comp S.subtype)) f hker
+    rw [h1, h2]
+    exact hrange
+  let g' : U →ₗ[𝕜] LinearMap.range g := g.codRestrict (LinearMap.range g) (fun u => ⟨u, rfl⟩)
+  have hg'surj : Function.Surjective g' := by
+    rintro ⟨y, hy⟩
+    obtain ⟨u, rfl⟩ := hy
+    exact ⟨u, Subtype.ext rfl⟩
+  let ψ' : LinearMap.range (C.comp S.subtype) →ₗ[𝕜] LinearMap.range g :=
+    ψ.codRestrict (LinearMap.range g) (fun p => hψrange ⟨p, rfl⟩)
+  obtain ⟨χ, hχ⟩ := Module.projective_lifting_property g' ψ' hg'surj
+  obtain ⟨N, hN⟩ := LinearMap.exists_extend (-χ)
+  refine ⟨N, ?_⟩
+  rintro _ ⟨s, hs, rfl⟩
+  change A s + B (N (C s)) ∈ V
+  rw [← Submodule.Quotient.mk_eq_zero V]
+  change V.mkQ (A s + B (N (C s))) = 0
+  have hNs : N (C s) = -χ ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩ := by
+    have := congrArg (fun h => h ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩) hN
+    simpa [LinearMap.comp_apply] using this
+  have hψs : ψ ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩ = V.mkQ (A s) := by
+    have he : e (Submodule.Quotient.mk ⟨s, hs⟩) = ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩ := by
+      apply Subtype.ext
+      rw [LinearMap.quotKerEquivRange_apply_mk]
+      rfl
+    have hes : e.symm ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩ = Submodule.Quotient.mk ⟨s, hs⟩ := by
+      rw [← he, LinearEquiv.symm_apply_apply]
+    simp only [ψ, LinearMap.comp_apply, LinearEquiv.coe_toLinearMap, hes, fbar,
+      Submodule.liftQ_apply, f, Submodule.mkQ_apply]
+    rfl
+  have hgχ : g (χ ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩) = ψ ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩ := by
+    have := congrArg (fun h => h ⟨C s, ⟨⟨s, hs⟩, rfl⟩⟩) hχ
+    exact congrArg Subtype.val this
+  rw [map_add]
+  change V.mkQ (A s) + g (N (C s)) = 0
+  rw [hNs, map_neg, hgχ, hψs, add_neg_cancel]
+
+/-- The controller `(6.7)` of Trentelman–Stoorvogel–Hautus associated with a
+`(C, A, B)`-pair: `K = A + B F + G C - B N C`, `L = B N - G`, `M = F - N C`,
+with state space `W = X`. -/
+def cabPairController (sys : LinearSystem 𝕜 X U Y) (F : X →ₗ[𝕜] U)
+    (G : Y →ₗ[𝕜] X) (N : Y →ₗ[𝕜] U) : DynamicController 𝕜 X Y U where
+  K := sys.A + sys.B.comp F + G.comp sys.C - sys.B.comp (N.comp sys.C)
+  L := sys.B.comp N - G
+  M := F - N.comp sys.C
+  N := N
+
+/-- The dynamic measurement-feedback interconnection obtained from a plant, a
+controller with state space `X`, a state disturbance channel `E` and a
+controlled-output map `H`. -/
+def cabPairInterconnection (sys : LinearSystem 𝕜 X U Y)
+    (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    DynamicInterconnection 𝕜 X U Y X D Z :=
+  ⟨sys, ctrl, E, H⟩
+
+/-- **Theorem 6.4 / Corollary 6.7 (synthesis).** For a strictly proper plant
+(`D = 0`), any `(C, A, B)`-pair `(S, V)` between `im E` and `ker H`, together
+with gains `F`, `G`, `N` satisfying
+`(A + B F) V ≤ V`, `(A + G C) S ≤ S` and `(A + B N C) S ≤ V`, produces a
+controller whose closed loop is disturbance decoupled.
+
+The invariant extended subspace is `V_e = {(x₁,0) + (x₂,x₂) | x₁ ∈ S, x₂ ∈ V}`
+(Trentelman–Stoorvogel–Hautus, equation (6.16)); it contains the disturbance
+image and lies in the kernel of the controlled output, so Theorem 4.6 applies. -/
+theorem isClosedLoopDisturbanceDecoupled_of_isCABPairBetween
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V)
+    (F : X →ₗ[𝕜] U) (G : Y →ₗ[𝕜] X) (N : Y →ₗ[𝕜] U)
+    (hF : Submodule.map (sys.A + sys.B.comp F) V ≤ V)
+    (hG : Submodule.map (sys.A + G.comp sys.C) S ≤ S)
+    (hN : Submodule.map (sys.A + sys.B.comp (N.comp sys.C)) S ≤ V)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed) :
+    (cabPairInterconnection sys (cabPairController sys F G N) E H).IsClosedLoopDisturbanceDecoupled
+      hwp := by
+  obtain ⟨⟨hSV, hS, hV⟩, hE, hH⟩ := hpair
+  let ic : DynamicInterconnection 𝕜 X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hcl0 : ∀ x : X, ic.closedLoopMap hwp (x, 0) =
+      (sys.A x + sys.B (N (sys.C x)), sys.B (N (sys.C x)) - G (sys.C x)) := by
+    intro x
+    rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, 0)]
+    ext <;> simp only [ic, cabPairInterconnection, cabPairController, map_zero,
+      LinearMap.add_apply, LinearMap.sub_apply, LinearMap.comp_apply, add_zero]
+  have hcl2 : ∀ x : X, ic.closedLoopMap hwp (x, x) =
+      ((sys.A + sys.B.comp F) x, (sys.A + sys.B.comp F) x) := by
+    intro x
+    rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, x)]
+    ext <;> simp only [ic, cabPairInterconnection, cabPairController, LinearMap.add_apply,
+      LinearMap.sub_apply, LinearMap.comp_apply, map_sub] <;> abel
+  refine (LinearMap.isDisturbanceDecoupled_iff_exists_invariant _ _ _).mpr ?_
+  let φ : S × V →ₗ[𝕜] X × X :=
+    LinearMap.prod (S.subtype.coprod V.subtype) (V.subtype.comp (LinearMap.snd 𝕜 S V))
+  let Ve : Submodule 𝕜 (X × X) := LinearMap.range φ
+  refine ⟨Ve, ?_, ?_, ?_⟩
+  · rintro _ ⟨d, rfl⟩
+    exact ⟨(⟨E d, hE ⟨d, rfl⟩⟩, ⟨0, V.zero_mem⟩), by
+      ext <;> simp [φ, LinearMap.coprod_apply, cabPairInterconnection]⟩
+  · rintro _ ⟨q, rfl⟩
+    obtain ⟨x1, x2⟩ := q
+    change H ((x1 : X) + (x2 : X)) = 0
+    rw [map_add, LinearMap.mem_ker.mp (hH (hSV x1.2)),
+      LinearMap.mem_ker.mp (hH x2.2), add_zero]
+  · rintro _ ⟨q, hq, rfl⟩
+    obtain ⟨p, rfl⟩ := hq
+    obtain ⟨x1, x2⟩ := p
+    have hdecomp : φ (x1, x2) = ((x1 : X), 0) + ((x2 : X), (x2 : X)) := by
+      ext <;> simp [φ, LinearMap.coprod_apply]
+    rw [hdecomp, map_add]
+    refine Ve.add_mem ?_ ?_
+    · have hNx1 : (sys.A + sys.B.comp (N.comp sys.C)) (x1 : X) ∈ V :=
+        hN ⟨(x1 : X), x1.2, rfl⟩
+      have hGx1 : (sys.A + G.comp sys.C) (x1 : X) ∈ S :=
+        hG ⟨(x1 : X), x1.2, rfl⟩
+      refine ⟨(⟨(sys.A + G.comp sys.C) (x1 : X), hGx1⟩,
+        ⟨sys.B (N (sys.C (x1 : X))) - G (sys.C (x1 : X)), ?_⟩), ?_⟩
+      · have hsub : (sys.A + sys.B.comp (N.comp sys.C)) (x1 : X) -
+            (sys.A + G.comp sys.C) (x1 : X) ∈ V :=
+          V.sub_mem hNx1 (hSV hGx1)
+        simpa [LinearMap.sub_apply, LinearMap.add_apply, LinearMap.comp_apply] using hsub
+      · rw [hcl0 (x1 : X)]
+        ext <;> simp [φ, LinearMap.coprod_apply]
+    · have hFx2 : (sys.A + sys.B.comp F) (x2 : X) ∈ V :=
+        hF ⟨(x2 : X), x2.2, rfl⟩
+      refine ⟨(⟨0, S.zero_mem⟩, ⟨(sys.A + sys.B.comp F) (x2 : X), hFx2⟩), ?_⟩
+      rw [hcl2 (x2 : X)]
+      ext <;> simp [φ, LinearMap.coprod_apply]
+
+/-- **Theorem 6.6 / Corollary 6.7 (existence of a decoupling controller).** For a
+strictly proper plant (`D = 0`), a `(C, A, B)`-pair between `im E` and `ker H`
+yields a finite-dimensional dynamic measurement-feedback controller which is
+well posed and whose closed loop is disturbance decoupled.
+
+The controller is the one of equation `(6.7)`: the gains `F`, `G` come from the
+controlled- and conditioned-invariance certificates and `N` from Lemma 6.3;
+well-posedness is automatic for a strictly proper plant. -/
+theorem exists_dynamicController_of_isCABPairBetween
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V) :
+    ∃ ctrl : DynamicController 𝕜 X Y U,
+      (cabPairInterconnection sys ctrl E H).IsClosedLoopDisturbanceDecoupled
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD) := by
+  have hpair' := hpair
+  obtain ⟨⟨hSV, hS, hV⟩, -, -⟩ := hpair'
+  obtain ⟨F, hF⟩ := LinearMap.exists_stateFeedback_of_isControlledInvariant hV
+  obtain ⟨G, hG⟩ := LinearMap.exists_outputInjection_of_isConditionedInvariant hS
+  obtain ⟨N, hN⟩ := exists_outputFeedback_of_isCABPair hSV hS hV
+  exact ⟨cabPairController sys F G N,
+    isClosedLoopDisturbanceDecoupled_of_isCABPairBetween sys hD E H S V hpair F G N hF hG hN
+      ((cabPairInterconnection sys (cabPairController sys F G N) E H).isWellPosed_of_D_eq_zero hD)⟩
+
+end Synthesis
 
 end LinearSystem
