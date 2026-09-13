@@ -203,6 +203,11 @@ sufficiency halves remain explicit follow-up obligations; disturbance-decoupling
 now has its algebraic and convolution foundations, while transfer-function and dynamic-controller
 bridges remain open.
 
+Dynamic-feedback foundations now define controller and plant interconnections, algebraic-loop
+well-posedness, resolved signals, closed-loop maps, and zero-disturbance bookkeeping. Full
+dynamic decoupling synthesis, spectrum factorization, and internal/external stabilization remain
+follow-up layers.
+
 The disturbance-decoupling foundations now define Markov responses and exact decoupling,
 prove the reachable/unobservable and controlled-invariant characterizations, include the
 finite-dimensional geometric corollary, and record coordinate-invariance and test examples.
