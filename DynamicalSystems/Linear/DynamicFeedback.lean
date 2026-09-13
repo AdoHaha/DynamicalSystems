@@ -8,6 +8,7 @@ module
 public import DynamicalSystems.Linear.DisturbanceDecoupling
 public import DynamicalSystems.Linear.Stabilization
 public import DynamicalSystems.Linear.Trajectory
+public import Mathlib.MeasureTheory.Integral.ExpDecay
 
 /-! # Dynamic measurement-feedback: algebraic foundations
 
@@ -120,8 +121,10 @@ controlled output into the flow `(d, z) ↦ (0, H_e e^{A_e t} B_e d)`
 (`externalFlow`) and asks that this flow be stable and attractive at the origin.
 It is derived from Hurwitzness of the extended closed loop
 (`isExternallyStable_of_isHurwitz_closedLoopMap`), which is the state-space form
-of Theorem 3.23 (internal stability implies external stability); the full
-BIBO/integrability statement of Theorem 3.21 is not claimed.
+of Theorem 3.23 (internal stability implies external stability). The stronger
+BIBO/integrability content of Theorem 3.21 is supplied separately by the
+predicate `IsBIBOStable` and the bridge
+`isBIBOStable_externalResponse_of_isHurwitz`.
 
 ## Scope
 
@@ -193,12 +196,20 @@ externally stable whenever the extended closed loop is Hurwitz
 (`DynamicInterconnection.isExternallyStable_of_isHurwitz_closedLoopMap`,
 `LinearSystem.isExternallyStable_closedLoopSystem_cabPairController`), and a
 controllable/observable plant admits such externally stabilizing gains
-(`LinearSystem.exists_externallyStabilizing_cabPair_gains`). The *geometric*
-necessary-and-sufficient conditions of Corollary 6.22 (`im E ⊂ V*(ker H) +
-Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`), the transfer-function form of decoupling,
-and the full BIBO/integrability statement of Theorem 3.21 remain future work;
-nonlinear (Conte–Moog–Perdon) dynamic feedback stays in the documented future
-roadmap.
+(`LinearSystem.exists_externallyStabilizing_cabPair_gains`);
+* the **external BIBO/integrability bridge** of Theorem 3.21: the closed-loop
+impulse response is Bochner integrable on `[0, ∞)` and the forced
+disturbance-to-controlled-output channel is bounded-input bounded-output
+whenever the extended closed loop is Hurwitz
+(`DynamicInterconnection.IsBIBOStable`,
+`LinearSystem.externalResponse_integrable_of_isHurwitz`,
+`LinearSystem.isBIBOStable_externalResponse_of_isHurwitz`), with the convolution
+kernel identified in the accepted disturbance-convolution API.
+
+The *geometric* necessary-and-sufficient conditions of Corollary 6.22
+(`im E ⊂ V*(ker H) + Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`) and the
+transfer-function form of decoupling remain future work; nonlinear
+(Conte–Moog–Perdon) dynamic feedback stays in the documented future roadmap.
 
 ## Main definitions
 
@@ -228,6 +239,10 @@ roadmap.
   impulse response `H_e e^{A_e t} B_e`
 * `DynamicInterconnection.externalFlow`, `DynamicInterconnection.IsExternallyStable`:
   the forced-response flow and its external asymptotic stability predicate
+* `DynamicInterconnection.externalResponseOperator`: the forced impulse response
+  `H_e e^{A_e t} B_e` bundled as a continuous linear operator `D →L[ℝ] Z`
+* `DynamicInterconnection.IsBIBOStable`: Bochner integrability on `[0, ∞)` plus
+  the bounded-input bounded-output property of the forced channel
 
 ## Main results
 
@@ -264,6 +279,14 @@ roadmap.
 * `DynamicInterconnection.isExternallyStable_of_isHurwitz_closedLoopMap`
 * `LinearSystem.isExternallyStable_closedLoopSystem_cabPairController`
 * `LinearSystem.exists_externallyStabilizing_cabPair_gains`
+* `DynamicInterconnection.externalResponse_eq_disturbanceImpulseResponse`
+* `DynamicInterconnection.disturbanceContribution_eq_convolution_externalResponse`
+* `DynamicInterconnection.externalResponse_integrable`
+* `DynamicInterconnection.isBIBOStable_of_isHurwitz`
+* `LinearSystem.externalResponse_integrable_of_isHurwitz`
+* `LinearSystem.isBIBOStable_externalResponse_of_isHurwitz`
+* `LinearSystem.isBIBOStable_externalResponse_cabPairController`
+* `LinearSystem.exists_biboStable_cabPair_gains`
 
 ## References
 
@@ -1130,9 +1153,10 @@ Lyapunov stable (`Filter.IsStableOn`) and attractive (`Filter.IsAttractive`) at
 the origin, and `isExternallyStable_of_isHurwitz_closedLoopMap` derives it from
 the Hurwitz property of the extended closed-loop map. This is the formal content
 of Theorem 3.23 (internal stability implies external stability) for the dynamic
-closed loop. The full BIBO statement of Theorem 3.21 additionally needs an
-exponential-rate/integrability estimate of the impulse response, which the
-accepted Hurwitz API does not provide and which is therefore not asserted. -/
+closed loop. The stronger Bochner-integrability and bounded-input bounded-output
+statement of Theorem 3.21 is supplied below by the predicate `IsBIBOStable` and
+the bridge `isBIBOStable_of_isHurwitz`, using the accepted exponential
+operator-norm bound `LinearMap.exists_exponential_norm_bound_of_isHurwitz`. -/
 
 /-- The **forced disturbance-to-output response** of the closed loop: the
 controlled output of the autonomous extended flow started from the disturbance
@@ -1188,13 +1212,10 @@ analytic decay content implied by `A_e` Hurwitz when the initial extended state
 is the disturbance image `B_e d` (zero plant/controller state together with an
 impulsive disturbance).
 
-The full BIBO/integrability statement of Theorem 3.21 and the geometric
-necessary-and-sufficient conditions of Corollary 6.22 (PDF pages 159–160 /
-printed pages 145–146) are **not** asserted. The precise missing bridge is an
-exponential-rate (equivalently impulse-response integrability) estimate for the
-Hurwitz flow, which the accepted `LinearMap.tendsto_exp_of_isHurwitz` /
-`LinearMap.isStableOn_expFlow_of_isHurwitz` API supplies only in the form of
-pointwise convergence and a uniform bound. -/
+The stronger Bochner-integrability and bounded-input bounded-output statement of
+Theorem 3.21 is recorded by the separate predicate `IsBIBOStable`. The
+*geometric* necessary-and-sufficient conditions of Corollary 6.22 (PDF pages
+159–160 / printed pages 145–146) are **not** asserted. -/
 noncomputable def IsExternallyStable (h : ic.IsWellPosed) : Prop :=
   (nhds (0 : D × Z)).IsStableOn (fun t q => ic.externalFlow h t q) (Set.Ici 0) ∧
     Filter.IsAttractive (l := nhds (0 : D × Z))
@@ -2187,5 +2208,350 @@ theorem exists_externallyStabilizing_cabPair_gains (sys : LinearSystem ℝ X U Y
   exact isExternallyStable_closedLoopSystem_cabPairController sys hD E H F G 0 _ hF hG
 
 end RealClosedLoopExternalStability
+
+/-! ## Bochner integrability and BIBO stability of the external response
+
+The external-stabilization predicate `IsExternallyStable` records only Lyapunov
+stability and attractivity of the closed-loop impulse response
+`t ↦ H_e e^{A_e t} B_e`. The stronger content of Theorem 3.21 is that this
+impulse response is *Bochner integrable* on `[0, ∞)` and that the forced
+disturbance response is *bounded-input bounded-output* (BIBO): a bounded,
+admissible (locally integrable) disturbance produces a bounded controlled
+output, with a bound proportional to the input bound.
+
+Both facts follow from the accepted quantitative operator-norm bound
+`LinearMap.exists_exponential_norm_bound_of_isHurwitz`: a Hurwitz closed-loop map
+`A_e = closedLoopMap h` satisfies `‖e^{t A_e}‖ ≤ C e^{-γ t}` with `C, γ > 0`, so
+the impulse-response operator
+
+`externalResponseOperator h t = H_e ∘ e^{t A_e} ∘ B_e : D →L[ℝ] Z`
+
+is exponentially bounded and integrable on `[0, ∞)`. The BIBO estimate then
+bounds the Bochner convolution integral
+
+`y(t) = ∫_0^t H_e e^{(t - s) A_e} B_e (d(s)) ds`
+
+of a bounded locally integrable disturbance by the total mass of the impulse
+response. The impulse response is identified with the kernel of the accepted
+disturbance-convolution API through
+`externalResponse_eq_disturbanceImpulseResponse` and
+`disturbanceContribution_eq_convolution_externalResponse` (zero initial state,
+locally integrable disturbance explicit).
+
+The predicate `IsBIBOStable` records precisely the Bochner integrability of the
+impulse response and the BIBO bound, keeping the zero initial state and the
+admissible locally integrable disturbances explicit. The geometric
+necessary-and-sufficient conditions of Corollary 6.22 are *not* claimed here.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 3.21 and Section 6.6 (PDF pages
+156, 159, 164). -/
+
+open MeasureTheory Filter Set
+open scoped Interval
+
+namespace DynamicInterconnection
+
+section BIBO
+
+variable {X U Y W D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable [NormedAddCommGroup W] [NormedSpace ℝ W]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [AddCommGroup U] [Module ℝ U] [AddCommGroup Y] [Module ℝ Y]
+variable [FiniteDimensional ℝ X] [FiniteDimensional ℝ W] [FiniteDimensional ℝ D]
+variable (ic : DynamicInterconnection ℝ X U Y W D Z)
+
+/-- The external impulse response `H_e e^{A_e t} B_e` bundled as a continuous
+linear operator `D →L[ℝ] Z`. The continuity is automatic because `D` and the
+closed-loop state space `X × W` are finite-dimensional. This is the operator
+whose norm the accepted Hurwitz exponential bound controls. -/
+noncomputable def externalResponseOperator (h : ic.IsWellPosed) (t : ℝ) : D →L[ℝ] Z :=
+  (ic.outputMap.toContinuousLinearMap).comp
+    (((ic.closedLoopSystem h).expFlow t).comp
+      (ic.disturbanceMapWithF h).toContinuousLinearMap)
+
+/-- Evaluation of the bundled external impulse response is the forced response
+`externalResponse`. -/
+@[simp]
+theorem externalResponseOperator_apply (h : ic.IsWellPosed) (t : ℝ) (d : D) :
+    ic.externalResponseOperator h t d = ic.externalResponse h t d := rfl
+
+omit [FiniteDimensional ℝ D] in
+/-- The forced disturbance-to-output response is continuous in time at each
+disturbance direction. -/
+theorem continuous_externalResponse (h : ic.IsWellPosed) (d : D) :
+    Continuous (fun t : ℝ => ic.externalResponse h t d) := by
+  have hflow : Continuous (fun t : ℝ => (ic.closedLoopSystem h).expFlow t) := by
+    simpa using continuous_expFlow_sub (ic.closedLoopSystem h) 0
+  have hv : Continuous (fun t : ℝ =>
+      (ic.closedLoopSystem h).expFlow t (ic.disturbanceMapWithF h d)) :=
+    hflow.clm_apply continuous_const
+  change Continuous (fun t : ℝ => ic.outputMap
+    ((ic.closedLoopSystem h).expFlow t (ic.disturbanceMapWithF h d)))
+  exact ic.outputMap.toContinuousLinearMap.continuous.comp hv
+
+/-- The bundled external impulse response is continuous in time. -/
+theorem continuous_externalResponseOperator (h : ic.IsWellPosed) :
+    Continuous (fun t : ℝ => ic.externalResponseOperator h t) := by
+  have hflow : Continuous (fun t : ℝ => (ic.closedLoopSystem h).expFlow t) := by
+    simpa using continuous_expFlow_sub (ic.closedLoopSystem h) 0
+  have h2 : Continuous (fun t : ℝ =>
+      ((ic.closedLoopSystem h).expFlow t).comp
+        (ic.disturbanceMapWithF h).toContinuousLinearMap) :=
+    hflow.clm_comp continuous_const
+  have h3 : Continuous (fun t : ℝ =>
+      (ic.outputMap.toContinuousLinearMap).comp
+        (((ic.closedLoopSystem h).expFlow t).comp
+          (ic.disturbanceMapWithF h).toContinuousLinearMap)) :=
+    continuous_const.clm_comp h2
+  simpa only [externalResponseOperator] using h3
+
+/-- **Exponential operator-norm bound for the external impulse response.** For
+a Hurwitz extended closed loop there are `A ≥ 0` and `γ > 0` with
+`‖externalResponseOperator h t‖ ≤ A e^{-γ t}` for every `t ≥ 0`. This pushes the
+accepted bound `LinearMap.exists_exponential_norm_bound_of_isHurwitz` through
+the bounded factors `H_e` and `B_e`. -/
+theorem norm_externalResponseOperator_le (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) :
+    ∃ A γ : ℝ, 0 ≤ A ∧ 0 < γ ∧
+      ∀ t : ℝ, 0 ≤ t → ‖ic.externalResponseOperator h t‖ ≤ A * Real.exp (-γ * t) := by
+  obtain ⟨C, hCpos, γ, hγpos, hbound⟩ :=
+    LinearMap.exists_exponential_norm_bound_of_isHurwitz (ic.closedLoopMap h) hH
+  refine ⟨‖ic.outputMap.toContinuousLinearMap‖ *
+      ‖(ic.disturbanceMapWithF h).toContinuousLinearMap‖ * C, γ, ?_, hγpos, ?_⟩
+  · exact mul_nonneg (mul_nonneg (norm_nonneg _) (norm_nonneg _)) hCpos.le
+  · intro t ht
+    have hexp : (ic.closedLoopSystem h).expFlow t =
+        NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap) :=
+      ic.closedLoopSystem_expFlow_eq h t
+    rw [externalResponseOperator, hexp]
+    calc ‖(ic.outputMap.toContinuousLinearMap).comp
+          ((NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap)).comp
+            (ic.disturbanceMapWithF h).toContinuousLinearMap)‖
+        ≤ ‖ic.outputMap.toContinuousLinearMap‖ *
+            ‖(NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap)).comp
+              (ic.disturbanceMapWithF h).toContinuousLinearMap‖ :=
+          ContinuousLinearMap.opNorm_comp_le _ _
+      _ ≤ ‖ic.outputMap.toContinuousLinearMap‖ *
+            (‖NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap)‖ *
+              ‖(ic.disturbanceMapWithF h).toContinuousLinearMap‖) := by
+          gcongr
+          exact ContinuousLinearMap.opNorm_comp_le _ _
+      _ ≤ ‖ic.outputMap.toContinuousLinearMap‖ *
+            ((C * Real.exp (-γ * t)) *
+              ‖(ic.disturbanceMapWithF h).toContinuousLinearMap‖) := by
+          gcongr
+          exact hbound t ht
+      _ = (‖ic.outputMap.toContinuousLinearMap‖ *
+            ‖(ic.disturbanceMapWithF h).toContinuousLinearMap‖ * C) *
+            Real.exp (-γ * t) := by ring
+
+/-- The external impulse-response operator is Bochner integrable on `[0, ∞)`
+when the closed loop is Hurwitz. -/
+theorem externalResponseOperator_integrable (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) :
+    IntegrableOn (fun t : ℝ => ic.externalResponseOperator h t) (Set.Ici 0) := by
+  obtain ⟨A, γ, hA, hγ, hbound⟩ := ic.norm_externalResponseOperator_le h hH
+  have hg : IntegrableOn (fun t : ℝ => A * Real.exp (-γ * t)) (Set.Ici 0) :=
+    (integrableOn_Ici_iff_integrableOn_Ioi
+      (f := fun t : ℝ => A * Real.exp (-γ * t)) (b := 0)).mpr
+      ((exp_neg_integrableOn_Ioi 0 hγ).const_mul A)
+  refine Integrable.mono' hg ?_ ?_
+  · exact (ic.continuous_externalResponseOperator h).aestronglyMeasurable.restrict
+  · filter_upwards [self_mem_ae_restrict measurableSet_Ici] with t ht
+    exact hbound t ht
+
+/-- The norm of the external impulse-response operator is integrable on
+`[0, ∞)` when the closed loop is Hurwitz. Its total mass is the BIBO constant. -/
+theorem norm_externalResponseOperator_integrable (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) :
+    IntegrableOn (fun t : ℝ => ‖ic.externalResponseOperator h t‖) (Set.Ici 0) :=
+  (ic.externalResponseOperator_integrable h hH).norm
+
+/-- **Bochner integrability of the external response.** Under a Hurwitz closed
+loop the forced response `t ↦ externalResponse h t d` is integrable on `[0, ∞)`
+for every disturbance direction `d`. -/
+theorem externalResponse_integrable (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) (d : D) :
+    IntegrableOn (fun t : ℝ => ic.externalResponse h t d) (Set.Ici 0) := by
+  have hKn := ic.norm_externalResponseOperator_integrable h hH
+  have hg : IntegrableOn
+      (fun t : ℝ => ‖ic.externalResponseOperator h t‖ * ‖d‖) (Set.Ici 0) :=
+    hKn.mul_const ‖d‖
+  refine Integrable.mono' hg ?_ ?_
+  · exact (ic.continuous_externalResponse h d).aestronglyMeasurable.restrict
+  · filter_upwards [self_mem_ae_restrict measurableSet_Ici] with t ht
+    calc ‖ic.externalResponse h t d‖
+        = ‖ic.externalResponseOperator h t d‖ := by rw [externalResponseOperator_apply]
+      _ ≤ ‖ic.externalResponseOperator h t‖ * ‖d‖ :=
+          (ic.externalResponseOperator h t).le_opNorm d
+
+omit [FiniteDimensional ℝ D] in
+/-- **The forced response is the disturbance impulse response of the closed
+loop.** This is the bridge to the disturbance-convolution API: the closed-loop
+impulse response `externalResponse` is exactly
+`LinearMap.disturbanceImpulseResponse` of the channel
+`(closedLoopMap h, disturbanceMapWithF h, outputMap)`. -/
+theorem externalResponse_eq_disturbanceImpulseResponse (h : ic.IsWellPosed)
+    (t : ℝ) (d : D) :
+    ic.externalResponse h t d =
+      LinearMap.disturbanceImpulseResponse (ic.closedLoopMap h) (ic.disturbanceMapWithF h)
+        ic.outputMap t d := rfl
+
+/-- **Convolution form of the closed-loop forced output.** For a locally
+integrable disturbance and zero initial state, the closed-loop disturbance
+contribution is the convolution of `externalResponse` with the disturbance.
+This is `LinearMap.disturbanceContribution_eq_convolution` for the closed-loop
+channel, with the zero initial state and the admissible locally integrable input
+kept explicit. -/
+theorem disturbanceContribution_eq_convolution_externalResponse [CompleteSpace Z]
+    (h : ic.IsWellPosed) {d : ℝ → D} (hd : LocallyIntegrable d volume) (t : ℝ) :
+    LinearMap.disturbanceContribution (ic.closedLoopMap h) (ic.disturbanceMapWithF h)
+        ic.outputMap 0 d t =
+      ∫ s in (0 : ℝ)..t, ic.externalResponse h (t - s) (d s) := by
+  rw [LinearMap.disturbanceContribution_eq_convolution _ _ _ hd t]
+  apply intervalIntegral.integral_congr
+  intro s _
+  exact (ic.externalResponse_eq_disturbanceImpulseResponse h (t - s) (d s)).symm
+
+/-- **Bochner integrability and bounded-input bounded-output stability of the
+external response.** The forced disturbance-to-controlled-output channel of a
+well-posed interconnection with Hurwitz extended closed loop is
+
+* Bochner integrable on `[0, ∞)` in every disturbance direction, and
+* bounded-input bounded-output: the convolution of the impulse response with a
+  bounded, admissible (locally integrable) disturbance is bounded by the total
+  mass of the impulse response, independently of the disturbance and of time.
+
+This is the BIBO/integrability bridge of Trentelman–Stoorvogel–Hautus, Theorem
+3.21, for the closed loop (6.12). The geometric necessary-and-sufficient
+conditions of Corollary 6.22 are not part of this predicate. -/
+noncomputable def IsBIBOStable (h : ic.IsWellPosed) : Prop :=
+  (∀ d : D, IntegrableOn (fun t : ℝ => ic.externalResponse h t d) (Set.Ici 0)) ∧
+    ∃ M : ℝ, 0 ≤ M ∧
+      ∀ (d : ℝ → D), LocallyIntegrable d volume →
+        (∀ t : ℝ, 0 ≤ t → ‖d t‖ ≤ 1) →
+          ∀ t : ℝ, 0 ≤ t →
+            ‖∫ s in (0 : ℝ)..t, ic.externalResponse h (t - s) (d s)‖ ≤ M
+
+/-- **Hurwitz closed loop implies BIBO stability.** The BIBO constant is the
+total mass `∫_0^∞ ‖H_e e^{t A_e} B_e‖ dt` of the impulse-response operator, whose
+integrability is the exponential bound of `norm_externalResponseOperator_le`. -/
+theorem isBIBOStable_of_isHurwitz (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) : ic.IsBIBOStable h := by
+  refine ⟨fun d => ic.externalResponse_integrable h hH d, ?_⟩
+  have hKn : IntegrableOn (fun t : ℝ => ‖ic.externalResponseOperator h t‖) (Set.Ici 0) :=
+    ic.norm_externalResponseOperator_integrable h hH
+  refine ⟨∫ t in Set.Ici (0 : ℝ), ‖ic.externalResponseOperator h t‖,
+    integral_nonneg_of_ae (Eventually.of_forall fun _ => norm_nonneg _), ?_⟩
+  intro d _hd hd_bound t ht
+  have hg_int : IntervalIntegrable
+      (fun s : ℝ => ‖ic.externalResponseOperator h (t - s)‖) volume 0 t := by
+    have hcont : Continuous (fun s : ℝ => ic.externalResponseOperator h (t - s)) :=
+      (ic.continuous_externalResponseOperator h).comp (by fun_prop)
+    exact hcont.norm.intervalIntegrable 0 t
+  have hle : ‖∫ s in (0 : ℝ)..t, ic.externalResponse h (t - s) (d s)‖ ≤
+      ∫ s in (0 : ℝ)..t, ‖ic.externalResponseOperator h (t - s)‖ := by
+    refine intervalIntegral.norm_integral_le_of_norm_le ht ?_ hg_int
+    filter_upwards with s hs
+    calc ‖ic.externalResponse h (t - s) (d s)‖
+        = ‖ic.externalResponseOperator h (t - s) (d s)‖ := by
+          rw [externalResponseOperator_apply]
+      _ ≤ ‖ic.externalResponseOperator h (t - s)‖ * ‖d s‖ :=
+          (ic.externalResponseOperator h (t - s)).le_opNorm (d s)
+      _ ≤ ‖ic.externalResponseOperator h (t - s)‖ * 1 := by
+          gcongr
+          exact hd_bound s (le_of_lt hs.1)
+      _ = ‖ic.externalResponseOperator h (t - s)‖ := mul_one _
+  refine hle.trans ?_
+  have hsubst : (∫ s in (0 : ℝ)..t, ‖ic.externalResponseOperator h (t - s)‖) =
+      ∫ u in (0 : ℝ)..t, ‖ic.externalResponseOperator h u‖ := by
+    simpa using intervalIntegral.integral_comp_sub_left (a := 0) (b := t)
+      (fun u : ℝ => ‖ic.externalResponseOperator h u‖) t
+  rw [hsubst, intervalIntegral.integral_of_le ht]
+  exact setIntegral_mono_set hKn
+    (Eventually.of_forall fun _ => norm_nonneg _)
+    (Eventually.of_forall fun x hx => le_of_lt hx.1)
+
+end BIBO
+
+end DynamicInterconnection
+
+section RealClosedLoopBIBO
+
+variable {X U Y W D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [AddCommGroup U] [Module ℝ U] [AddCommGroup Y] [Module ℝ Y]
+variable (ic : DynamicInterconnection ℝ X U Y W D Z)
+
+/-- **Bochner integrability of the closed-loop impulse response.** If the
+extended closed-loop map `A_e` of a well-posed interconnection is Hurwitz then
+the forced disturbance-to-output impulse response is Bochner integrable on
+`[0, ∞)` in every disturbance direction. This is the integrability half of the
+external BIBO bridge (Trentelman–Stoorvogel–Hautus, Theorem 3.21). -/
+theorem externalResponse_integrable_of_isHurwitz (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) (d : D) :
+    IntegrableOn (fun t : ℝ => ic.externalResponse h t d) (Set.Ici 0) :=
+  ic.externalResponse_integrable h hH d
+
+/-- **BIBO stability of the closed-loop impulse response.** If the extended
+closed-loop map `A_e` is Hurwitz then the forced disturbance-to-controlled-output
+channel is bounded-input bounded-output for every bounded, admissible (locally
+integrable) disturbance, with zero initial state. This is the BIBO half of the
+external bridge (Trentelman–Stoorvogel–Hautus, Theorem 3.21); the geometric
+necessary-and-sufficient conditions of Corollary 6.22 are not claimed. -/
+theorem isBIBOStable_externalResponse_of_isHurwitz (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) :
+    ic.IsBIBOStable h :=
+  ic.isBIBOStable_of_isHurwitz h hH
+
+/-- **BIBO stability for the strictly proper cabPair controller.** For a strictly
+proper plant (`D = 0`) whose cabPair controller (6.7) has Hurwitz state-feedback
+and observer-error blocks, the closed-loop disturbance-to-output channel is BIBO
+stable. This specializes the Hurwitz bridge to the accepted controller of
+Sections 6.3–6.6 and makes the strictly proper, well-posed hypotheses explicit. -/
+theorem isBIBOStable_externalResponse_cabPairController
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    (cabPairInterconnection sys (cabPairController sys F G N) E H).IsBIBOStable hwp :=
+  isBIBOStable_externalResponse_of_isHurwitz _ hwp
+    (isHurwitz_closedLoopMap_cabPairController sys hD E H F G N hwp hF hG)
+
+end RealClosedLoopBIBO
+
+section RealClosedLoopBIBOExistence
+
+variable {X U Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+/-- **Existence of a BIBO-stabilizing dynamic measurement feedback.** A
+controllable and observable strictly proper plant admits a cabPair controller
+with accepted Hurwitz gains whose closed-loop disturbance-to-output channel is
+BIBO stable. The gains are those of `exists_hurwitz_cabPair_gains`, so the BIBO
+bridge is not vacuous. -/
+theorem exists_biboStable_cabPair_gains (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hcont : LinearMap.IsControllable sys.A sys.B)
+    (hobs : LinearMap.IsObservable sys.C sys.A) :
+    ∃ F : X →ₗ[ℝ] U, ∃ G : Y →ₗ[ℝ] X, ∃ N : Y →ₗ[ℝ] U,
+      (cabPairInterconnection sys (cabPairController sys F G N) E H).IsBIBOStable
+        ((cabPairInterconnection sys (cabPairController sys F G N) E H).isWellPosed_of_D_eq_zero
+          hD) := by
+  obtain ⟨F, G, hF, hG⟩ := exists_hurwitz_cabPair_gains sys hcont hobs
+  refine ⟨F, G, 0, ?_⟩
+  exact isBIBOStable_externalResponse_cabPairController sys hD E H F G 0 _ hF hG
+
+end RealClosedLoopBIBOExistence
 
 end LinearSystem
