@@ -258,8 +258,9 @@ invertibility of `1 - D N`.
 {docstring LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween}
 
 The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
-transfer-function form `H (s I - A)⁻¹ E = 0`, a measurement disturbance channel `F`, and the
-spectrum/internal-stability layers remain deferred obligations.
+explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, and
+the spectrum/internal-stability layer are formalized. Full nonzero-`F` synthesis and external
+stabilization remain deferred.
 
 # Algebraic examples
 
@@ -523,12 +524,9 @@ is equivalent to zero disturbance contribution for every locally integrable inpu
 synthesis layer constructs a dynamic measurement-feedback controller from an `IsCABPairBetween`
 certificate and proves the closed loop decoupled.
 
-The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is now proved in both directions
-under the explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is
-not claimed. The documented deferred obligations are: the converse extraction of a `(C, A, B)`-pair
-from a decoupled closed loop; a measurement disturbance channel `F` in the readout; the spectrum
-factorization of the extended system map and the internal/external stabilization layers; and the
-nonlinear theory of Chapters 7–15 together with the algebraic-methods reference of Conte, Moog and
-Perdon. The examples module supplies the nonzero-feedthrough observer, the possible/impossible
-decoupling instances and the proved scalar-filter representation bridge, so the algebraic release
-task is complete modulo the deferred items above.
+The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
+explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
+The remaining deferred obligations are full nonzero-`F` synthesis, external stabilization, and
+the nonlinear theory of Chapters 7–15 together with the algebraic-methods reference of Conte,
+Moog and Perdon. The examples module supplies the nonzero-feedthrough observer, possible/impossible
+decoupling instances, and the proved scalar-filter representation bridge.
