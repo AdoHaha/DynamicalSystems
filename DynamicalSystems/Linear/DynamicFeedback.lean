@@ -108,12 +108,34 @@ observer-error coordinate change is `observerErrorEquiv`; the sign convention is
 that the injection `+G C` of (6.7) is the contract's `A - L.comp C` with
 `L = -G` (`observerErrorBlock_eq`).
 
+## External stabilization of the forced channel
+
+External stabilization (Sections 4.8 and 6.6) is the forced counterpart of the
+above. The closed-loop impulse response of the disturbance channel (6.12) is the
+forced response `H_e e^{A_e t} B_e` (`externalResponse`), where `B_e` is the
+total channel `disturbanceMapWithF`. Because the project stability vocabulary
+`Filter.IsStableOn` / `Filter.IsAttractive` is stated for an endomorphism, the
+predicate `IsExternallyStable` packages the disturbance direction and the
+controlled output into the flow `(d, z) ↦ (0, H_e e^{A_e t} B_e d)`
+(`externalFlow`) and asks that this flow be stable and attractive at the origin.
+It is derived from Hurwitzness of the extended closed loop
+(`isExternallyStable_of_isHurwitz_closedLoopMap`), which is the state-space form
+of Theorem 3.23 (internal stability implies external stability); the full
+BIBO/integrability statement of Theorem 3.21 is not claimed.
+
 ## Scope
 
 This file contains the algebraic foundations of Chapter 6 together with the
 **dynamic decoupling synthesis** of Theorem 6.4 / Corollary 6.7 and the
 **geometric extraction (necessity)** of Theorem 6.2 / Theorem 6.6, so the
 following is now claimed and proved here:
+
+* the **external-stabilization sufficient direction** (Sections 4.8 and 6.6): a
+  Hurwitz extended closed loop is externally stable, and a
+  controllable/observable plant admits a cabPair controller with accepted
+  Hurwitz gains whose closed loop is externally stable
+  (`isExternallyStable_closedLoopSystem_cabPairController`,
+  `exists_externallyStabilizing_cabPair_gains`);
 
 * a `(C, A, B)`-pair between `im E` and `ker H` yields the controller `(6.7)`
   with state space `W = X`, and its closed loop is disturbance decoupled
@@ -165,10 +187,18 @@ declarations:
   disturbance (`G F = -E`, equivalently `ker F ≤ ker E`). The source's
   Theorem 6.4 is the `F = 0` case, and unconditional nonzero-`F` decoupling is
   not claimed because that factorization is not automatic;
-* the transfer-function form of decoupling and the external stabilization of
-  Section 6.6;
-* nonlinear (Conte–Moog–Perdon) dynamic feedback, which stays in the documented
-  future roadmap.
+* the **external stabilization** sufficient direction of Sections 4.8 and 6.6:
+the forced disturbance-to-controlled-output response of the controller (6.7) is
+externally stable whenever the extended closed loop is Hurwitz
+(`DynamicInterconnection.isExternallyStable_of_isHurwitz_closedLoopMap`,
+`LinearSystem.isExternallyStable_closedLoopSystem_cabPairController`), and a
+controllable/observable plant admits such externally stabilizing gains
+(`LinearSystem.exists_externallyStabilizing_cabPair_gains`). The *geometric*
+necessary-and-sufficient conditions of Corollary 6.22 (`im E ⊂ V*(ker H) +
+Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`), the transfer-function form of decoupling,
+and the full BIBO/integrability statement of Theorem 3.21 remain future work;
+nonlinear (Conte–Moog–Perdon) dynamic feedback stays in the documented future
+roadmap.
 
 ## Main definitions
 
@@ -194,6 +224,10 @@ declarations:
 * `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`,
   `LinearSystem.measurementInterconnection`
 * `LinearSystem.observerErrorEquiv`: the observer-error coordinate change
+* `DynamicInterconnection.externalResponse`: the forced disturbance-to-output
+  impulse response `H_e e^{A_e t} B_e`
+* `DynamicInterconnection.externalFlow`, `DynamicInterconnection.IsExternallyStable`:
+  the forced-response flow and its external asymptotic stability predicate
 
 ## Main results
 
@@ -227,12 +261,16 @@ declarations:
 * `LinearSystem.isAsymptoticallyStable_closedLoopSystem_cabPairController`
 * `LinearSystem.exists_hurwitz_cabPair_gains`
 * `LinearSystem.exists_hurwitz_closedLoopMap_of_isControllable_isObservable`
+* `DynamicInterconnection.isExternallyStable_of_isHurwitz_closedLoopMap`
+* `LinearSystem.isExternallyStable_closedLoopSystem_cabPairController`
+* `LinearSystem.exists_externallyStabilizing_cabPair_gains`
 
 ## References
 
 * H. L. Trentelman, A. A. Stoorvogel, M. Hautus, *Control Theory for Linear
-  Systems*, Springer, 2001, Section 3.13 and Chapter 6, in particular
-  equations (6.2)–(6.4), Definition 6.1 and exercise 6.3.
+  Systems*, Springer, 2001, Section 3.13, Sections 4.8 and 6.6 (external
+  stabilization), and Chapter 6, in particular equations (6.2)–(6.4), (6.12),
+  Definitions 4.36, 6.1 and 6.19, Theorems 3.23, 3.21 and exercise 6.3.
 -/
 
 @[expose] public section
@@ -1075,6 +1113,163 @@ theorem closedLoopSystem_variationOfConstants_eq_homogeneous (h : ic.IsWellPosed
   rw [LinearSystem.variationOfConstants, LinearSystem.homogeneousSolution,
     ic.closedLoopSystem_forcing_zero h t₀]
   simp
+
+open Filter
+
+/-! ### The forced disturbance-to-output channel and external stability
+
+External stabilization (Trentelman–Stoorvogel–Hautus, Sections 4.8 and 6.6)
+concerns the *forced* disturbance-to-controlled-output response of the closed
+loop rather than the unforced extended state. The closed-loop impulse response
+of the channel (6.12) is `H_e e^{A_e t} B_e`, where `B_e` is the total
+disturbance map `disturbanceMapWithF`; its decay is the state-space counterpart
+of stability of the closed-loop transfer function `G(s) = H_e (s I - A_e)⁻¹ B_e`.
+
+The predicate `IsExternallyStable` records that this impulse response is both
+Lyapunov stable (`Filter.IsStableOn`) and attractive (`Filter.IsAttractive`) at
+the origin, and `isExternallyStable_of_isHurwitz_closedLoopMap` derives it from
+the Hurwitz property of the extended closed-loop map. This is the formal content
+of Theorem 3.23 (internal stability implies external stability) for the dynamic
+closed loop. The full BIBO statement of Theorem 3.21 additionally needs an
+exponential-rate/integrability estimate of the impulse response, which the
+accepted Hurwitz API does not provide and which is therefore not asserted. -/
+
+/-- The **forced disturbance-to-output response** of the closed loop: the
+controlled output of the autonomous extended flow started from the disturbance
+image `disturbanceMapWithF h d`. This is the state-space impulse response
+`H_e e^{A_e t} B_e` of the closed loop (6.12) evaluated at the disturbance
+direction `d`, with the measurement channel included through
+`disturbanceMapWithF`. -/
+noncomputable def externalResponse (h : ic.IsWellPosed) (t : ℝ) (d : D) : Z :=
+  ic.outputMap ((ic.closedLoopSystem h).expFlow t (ic.disturbanceMapWithF h d))
+
+omit [FiniteDimensional ℝ D] in
+@[simp]
+theorem externalResponse_apply (h : ic.IsWellPosed) (t : ℝ) (d : D) :
+    ic.externalResponse h t d =
+      ic.outputMap ((ic.closedLoopSystem h).expFlow t (ic.disturbanceMapWithF h d)) := rfl
+
+/-- The **external flow** of the forced disturbance-to-output channel. The
+project stability vocabulary (`Filter.IsStableOn`, `Filter.IsAttractive`) is
+stated for an endomorphism `ι → E → E`, whereas the forced response is a map
+`D → Z`. We therefore package the disturbance direction and the controlled
+output in the product `D × Z` and set
+`(d, z) ↦ (0, H_e e^{A_e t} B_e d)`: the first coordinate records that the
+channel is driven from the disturbance image, the second is the impulse response
+of the closed-loop output. -/
+noncomputable def externalFlow (h : ic.IsWellPosed) (t : ℝ) (q : D × Z) : D × Z :=
+  (0, ic.externalResponse h t q.1)
+
+omit [FiniteDimensional ℝ D] in
+@[simp]
+theorem externalFlow_apply (h : ic.IsWellPosed) (t : ℝ) (q : D × Z) :
+    ic.externalFlow h t q = (0, ic.externalResponse h t q.1) := rfl
+
+/-- **External asymptotic stability of the forced disturbance-to-output
+channel.** The state-space impulse response `H_e e^{A_e t} B_e` of the closed
+loop with the total disturbance channel `disturbanceMapWithF h` is Lyapunov
+stable at the origin (`Filter.IsStableOn`) and attractive at `+∞`
+(`Filter.IsAttractive`) in the project stability vocabulary, applied to the
+external flow `(d, z) ↦ (0, H_e e^{A_e t} B_e d)` of `externalFlow`.
+
+This is the forced-response analogue of the internal asymptotic-stability
+predicate: it concerns only the response generated by the disturbance channel,
+so it is genuinely external. It is the formal counterpart of stability of the
+closed-loop transfer function `G(s) = H_e (s I - A_e)⁻¹ B_e` required by
+external stabilization.
+
+The source definition is Trentelman–Stoorvogel–Hautus, Definition 6.19 (PDF
+page 156 / printed page 142): *“The problem of external stabilization by
+measurement feedback, ESPM, is to find a controller Κ such that the closed loop
+transfer function G_Κ(s) is stable.”* The state-space channel is
+`G_Κ(s) = H_e (s I - A_e)⁻¹ B_e` of equation (6.12). The predicate below records
+the Lyapunov stability and attractivity of the impulse response, which is the
+analytic decay content implied by `A_e` Hurwitz when the initial extended state
+is the disturbance image `B_e d` (zero plant/controller state together with an
+impulsive disturbance).
+
+The full BIBO/integrability statement of Theorem 3.21 and the geometric
+necessary-and-sufficient conditions of Corollary 6.22 (PDF pages 159–160 /
+printed pages 145–146) are **not** asserted. The precise missing bridge is an
+exponential-rate (equivalently impulse-response integrability) estimate for the
+Hurwitz flow, which the accepted `LinearMap.tendsto_exp_of_isHurwitz` /
+`LinearMap.isStableOn_expFlow_of_isHurwitz` API supplies only in the form of
+pointwise convergence and a uniform bound. -/
+noncomputable def IsExternallyStable (h : ic.IsWellPosed) : Prop :=
+  (nhds (0 : D × Z)).IsStableOn (fun t q => ic.externalFlow h t q) (Set.Ici 0) ∧
+    Filter.IsAttractive (l := nhds (0 : D × Z))
+      (Φ := fun t q => ic.externalFlow h t q) (l' := atTop)
+
+omit [FiniteDimensional ℝ D] in
+/-- The closed-loop flow is the operator exponential of the closed-loop map. -/
+theorem closedLoopSystem_expFlow_eq (h : ic.IsWellPosed) (t : ℝ) :
+    (ic.closedLoopSystem h).expFlow t =
+      NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap) := by
+  simp [LinearSystem.expFlow, LinearSystem.continuousA]
+
+/-- **Internal Hurwitz stability implies external stability of the forced
+channel.** If the extended closed-loop map is Hurwitz then the forced
+disturbance-to-output response is both Lyapunov stable and attractive at the
+origin, i.e. the closed loop is externally stable. The decay of the impulse
+response is derived from the accepted real Hurwitz theorem
+`LinearMap.tendsto_exp_of_isHurwitz`; no stability of the forced response is
+assumed.
+
+This is the external-stabilization bridge of Trentelman–Stoorvogel–Hautus,
+Theorem 3.23 (internal stability implies external stability) applied to the
+closed loop (6.12). -/
+theorem isExternallyStable_of_isHurwitz_closedLoopMap (h : ic.IsWellPosed)
+    (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) :
+    ic.IsExternallyStable h := by
+  have hexp : ∀ t : ℝ, (ic.closedLoopSystem h).expFlow t =
+      NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap) :=
+    ic.closedLoopSystem_expFlow_eq h
+  have hstable := LinearMap.isStableOn_expFlow_of_isHurwitz (ic.closedLoopMap h) hH
+  constructor
+  · intro s hs
+    obtain ⟨sD, hsD, sZ, hsZ, hsDZ⟩ :=
+      mem_nhds_prod_iff.mp (show s ∈ nhds ((0 : D), (0 : Z)) from hs)
+    have hsOut : (ic.outputMap.toContinuousLinearMap) ⁻¹' sZ ∈ nhds (0 : X × W) :=
+      ic.outputMap.toContinuousLinearMap.continuous.continuousAt.preimage_mem_nhds
+        (by rw [map_zero]; exact hsZ)
+    obtain ⟨u, hu, hflow⟩ := hstable _ hsOut
+    have hDmem : (ic.disturbanceMapWithF h).toContinuousLinearMap ⁻¹' u ∈ nhds (0 : D) :=
+      (ic.disturbanceMapWithF h).toContinuousLinearMap.continuous.continuousAt.preimage_mem_nhds
+        (by rw [map_zero]; exact hu)
+    refine ⟨((ic.disturbanceMapWithF h).toContinuousLinearMap ⁻¹' u) ×ˢ (Set.univ : Set Z),
+      ?_, ?_⟩
+    · rw [nhds_prod_eq]
+      exact Filter.prod_mem_prod hDmem Filter.univ_mem
+    · intro t ht q hq
+      obtain ⟨d, z⟩ := q
+      have hdu : (ic.disturbanceMapWithF h) d ∈ u := hq.1
+      have hmem := hflow t ht ((ic.disturbanceMapWithF h) d) hdu
+      have hpair : ((0 : D), ic.outputMap ((ic.closedLoopSystem h).expFlow t
+          ((ic.disturbanceMapWithF h) d))) ∈ sD ×ˢ sZ :=
+        ⟨mem_of_mem_nhds hsD, by simpa [hexp t] using hmem⟩
+      simpa [externalFlow, externalResponse] using hsDZ hpair
+  · refine Filter.Eventually.of_forall (fun q => ?_)
+    obtain ⟨d, z⟩ := q
+    have hd : Tendsto (fun t : ℝ =>
+        NormedSpace.exp (t • (ic.closedLoopMap h).toContinuousLinearMap)
+          (ic.disturbanceMapWithF h d)) atTop (nhds 0) :=
+      LinearMap.tendsto_exp_of_isHurwitz (ic.closedLoopMap h) hH _
+    have hd' : Tendsto (fun t : ℝ => (ic.closedLoopSystem h).expFlow t
+        (ic.disturbanceMapWithF h d)) atTop (nhds 0) :=
+      by simpa [hexp] using hd
+    have hz : Tendsto (fun t : ℝ => ic.outputMap ((ic.closedLoopSystem h).expFlow t
+        (ic.disturbanceMapWithF h d))) atTop (nhds 0) := by
+      have hcomp := (ic.outputMap.toContinuousLinearMap.continuous.tendsto 0).comp hd'
+      rw [map_zero] at hcomp
+      exact hcomp
+    have hpair := (tendsto_const_nhds (x := (0 : D))).prodMk_nhds hz
+    have hgoal : (fun t : ℝ => ic.externalFlow h t (d, z)) =
+        fun t : ℝ => ((0 : D), ic.outputMap ((ic.closedLoopSystem h).expFlow t
+          (ic.disturbanceMapWithF h d))) := by
+      funext t
+      rfl
+    rw [hgoal]
+    exact hpair
 
 end Analytic
 
@@ -1920,5 +2115,77 @@ theorem exists_hurwitz_closedLoopMap_of_isControllable_isObservable
   exact isHurwitz_closedLoopMap_cabPairController sys hD E H F G 0 _ hF hG
 
 end RealClosedLoopSpectrumExistence
+
+section RealClosedLoopExternalStability
+
+open Filter
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+omit [FiniteDimensional ℝ Y] in
+/-- **External stability of the closed loop of the controller (6.7).** For a
+strictly proper plant (`D = 0`), if the state-feedback block `A + B F` and the
+observer-error block `A + G C` are Hurwitz, then the forced
+disturbance-to-controlled-output response of the cabPair controller (6.7) is
+externally stable: its impulse response `H e^{A_e t} B_e` is Lyapunov stable
+and attractive at the origin. The extended closed loop is Hurwitz by
+`isHurwitz_closedLoopMap_cabPairController`, and external stability is derived
+from it through `isExternallyStable_of_isHurwitz_closedLoopMap`; decay is never
+assumed.
+
+Source: Trentelman–Stoorvogel–Hautus, Section 6.6 and Definitions 4.36/6.19;
+the sufficiency direction here is the state-space form of Theorem 3.23
+(internal stability implies external stability).
+
+The hypotheses are exactly the strictly proper plant (`hD : sys.D = 0`), the
+well-posed interconnection (`hwp`, automatic for `D = 0` but kept explicit) and
+the Hurwitz gains (`hF`, `hG`); no decay or stability is assumed. Because the
+predicate is impulse-response attractivity, no admissible locally-integrable
+disturbance or zero-initial-state hypothesis is needed here. The general forced
+(convolution) response to locally integrable disturbances, and its BIBO
+consequence, are the missing bridge documented at `IsExternallyStable`. -/
+theorem isExternallyStable_closedLoopSystem_cabPairController
+    (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    (cabPairInterconnection sys (cabPairController sys F G N) E H).IsExternallyStable hwp :=
+  DynamicInterconnection.isExternallyStable_of_isHurwitz_closedLoopMap
+    (cabPairInterconnection sys (cabPairController sys F G N) E H) hwp
+    (isHurwitz_closedLoopMap_cabPairController sys hD E H F G N hwp hF hG)
+
+/-- **Existence of externally stabilizing dynamic measurement feedback.** A
+controllable and observable strictly proper plant admits a cabPair controller
+whose closed loop is externally stable: the forced disturbance-to-output
+response of (6.12) is Lyapunov stable and attractive at the origin. The gains
+`F`, `G` are the accepted Hurwitz gains of `exists_hurwitz_cabPair_gains` and
+`N = 0`; external stability is derived from the Hurwitz closed loop, not assumed.
+
+This is the dynamic measurement-feedback counterpart of the sufficient
+direction of external stabilization (Trentelman–Stoorvogel–Hautus, Section 6.6);
+the geometric necessary-and-sufficient conditions of Corollary 6.22 remain
+future work. The only hypotheses are controllability and observability of the
+strictly proper plant; the gains exist without being assumed and external
+stability is derived from their Hurwitz closed loop. -/
+theorem exists_externallyStabilizing_cabPair_gains (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hcont : LinearMap.IsControllable sys.A sys.B)
+    (hobs : LinearMap.IsObservable sys.C sys.A) :
+    ∃ F : X →ₗ[ℝ] U, ∃ G : Y →ₗ[ℝ] X, ∃ N : Y →ₗ[ℝ] U,
+      (cabPairInterconnection sys (cabPairController sys F G N) E H).IsExternallyStable
+        ((cabPairInterconnection sys (cabPairController sys F G N) E H).isWellPosed_of_D_eq_zero
+          hD) := by
+  obtain ⟨F, G, hF, hG⟩ := exists_hurwitz_cabPair_gains sys hcont hobs
+  refine ⟨F, G, 0, ?_⟩
+  exact isExternallyStable_closedLoopSystem_cabPairController sys hD E H F G 0 _ hF hG
+
+end RealClosedLoopExternalStability
 
 end LinearSystem
