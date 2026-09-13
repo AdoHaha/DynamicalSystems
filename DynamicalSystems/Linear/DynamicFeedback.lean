@@ -18,12 +18,13 @@ input to the measurement.
 
 The plant `Σ = (A, B, C, D)` is an ordinary `LinearSystem` with state `X`,
 control input `U` and measurement output `Y`, and it is driven by a disturbance
-input `d : D` through a **state channel** `E : D →ₗ[𝕜] X`; the controlled output
-is the **output channel** `H : X →ₗ[𝕜] Z`:
+input `d : D` through a **state channel** `E : D →ₗ[𝕜] X` and a **measurement
+channel** `F : D →ₗ[𝕜] Y`; the controlled output is the **output channel**
+`H : X →ₗ[𝕜] Z`:
 
 ```
 x'(t) = A x(t) + B u(t) + E d(t),
-y(t)  = C x(t) + D u(t),
+y(t)  = C x(t) + D u(t) + F d(t),
 z(t)  = H x(t).
 ```
 
@@ -65,10 +66,13 @@ z(t)  = He p(t),
 ```
 
 where `p = (x, w)` and `Ae = closedLoopMap`, `Be = disturbanceMap`,
-`He = outputMap` (`closedLoopSystem`). The main algebraic law below is the
+`He = outputMap` (`closedLoopSystem`). For a nonzero measurement channel `F`
+the total disturbance map is `disturbanceMapWithF`, which combines `E`, `F` and
+the resolved loop; it reduces to `disturbanceMap` when `F = 0`
+(`disturbanceMapWithF_of_F_eq_zero`). The main algebraic law below is the
 composition identity `closedLoopSystem_dynamics`, which decomposes the
 closed-loop right-hand side into the autonomous extended map plus the disturbance
-channel.
+channel; its `F`-channel counterpart is `closedLoopDynamicsWithF_eq`.
 
 ## Zero-disturbance and zero-initial-state lemmas
 
@@ -123,9 +127,11 @@ present requires `D = 0`. The following remain the next milestones and are *not*
 claimed here, so that no unproved strengthening is read into the present
 declarations:
 
-* a measurement disturbance channel `F : D →ₗ[𝕜] Y` in the readout; only the
-  state disturbance `E` is modelled at this stage, and the output channel `H`
-  is the controlled-output map;
+* the **decoupling synthesis theorem for a nonzero measurement disturbance
+  channel** `F`: the channel itself, its resolved measured signal and input, the
+  zero-channel and zero-disturbance reductions and the closed-loop disturbance
+  bookkeeping are formalised here, but no nonzero-`F` decoupling existence
+  theorem is claimed (the synthesis of Theorem 6.4 fixes `F = 0`);
 * the spectrum factorization of the extended system mapping and the internal
   stability results of Sections 6.3–6.4 (`σ (Ae) = σ (A + B F) ∪ σ (A + G C)`),
   which require a stabilizability/detectability calculus that is likewise not
@@ -143,9 +149,15 @@ declarations:
 * `DynamicInterconnection.loopMap`, `DynamicInterconnection.IsWellPosed`,
   `DynamicInterconnection.loopInv`
 * `DynamicInterconnection.solvedMeasurement`, `DynamicInterconnection.solvedInput`
-* `DynamicInterconnection.closedLoopMap`, `disturbanceMap`, `outputMap`
-* `DynamicInterconnection.closedLoopSystem`
-* `DynamicInterconnection.IsClosedLoopDisturbanceDecoupled`
+* `DynamicInterconnection.disturbanceMeasurement`,
+  `DynamicInterconnection.measuredSignal`, `DynamicInterconnection.disturbanceInput`,
+  `DynamicInterconnection.resolvedInput`
+* `DynamicInterconnection.closedLoopMap`, `disturbanceMap`,
+  `disturbanceMapWithF`, `outputMap`
+* `DynamicInterconnection.closedLoopSystem`,
+  `DynamicInterconnection.closedLoopDynamicsWithF`
+* `DynamicInterconnection.IsClosedLoopDisturbanceDecoupled`,
+  `DynamicInterconnection.IsClosedLoopDisturbanceDecoupledWithF`
 * `DynamicInterconnection.extendedIntersection`,
   `DynamicInterconnection.extendedProjection`
 * `LinearSystem.cabPairController`, `LinearSystem.cabPairInterconnection`
@@ -154,6 +166,13 @@ declarations:
 
 * `DynamicInterconnection.measurement_eq_plant_readout`
 * `DynamicInterconnection.measurement_eq_of_plant_readout`
+* `DynamicInterconnection.measuredSignal_eq_plant_readout`
+* `DynamicInterconnection.measuredSignal_unique`
+* `DynamicInterconnection.measuredSignal_of_F_eq_zero`,
+  `DynamicInterconnection.resolvedInput_of_F_eq_zero`
+* `DynamicInterconnection.disturbanceMapWithF_of_F_eq_zero`
+* `DynamicInterconnection.closedLoopDynamicsWithF_eq`
+* `DynamicInterconnection.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero`
 * `DynamicInterconnection.closedLoopSystem_dynamics`
 * `DynamicInterconnection.closedLoopSystem_dynamics_zero_disturbance`
 * `DynamicInterconnection.closedLoopMap_of_D_eq_zero`
@@ -316,6 +335,8 @@ structure DynamicInterconnection (𝕜 X U Y W D Z : Type*) [Field 𝕜]
   controller : DynamicController 𝕜 W Y U
   /-- State disturbance channel `E : D →ₗ[𝕜] X`. -/
   E : D →ₗ[𝕜] X
+  /-- Measurement disturbance channel `F : D →ₗ[𝕜] Y`. -/
+  F : D →ₗ[𝕜] Y
   /-- Controlled-output map `H : X →ₗ[𝕜] Z`. -/
   H : X →ₗ[𝕜] Z
 
@@ -580,6 +601,209 @@ theorem closedLoopSystem_dynamics_snd (h : ic.IsWellPosed) (p : X × W) (d : D) 
 theorem solvedInput_eq_controller_output (h : ic.IsWellPosed) (p : X × W) :
     ic.solvedInput h p = ic.controller.output p.2 (ic.solvedMeasurement h p) := rfl
 
+/-! ### The measurement-disturbance channel
+
+With a measurement disturbance channel `F : D →ₗ[𝕜] Y` the plant readout reads
+
+`y = C x + D u + F d`,
+
+so the resolved measurement and control acquire an additive, linear-in-`d`
+contribution. Since the algebraic-loop map `1 - D N` does not involve `d`, this
+contribution is `(1 - D N)⁻¹ (F d)` and the loop remains uniquely solvable for
+every disturbance. The constructions below reduce to the channel-free resolved
+measurement and control when `F = 0`, and to the resolved measurement and control
+of the extended state when `d = 0`.
+
+The full channel-decoupling synthesis theorem for nonzero `F` is **not** claimed
+here: only the signal, reduction and bookkeeping identities are proved. -/
+
+/-- The **disturbance contribution to the measurement**, the part of the resolved
+measurement proportional to the disturbance, `(1 - D N)⁻¹ F d : D →ₗ[𝕜] Y`. -/
+noncomputable def disturbanceMeasurement (h : ic.IsWellPosed) : D →ₗ[𝕜] Y :=
+  (ic.loopInv h).comp ic.F
+
+@[simp]
+theorem disturbanceMeasurement_apply (h : ic.IsWellPosed) (d : D) :
+    ic.disturbanceMeasurement h d = ic.loopInv h (ic.F d) := rfl
+
+/-- The **measured signal** with the measurement disturbance: the resolved
+measurement shifted by the disturbance contribution. It solves
+
+`y = C x + D (M w + N y) + F d`, i.e. `y = (1 - D N)⁻¹ (C x + D M w + F d)`. -/
+noncomputable def measuredSignal (h : ic.IsWellPosed) (p : X × W) (d : D) : Y :=
+  ic.solvedMeasurement h p + ic.disturbanceMeasurement h d
+
+@[simp]
+theorem measuredSignal_apply (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.measuredSignal h p d =
+      ic.solvedMeasurement h p + ic.loopInv h (ic.F d) := rfl
+
+/-- The **disturbance contribution to the control**, `N (1 - D N)⁻¹ F d`. -/
+noncomputable def disturbanceInput (h : ic.IsWellPosed) : D →ₗ[𝕜] U :=
+  ic.controller.N.comp (ic.disturbanceMeasurement h)
+
+@[simp]
+theorem disturbanceInput_apply (h : ic.IsWellPosed) (d : D) :
+    ic.disturbanceInput h d = ic.controller.N (ic.disturbanceMeasurement h d) := rfl
+
+/-- The **resolved controller input** with the measurement disturbance,
+`u = M w + N y` at the measured signal. -/
+noncomputable def resolvedInput (h : ic.IsWellPosed) (p : X × W) (d : D) : U :=
+  ic.solvedInput h p + ic.disturbanceInput h d
+
+@[simp]
+theorem resolvedInput_apply (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.resolvedInput h p d =
+      ic.solvedInput h p + ic.controller.N (ic.disturbanceMeasurement h d) := rfl
+
+/-- The measured signal is the resolved measurement shifted by the disturbance
+contribution. -/
+theorem measuredSignal_eq_solvedMeasurement_add (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.measuredSignal h p d =
+      ic.solvedMeasurement h p + ic.disturbanceMeasurement h d := rfl
+
+/-- The resolved input is the resolved control shifted by the disturbance
+contribution. -/
+theorem resolvedInput_eq_solvedInput_add (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.resolvedInput h p d = ic.solvedInput h p + ic.disturbanceInput h d := rfl
+
+/-- **The measured signal solves the algebraic loop** with the measurement
+disturbance: `(1 - D N) y = C x + D M w + F d`. -/
+theorem loopMap_measuredSignal (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.loopMap (ic.measuredSignal h p d) = ic.loopForcing p + ic.F d := by
+  rw [measuredSignal_eq_solvedMeasurement_add, map_add, ic.loopMap_solvedMeasurement h p,
+    disturbanceMeasurement_apply]
+  exact congrArg (fun z => ic.loopForcing p + z)
+    (LinearMap.congr_fun (ic.loopMap_loopInv h) (ic.F d))
+
+/-- **The measured signal satisfies the plant readout** including the measurement
+disturbance, `y = C x + D u + F d` with `u = resolvedInput`. -/
+theorem measuredSignal_eq_plant_readout (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.measuredSignal h p d =
+      ic.plant.C p.1 + ic.plant.D (ic.resolvedInput h p d) + ic.F d := by
+  have h1 := ic.loopMap_solvedMeasurement h p
+  have h2 : ic.loopMap (ic.disturbanceMeasurement h d) = ic.F d := by
+    rw [disturbanceMeasurement_apply]
+    exact LinearMap.congr_fun (ic.loopMap_loopInv h) (ic.F d)
+  simp only [loopMap_apply, loopForcing_apply] at h1 h2
+  have h1' : ic.solvedMeasurement h p =
+      (ic.plant.C p.1 + ic.plant.D (ic.controller.M p.2)) +
+        ic.plant.D (ic.controller.N (ic.solvedMeasurement h p)) :=
+    sub_eq_iff_eq_add.mp h1
+  have h2' : ic.disturbanceMeasurement h d =
+      ic.F d + ic.plant.D (ic.controller.N (ic.disturbanceMeasurement h d)) :=
+    sub_eq_iff_eq_add.mp h2
+  conv_lhs => rw [measuredSignal_eq_solvedMeasurement_add, h1', h2']
+  rw [resolvedInput_apply, solvedInput_apply]
+  simp only [map_add]
+  abel
+
+/-- **Uniqueness of the measured signal.** Any measurement satisfying the readout
+with the measurement disturbance is the measured signal. -/
+theorem measuredSignal_unique (h : ic.IsWellPosed) {p : X × W} {d : D} {y : Y}
+    (hy : y = ic.plant.C p.1 +
+      ic.plant.D (ic.controller.M p.2 + ic.controller.N y) + ic.F d) :
+    y = ic.measuredSignal h p d := by
+  apply h.1
+  rw [ic.loopMap_measuredSignal h p d, loopMap_apply, loopForcing_apply]
+  rw [sub_eq_iff_eq_add]
+  calc y = ic.plant.C p.1 +
+        ic.plant.D (ic.controller.M p.2 + ic.controller.N y) + ic.F d := hy
+    _ = (ic.plant.C p.1 + ic.plant.D (ic.controller.M p.2) + ic.F d) +
+          ic.plant.D (ic.controller.N y) := by
+          rw [map_add]
+          abel
+
+/-- With no measurement disturbance channel the disturbance contribution to the
+measurement vanishes. -/
+theorem disturbanceMeasurement_of_F_eq_zero (h : ic.IsWellPosed) (hF : ic.F = 0) :
+    ic.disturbanceMeasurement h = 0 := by
+  rw [disturbanceMeasurement, hF, LinearMap.comp_zero]
+
+/-- With no measurement disturbance channel the disturbance contribution to the
+control vanishes. -/
+theorem disturbanceInput_of_F_eq_zero (h : ic.IsWellPosed) (hF : ic.F = 0) :
+    ic.disturbanceInput h = 0 := by
+  rw [disturbanceInput, ic.disturbanceMeasurement_of_F_eq_zero h hF, LinearMap.comp_zero]
+
+/-- **Zero-channel reduction of the measured signal.** With no measurement
+disturbance channel (`F = 0`) the measured signal is the resolved measurement. -/
+theorem measuredSignal_of_F_eq_zero (h : ic.IsWellPosed) (hF : ic.F = 0)
+    (p : X × W) (d : D) :
+    ic.measuredSignal h p d = ic.solvedMeasurement h p := by
+  rw [measuredSignal_eq_solvedMeasurement_add, ic.disturbanceMeasurement_of_F_eq_zero h hF,
+    LinearMap.zero_apply, add_zero]
+
+/-- **Zero-channel reduction of the resolved input.** With `F = 0` the resolved
+input is the resolved control. -/
+theorem resolvedInput_of_F_eq_zero (h : ic.IsWellPosed) (hF : ic.F = 0)
+    (p : X × W) (d : D) :
+    ic.resolvedInput h p d = ic.solvedInput h p := by
+  rw [resolvedInput_eq_solvedInput_add, ic.disturbanceInput_of_F_eq_zero h hF,
+    LinearMap.zero_apply, add_zero]
+
+/-- **Zero-disturbance reduction.** With no disturbance the measured signal is the
+resolved measurement. -/
+theorem measuredSignal_zero_disturbance (h : ic.IsWellPosed) (p : X × W) :
+    ic.measuredSignal h p 0 = ic.solvedMeasurement h p :=
+  by simp [measuredSignal]
+
+/-- **Zero-disturbance reduction of the resolved input.** -/
+theorem resolvedInput_zero_disturbance (h : ic.IsWellPosed) (p : X × W) :
+    ic.resolvedInput h p 0 = ic.solvedInput h p :=
+  by simp [resolvedInput]
+
+theorem disturbanceMeasurement_zero (h : ic.IsWellPosed) :
+    ic.disturbanceMeasurement h (0 : D) = 0 := map_zero _
+
+theorem disturbanceInput_zero (h : ic.IsWellPosed) :
+    ic.disturbanceInput h (0 : D) = 0 := map_zero _
+
+/-- The **closed-loop disturbance map with the measurement channel**: the total
+disturbance input of `p' = closedLoopMap p + Be d`, combining the state channel
+`E d` with the disturbance contributions to the resolved control and measurement. -/
+noncomputable def disturbanceMapWithF (h : ic.IsWellPosed) : D →ₗ[𝕜] X × W :=
+  LinearMap.prod (ic.E + ic.plant.B.comp (ic.disturbanceInput h))
+    (ic.controller.L.comp (ic.disturbanceMeasurement h))
+
+@[simp]
+theorem disturbanceMapWithF_apply (h : ic.IsWellPosed) (d : D) :
+    ic.disturbanceMapWithF h d =
+      (ic.E d + ic.plant.B (ic.disturbanceInput h d),
+        ic.controller.L (ic.disturbanceMeasurement h d)) := rfl
+
+/-- **Zero-channel reduction of the disturbance map.** With `F = 0` the
+extended disturbance map is the state-only disturbance map. -/
+theorem disturbanceMapWithF_of_F_eq_zero (h : ic.IsWellPosed) (hF : ic.F = 0) :
+    ic.disturbanceMapWithF h = ic.disturbanceMap := by
+  apply LinearMap.ext
+  intro d
+  rw [disturbanceMapWithF_apply, ic.disturbanceInput_of_F_eq_zero h hF,
+    ic.disturbanceMeasurement_of_F_eq_zero h hF, disturbanceMap_apply]
+  simp
+
+/-- The **closed-loop dynamics with the measurement disturbance**: the extended
+state derivative `(A x + B u + E d, K w + L y)` with `u` the resolved input and
+`y` the measured signal. -/
+noncomputable def closedLoopDynamicsWithF (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    X × W :=
+  (ic.plant.A p.1 + ic.plant.B (ic.resolvedInput h p d) + ic.E d,
+    ic.controller.K p.2 + ic.controller.L (ic.measuredSignal h p d))
+
+/-- **Bookkeeping identity for the closed loop with the measurement disturbance.**
+The extended dynamics decomposes into the autonomous extended map and the total
+disturbance map `disturbanceMapWithF`. -/
+theorem closedLoopDynamicsWithF_eq (h : ic.IsWellPosed) (p : X × W) (d : D) :
+    ic.closedLoopDynamicsWithF h p d = ic.closedLoopMap h p + ic.disturbanceMapWithF h d := by
+  apply Prod.ext
+  · simp only [closedLoopDynamicsWithF, closedLoopMap_apply, disturbanceMapWithF_apply,
+      resolvedInput_eq_solvedInput_add, solvedInput_apply, disturbanceInput_apply, map_add,
+      Prod.fst_add]
+    abel
+  · simp only [closedLoopDynamicsWithF, closedLoopMap_apply, disturbanceMapWithF_apply,
+      measuredSignal_eq_solvedMeasurement_add, map_add, Prod.snd_add]
+    abel
+
 /-! ### Well-posedness for a strictly proper plant -/
 
 /-- For a strictly proper plant (`D = 0`) the algebraic-loop map is the
@@ -686,6 +910,46 @@ theorem isClosedLoopDisturbanceDecoupled_iff_reachableSubspace_le_ker
     (h : ic.IsWellPosed) :
     ic.IsClosedLoopDisturbanceDecoupled h ↔
       LinearMap.reachableSubspace (ic.closedLoopMap h) ic.disturbanceMap ≤
+        LinearMap.ker ic.outputMap :=
+  LinearMap.isDisturbanceDecoupled_iff_reachableSubspace_le_ker _ _ _
+
+/-! ### The closed-loop disturbance channel with the measurement disturbance
+
+The predicate `IsClosedLoopDisturbanceDecoupled` above is the state-disturbance
+predicate built from `disturbanceMap`. With the measurement disturbance `F` the
+correct closed-loop disturbance channel is `disturbanceMapWithF`, and the scoped
+predicate `IsClosedLoopDisturbanceDecoupledWithF` records decoupling for that
+channel. Its only use below is the zero-channel reduction to the accepted
+predicate: the full channel-decoupling synthesis theorem for nonzero `F` is
+**not** claimed. -/
+
+/-- The closed-loop **with the measurement disturbance channel**: the controlled
+output is independent of the disturbance when every Markov parameter of the
+extended channel `(closedLoopMap, disturbanceMapWithF)` vanishes. -/
+noncomputable def IsClosedLoopDisturbanceDecoupledWithF (h : ic.IsWellPosed) : Prop :=
+  LinearMap.IsDisturbanceDecoupled (ic.closedLoopMap h) (ic.disturbanceMapWithF h)
+    ic.outputMap
+
+/-- **Zero-channel reduction of decoupling.** With `F = 0` the extended
+decoupling predicate is the accepted state-disturbance predicate. -/
+theorem isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero (h : ic.IsWellPosed)
+    (hF : ic.F = 0) :
+    ic.IsClosedLoopDisturbanceDecoupledWithF h ↔ ic.IsClosedLoopDisturbanceDecoupled h := by
+  rw [IsClosedLoopDisturbanceDecoupledWithF, IsClosedLoopDisturbanceDecoupled,
+    ic.disturbanceMapWithF_of_F_eq_zero h hF]
+
+/-- Pointwise (Markov-parameter) form of the extended decoupling predicate. -/
+theorem isClosedLoopDisturbanceDecoupledWithF_iff_forall (h : ic.IsWellPosed) :
+    ic.IsClosedLoopDisturbanceDecoupledWithF h ↔
+      ∀ k : ℕ, ∀ d : D,
+        ic.outputMap ((ic.closedLoopMap h ^ k) (ic.disturbanceMapWithF h d)) = 0 :=
+  LinearMap.isDisturbanceDecoupled_iff_forall _ _ _
+
+/-- Reachable-subspace form of the extended decoupling predicate. -/
+theorem isClosedLoopDisturbanceDecoupledWithF_iff_reachableSubspace_le_ker
+    (h : ic.IsWellPosed) :
+    ic.IsClosedLoopDisturbanceDecoupledWithF h ↔
+      LinearMap.reachableSubspace (ic.closedLoopMap h) (ic.disturbanceMapWithF h) ≤
         LinearMap.ker ic.outputMap :=
   LinearMap.isDisturbanceDecoupled_iff_reachableSubspace_le_ker _ _ _
 
@@ -1027,7 +1291,16 @@ controlled-output map `H`. -/
 def cabPairInterconnection (sys : LinearSystem 𝕜 X U Y)
     (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
     DynamicInterconnection 𝕜 X U Y X D Z :=
-  ⟨sys, ctrl, E, H⟩
+  ⟨sys, ctrl, E, 0, H⟩
+
+/-- The synthesis interconnection of Theorem 6.4 has a zero measurement
+disturbance channel: the construction of Chapter 6 only uses the state
+disturbance `E`, so the extended decoupling predicate coincides with the
+state-disturbance one. -/
+@[simp]
+theorem cabPairInterconnection_F (sys : LinearSystem 𝕜 X U Y)
+    (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
+    (cabPairInterconnection sys ctrl E H).F = 0 := rfl
 
 /-- **Theorem 6.4 / Corollary 6.7 (synthesis).** For a strictly proper plant
 (`D = 0`), any `(C, A, B)`-pair `(S, V)` between `im E` and `ker H`, together
@@ -1101,6 +1374,29 @@ theorem isClosedLoopDisturbanceDecoupled_of_isCABPairBetween
       refine ⟨(⟨0, S.zero_mem⟩, ⟨(sys.A + sys.B.comp F) (x2 : X), hFx2⟩), ?_⟩
       rw [hcl2 (x2 : X)]
       ext <;> simp [φ, LinearMap.coprod_apply]
+
+/-- **The synthesis also satisfies the extended decoupling predicate.** Because
+the controller (6.7) is built with a zero measurement-disturbance channel, its
+closed loop is disturbance decoupled for the extended channel as well. This is
+the only sense in which the synthesis touches the `F`-channel; no nonzero-`F`
+decoupling statement is made. -/
+theorem isClosedLoopDisturbanceDecoupledWithF_of_isCABPairBetween
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V)
+    (F : X →ₗ[𝕜] U) (G : Y →ₗ[𝕜] X) (N : Y →ₗ[𝕜] U)
+    (hF : Submodule.map (sys.A + sys.B.comp F) V ≤ V)
+    (hG : Submodule.map (sys.A + G.comp sys.C) S ≤ S)
+    (hN : Submodule.map (sys.A + sys.B.comp (N.comp sys.C)) S ≤ V)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G N) E H).IsWellPosed) :
+    (cabPairInterconnection sys (cabPairController sys F G N) E
+      H).IsClosedLoopDisturbanceDecoupledWithF hwp := by
+  let ic : DynamicInterconnection 𝕜 X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hF0 : ic.F = 0 := rfl
+  exact (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp hF0).mpr
+    (isClosedLoopDisturbanceDecoupled_of_isCABPairBetween sys hD E H S V hpair F G N
+      hF hG hN hwp)
 
 /-- **Theorem 6.6 / Corollary 6.7 (existence of a decoupling controller).** For a
 strictly proper plant (`D = 0`), a `(C, A, B)`-pair between `im E` and `ker H`
