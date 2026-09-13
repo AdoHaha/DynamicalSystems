@@ -206,10 +206,27 @@ whenever the extended closed loop is Hurwitz
 `LinearSystem.isBIBOStable_externalResponse_of_isHurwitz`), with the convolution
 kernel identified in the accepted disturbance-convolution API.
 
-The *geometric* necessary-and-sufficient conditions of Corollary 6.22
-(`im E ⊂ V*(ker H) + Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`) and the
-transfer-function form of decoupling remain future work; nonlinear
-(Conte–Moog–Perdon) dynamic feedback stays in the documented future roadmap.
+The **geometric external zero-response criterion** is proved as
+`LinearSystem.externalStability_iff_geometricCertificate`: a strictly proper
+plant admits a dynamic measurement-feedback controller whose *exact* external
+impulse response `H_e e^{A_e t} B_e` vanishes identically if and only if there
+is a `(C, A, B)`-pair between `im E` and `ker H`. The extraction direction is
+`LinearSystem.exists_isCABPairBetween_of_externalStability`, and the analytic
+bridge between the identically vanishing forced response and the Markov-parameter
+predicate is
+`DynamicInterconnection.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF`.
+The *full* external-stabilization Corollary 6.22
+(`im E ⊂ V*(ker H) + Xstab` and `S*(im E) ∩ Xdet ⊂ ker H`) is **not** claimed:
+it needs the stabilizable and undetectable subspaces `Xstab`/`Xdet` and their
+spectral characterisations, which are not available in the pinned library and
+are recorded as the gap `external-stability-subspaces`. In particular the
+zero-response predicate above must not be read as BIBO/external asymptotic
+stability; the two are separated by
+`LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`,
+which obtains BIBO *and* zero response only after adjoining Hurwitz feedback and
+injection gains to the geometric certificate. The transfer-function form of
+decoupling and nonlinear (Conte–Moog–Perdon) dynamic feedback stay in the
+documented future roadmap.
 
 ## Main definitions
 
@@ -243,6 +260,12 @@ transfer-function form of decoupling remain future work; nonlinear
   `H_e e^{A_e t} B_e` bundled as a continuous linear operator `D →L[ℝ] Z`
 * `DynamicInterconnection.IsBIBOStable`: Bochner integrability on `[0, ∞)` plus
   the bounded-input bounded-output property of the forced channel
+* `DynamicInterconnection.HasExternalZeroResponse`: identical vanishing of the
+  forced closed-loop external response `H_e e^{A_e t} B_e`
+* `LinearSystem.GeometricCertificate`: existence of a `(C, A, B)`-pair between
+  `im E` and `ker H`
+* `LinearSystem.ExternalStability`: existence of a strictly proper dynamic
+  measurement-feedback controller with identically zero external response
 
 ## Main results
 
@@ -287,6 +310,10 @@ transfer-function form of decoupling remain future work; nonlinear
 * `LinearSystem.isBIBOStable_externalResponse_of_isHurwitz`
 * `LinearSystem.isBIBOStable_externalResponse_cabPairController`
 * `LinearSystem.exists_biboStable_cabPair_gains`
+* `DynamicInterconnection.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF`
+* `LinearSystem.exists_isCABPairBetween_of_externalStability`
+* `LinearSystem.externalStability_iff_geometricCertificate`
+* `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`
 
 ## References
 
@@ -2553,5 +2580,226 @@ theorem exists_biboStable_cabPair_gains (sys : LinearSystem ℝ X U Y)
   exact isBIBOStable_externalResponse_cabPairController sys hD E H F G 0 _ hF hG
 
 end RealClosedLoopBIBOExistence
+
+/-! ## The geometric external zero-response criterion
+
+This final section states the geometric necessary-and-sufficient criterion for
+the *exact* external zero response of a strictly proper plant under dynamic
+measurement feedback, and separates it from BIBO stability.
+
+The Trentelman–Stoorvogel–Hautus external-stabilization problem (Definition 6.19)
+asks for a controller making the closed-loop transfer function
+`G_Κ(s) = H_e (s I - A_e)⁻¹ B_e` *stable*. Corollary 6.22 characterises this by
+`im E ⊂ V*(ker H) + Xstab` together with `S*(im E) ∩ Xdet ⊂ ker H`, where
+`Xstab` is the stabilizable subspace of `(A, B)` and `Xdet` the undetectable
+subspace of `(C, A)`. Neither subspace (nor its spectral characterisation) is
+available in the pinned library, so the full Corollary 6.22 is **not** formalised
+here; the package `external-stability-subspaces` records the gap.
+
+What *is* formalised is the exact-decoupling idealisation: the forced external
+impulse response `t ↦ H_e e^{t A_e} B_e` vanishes identically. By the analytic
+Markov-parameter bridge this is exactly the Chapter 6 disturbance-decoupling
+predicate, whose geometric certificate is a `(C, A, B)`-pair between `im E` and
+`ker H`. This is strictly stronger than BIBO stability, and the two are only
+combined after adjoining Hurwitz gains (`bibo_and_externalZeroResponse_…`). -/
+
+namespace DynamicInterconnection
+
+section AnalyticZeroResponse
+
+variable {X U Y W D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable [NormedAddCommGroup W] [NormedSpace ℝ W]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [AddCommGroup U] [Module ℝ U] [AddCommGroup Y] [Module ℝ Y]
+variable [FiniteDimensional ℝ X] [FiniteDimensional ℝ W]
+variable (ic : DynamicInterconnection ℝ X U Y W D Z)
+
+/-- **Identically vanishing external response.** The forced disturbance-to-output
+impulse response `H_e e^{t A_e} B_e` of a well-posed interconnection is zero in
+every disturbance direction and at every time. This is the exact zero-response
+(external disturbance decoupling) property.
+
+It is *not* the same as bounded-input bounded-output stability: a nonzero but
+decaying impulse response is BIBO stable yet does not satisfy this predicate. The
+separation is made explicit by
+`bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`, which derives
+BIBO *and* zero response only after adjoining Hurwitz gains to the geometric
+certificate. -/
+noncomputable def HasExternalZeroResponse (h : ic.IsWellPosed) : Prop :=
+  ∀ t : ℝ, ∀ d : D, ic.externalResponse h t d = 0
+
+/-- **Analytic bridge for the external zero response.** For a well-posed
+interconnection the forced external response vanishes identically if and only if
+the closed loop is disturbance decoupled for the full measurement-disturbance
+channel `disturbanceMapWithF`, i.e. all Markov parameters
+`H_e A_e^k B_e` vanish. Both sides use the same extended system, and the operator
+exponential of `disturbanceSystem` agrees with the closed-loop flow.
+
+This is the analytic (impulse-response) form of the Chapter 4/6 decoupling
+predicate and the entry point for the geometric extraction below. -/
+theorem hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF
+    (h : ic.IsWellPosed) :
+    ic.HasExternalZeroResponse h ↔ ic.IsClosedLoopDisturbanceDecoupledWithF h := by
+  rw [IsClosedLoopDisturbanceDecoupledWithF,
+    LinearMap.isDisturbanceDecoupled_iff_forall_expFlow]
+  have hflow : ∀ t : ℝ,
+      (LinearMap.disturbanceSystem (ic.closedLoopMap h) (ic.disturbanceMapWithF h)
+        ic.outputMap).expFlow t = (ic.closedLoopSystem h).expFlow t := by
+    intro t
+    simp only [LinearSystem.expFlow, LinearSystem.continuousA,
+      LinearMap.disturbanceSystem, ic.closedLoopSystem_A h]
+  constructor
+  · intro hz d t
+    have hd := hz t d
+    simpa [externalResponse, hflow t] using hd
+  · intro hdec t d
+    have hd := hdec d t
+    simpa [externalResponse, hflow t] using hd
+
+end AnalyticZeroResponse
+
+end DynamicInterconnection
+
+section GeometricExternalZeroResponse
+
+variable {X U Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable [AddCommGroup U] [Module ℝ U] [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [FiniteDimensional ℝ X] [FiniteDimensional ℝ D]
+
+/-- **Geometric external zero-response certificate.** A strictly proper plant
+`sys` with disturbance map `E` and controlled output `H` admits the geometric
+certificate when there is a `(C, A, B)`-pair `(S, V)` between `im E` and
+`ker H`: `S` conditioned invariant, `V` controlled invariant, `S ≤ V`,
+`im E ≤ S` and `V ≤ ker H`.
+
+Source: Trentelman–Stoorvogel–Hautus, Definition 6.1 and Corollary 6.7 (the
+zero-response/decoupling certificate). -/
+def GeometricCertificate (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) : Prop :=
+  ∃ S V : Submodule ℝ X, LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V
+
+/-- **External zero-response property of a plant.** There exists a
+finite-dimensional dynamic measurement-feedback controller (with state space `X`
+and the strictly proper `cabPairInterconnection`, i.e. zero measurement
+disturbance channel and zero control feedthrough) that is well posed and whose
+forced external response vanishes identically.
+
+This is the exact-decoupling reading of external stability. It is explicitly the
+zero-response predicate, not BIBO stability; the latter requires additional
+Hurwitz gain data and is the subject of
+`bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`. -/
+noncomputable def ExternalStability (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) : Prop :=
+  ∃ ctrl : DynamicController ℝ X Y U,
+    DynamicInterconnection.HasExternalZeroResponse
+      (ic := cabPairInterconnection sys ctrl E H)
+      ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)
+
+omit [FiniteDimensional ℝ D] in
+/-- **Necessity: geometric certificate from external zero response.** A strictly
+proper plant admitting a dynamic measurement-feedback controller with identically
+zero external response carries a `(C, A, B)`-pair between `im E` and `ker H`.
+
+The external response is converted to the closed-loop Markov-parameter predicate
+by `hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF`, then the
+accepted Theorem 6.2 extraction
+`exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled` produces the pair.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 6.2 and the forward half of
+Theorem 6.6. -/
+theorem exists_isCABPairBetween_of_externalStability
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ExternalStability sys hD E H) :
+    ∃ S V : Submodule ℝ X, LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V := by
+  obtain ⟨ctrl, hz⟩ := h
+  let ic : DynamicInterconnection ℝ X U Y X D Z := cabPairInterconnection sys ctrl E H
+  have hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  have hz' : ic.HasExternalZeroResponse hwp := by
+    simpa only [ic] using hz
+  have hdecF : ic.IsClosedLoopDisturbanceDecoupledWithF hwp :=
+    (ic.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF hwp).mp hz'
+  have hdec : ic.IsClosedLoopDisturbanceDecoupled hwp :=
+    (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp rfl).mp hdecF
+  exact ic.exists_isCABPairBetween_of_isClosedLoopDisturbanceDecoupled hwp hdec
+
+omit [FiniteDimensional ℝ D] in
+/-- **The geometric external zero-response criterion.** For a strictly proper
+plant, the existence of a dynamic measurement-feedback controller whose forced
+external response vanishes identically is equivalent to the geometric
+certificate: a `(C, A, B)`-pair between `im E` and `ker H`.
+
+The necessity direction is
+`exists_isCABPairBetween_of_externalStability`; the sufficiency direction
+synthesises the controller (6.7) from the pair
+(`exists_dynamicController_of_isCABPairBetween`) and invokes the analytic bridge.
+
+This is the externally-stated form of the Chapter 6 exact-decoupling criterion
+(Theorem 6.6 / Corollary 6.7). It concerns the *zero* response, not merely
+stability of the transfer function: the full external-stabilization Corollary
+6.22 additionally needs `Xstab`/`Xdet` and is not claimed here. -/
+theorem externalStability_iff_geometricCertificate
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    ExternalStability sys hD E H ↔ GeometricCertificate sys E H := by
+  constructor
+  · intro h
+    exact exists_isCABPairBetween_of_externalStability sys hD E H h
+  · rintro ⟨S, V, hpair⟩
+    obtain ⟨ctrl, hdec⟩ :=
+      exists_dynamicController_of_isCABPairBetween sys hD E H S V hpair
+    refine ⟨ctrl, ?_⟩
+    let ic : DynamicInterconnection ℝ X U Y X D Z := cabPairInterconnection sys ctrl E H
+    have hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+    have hdec' : ic.IsClosedLoopDisturbanceDecoupled hwp := by
+      simpa only [ic] using hdec
+    have hdecF : ic.IsClosedLoopDisturbanceDecoupledWithF hwp :=
+      (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp rfl).mpr hdec'
+    exact (ic.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF hwp).mpr hdecF
+
+/-- **BIBO stability and external zero response from a stabilising certificate.**
+Suppose the geometric certificate `(S, V)` is equipped with gains `F`, `G`, `N`
+that preserve the pair (`(A + B F) V ≤ V`, `(A + G C) S ≤ S`,
+`(A + B N C) S ≤ V`) and for which the state-feedback block `A + B F` and the
+observer-error block `A + G C` are Hurwitz. Then the cabPair controller (6.7) is
+well posed, its forced disturbance-to-output channel is BIBO stable (accepted BIBO
+bridge) **and** its external response vanishes identically (Theorem 6.6 plus the
+analytic bridge).
+
+This is the point at which the zero-response (decoupling) content and the BIBO
+(stability) content are combined: the geometric pair alone gives only the former;
+the Hurwitz gains are the extra data needed for the latter. No identification of
+the two notions is made. -/
+theorem bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (S V : Submodule ℝ X) (hpair : LinearMap.IsCABPairBetween sys.C sys.A sys.B E H S V)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hF : Submodule.map (sys.A + sys.B.comp F) V ≤ V)
+    (hG : Submodule.map (sys.A + G.comp sys.C) S ≤ S)
+    (hN : Submodule.map (sys.A + sys.B.comp (N.comp sys.C)) S ≤ V)
+    (hFh : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hGh : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    let ic : DynamicInterconnection ℝ X U Y X D Z :=
+      cabPairInterconnection sys (cabPairController sys F G N) E H
+    ic.IsBIBOStable (ic.isWellPosed_of_D_eq_zero hD) ∧
+      ic.HasExternalZeroResponse (ic.isWellPosed_of_D_eq_zero hD) := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  have hdec : ic.IsClosedLoopDisturbanceDecoupled hwp :=
+    isClosedLoopDisturbanceDecoupled_of_isCABPairBetween sys hD E H S V hpair F G N
+      hF hG hN hwp
+  have hbibo : ic.IsBIBOStable hwp :=
+    isBIBOStable_externalResponse_cabPairController sys hD E H F G N hwp hFh hGh
+  have hzero : ic.HasExternalZeroResponse hwp := by
+    have hdecF : ic.IsClosedLoopDisturbanceDecoupledWithF hwp :=
+      (ic.isClosedLoopDisturbanceDecoupledWithF_of_F_eq_zero hwp rfl).mpr hdec
+    exact (ic.hasExternalZeroResponse_iff_isClosedLoopDisturbanceDecoupledWithF hwp).mpr hdecF
+  exact ⟨hbibo, hzero⟩
+
+end GeometricExternalZeroResponse
 
 end LinearSystem
