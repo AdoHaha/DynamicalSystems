@@ -40,6 +40,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
+import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
 import DynamicalSystems.Stability.Example
 import DynamicalSystems.Stability.Floquet
