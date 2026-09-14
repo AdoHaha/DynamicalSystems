@@ -4221,6 +4221,126 @@ noncomputable instance instNormedSpaceDual (X : Type*) [AddCommGroup X]
   letI : NormedAddCommGroup (Module.Dual ℝ X) := NormedAddCommGroup.ofCore (𝕜 := ℝ) core
   exact NormedSpace.ofCore core
 
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+
+/-! ### Transpose naturality of the exponential
+
+The exponential of the algebraic transpose is the transpose of the exponential:
+for a real endomorphism `T` of a finite-dimensional space and every `t : ℝ`,
+
+`exp (t • Tᵀ) = (exp (t • T))ᵀ`.
+
+The algebraic transpose is an algebra *anti*-homomorphism (`(S ∘ R)ᵀ = Rᵀ ∘ Sᵀ`),
+so it is realised below as the ring homomorphism `dualMapRingHom` into the
+multiplicative opposite ring, which is exactly the shape `NormedSpace.map_exp`
+accepts; `NormedSpace.exp_op` then removes the opposite. The pointwise form
+`exp_smul_dualMap_apply` is the pairing identity used to turn the accepted dual
+observer readout into the primal readout. -/
+
+/-- The algebraic transpose as an ℝ-linear map from the continuous endomorphisms
+of `X` to the continuous endomorphisms of the algebraic dual `Module.Dual ℝ X`.
+This is the underlying linear map of `dualMapRingHom`; being a linear map between
+finite-dimensional normed spaces it is automatically continuous, which is what
+lets `NormedSpace.exp` commute with the transpose. -/
+noncomputable def dualMapLinearMap :
+    (X →L[ℝ] X) →ₗ[ℝ] (Module.Dual ℝ X →L[ℝ] Module.Dual ℝ X) where
+  toFun S := ((S : X →ₗ[ℝ] X).dualMap).toContinuousLinearMap
+  map_add' S R := by
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+  map_smul' c S := by
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+
+/-- The algebraic transpose bundled as a ring homomorphism into the
+multiplicative opposite of the endomorphism ring of the algebraic dual. The
+multiplicative opposite is required because the transpose reverses products:
+`(S ∘ R)ᵀ = Rᵀ ∘ Sᵀ`. This is the form needed by `NormedSpace.map_exp`. -/
+noncomputable def dualMapRingHom :
+    (X →L[ℝ] X) →+* (Module.Dual ℝ X →L[ℝ] Module.Dual ℝ X)ᵐᵒᵖ where
+  toFun S := MulOpposite.op (((S : X →ₗ[ℝ] X).dualMap).toContinuousLinearMap)
+  map_one' := by
+    apply MulOpposite.unop_injective
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+  map_mul' S R := by
+    apply MulOpposite.unop_injective
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+  map_zero' := by
+    apply MulOpposite.unop_injective
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+  map_add' S R := by
+    apply MulOpposite.unop_injective
+    ext φ x
+    simp [LinearMap.dualMap_apply]
+
+/-- **Transpose naturality of the exponential.** For a real endomorphism `T` of a
+finite-dimensional real normed space and every `t : ℝ`, the exponential of the
+scaled transpose equals the transpose of the exponential of the scaled map:
+
+`exp (t • Tᵀ) = (exp (t • T))ᵀ`
+
+where the exponential on the left lives in the endomorphism algebra of the
+algebraic dual `Module.Dual ℝ X` and the transpose on the right is the algebraic
+transpose of the continuous endomorphism `exp (t • T)`. This is the missing
+bridge between the dual observer gain and the primal readout; it is proved by
+transporting `NormedSpace.map_exp` along the anti-homomorphism `dualMapRingHom`. -/
+theorem exp_smul_dualMap_eq (T : X →ₗ[ℝ] X) (t : ℝ) :
+    NormedSpace.exp (t • T.dualMap.toContinuousLinearMap) =
+      (((NormedSpace.exp (t • T.toContinuousLinearMap) : X →L[ℝ] X) :
+        X →ₗ[ℝ] X).dualMap).toContinuousLinearMap := by
+  have hcont : Continuous (dualMapRingHom (X := X)) := by
+    change Continuous (fun S : X →L[ℝ] X =>
+      MulOpposite.op (((S : X →ₗ[ℝ] X).dualMap).toContinuousLinearMap))
+    exact MulOpposite.opHomeomorph.continuous.comp
+      (dualMapLinearMap (X := X)).continuous_of_finiteDimensional
+  have hx : (t • T.toContinuousLinearMap) ∈
+      Metric.eball (0 : X →L[ℝ] X) (NormedSpace.expSeries ℝ (X →L[ℝ] X)).radius := by
+    rw [NormedSpace.expSeries_radius_eq_top]
+    exact edist_lt_top _ _
+  have h := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (dualMapRingHom (X := X)) hcont
+    (t • T.toContinuousLinearMap) hx
+  have hsmul : dualMapRingHom (X := X) (t • T.toContinuousLinearMap) =
+      MulOpposite.op (t • T.dualMap.toContinuousLinearMap) := by
+    apply MulOpposite.unop_injective
+    ext φ x
+    simp only [dualMapRingHom, MulOpposite.unop_op]
+    simp [LinearMap.dualMap_apply]
+  rw [hsmul, NormedSpace.exp_op] at h
+  exact (MulOpposite.op_injective h).symm
+
+/-- **Transpose naturality of the exponential, linear-map form.** Restating
+`exp_smul_dualMap_eq` as an equality of linear maps on the algebraic dual:
+
+`(exp (t • Tᵀ)).toLinearMap = (exp (t • T))ᵀ`.
+
+This makes explicit that the exponential of the transpose is the transpose of
+the exponential, without the `toContinuousLinearMap` bookkeeping needed for the
+equality of continuous linear maps. -/
+theorem exp_smul_dualMap_toLinearMap_eq (T : X →ₗ[ℝ] X) (t : ℝ) :
+    (NormedSpace.exp (t • T.dualMap.toContinuousLinearMap)).toLinearMap =
+      ((NormedSpace.exp (t • T.toContinuousLinearMap) : X →L[ℝ] X) : X →ₗ[ℝ] X).dualMap :=
+  by
+  rw [exp_smul_dualMap_eq]
+  rfl
+
+/-- **Pointwise transpose-exponential pairing.** The transpose-naturality
+identity `exp_smul_dualMap_eq` in evaluation form: for every dual vector `φ` and
+vector `x`,
+
+`(exp (t • Tᵀ) φ) x = φ ((exp (t • T)) x)`.
+
+This is the form in which the exponential/transpose bridge is consumed by the
+observer readout: pairing the transposed dual readout against a disturbance
+direction produces exactly the primal readout evaluated through the functional. -/
+theorem exp_smul_dualMap_apply (T : X →ₗ[ℝ] X) (t : ℝ) (φ : Module.Dual ℝ X) (x : X) :
+    (NormedSpace.exp (t • T.dualMap.toContinuousLinearMap)) φ x =
+      φ ((NormedSpace.exp (t • T.toContinuousLinearMap)) x) := by
+  rw [exp_smul_dualMap_eq]
+  simp [LinearMap.dualMap_apply]
+
 end LinearMap
 
 namespace LinearSystem
@@ -4307,34 +4427,149 @@ theorem exists_observerError_dualReadout_tendsto_of_dualCondition
 
 end ObserverGainAssembly
 
+/-! ## The primal observer-error readout
+
+The transpose-exponential pairing turns the accepted dual observer-gain readout
+into the primal one. The remaining ingredient is that a finite-dimensional real
+space is separated by its algebraic dual *in the norm topology*: coordinatewise
+convergence (which is what the dual pairing supplies) upgrades to norm
+convergence because any linear equivalence onto a coordinate space is a
+homeomorphism. This is the `Module.finBasis` step at the end of
+`exists_observerError_readout_tendsto_of_dualCondition`.
+
+The resulting statement is the *stable nonzero* observer-error readout: the
+observer-error output `H (exp (t • (A - L C)) (E d))` decays to zero for every
+disturbance direction `d`, with the gain `L` produced from the Corollary 6.22
+output-injection condition. The exact-zero statement (`E d = 0`, or a zero
+initial error, stays zero) is the separate decoupling layer and is not conflated
+with this decay statement. -/
+
+section PrimalObserverReadout
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [FiniteDimensional ℝ Y] [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D]
+
+/-- **Primal observer-error readout decay from the dual observer condition.**
+Assume the Corollary 6.22 output-injection condition
+`S*(im E) ∩ Xdet(C, A) ≤ ker H`. Then there is an observer gain
+`L : Y →ₗ[ℝ] X`, in the contract's `A - L C` observer-error convention, such that
+the primal observer-error readout
+
+`t ↦ H (exp (t • (A - L.comp C)) (E d))`
+
+decays to zero for every disturbance direction `d`.
+
+This is obtained from the accepted dual statement
+`exists_observerError_dualReadout_tendsto_of_dualCondition` by the
+transpose-exponential pairing `exp_smul_dualMap_apply` (which identifies the
+transposed readout with `z (H (exp (t • (A - L.comp C)) (E d)))` for every
+functional `z`) and the finite-dimensional fact that the algebraic dual separates
+points in the norm topology. -/
+theorem exists_observerError_readout_tendsto_of_dualCondition
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A ≤ LinearMap.ker H) :
+    ∃ L : Y →ₗ[ℝ] X, ∀ d : D,
+      Filter.Tendsto (fun t : ℝ =>
+        H (NormedSpace.exp (t • (A - L.comp C).toContinuousLinearMap) (E d)))
+        Filter.atTop (nhds 0) := by
+  obtain ⟨L, hL⟩ := exists_observerError_dualReadout_tendsto_of_dualCondition C A E H h
+  refine ⟨L, fun d => ?_⟩
+  let b := Module.finBasis ℝ Z
+  have hz : ∀ z : Module.Dual ℝ Z, Filter.Tendsto (fun t : ℝ =>
+      z (H (NormedSpace.exp (t • (A - L.comp C).toContinuousLinearMap) (E d))))
+      Filter.atTop (nhds 0) := by
+    intro z
+    have hpair : ∀ t : ℝ,
+        (E.dualMap (NormedSpace.exp
+          (t • ((A - L.comp C).dualMap).toContinuousLinearMap) (H.dualMap z))) d =
+        z (H (NormedSpace.exp (t • (A - L.comp C).toContinuousLinearMap) (E d))) := by
+      intro t
+      rw [LinearMap.dualMap_apply, LinearMap.exp_smul_dualMap_apply,
+        LinearMap.dualMap_apply]
+    have hev : Continuous (fun ψ : Module.Dual ℝ D => ψ d) :=
+      (LinearMap.continuous_of_finiteDimensional
+        ({ toFun := fun ψ => ψ d
+           map_add' := fun a b => rfl
+           map_smul' := fun c a => rfl } : Module.Dual ℝ D →ₗ[ℝ] ℝ))
+    have h1 : Filter.Tendsto (fun t : ℝ =>
+        (E.dualMap (NormedSpace.exp
+          (t • ((A - L.comp C).dualMap).toContinuousLinearMap) (H.dualMap z))) d)
+        Filter.atTop (nhds 0) :=
+      (hev.tendsto 0).comp (hL z)
+    rw [show (fun t : ℝ => z (H (NormedSpace.exp
+        (t • (A - L.comp C).toContinuousLinearMap) (E d))))
+        = (fun t : ℝ => (E.dualMap (NormedSpace.exp
+          (t • ((A - L.comp C).dualMap).toContinuousLinearMap) (H.dualMap z))) d)
+        from funext (fun t => (hpair t).symm)]
+    exact h1
+  have hcoord : Filter.Tendsto (fun t : ℝ => b.equivFun
+      (H (NormedSpace.exp (t • (A - L.comp C).toContinuousLinearMap) (E d))))
+      Filter.atTop (nhds 0) := by
+    rw [tendsto_pi_nhds]
+    intro i
+    have := hz (b.coord i)
+    simpa [Module.Basis.equivFun_apply, Module.Basis.coord_apply] using this
+  have hcont : Continuous (fun x : Fin (Module.finrank ℝ Z) → ℝ => b.equivFun.symm x) :=
+    b.equivFun.toContinuousLinearEquiv.symm.continuous
+  have h2 : Filter.Tendsto (fun t : ℝ => b.equivFun.symm (b.equivFun
+      (H (NormedSpace.exp (t • (A - L.comp C).toContinuousLinearMap) (E d)))))
+      Filter.atTop (nhds (b.equivFun.symm 0)) :=
+    (hcont.tendsto 0).comp hcoord
+  rw [map_zero] at h2
+  exact Filter.Tendsto.congr (fun t => b.equivFun.symm_apply_apply _) h2
+
+/-- **Primal observer-error readout decay from the Corollary 6.22 conditions.**
+The packaged form of `exists_observerError_readout_tendsto_of_dualCondition`:
+under the full Corollary 6.22 geometric subspace conditions
+`ExternalStabilizationConditions`, the second conjunct (the output-injection
+condition) supplies the observer gain `L` in the contract's `A - L C`
+convention for which the primal observer-error readout decays to zero for every
+disturbance direction. The first conjunct (the state-feedback condition) is not
+needed for the observer half and is retained only so that the hypothesis matches
+the source criterion. -/
+theorem exists_observerError_readout_tendsto_of_externalStabilizationConditions
+    (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ExternalStabilizationConditions sys E H) :
+    ∃ L : Y →ₗ[ℝ] X, ∀ d : D,
+      Filter.Tendsto (fun t : ℝ =>
+        H (NormedSpace.exp (t • (sys.A - L.comp sys.C).toContinuousLinearMap) (E d)))
+        Filter.atTop (nhds 0) :=
+  exists_observerError_readout_tendsto_of_dualCondition sys.C sys.A E H h.2
+
+end PrimalObserverReadout
+
 end LinearSystem
 
-/-! ### Handoff: the dual observer gain is assembled; the primal pairing is the
-remaining syntactic bridge
+/-! ### The transpose-exponential bridge and the primal observer readout
 
-The dual output-injection half of Corollary 6.22 is now assembled:
+The syntactic bridge recorded in the previous handoff is now complete.
 
-* `LinearMap.instNormedAddCommGroupDual` / `LinearMap.instNormedSpaceDual`
-  install the basis-coordinate norm on the algebraic dual `Module.Dual ℝ X`,
-  reusing the canonical linear structure so `LinearMap.toContinuousLinearMap`
-  and `NormedSpace.exp` apply. This was the missing API in the prior handoffs.
-* `LinearSystem.exists_outputInjection_dualReadout_tendsto_of_dualCondition`
-  applies the accepted state-feedback geometric-condition decay theorem to the
-  transposed pair `(Aᵀ, Cᵀ, Eᵀ, Hᵀ)` and transports the gain back with
-  `dualMap_surjective`, yielding an output injection `G` (in the `A + G C`
-  convention of `observerErrorBlock_eq`) whose transposed observer-error
-  readout `t ↦ Eᵀ (exp (t • (A + G C)ᵀ)) (Hᵀ z)` decays to zero.
-* `LinearSystem.exists_observerError_dualReadout_tendsto_of_dualCondition`
-  restates it in the contract's `A - L C` observer-error convention (`L = -G`).
+* `LinearMap.exp_smul_dualMap_eq` is the operator identity
+  `exp (t • Tᵀ) = (exp (t • T))ᵀ` for a real endomorphism `T`. It is proved by
+  bundling the algebraic transpose as the ring homomorphism
+  `LinearMap.dualMapRingHom` into the multiplicative opposite (the transpose is
+  an algebra anti-homomorphism, `(S ∘ R)ᵀ = Rᵀ ∘ Sᵀ`), applying
+  `NormedSpace.map_exp`, and removing the opposite with `NormedSpace.exp_op`.
+  `LinearMap.exp_smul_dualMap_apply` is the equivalent pointwise pairing form
+  `(exp (t • Tᵀ) φ) x = φ ((exp (t • T)) x)`.
+* `LinearSystem.exists_observerError_readout_tendsto_of_dualCondition`
+  converts the accepted dual observer-error readout decay into the primal
+  statement `H (exp (t • (A - L.comp C)) (E d)) → 0` for every disturbance
+  direction `d`, with `L` the observer gain in the contract's `A - L C`
+  convention. The pairing identifies the transposed readout with
+  `z (H (exp (t • (A - L C)) (E d)))` for every functional `z`, and the
+  finite-dimensional `Module.finBasis` coordinate argument upgrades the
+  coordinatewise convergence supplied by the algebraic dual to norm convergence.
+* `LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions`
+  packages the same conclusion under the full Corollary 6.22 subspace
+  conditions `ExternalStabilizationConditions`.
 
-The remaining step is purely notational: converting the transposed readout
-convergence into the primal statement `H (exp (t • (A + G C)) (E d)) → 0` for
-every disturbance direction `d`. The two are mathematically equal because
-`(exp (t • (A + G C))).dualMap = exp (t • (A + G C).dualMap)` and evaluation at
-`E d` against `z` gives `z (H (exp (t • (A + G C)) (E d)))`. A reusable Lean
-bridge would prove `NormedSpace.exp (t • T.dualMap.toContinuousLinearMap) =
-(NormedSpace.exp (t • T.toContinuousLinearMap)).dualMap` for a real endomorphism
-`T` (naturality of `NormedSpace.exp` under the transpose/MulOpposite ring
-homomorphism, or the ODE uniqueness of the two curves); the algebraic
-`LinearMap.toContinuousLinearMap`/basis-coordinate dictionary on the dual is not
-currently in the pinned library. No primal pairing statement is claimed here. -/
+The exact-zero (decoupling) and stable-nonzero (decay) readings remain distinct:
+this layer proves only the decay of the observer-error readout; it does not
+collapse it into the identically-zero external-response predicate. -/
