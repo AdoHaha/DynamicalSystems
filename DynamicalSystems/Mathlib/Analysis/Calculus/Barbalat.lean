@@ -6,8 +6,11 @@ Authors: Igor Zubrycki
 module
 
 public import Mathlib.Analysis.Real.Sqrt
+public import Mathlib.MeasureTheory.Integral.Bochner.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.Order.Filter.AtTopBot.Group
+public import Mathlib.Topology.MetricSpace.Holder
 public import Mathlib.Topology.Order.OrderClosed
 public import Mathlib.Topology.UniformSpace.Basic
 
@@ -44,7 +47,7 @@ The main theorem would upstream to the root namespace under a Mathlib-style name
 @[expose] public noncomputable section
 
 open Filter Set MeasureTheory
-open scoped Topology
+open scoped Topology NNReal ENNReal
 
 namespace Barbalat
 
@@ -434,5 +437,167 @@ theorem norm_le_rpow_tailSup_of_holder_of_tendsto
     {t : ℝ} (ht : 0 ≤ t) :
     ‖f t‖ ≤ (1 + c) * tailSup f t ^ (α / (1 + α)) :=
   norm_le_rpow_tailSup_of_holder hc hα hcont hholder ht (bddAbove_range_tailSup hcont h ht)
+
+/-! ## Lemma 6: Hölder regularity from an `L^q` derivative -/
+
+/-- Hölder's inequality on a compact interval, in the form needed for Lemma 6. If `g : ℝ → ℝ` is
+nonnegative with finite `L^q` seminorm on `[0, ∞)` and `(∫ x in Ioi 0, g x ^ q) ^ (1 / q) ≤ C`,
+then `∫ x in a..b, g x ≤ (b - a) ^ (1 / q') * C` for `1 < q` and `q' = q / (q - 1)`. -/
+private lemma intervalIntegral_le_rpow_mul_of_integral_rpow_le
+    {g : ℝ → ℝ} {q C : ℝ} (hq : 1 < q)
+    (hg : MemLp g (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)))
+    (hgnn : ∀ x, 0 ≤ g x)
+    (hC : (∫ x in Set.Ioi 0, g x ^ q) ^ (1 / q) ≤ C)
+    {a b : ℝ} (ha : 0 ≤ a) (hab : a ≤ b) :
+    ∫ x in a..b, g x ≤ (b - a) ^ (1 / Real.conjExponent q) * C := by
+  have hqpos : 0 < q := lt_trans zero_lt_one hq
+  have hconj : (Real.conjExponent q).HolderConjugate q :=
+    (Real.HolderConjugate.conjExponent hq).symm
+  have hsub : Set.Ioc a b ⊆ Set.Ioi (0 : ℝ) := fun x hx => lt_of_le_of_lt ha hx.1
+  have hνle : volume.restrict (Set.Ioc a b) ≤ volume.restrict (Set.Ioi 0) :=
+    Measure.restrict_mono hsub le_rfl
+  have hgν : MemLp g (ENNReal.ofReal q) (volume.restrict (Set.Ioc a b)) :=
+    hg.mono_measure hνle
+  have h1ν : MemLp (fun _ : ℝ => (1 : ℝ))
+      (ENNReal.ofReal (Real.conjExponent q)) (volume.restrict (Set.Ioc a b)) :=
+    memLp_const 1
+  have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg hconj
+    (Eventually.of_forall fun _ => zero_le_one)
+    (Eventually.of_forall hgnn) h1ν hgν
+  simp only [one_mul, Real.one_rpow] at hholder
+  have hfirst : (∫ _x : ℝ, (1 : ℝ) ∂(volume.restrict (Set.Ioc a b))) = b - a := by
+    rw [integral_const, smul_eq_mul, mul_one, measureReal_def,
+      Measure.restrict_apply MeasurableSet.univ, Set.univ_inter, Real.volume_Ioc,
+      ENNReal.toReal_ofReal (by linarith)]
+  have hInt : Integrable (fun x => g x ^ q) (volume.restrict (Set.Ioi 0)) :=
+    (hg.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hqpos) ENNReal.ofReal_ne_top).congr
+      (Eventually.of_forall fun x => by
+        simp only [ENNReal.toReal_ofReal hqpos.le, Real.norm_of_nonneg (hgnn x)])
+  have hmono : (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ≤
+      ∫ x, g x ^ q ∂(volume.restrict (Set.Ioi 0)) :=
+    integral_mono_measure hνle (Eventually.of_forall fun x => Real.rpow_nonneg (hgnn x) q) hInt
+  have hsecond : (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ^ (1 / q) ≤ C :=
+    le_trans (Real.rpow_le_rpow (integral_nonneg fun x => Real.rpow_nonneg (hgnn x) q) hmono
+      (by positivity)) hC
+  rw [intervalIntegral.integral_of_le hab]
+  calc ∫ x in Set.Ioc a b, g x
+      ≤ (∫ _x : ℝ, (1 : ℝ) ∂(volume.restrict (Set.Ioc a b))) ^
+          (1 / Real.conjExponent q) *
+          (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ^ (1 / q) := hholder
+    _ = (b - a) ^ (1 / Real.conjExponent q) *
+          (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ^ (1 / q) := by rw [hfirst]
+    _ ≤ (b - a) ^ (1 / Real.conjExponent q) * C := by
+        exact mul_le_mul_of_nonneg_left hsecond (Real.rpow_nonneg (by linarith) _)
+
+/-- **Lemma 6 of Farkas–Wegner** (Hölder regularity from an `L^q` derivative). Let `E` be a Banach
+space, `f : ℝ → E` differentiable everywhere with derivative `f'`, and suppose that
+`f' ∈ L^q(0, ∞)` for some `q ∈ (1, ∞)` with `L^q` seminorm bounded by `C`. Then `f` is Hölder
+continuous on `[0, ∞)` with exponent `(q - 1) / q` and constant `C`.
+
+Compared with the paper, the hypothesis is reshaped as follows: absolute continuity is replaced by
+the stronger (and in this pin more convenient) hypothesis `∀ x, HasDerivAt f (f' x) x`; the
+derivative bound `f' ∈ L^q(0, ∞)` is expressed through `MeasureTheory.MemLp` together with the
+norm bound `eLpNorm f' (ofReal q) ≤ C`; the `L^p` assumption on `f` itself is not needed for this
+estimate (boundedness of `f` follows from Hölder continuity and one finite value). The proof is
+exactly the paper's one-liner `‖f y - f x‖ = ‖∫ t in x..y, f' t‖ ≤ (y - x) ^ (1/q') * ‖f'‖_q`,
+with Hölder's inequality for the final step. -/
+theorem holderOn_of_memLp_deriv
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {q : ℝ} (hq : 1 < q) {C : ℝ≥0}
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hmem : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)))
+    (hC : eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)) ≤ (C : ENNReal)) :
+    HolderOnWith C (Real.toNNReal ((q - 1) / q)) f (Set.Ici 0) := by
+  have hqpos : 0 < q := lt_trans zero_lt_one hq
+  have hr : 0 ≤ (q - 1) / q := by positivity
+  -- Extract the real-valued `L^q` bound from the `eLpNorm` hypothesis.
+  have hreal : (∫ x in Set.Ioi 0, ‖f' x‖ ^ q) ^ (1 / q) ≤ (C : ℝ) := by
+    have h := MemLp.eLpNorm_eq_integral_rpow_norm (μ := volume.restrict (Set.Ioi 0))
+      (f := f') (p := ENNReal.ofReal q) (ENNReal.ofReal_ne_zero_iff.mpr hqpos)
+      ENNReal.ofReal_ne_top hmem
+    rw [ENNReal.toReal_ofReal hqpos.le] at h
+    rw [h, ← ENNReal.ofReal_coe_nnreal (p := C)] at hC
+    rw [ENNReal.ofReal_le_ofReal_iff C.coe_nonneg] at hC
+    simpa only [one_div] using hC
+  -- The key estimate `‖f y - f x‖ ≤ (y - x) ^ (1/q') * C` for `0 ≤ x ≤ y`.
+  have hkey : ∀ {x y : ℝ}, 0 ≤ x → x ≤ y →
+      ‖f y - f x‖ ≤ (y - x) ^ ((q - 1) / q) * (C : ℝ) := by
+    intro x y hx hxy
+    have hmemν : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioc x y)) :=
+      hmem.mono_measure (Measure.restrict_mono (fun z hz => lt_of_le_of_lt hx hz.1) le_rfl)
+    have hint : IntervalIntegrable f' volume x y := by
+      rw [intervalIntegrable_iff_integrableOn_Ioc_of_le hxy]
+      exact hmemν.integrable (ENNReal.one_le_ofReal.mpr hq.le)
+    have hftc : ∫ t in x..y, f' t = f y - f x :=
+      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+    have hle := intervalIntegral_le_rpow_mul_of_integral_rpow_le hq hmem.norm
+      (fun t => norm_nonneg _) hreal hx hxy
+    calc ‖f y - f x‖ = ‖∫ t in x..y, f' t‖ := by rw [hftc]
+      _ ≤ ∫ t in x..y, ‖f' t‖ := intervalIntegral.norm_integral_le_integral_norm hxy
+      _ ≤ (y - x) ^ (1 / Real.conjExponent q) * (C : ℝ) := hle
+      _ = (y - x) ^ ((q - 1) / q) * (C : ℝ) := by rw [Real.conjExponent, one_div_div]
+  intro x hx y hy
+  have hd : dist (f x) (f y) ≤
+      (C : ℝ) * dist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ) := by
+    rcases le_total x y with hxy | hyx
+    · have hk := hkey hx hxy
+      have hdf : dist (f x) (f y) = ‖f y - f x‖ := by rw [dist_eq_norm, norm_sub_rev]
+      have hdist : dist x y = y - x := by
+        rw [Real.dist_eq, abs_of_nonpos (sub_nonpos.mpr hxy), neg_sub]
+      rw [hdf, hdist, Real.coe_toNNReal _ hr]
+      exact hk.trans_eq (by ring)
+    · have hk := hkey hy hyx
+      have hdf : dist (f x) (f y) = ‖f x - f y‖ := by rw [dist_eq_norm]
+      have hdist : dist x y = x - y := by
+        rw [Real.dist_eq, abs_of_nonneg (sub_nonneg.mpr hyx)]
+      rw [hdf, hdist, Real.coe_toNNReal _ hr]
+      exact hk.trans_eq (by ring)
+  calc edist (f x) (f y) = ENNReal.ofReal (dist (f x) (f y)) := edist_dist _ _
+    _ ≤ ENNReal.ofReal ((C : ℝ) * dist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ)) :=
+        ENNReal.ofReal_le_ofReal hd
+    _ = (C : ℝ≥0∞) * edist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ) := by
+        rw [edist_dist, ENNReal.ofReal_mul (by positivity),
+          ENNReal.ofReal_rpow_of_nonneg dist_nonneg (by positivity),
+          ENNReal.ofReal_coe_nnreal]
+
+/-- **Lemma 6 of Farkas–Wegner, endpoint `q = ∞`.** If `f : ℝ → E` is differentiable everywhere
+with derivative `f'`, the derivative is in `L^∞(0, ∞)`, and `C` is an essential bound for `‖f'‖`,
+then `f` is Lipschitz continuous on `[0, ∞)` with constant `C`. This is the `q = ∞` case of
+`holderOn_of_memLp_deriv`, where the Hölder exponent `(q - 1) / q` tends to `1`. Again the
+`L^p` assumption on `f` itself is not needed for the estimate. -/
+theorem lipschitzOn_of_memLp_deriv
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} (hderiv : ∀ x, HasDerivAt f (f' x) x) {C : ℝ≥0}
+    (hmem : MemLp f' ∞ (volume.restrict (Set.Ioi 0)))
+    (hC : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ)) :
+    LipschitzOnWith C f (Set.Ici 0) := by
+  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy => ?_
+  have key : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b →
+      dist (f a) (f b) ≤ (C : ℝ) * dist a b := by
+    intro a b ha hab
+    have hνle : volume.restrict (Set.Ioc a b) ≤ volume.restrict (Set.Ioi 0) :=
+      Measure.restrict_mono (fun z hz => lt_of_le_of_lt ha hz.1) le_rfl
+    have hasm : AEStronglyMeasurable f' (volume.restrict (Set.Ioc a b)) :=
+      hmem.aestronglyMeasurable.mono_measure hνle
+    have hCae : ∀ᵐ z ∂(volume.restrict (Set.Ioc a b)), ‖f' z‖ ≤ (C : ℝ) :=
+      hC.filter_mono (ae_mono hνle)
+    have hint : IntervalIntegrable f' volume a b := by
+      rw [intervalIntegrable_iff_integrableOn_Ioc_of_le hab]
+      exact IntegrableOn.of_bound (by simp) hasm C hCae
+    have hftc : ∫ t in a..b, f' t = f b - f a :=
+      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+    have hCae' : ∀ᵐ t ∂volume, t ∈ Set.uIoc a b → ‖f' t‖ ≤ (C : ℝ) := by
+      rw [Set.uIoc_of_le hab]
+      exact (ae_restrict_iff' measurableSet_Ioc).mp hCae
+    have hbound := intervalIntegral.norm_integral_le_of_norm_le_const_ae hCae'
+    have hdf : dist (f a) (f b) = ‖f b - f a‖ := by rw [dist_eq_norm, norm_sub_rev]
+    have hdist : dist a b = b - a := by
+      rw [Real.dist_eq, abs_of_nonpos (sub_nonpos.mpr hab), neg_sub]
+    rw [hdf, hdist, ← hftc]
+    simpa [abs_of_nonneg (sub_nonneg.mpr hab)] using hbound
+  rcases le_total x y with hxy | hyx
+  · exact key hx hxy
+  · rw [dist_comm (f x) (f y), dist_comm x y]
+    exact key hy hyx
 
 end Barbalat
