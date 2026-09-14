@@ -4003,25 +4003,59 @@ end LinearMap
 /-! ### Handoff: the remaining output-injection bridge
 
 The dual output-injection half of Corollary 6.22 is now reduced to a single
-missing declaration. The source's second condition (6.32) is restated through
-`conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition` as the
-primal geometric condition of the transposed pair, except that the antistable
+missing declaration. After the accepted commit `0229756` the antistable
 annihilator `(X_b(A))ᵃⁿⁿ` has not yet been identified with the stable subspace
-`X_g(Aᵀ)`. Concretely the missing reusable lemma is the transpose stable/
-antistable duality
+of the transpose. The stabilizable/stable spaces are now available on any
+finite-dimensional real vector space through the norm-free API in
+`DynamicalSystems/Linear/Stabilization.lean`
+(`stableSubspaceOfBasis`, `unstableSubspaceOfBasis`, with
+`stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace` recovering the accepted
+`hurwitzSubspace` definitionally). The missing reusable lemma is therefore now
+well-typed:
 
-`(unstableSubspace A).dualAnnihilator = hurwitzSubspace (transpose of A)`
+`(unstableSubspace A).dualAnnihilator =
+   stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap`,
 
-(or globally `(detectableSubspace C A).dualAnnihilator = stabilizableSubspace of
-the transposed pair`). It is not currently statable, because `stabilizableSubspace`
-and `hurwitzSubspace` are defined on real **normed** finite-dimensional spaces
-via `Module.finBasis`, while the algebraic dual `Module.Dual ℝ X` carries no
-`NormedAddCommGroup`/`NormedSpace` instance. The smallest next step is to make
-`hurwitzSubspace` (equivalently `stabilizableSubspace`) available on a finite-
-dimensional real vector space from an arbitrary basis, prove it basis-independent,
-and then identify `(unstableSubspace A)ᵃⁿⁿ` with the stable subspace of the
-transpose using `Basis.dualBasis` and `charpoly_dualMap`. With that identification
-the accepted state-feedback construction `exists_feedback_tendsto_readout_of_geometricCondition`
-can be run on the transposed pair and the resulting gain transposed back with
-`dualMap_surjective`, yielding the observer gain `G` of Trentelman–Stoorvogel–Hautus
-Lemma 6.20/6.21. Until then no output-injection statement is claimed. -/
+equivalently, after basis independence, `(detectableSubspace C A).dualAnnihilator
+= stabilizableSubspace` of the transposed pair. The two reusable ingredients
+named in the previous handoff are now proved (in
+`DynamicalSystems/Linear/Stabilization.lean`):
+
+1. **Commuting-map generalized-eigenspace transport.**
+   `map_maxGenEigenspace_le_of_comp_eq` gives `map e (X_μ(f)) ≤ X_μ(g)` for
+   `g ∘ e = e ∘ f`, and `map_maxGenEigenspace_of_equiv` upgrades this to the
+   conjugation identity `e '' X_μ(f) = X_μ(g)` for a linear equivalence `e`.
+   The matrix lemma `map_toLin'_maxGenEigenspace` is now the specialization of
+   the former. What is still missing for basis independence is the
+   `baseChange` dictionary: generalizing `baseChange_repr_comp` and
+   `baseChange_equivFun_symm_one_tmul` from `Module.finBasis` to an arbitrary
+   basis `b`, so that `b.equivFun` intertwines `A.baseChange ℂ` with the
+   complexified coordinate matrix; `map_maxGenEigenspace_of_equiv` then
+   identifies the `iSup` of generalized eigenspaces in any basis with the
+   canonical complexification `X_g(A.baseChange ℂ)`.
+2. **Single-eigenvalue annihilator lemma.**
+   `dualAnnihilator_genEigenrange_eq_genEigenspace_dualMap` proves
+   `(genEigenrange A ν k)ᵃⁿⁿ = genEigenspace Aᵀ ν k` for the algebraic
+   transpose `Aᵀ = A.dualMap`, and
+   `dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace` gives the
+   `finrank`/maximal form `(genEigenrange A ν n)ᵃⁿⁿ = X_ν(Aᵀ)` used below.
+   What is still missing is the inclusion `X_μ(A) ≤ genEigenrange A ν n` for
+   `ν ≠ μ`: on `X_μ(A)` the map `A - μ` is nilpotent
+   (`Module.End.isNilpotent_restrict_maxGenEigenspace_sub_algebraMap`), hence
+   `A - ν = (A - μ) + (μ - ν)` is a unit there by
+   `IsNilpotent.isUnit_add_right_of_commute`, so `A - ν` is surjective on
+   `X_μ(A)` and `X_μ(A) ≤ range ((A - ν)^n)`. Combined with the annihilator
+   lemma this yields the single-eigenvalue orthogonality
+   `X_ν(Aᵀ) ≤ (X_μ(A))ᵃⁿⁿ` for `ν ≠ μ`; summing over `{re ≥ 0}` gives one
+   inclusion of the transpose spectral duality. The reverse inclusion still
+   needs the finite-dimensional generalized-eigenspace decomposition
+   (equivalently, `finrank_maxGenEigenspace_eq` and `charpoly_dualMap_ofField`
+   to match the stable/antistable dimensions), which is the remaining
+   finite-dimensional bookkeeping.
+
+With that identification the accepted state-feedback construction
+`exists_feedback_tendsto_readout_of_geometricCondition` can be run on the
+transposed pair and the resulting gain transposed back with
+`dualMap_surjective`, yielding the observer gain `G` of
+Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21. Until then no output-injection
+statement is claimed. -/

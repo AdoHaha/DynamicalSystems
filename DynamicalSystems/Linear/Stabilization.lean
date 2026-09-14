@@ -3044,33 +3044,29 @@ lemma ofRealPi_mulVec_rect {ι κ : Type*} [Fintype ι]
   have h := RingHom.map_mulVec (algebraMap ℝ ℂ) M y i
   simpa [ofRealPi, Function.comp_def] using h
 
-/-- Matrix transport of generalized eigenspaces. -/
-theorem map_toLin'_maxGenEigenspace {m n : ℕ}
-    (M : Matrix (Fin m) (Fin n) ℂ) (A : Matrix (Fin n) (Fin n) ℂ)
-    (T : Matrix (Fin m) (Fin m) ℂ) (μ : ℂ)
-    (h : M * A = T * M) :
-    Submodule.map (Matrix.toLin' M)
-        (Module.End.maxGenEigenspace (Matrix.toLin' A) μ) ≤
-      Module.End.maxGenEigenspace (Matrix.toLin' T) μ := by
+/-- **Commuting-map generalized-eigenspace transport.** If a linear map `e`
+intertwines `f` with `g` (`g ∘ e = e ∘ f`), then `e` maps the generalized
+eigenspace of `f` at `μ` into the generalized eigenspace of `g` at `μ`. This is
+the abstract form of `map_toLin'_maxGenEigenspace` and the reusable ingredient
+for transporting spectral subspaces across a change of coordinates. -/
+theorem map_maxGenEigenspace_le_of_comp_eq
+    {E F : Type*} [AddCommGroup E] [Module ℂ E] [AddCommGroup F] [Module ℂ F]
+    (e : E →ₗ[ℂ] F) (f : E →ₗ[ℂ] E) (g : F →ₗ[ℂ] F) (μ : ℂ)
+    (h : g.comp e = e.comp f) :
+    Submodule.map e (Module.End.maxGenEigenspace f μ) ≤
+      Module.End.maxGenEigenspace g μ := by
   rw [Submodule.map_le_iff_le_comap]
   intro z hz
   rw [Submodule.mem_comap] at *
   rw [Module.End.mem_maxGenEigenspace] at hz ⊢
   obtain ⟨k, hk⟩ := hz
   refine ⟨k, ?_⟩
-  have hMA : (Matrix.toLin' M).comp (Matrix.toLin' A) =
-      (Matrix.toLin' T).comp (Matrix.toLin' M) := by
-    rw [← Matrix.toLin'_mul, ← Matrix.toLin'_mul, h]
-  have hcomm : (Matrix.toLin' M).comp (Matrix.toLin' A - μ • 1) =
-      (Matrix.toLin' T - μ • 1).comp (Matrix.toLin' M) := by
-    rw [LinearMap.comp_sub, LinearMap.sub_comp, hMA]
+  have hcomm : e.comp (f - μ • 1) = (g - μ • 1).comp e := by
+    rw [LinearMap.comp_sub, LinearMap.sub_comp, h]
     ext v
-    simp [LinearMap.comp_apply]
-  have hind : ∀ j,
-      ((Matrix.toLin' T - μ • (1 : (Fin m → ℂ) →ₗ[ℂ] (Fin m → ℂ))) ^ j)
-        ((Matrix.toLin' M) z) =
-      (Matrix.toLin' M)
-        (((Matrix.toLin' A - μ • (1 : (Fin n → ℂ) →ₗ[ℂ] (Fin n → ℂ))) ^ j) z) := by
+    simp
+  have hind : ∀ j, ((g - μ • (1 : (F →ₗ[ℂ] F))) ^ j) (e z) =
+      e (((f - μ • (1 : (E →ₗ[ℂ] E))) ^ j) z) := by
     intro j
     induction j with
     | zero => simp
@@ -3079,6 +3075,78 @@ theorem map_toLin'_maxGenEigenspace {m n : ℕ}
           ← LinearMap.comp_apply, ← hcomm, LinearMap.comp_apply]
         rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply]
   rw [hind k, hk, map_zero]
+
+/-- **Commuting-equivalence generalized-eigenspace transport.** A linear
+equivalence `e` satisfying `g ∘ e = e ∘ f` identifies the generalized
+eigenspace of `f` at `μ` with that of `g` at `μ`: the conjugation identity
+`e '' maxGenEigenspace f μ = maxGenEigenspace g μ`. This is the exact form
+needed for basis independence of the spectral subspaces. -/
+theorem map_maxGenEigenspace_of_equiv
+    {E F : Type*} [AddCommGroup E] [Module ℂ E] [AddCommGroup F] [Module ℂ F]
+    (e : E ≃ₗ[ℂ] F) (f : E →ₗ[ℂ] E) (g : F →ₗ[ℂ] F) (μ : ℂ)
+    (h : g.comp e.toLinearMap = e.toLinearMap.comp f) :
+    Submodule.map e.toLinearMap (Module.End.maxGenEigenspace f μ) =
+      Module.End.maxGenEigenspace g μ := by
+  refine le_antisymm (map_maxGenEigenspace_le_of_comp_eq e.toLinearMap f g μ h) ?_
+  have h1 : ∀ x : E, g (e x) = e (f x) := by
+    intro x
+    have := congrArg (fun φ : E →ₗ[ℂ] F => φ x) h
+    simpa using this
+  have h' : f.comp e.symm.toLinearMap = e.symm.toLinearMap.comp g := by
+    ext y
+    apply e.injective
+    rw [LinearMap.comp_apply, LinearMap.comp_apply, ← h1 (e.symm.toLinearMap y)]
+    simp
+  have hsymm := map_maxGenEigenspace_le_of_comp_eq e.symm.toLinearMap g f μ h'
+  intro y hy
+  have hy' : e.symm y ∈ Module.End.maxGenEigenspace f μ := hsymm ⟨y, hy, rfl⟩
+  exact ⟨e.symm y, hy', by simp⟩
+
+/-- **Single-eigenvalue annihilator lemma.** The annihilator of the generalized
+eigenrange `genEigenrange A ν k = range ((A - ν)^k)` is the `k`-th generalized
+eigenspace of the transpose `Aᵀ = A.dualMap` at `ν`. This is the exact duality
+between generalized eigenspaces and generalized eigenranges and is the reusable
+input for the transpose spectral duality `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`. -/
+theorem dualAnnihilator_genEigenrange_eq_genEigenspace_dualMap
+    {E : Type*} [AddCommGroup E] [Module ℂ E]
+    (A : E →ₗ[ℂ] E) (ν : ℂ) (k : ℕ) :
+    (Module.End.genEigenrange A ν k).dualAnnihilator =
+      Module.End.genEigenspace A.dualMap ν k := by
+  rw [Module.End.genEigenrange_nat, Module.End.genEigenspace_nat]
+  rw [← LinearMap.ker_dualMap_eq_dualAnnihilator_range]
+  congr 1
+  rw [← dualMap_pow]
+  congr 1
+  exact dualMap_sub_smul_one A ν
+
+/-- **Single-eigenvalue annihilator lemma, maximal form.** Over a
+finite-dimensional complex space the annihilator of the `finrank`-generalized
+eigenrange at `ν` is the maximal generalized eigenspace of the transpose at
+`ν`. This is the form stated in the handoff for the transpose spectral
+duality. -/
+theorem dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace
+    {E : Type*} [AddCommGroup E] [Module ℂ E] [FiniteDimensional ℂ E]
+    (A : E →ₗ[ℂ] E) (ν : ℂ) :
+    (Module.End.genEigenrange A ν (Module.finrank ℂ E)).dualAnnihilator =
+      Module.End.maxGenEigenspace A.dualMap ν := by
+  rw [dualAnnihilator_genEigenrange_eq_genEigenspace_dualMap]
+  have hfin : Module.finrank ℂ (Module.Dual ℂ E) = Module.finrank ℂ E :=
+    Subspace.dual_finrank_eq
+  rw [← hfin, ← Module.End.maxGenEigenspace_eq_genEigenspace_finrank A.dualMap ν]
+
+/-- Matrix transport of generalized eigenspaces. -/
+theorem map_toLin'_maxGenEigenspace {m n : ℕ}
+    (M : Matrix (Fin m) (Fin n) ℂ) (A : Matrix (Fin n) (Fin n) ℂ)
+    (T : Matrix (Fin m) (Fin m) ℂ) (μ : ℂ)
+    (h : M * A = T * M) :
+    Submodule.map (Matrix.toLin' M)
+        (Module.End.maxGenEigenspace (Matrix.toLin' A) μ) ≤
+      Module.End.maxGenEigenspace (Matrix.toLin' T) μ := by
+  have hMA : (Matrix.toLin' M).comp (Matrix.toLin' A) =
+      (Matrix.toLin' T).comp (Matrix.toLin' M) := by
+    rw [← Matrix.toLin'_mul, ← Matrix.toLin'_mul, h]
+  exact map_maxGenEigenspace_le_of_comp_eq (Matrix.toLin' M) (Matrix.toLin' A)
+    (Matrix.toLin' T) μ hMA.symm
 
 /-- Coordinate naturality of a real linear map. -/
 theorem ofRealPi_equivFun_toLin'_apply {Z : Type*} [AddCommGroup Z] [Module ℝ Z]
@@ -3685,5 +3753,87 @@ theorem isDetectable_iff_detectableSubspace_eq_bot (C : X →ₗ[ℝ] Y) (A : X 
       isHurwitz_of_unstableSubspace_eq_bot _ hUN
     exact isDetectable_of_isHurwitz_unobservableRestriction C A hAN
 
+
+/-! ## Basis-agnostic spectral subspaces on an arbitrary finite-dimensional real space
+
+The definitions `hurwitzSubspace` and `unstableSubspace` in this file are stated
+under the global `[NormedAddCommGroup X] [NormedSpace ℝ X]` variables, although
+neither definition uses the norm: both only unfold `Module.finBasis` and the
+matrix/`ofRealPi` construction. This blocks their use on the algebraic dual
+`Module.Dual ℝ X`, which carries no norm and no `Module.finBasis`-compatible
+normed instance, and is exactly the obstruction recorded in the handoff for the
+output-injection half of Corollary 6.22.
+
+The definitions below remove the norm from the interface: they are stated for an
+arbitrary real finite-dimensional vector space `M` and an arbitrary finite basis
+`b`, with no normed hypotheses. Specialising `b := Module.finBasis ℝ X` recovers
+the accepted `hurwitzSubspace`/`unstableSubspace` definitionally (see
+`hurwitzSubspace_eq_stableSubspaceOfBasis`), so the new API is a conservative
+generalisation. Applying them to `M := Module.Dual ℝ X` with
+`b := Module.finBasis ℝ (Module.Dual ℝ X)` makes the transpose stable subspace
+`stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap` a
+well-typed object.
+
+The missing step for the duality identity is recorded in the handoff: the
+basis-independence of `stableSubspaceOfBasis` (equivalently, that it agrees with
+the canonical complexification `⨆_{re<0} maxGenEigenspace (A.baseChange ℂ)`
+under `x ↦ 1 ⊗ₜ x`) and the transpose spectral duality
+`(unstableSubspace A).dualAnnihilator = stableSubspaceOfBasis … A.dualMap`.
+-/
+
+section BasisSpectralSubspace
+
+variable {M : Type*} [AddCommGroup M] [Module ℝ M] [FiniteDimensional ℝ M]
+
+/-- The complex spectral subspace of an endomorphism in an arbitrary finite
+basis `b`, at the eigenvalues with real part satisfying a predicate `q`. -/
+noncomputable def complexSpectralSubspaceOfBasis {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) (q : ℂ → Prop) : Submodule ℂ (ι → ℂ) :=
+  ⨆ μ : {μ : ℂ // q μ},
+    Module.End.maxGenEigenspace
+      (Matrix.toLin' ((LinearMap.toMatrix b b A).map (algebraMap ℝ ℂ))) μ.1
+
+/-- The **stable subspace** `X_g(A)` in an arbitrary finite basis: the pull-back
+along the real coordinates of the sum of generalized eigenspaces at the
+eigenvalues with negative real part. This is the norm-free form of
+`hurwitzSubspace`. -/
+noncomputable def stableSubspaceOfBasis {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) : Submodule ℝ M :=
+  ((complexSpectralSubspaceOfBasis b A (fun μ => μ.re < 0)).restrictScalars ℝ).comap
+    (ofRealPi.comp b.equivFun.toLinearMap)
+
+/-- The **antistable subspace** `X_b(A)` in an arbitrary finite basis: the
+pull-back along the real coordinates of the sum of generalized eigenspaces at
+the eigenvalues with nonnegative real part. This is the norm-free form of
+`unstableSubspace`. -/
+noncomputable def unstableSubspaceOfBasis {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) : Submodule ℝ M :=
+  ((complexSpectralSubspaceOfBasis b A (fun μ => ¬ μ.re < 0)).restrictScalars ℝ).comap
+    (ofRealPi.comp b.equivFun.toLinearMap)
+
+omit [FiniteDimensional ℝ M] in
+/-- The coordinate pull-back is measurable/injective as before: membership in
+`stableSubspaceOfBasis` is exactly membership of the complex coordinates in the
+complex spectral subspace. -/
+theorem mem_stableSubspaceOfBasis {ι : Type*} [Fintype ι] [DecidableEq ι]
+    {b : Basis ι ℝ M} {A : M →ₗ[ℝ] M} {x : M} :
+    x ∈ stableSubspaceOfBasis b A ↔
+      ofRealPi (b.equivFun x) ∈ complexSpectralSubspaceOfBasis b A (fun μ => μ.re < 0) := by
+  rw [stableSubspaceOfBasis, Submodule.mem_comap, Submodule.restrictScalars_mem]
+  rfl
+
+/-- **Conservative generalisation.** For the canonical basis `Module.finBasis`,
+the basis-agnostic stable subspace is definitionally the accepted
+`hurwitzSubspace`. -/
+theorem stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace (A : X →ₗ[ℝ] X) :
+    stableSubspaceOfBasis (Module.finBasis ℝ X) A = hurwitzSubspace A := rfl
+
+/-- **Conservative generalisation.** For the canonical basis `Module.finBasis`,
+the basis-agnostic antistable subspace is definitionally the accepted
+`unstableSubspace`. -/
+theorem unstableSubspaceOfBasis_finBasis_eq_unstableSubspace (A : X →ₗ[ℝ] X) :
+    unstableSubspaceOfBasis (Module.finBasis ℝ X) A = unstableSubspace A := rfl
+
+end BasisSpectralSubspace
 
 end LinearMap
