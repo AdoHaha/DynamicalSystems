@@ -3880,3 +3880,148 @@ end QuotientFeedbackLift
 end GeometricFeedbackConstruction
 
 end LinearSystem
+
+/-! ## The dual output-injection (detectable) half: annihilator duality
+
+Corollary 6.22 of Trentelman–Stoorvogel–Hautus pairs the primal state-feedback
+condition `im E ≤ V*(ker H) + Xstab(A, B)` with the dual output-injection
+condition `S*(im E) ∩ Xdet(C, A) ≤ ker H`. The state-feedback half is assembled
+in the previous section; this section records the geometric duality bridge that
+the dual half rests on.
+
+The smallest conditioned invariant subspace `S*(E) = conditionedInvariantSubspace
+C A E` is, by the duality of Theorem 5.6, the annihilator of the largest
+controlled invariant subspace of the transposed pair that is contained in
+`Eᵃⁿⁿ = ker E.dualMap`. The two CISA/ISA recurrences dualize step by step, so
+the identity holds without any characteristic-polynomial or spectral input. -/
+
+namespace LinearMap
+
+variable {𝕜 X Y : Type*}
+variable [Field 𝕜]
+variable [AddCommGroup X] [Module 𝕜 X]
+variable [AddCommGroup Y] [Module 𝕜 Y]
+
+/-- **Step-by-step duality of the CISA and ISA recurrences.** The annihilator of
+the `n`-th conditioned-invariant iterate is the `n`-th controlled-invariant
+iterate of the transposed pair, starting from the annihilator `Eᵃⁿⁿ`.
+
+This is the finite-step form of Trentelman–Stoorvogel–Hautus, display (5.5)
+under the duality of Theorem 5.6. -/
+theorem dualAnnihilator_conditionedInvariantSeq (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X)
+    (E : Submodule 𝕜 X) (n : ℕ) :
+    (conditionedInvariantSeq C A E n).dualAnnihilator =
+      controlledInvariantSeq A.dualMap C.dualMap E.dualAnnihilator n := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+      rw [conditionedInvariantSeq_succ, controlledInvariantSeq_succ,
+        Submodule.dualAnnihilator_sup_eq, dualAnnihilator_map_inf_ker, ih]
+
+/-- **Duality of `S*` and `V*`.** The annihilator of the smallest conditioned
+invariant subspace containing `E` is the largest controlled invariant subspace
+of the transposed pair contained in `Eᵃⁿⁿ = ker E.dualMap`:
+
+`S*(E)ᵃⁿⁿ = V*(Eᵃⁿⁿ)`.
+
+This is the geometric duality between the primal and dual halves of Corollary
+6.22 and the precise bridge used to restate the output-injection condition
+`S*(im E) ∩ Xdet ≤ ker H` as a state-feedback condition on the transposed
+system. -/
+theorem dualAnnihilator_conditionedInvariantSubspace (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X)
+    (E : Submodule 𝕜 X) :
+    (conditionedInvariantSubspace C A E).dualAnnihilator =
+      controlledInvariantSubspace A.dualMap C.dualMap E.dualAnnihilator := by
+  rw [conditionedInvariantSubspace, controlledInvariantSubspace,
+    Submodule.dualAnnihilator_iSup_eq]
+  exact iInf_congr fun n => dualAnnihilator_conditionedInvariantSeq C A E n
+
+end LinearMap
+
+/-! ### The dual condition as an algebraic condition on the transposed pair
+
+The remaining ingredient of the output-injection half is the detectability
+subspace `Xdet(C, A) = ⟨ker C | A⟩ ∩ X_b(A)`, whose annihilator we expand below.
+The reachable part dualizes by the accepted
+`reachableSubspace_dualMap`; the antistable part `(X_b(A))ᵃⁿⁿ` is kept as an
+explicit algebraic object, because the stable subspace `X_g(A.dualMap)` cannot
+be written down in this way without first putting a norm (and hence a `Module.finBasis`)
+on the algebraic dual `Module.Dual ℝ X`. This is exactly the missing bridge;
+the results below isolate it precisely and the section note records it as the
+handoff item. -/
+
+namespace LinearMap
+
+variable {X Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- **Annihilator of the detectability subspace.** The detectability subspace
+`Xdet(C, A) = ⟨ker C | A⟩ ∩ X_b(A)` has annihilator
+`⟨Aᵀ | im Cᵀ⟩ ⊔ (X_b(A))ᵃⁿⁿ`. The first summand is the reachable subspace of
+the transposed pair (`reachableSubspace_dualMap`); the second is the annihilator
+of the antistable subspace, the only part that is not expressible through the
+algebraic dual alone. -/
+theorem dualAnnihilator_detectableSubspace (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :
+    (detectableSubspace C A).dualAnnihilator =
+      reachableSubspace A.dualMap C.dualMap ⊔ (unstableSubspace A).dualAnnihilator := by
+  rw [detectableSubspace, Subspace.dualAnnihilator_inf_eq, ← reachableSubspace_dualMap]
+
+/-- **Dual form of the Corollary 6.22 output-injection condition.** The source's
+second condition `S*(im E) ∩ Xdet(C, A) ≤ ker H` is equivalent to the purely
+algebraic condition on the transposed pair
+
+`im Hᵀ ≤ V*(ker Eᵀ) ⊔ (⟨Aᵀ | im Cᵀ⟩ ⊔ (X_b(A))ᵃⁿⁿ)`
+
+where `V*(ker Eᵀ) = controlledInvariantSubspace A.dualMap C.dualMap
+(im E)ᵃⁿⁿ = S*(im E)ᵃⁿⁿ` by `dualAnnihilator_conditionedInvariantSubspace`.
+
+The only remaining identification needed to match the primal geometric condition
+`im E ≤ V*(ker H) + Xstab(A, B)` is `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`, i.e. the transpose
+stable/antistable duality; because `Module.Dual ℝ X` carries no norm and no
+`Module.finBasis`, `X_g(A.dualMap)` is not currently a definable object here.
+This equivalence is therefore the precise reusable bridge and the point at which
+the output-injection half is blocked. -/
+theorem conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    conditionedInvariantSubspace C A (LinearMap.range E) ⊓ detectableSubspace C A ≤
+        LinearMap.ker H ↔
+      LinearMap.range H.dualMap ≤
+        controlledInvariantSubspace A.dualMap C.dualMap
+            (LinearMap.range E).dualAnnihilator ⊔
+          (reachableSubspace A.dualMap C.dualMap ⊔
+            (unstableSubspace A).dualAnnihilator) := by
+  rw [← Subspace.dualAnnihilator_le_dualAnnihilator_iff (W := LinearMap.ker H)
+    (W' := conditionedInvariantSubspace C A (LinearMap.range E) ⊓ detectableSubspace C A)]
+  rw [Subspace.dualAnnihilator_inf_eq, dualAnnihilator_conditionedInvariantSubspace,
+    dualAnnihilator_detectableSubspace, LinearMap.range_dualMap_eq_dualAnnihilator_ker]
+
+end LinearMap
+
+/-! ### Handoff: the remaining output-injection bridge
+
+The dual output-injection half of Corollary 6.22 is now reduced to a single
+missing declaration. The source's second condition (6.32) is restated through
+`conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition` as the
+primal geometric condition of the transposed pair, except that the antistable
+annihilator `(X_b(A))ᵃⁿⁿ` has not yet been identified with the stable subspace
+`X_g(Aᵀ)`. Concretely the missing reusable lemma is the transpose stable/
+antistable duality
+
+`(unstableSubspace A).dualAnnihilator = hurwitzSubspace (transpose of A)`
+
+(or globally `(detectableSubspace C A).dualAnnihilator = stabilizableSubspace of
+the transposed pair`). It is not currently statable, because `stabilizableSubspace`
+and `hurwitzSubspace` are defined on real **normed** finite-dimensional spaces
+via `Module.finBasis`, while the algebraic dual `Module.Dual ℝ X` carries no
+`NormedAddCommGroup`/`NormedSpace` instance. The smallest next step is to make
+`hurwitzSubspace` (equivalently `stabilizableSubspace`) available on a finite-
+dimensional real vector space from an arbitrary basis, prove it basis-independent,
+and then identify `(unstableSubspace A)ᵃⁿⁿ` with the stable subspace of the
+transpose using `Basis.dualBasis` and `charpoly_dualMap`. With that identification
+the accepted state-feedback construction `exists_feedback_tendsto_readout_of_geometricCondition`
+can be run on the transposed pair and the resulting gain transposed back with
+`dualMap_surjective`, yielding the observer gain `G` of Trentelman–Stoorvogel–Hautus
+Lemma 6.20/6.21. Until then no output-injection statement is claimed. -/
