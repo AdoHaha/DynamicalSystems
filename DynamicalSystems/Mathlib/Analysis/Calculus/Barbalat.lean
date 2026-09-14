@@ -8,7 +8,9 @@ module
 public import Mathlib.Analysis.Calculus.MeanValue
 public import Mathlib.Analysis.Real.Sqrt
 public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
+public import Mathlib.MeasureTheory.Function.AbsolutelyContinuous
 public import Mathlib.MeasureTheory.Integral.Bochner.Basic
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.AbsolutelyContinuousFun
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.Order.Filter.AtTopBot.Group
@@ -496,13 +498,14 @@ space, `f : ℝ → E` differentiable everywhere with derivative `f'`, and suppo
 `f' ∈ L^q(0, ∞)` for some `q ∈ (1, ∞)` with `L^q` seminorm bounded by `C`. Then `f` is Hölder
 continuous on `[0, ∞)` with exponent `(q - 1) / q` and constant `C`.
 
-Compared with the paper, the hypothesis is reshaped as follows: absolute continuity is replaced by
-the stronger (and in this pin more convenient) hypothesis `∀ x, HasDerivAt f (f' x) x`; the
-derivative bound `f' ∈ L^q(0, ∞)` is expressed through `MeasureTheory.MemLp` together with the
-norm bound `eLpNorm f' (ofReal q) ≤ C`; the `L^p` assumption on `f` itself is not needed for this
-estimate (boundedness of `f` follows from Hölder continuity and one finite value). The proof is
-exactly the paper's one-liner `‖f y - f x‖ = ‖∫ t in x..y, f' t‖ ≤ (y - x) ^ (1/q') * ‖f'‖_q`,
-with Hölder's inequality for the final step. -/
+Compared with the paper, this is the everywhere-differentiable special case: absolute continuity
+and an a.e. derivative are replaced by the stronger hypothesis `∀ x, HasDerivAt f (f' x) x` (the
+paper-faithful form is `holderOn_of_absolutelyContinuousOnInterval`). The derivative bound
+`f' ∈ L^q(0, ∞)` is expressed through `MeasureTheory.MemLp` together with the norm bound
+`eLpNorm f' (ofReal q) ≤ C`; the `L^p` assumption on `f` itself is not needed for this estimate.
+The proof is exactly the paper's one-liner
+`‖f y - f x‖ = ‖∫ t in x..y, f' t‖ ≤ (y - x) ^ (1/q') * ‖f'‖_q`, with Hölder's inequality for the
+final step. -/
 theorem holderOn_of_memLp_deriv
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f f' : ℝ → E} {q : ℝ} (hq : 1 < q) {C : ℝ≥0}
@@ -535,6 +538,86 @@ theorem holderOn_of_memLp_deriv
     have hle := intervalIntegral_le_rpow_mul_of_integral_rpow_le hq hmem.norm
       (fun t => norm_nonneg _) hreal hx hxy
     calc ‖f y - f x‖ = ‖∫ t in x..y, f' t‖ := by rw [hftc]
+      _ ≤ ∫ t in x..y, ‖f' t‖ := intervalIntegral.norm_integral_le_integral_norm hxy
+      _ ≤ (y - x) ^ (1 / Real.conjExponent q) * (C : ℝ) := hle
+      _ = (y - x) ^ ((q - 1) / q) * (C : ℝ) := by rw [Real.conjExponent, one_div_div]
+  intro x hx y hy
+  have hd : dist (f x) (f y) ≤
+      (C : ℝ) * dist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ) := by
+    rcases le_total x y with hxy | hyx
+    · have hk := hkey hx hxy
+      have hdf : dist (f x) (f y) = ‖f y - f x‖ := by rw [dist_eq_norm, norm_sub_rev]
+      have hdist : dist x y = y - x := by
+        rw [Real.dist_eq, abs_of_nonpos (sub_nonpos.mpr hxy), neg_sub]
+      rw [hdf, hdist, Real.coe_toNNReal _ hr]
+      exact hk.trans_eq (by ring)
+    · have hk := hkey hy hyx
+      have hdf : dist (f x) (f y) = ‖f x - f y‖ := by rw [dist_eq_norm]
+      have hdist : dist x y = x - y := by
+        rw [Real.dist_eq, abs_of_nonneg (sub_nonneg.mpr hyx)]
+      rw [hdf, hdist, Real.coe_toNNReal _ hr]
+      exact hk.trans_eq (by ring)
+  calc edist (f x) (f y) = ENNReal.ofReal (dist (f x) (f y)) := edist_dist _ _
+    _ ≤ ENNReal.ofReal ((C : ℝ) * dist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ)) :=
+        ENNReal.ofReal_le_ofReal hd
+    _ = (C : ℝ≥0∞) * edist x y ^ ((Real.toNNReal ((q - 1) / q)) : ℝ) := by
+        rw [edist_dist, ENNReal.ofReal_mul (by positivity),
+          ENNReal.ofReal_rpow_of_nonneg dist_nonneg (by positivity),
+          ENNReal.ofReal_coe_nnreal]
+
+/-- **Lemma 6 of Farkas–Wegner, absolutely continuous form** (paper form). Let `f : ℝ → ℝ` be
+absolutely continuous on `[0, T]` for every `T ≥ 0` and let `f'` be an a.e. derivative of `f` on
+`(0, ∞)`. If `f' ∈ L^q(0, ∞)` for some `q ∈ (1, ∞)` with `L^q` seminorm bounded by `C`, then `f`
+is Hölder continuous on `[0, ∞)` with exponent `(q - 1) / q` and constant `C`.
+
+This is the paper-faithful form of `holderOn_of_memLp_deriv`: the derivative is only required to
+exist almost everywhere, and the fundamental theorem of calculus is supplied by
+`AbsolutelyContinuousOnInterval.integral_deriv_eq_sub` instead of an everywhere-differentiable
+hypothesis. As in `holderOn_of_memLp_deriv`, the `L^p` assumption on `f` itself is not needed for
+this estimate. The proof is the paper's one-liner
+`‖f y - f x‖ = ‖∫ t in x..y, f' t‖ ≤ (y - x) ^ (1/q') * ‖f'‖_q`, with Hölder's inequality. -/
+theorem holderOn_of_absolutelyContinuousOnInterval
+    {f f' : ℝ → ℝ} {q : ℝ} (hq : 1 < q) {C : ℝ≥0}
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hmem : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)))
+    (hC : eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)) ≤ (C : ENNReal)) :
+    HolderOnWith C (Real.toNNReal ((q - 1) / q)) f (Set.Ici 0) := by
+  have hqpos : 0 < q := lt_trans zero_lt_one hq
+  have hr : 0 ≤ (q - 1) / q := by positivity
+  -- Extract the real-valued `L^q` bound from the `eLpNorm` hypothesis.
+  have hreal : (∫ x in Set.Ioi 0, ‖f' x‖ ^ q) ^ (1 / q) ≤ (C : ℝ) := by
+    have h := MemLp.eLpNorm_eq_integral_rpow_norm (μ := volume.restrict (Set.Ioi 0))
+      (f := f') (p := ENNReal.ofReal q) (ENNReal.ofReal_ne_zero_iff.mpr hqpos)
+      ENNReal.ofReal_ne_top hmem
+    rw [ENNReal.toReal_ofReal hqpos.le] at h
+    rw [h, ← ENNReal.ofReal_coe_nnreal (p := C)] at hC
+    rw [ENNReal.ofReal_le_ofReal_iff C.coe_nonneg] at hC
+    simpa only [one_div] using hC
+  -- The key estimate `‖f y - f x‖ ≤ (y - x) ^ (1/q') * C` for `0 ≤ x ≤ y`.
+  have hkey : ∀ {x y : ℝ}, 0 ≤ x → x ≤ y →
+      ‖f y - f x‖ ≤ (y - x) ^ ((q - 1) / q) * (C : ℝ) := by
+    intro x y hx hxy
+    have hy : 0 ≤ y := le_trans hx hxy
+    -- Absolute continuity on `[x, y]`, hence the FTC for `deriv f`.
+    have hacxy : AbsolutelyContinuousOnInterval f x y :=
+      (hac y hy).mono fun z hz ↦ by
+        rw [Set.uIcc_of_le hxy] at hz
+        rw [Set.uIcc_of_le hy]
+        exact ⟨le_trans hx hz.1, hz.2⟩
+    have hftc : ∫ t in x..y, deriv f t = f y - f x := hacxy.integral_deriv_eq_sub
+    -- On `(x, y]` the a.e. derivative `f'` agrees with `deriv f`.
+    have hae : ∀ᵐ t ∂(volume.restrict (Set.Ioc x y)), f' t = deriv f t := by
+      rw [ae_restrict_iff' measurableSet_Ioc]
+      filter_upwards [(ae_restrict_iff' measurableSet_Ioi).mp hderiv] with t ht htioc
+      exact (ht (lt_of_le_of_lt hx htioc.1)).deriv.symm
+    have hint_eq : ∫ t in x..y, f' t = ∫ t in x..y, deriv f t := by
+      rw [intervalIntegral.integral_of_le hxy, intervalIntegral.integral_of_le hxy]
+      exact integral_congr_ae hae
+    have hftc' : ∫ t in x..y, f' t = f y - f x := by rw [hint_eq, hftc]
+    have hle := intervalIntegral_le_rpow_mul_of_integral_rpow_le hq hmem.norm
+      (fun t ↦ norm_nonneg _) hreal hx hxy
+    calc ‖f y - f x‖ = ‖∫ t in x..y, f' t‖ := by rw [hftc']
       _ ≤ ∫ t in x..y, ‖f' t‖ := intervalIntegral.norm_integral_le_integral_norm hxy
       _ ≤ (y - x) ^ (1 / Real.conjExponent q) * (C : ℝ) := hle
       _ = (y - x) ^ ((q - 1) / q) * (C : ℝ) := by rw [Real.conjExponent, one_div_div]
