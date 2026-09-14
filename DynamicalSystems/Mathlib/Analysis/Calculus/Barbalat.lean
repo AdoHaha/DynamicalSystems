@@ -967,10 +967,14 @@ theorem tendsto_zero_of_memLp_deriv_top
     exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
   exact tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow hp hM huc hb hint
 
-/-- **Theorem 5 of Farkas–Wegner.** Let `p ∈ [1, ∞)` and `q ∈ (1, ∞]`. Every function `f` in the
-mixed Sobolev space `W^{1,p,q}(0, ∞)`, encoded as `MemLp f p` and `MemLp f' q` on `(0, ∞)` for a
-derivative `f'` of `f`, tends to zero at infinity. The finite and infinite exponents are dispatched
-to `tendsto_zero_of_memLp_deriv_finite` and `tendsto_zero_of_memLp_deriv_top`. -/
+/-- **Theorem 5 of Farkas–Wegner, everywhere-differentiable special case.** Let `p ∈ [1, ∞)` and
+`q ∈ (1, ∞]`. If `f : ℝ → E` is differentiable everywhere with derivative `f'`, with `f ∈ L^p(0, ∞)`
+and `f' ∈ L^q(0, ∞)`, then `f t → 0` at infinity. This is the everywhere-differentiable special
+case of the paper's mixed Sobolev space `W^{1,p,q}(0, ∞)`; the paper-faithful statement, which
+assumes only an a.e. derivative together with absolute continuity instead of
+`∀ x, HasDerivAt f (f' x) x`, is `tendsto_zero_of_absolutelyContinuous_memLp`. The finite and
+infinite exponents are dispatched to `tendsto_zero_of_memLp_deriv_finite` and
+`tendsto_zero_of_memLp_deriv_top`. -/
 theorem tendsto_zero_of_memLp_deriv
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f f' : ℝ → E} {p : ℝ} {q : ℝ≥0∞} (hp : 1 ≤ p) (hq : 1 < q)
@@ -986,6 +990,87 @@ theorem tendsto_zero_of_memLp_deriv
     have hqeq : q = ENNReal.ofReal q.toReal := (ENNReal.ofReal_toReal hqtop).symm
     rw [hqeq] at hf'
     exact tendsto_zero_of_memLp_deriv_finite hp hqreal hderiv hf hf'
+
+/-- **Theorem 5 of Farkas–Wegner, absolutely continuous form, finite `q`.** Let `p ≥ 1` and `q > 1`,
+let `f : ℝ → ℝ` be absolutely continuous on `[0, T]` for every `T ≥ 0` with an a.e. derivative `f'`
+on `(0, ∞)`. If `f ∈ L^p(0, ∞)` and `f' ∈ L^q(0, ∞)`, then `f t → 0` as `t → ∞`. This uses the
+paper-faithful Hölder estimate `holderOn_of_absolutelyContinuousOnInterval` for uniform continuity
+and `exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow` for boundedness, then applies the
+main Barbălat theorem to `‖f‖^p`. -/
+theorem tendsto_zero_of_absolutelyContinuous_memLp_finite
+    {f f' : ℝ → ℝ} {p q : ℝ} (hp : 1 ≤ p) (hq : 1 < q)
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  have hr : 0 ≤ (q - 1) / q := by positivity
+  set C : ℝ≥0 := (eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0))).toNNReal with hC
+  have hCtop : (C : ℝ≥0∞) = eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)) :=
+    ENNReal.coe_toNNReal (hf'.eLpNorm_lt_top).ne
+  have hholder : HolderOnWith C (Real.toNNReal ((q - 1) / q)) f (Set.Ici 0) :=
+    holderOn_of_absolutelyContinuousOnInterval hq hac hderiv hf' (le_of_eq hCtop.symm)
+  have hαpos : 0 < (Real.toNNReal ((q - 1) / q) : ℝ) := by
+    rw [Real.coe_toNNReal _ hr]
+    positivity
+  have huc : UniformContinuousOn f (Set.Ici 0) := hholder.uniformContinuousOn hαpos
+  have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa [ENNReal.toReal_ofReal hp0.le] using h
+  obtain ⟨M, hM, hb⟩ :=
+    exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
+  exact tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow hp hM huc hb hint
+
+/-- **Theorem 5 of Farkas–Wegner, absolutely continuous form, `q = ∞`.** Let `p ≥ 1`, let
+`f : ℝ → ℝ` be absolutely continuous on `[0, T]` for every `T ≥ 0` with an a.e. derivative `f'` on
+`(0, ∞)`. If `f ∈ L^p(0, ∞)` and `f' ∈ L^∞(0, ∞)`, then `f t → 0` as `t → ∞`. The derivative
+bound makes `f` Lipschitz via `lipschitzOn_of_absolutelyContinuousOnInterval`, and the rest of the
+argument is unchanged. -/
+theorem tendsto_zero_of_absolutelyContinuous_memLp_top
+    {f f' : ℝ → ℝ} {p : ℝ} (hp : 1 ≤ p)
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' ∞ (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  obtain ⟨C, hC⟩ := eLpNormEssSup_lt_top_iff_isBoundedUnder.mp
+    (by simpa only [eLpNorm_exponent_top] using hf'.eLpNorm_lt_top)
+  have hC' : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ) :=
+    (Filter.eventually_map.mp hC).mono fun x hx ↦ by exact_mod_cast hx
+  have huc : UniformContinuousOn f (Set.Ici 0) :=
+    (lipschitzOn_of_absolutelyContinuousOnInterval hac hderiv hf' hC').uniformContinuousOn
+  have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa [ENNReal.toReal_ofReal hp0.le] using h
+  obtain ⟨M, hM, hb⟩ :=
+    exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
+  exact tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow hp hM huc hb hint
+
+/-- **Theorem 5 of Farkas–Wegner, paper-faithful absolutely continuous form.** Let `p ≥ 1` and
+`q ∈ (1, ∞]`. Let `f : ℝ → ℝ` be absolutely continuous on `[0, T]` for every `T ≥ 0` with an a.e.
+derivative `f'` on `(0, ∞)`. If `f ∈ L^p(0, ∞)` and `f' ∈ L^q(0, ∞)`, then `f t → 0` as `t → ∞`.
+This is the paper's mixed Sobolev class `W^{1,p,q}(0, ∞)` with the a.e. derivative encoded by
+absolute continuity, so it is the paper-faithful replacement for the everywhere-differentiable
+`tendsto_zero_of_memLp_deriv`. The finite and infinite exponents are dispatched to
+`tendsto_zero_of_absolutelyContinuous_memLp_finite` and
+`tendsto_zero_of_absolutelyContinuous_memLp_top`. -/
+theorem tendsto_zero_of_absolutelyContinuous_memLp
+    {f f' : ℝ → ℝ} {p : ℝ} {q : ℝ≥0∞} (hp : 1 ≤ p) (hq : 1 < q)
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' q (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  rcases eq_or_ne q ∞ with rfl | hqtop
+  · exact tendsto_zero_of_absolutelyContinuous_memLp_top hp hac hderiv hf hf'
+  · have hqreal : 1 < q.toReal := by
+      simpa only [ENNReal.toReal_one] using
+        (ENNReal.toReal_lt_toReal ENNReal.one_ne_top hqtop).mpr hq
+    have hqeq : q = ENNReal.ofReal q.toReal := (ENNReal.ofReal_toReal hqtop).symm
+    rw [hqeq] at hf'
+    exact tendsto_zero_of_absolutelyContinuous_memLp_finite hp hqreal hac hderiv hf hf'
 
 /-- **Tao's case** (Farkas–Wegner, Section 2): if `f ∈ L²(0, ∞)` and `f' ∈ L^∞(0, ∞)`, then
 `f t → 0` at infinity. This is the case `p = 2`, `q = ∞` of `tendsto_zero_of_memLp_deriv`. -/
