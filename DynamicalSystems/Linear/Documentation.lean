@@ -432,7 +432,9 @@ definitions.
   `LinearSystem.variationOfConstants_ae_hasDerivAt` for the identities, and
   `LinearSystem.ltiStateTrajectoryRel_existsUnique` for existence and uniqueness of the locally
   integrable trajectory. For reachability use `LinearSystem.reachableSetAt_eq_reachableSubspace`;
-  for indistinguishability use `LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace`.
+  for indistinguishability use `LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace`. To
+  push a flow through a continuous linear map intertwining the two generators use
+  `LinearSystem.clm_map_exp_smul` (see F9 below).
 * *You need an energy or Gramian argument.* Use `LinearSystem.inner_controllabilityGramian` and
   `LinearSystem.inner_observabilityGramian` with the positive-definiteness criteria
   `LinearSystem.controllabilityGramian_posDef_iff_isControllable` and
@@ -472,6 +474,282 @@ definitions.
   `LinearMap.dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`; the transpose of the
   exponential is `LinearMap.exp_smul_dualMap_eq`, with pointwise form
   `LinearMap.exp_smul_dualMap_apply`.
+
+# Proof-reuse and redundancy audit
+
+This section records a read-only audit of the completed linear-control corpus against the pinned
+Mathlib `4.34.0-rc2`. It covers every declaration in `DynamicalSystems/Linear/*.lean` and
+`DynamicalSystems/Linear/Examples/Algebra.lean` (roughly 940 named declarations) and looks for
+(a) duplicated constructions, (b) repeated coordinate/base-change arguments, (c) recurring
+finite-dimensional and zero-dimensional hypotheses, (d) repeated exponential/decay and
+convolution reasoning, and (e) local lemmas that a checked common API already supplies.
+
+Scope note. The audit task owns only this documentation file, so no module outside it was
+modified. Every item below is a recorded recommendation rather than an applied change. Each
+entry names the file and declarations, gives the reuse recommendation, states the risk of acting
+on it, and says whether a follow-up task is justified. *Demonstrable* means the duplication is
+textually present and a shared helper would remove it without changing a public signature;
+*speculative* means the benefit is plausible but not yet established. The two cross-file refactors
+with the best benefit-to-risk ratio are F1 and F8; the remaining items are either guidance or
+deliberate design choices that should not be deduplicated.
+
+## Reuse inventory: what is actually consumed
+
+The verified reuse inventory listed in the source contract is largely consumed by the corpus:
+
+* `Module.End.invtSubmodule` and `Module.End.mem_invtSubmodule_iff_map_le` are used by
+  `LinearMap.reachableSubspace_mem_invtSubmodule` and
+  `LinearMap.unobservableSubspace_mem_invtSubmodule` (`Subspaces.lean`).
+* `LinearMap.pow_eq_aeval_mod_charpoly`, `Polynomial.aeval_eq_sum_range'` and
+  `LinearMap.charpoly_natDegree` drive `LinearMap.exists_pow_eq_sum_finrank` (`Kalman.lean`).
+* The duality lemmas `Submodule.dualAnnihilator_iSup_eq`,
+  `LinearMap.ker_dualMap_eq_dualAnnihilator_range` and `Submodule.dualAnnihilator_eq_bot_iff`
+  are used throughout `ConditionedInvariant.lean`, `DynamicFeedback.lean` and
+  `Stabilization.lean`.
+* `LinearMap.toContinuousLinearMap`, `Filter.IsStableOn`, `Filter.IsAttractive`,
+  `stateTrajectoryRel` and `inputOutputRel` are used by the trajectory, stability and relation
+  adapters.
+* Conversely, `LinearEquiv.map_mem_invtSubmodule_conj_iff`,
+  `Subspace.dualAnnihilator_dualCoannihilator_eq`, `Subspace.comap_dualAnnihilator_dualAnnihilator`,
+  `isCaratheodoryLinear`, `isCaratheodoryLipschitz_linear`, `intervalIntegrable_linear` and
+  `exists_unique_caratheodory_solution_global` have zero references in the Linear corpus. These
+  are addressed in F2 and F18 below.
+
+## Coordinate and base-change arguments
+
+*F1. Repeated `conj`-power helper.* `LinearMap.reachableSubspace_changeState` and
+`LinearMap.unobservableSubspace_changeState` in `Duality.lean`, and
+`LinearMap.disturbanceResponse_changeState` in `DisturbanceDecoupling.lean`, each open with the
+same anonymous local fact
+`have hpow : ∀ k, (e.symm.conj A)^k = e.symm.conj (A^k) := fun k => (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm`.
+The underlying accepted API is `map_pow` applied to `LinearEquiv.conjRingEquiv`, but the pinned
+Mathlib exposes no named `LinearEquiv.conj_pow` (searched), so the closed form is re-derived three
+times. *Recommendation:* add one named `LinearEquiv.conj_pow` (or `LinearMap.conj_pow`) lemma and
+rewrite the three proofs to invoke it. *Risk:* low, purely mechanical. *Follow-up:* justified.
+
+*F2. Missing state-coordinate invariance for controlled and conditioned invariance.*
+`ControlledInvariant.lean` proves input-coordinate invariance
+(`LinearMap.isControlledInvariant_changeInput_iff`) but has no state-coordinate lemma, and
+`ConditionedInvariant.lean` proves output-space invariance
+(`LinearMap.isConditionedInvariant_changeOutput_iff`) but likewise has no state-coordinate
+lemma. Mathlib already provides the missing ingredient,
+`LinearEquiv.map_mem_invtSubmodule_conj_iff` (and the companion
+`LinearEquiv.map_mem_invtSubmodule_iff`), which is unused here. *Recommendation:* add
+`isControlledInvariant_changeState_iff` and `isConditionedInvariant_changeState_iff`, proving the
+invariance half through `map_mem_invtSubmodule_conj_iff` and transporting `range B`/`ker C` with
+`LinearMap.range_comp`, `LinearEquiv.range` and `LinearMap.ker_comp`. *Risk:* low to moderate
+(the supremum/infimum transport is routine but must be spelled out). *Follow-up:* justified,
+because it closes a stated class of coordinate arguments.
+
+*F3. `disturbanceResponse_changeState` is a special case of subspace transport.*
+`LinearMap.disturbanceResponse_changeState` (`DisturbanceDecoupling.lean`) and
+`LinearMap.reachableSubspace_changeState` (`Duality.lean`) both prove that an `iSup` of ranges is
+carried along a conjugation; `reachableSubspace` is the `iSup` of `range ((A^k).comp B)`, and the
+decoupled Markov data is `H.comp ((A^k).comp E)`. *Recommendation:* once F1 exists, derive
+`disturbanceResponse_changeState` from the shared conjugation lemma plus
+`LinearEquiv.conj_apply`, and consider a general `LinearMap.range_conj_pow_comp`. *Risk:* low.
+*Follow-up:* optional; F1 already captures most of the value.
+
+*F4. State/input/output coordinate boilerplate in `Basic.lean`.* The three coordinate changes
+`LinearSystem.changeState`, `LinearSystem.changeInput` and `LinearSystem.changeOutput` are each
+given four `rfl` projection lemmas (`_A`, `_B`, `_C`, `_D`) plus one or two evaluation lemmas
+(`changeState_dynamics`, `changeState_readout`, `changeInput_dynamics`, `changeInput_readout`,
+`changeOutput_readout`), about eighteen near-identical declarations. `changeOutput` is the only
+one without a `changeOutput_dynamics` companion. *Recommendation:* keep as is; the public names
+are part of the API and a single `changeCoordinates` record would be a breaking change. Record
+only. *Risk:* high (API break). *Follow-up:* not justified for the available benefit.
+
+## Finite-dimensional and zero-dimensional hypotheses
+
+*F5. Two zero-dimensional dispatch styles.* `LinearMap.exists_feedback_charpoly_of_finrank_zero`
+(`PolePlacement.lean`) branches on `Module.finrank ℝ X = 0` and converts with
+`Module.finrank_zero_iff.mp`; the three `Stabilization.lean` corner lemmas
+`LinearMap.hurwitzSubspace_eq_top_of_subsingleton`,
+`LinearMap.stabilizableSubspace_eq_top_of_subsingleton` and
+`LinearMap.detectableSubspace_eq_top_of_subsingleton` take `[Subsingleton X]` directly, as do the
+`Examples/Algebra.lean` regressions `DynamicalSystems.Linear.Examples.zeroDim_controllable`,
+`DynamicalSystems.Linear.Examples.zeroDim_observable`,
+`DynamicalSystems.Linear.Examples.zeroDim_kalman_surjective` and
+`DynamicalSystems.Linear.Examples.zeroDim_kalman_injective`. *Recommendation:* standardize the `finrank = 0` to `Subsingleton X`
+conversion on `Module.finrank_zero_iff` / `Module.finrank_zero_iff_forall_zero` and add a single
+named dispatch lemma so the recurring `by_cases hzero : Module.finrank ℝ X = 0` is written once.
+*Risk:* low. *Follow-up:* optional.
+
+*F6. The `Subsingleton`-based `_eq_top` corner lemmas are load-bearing.*
+`LinearMap.hurwitzSubspace_eq_top_of_subsingleton`,
+`stabilizableSubspace_eq_top_of_subsingleton`,
+`detectableSubspace_eq_top_of_subsingleton`, together with
+`LinearMap.hurwitzSubspace_zero` and
+`LinearMap.stabilizableSubspace_eq_top_of_isStabilizable`, all reduce to `Subsingleton.elim` or
+the main characterisation. *Recommendation:* keep; they are the zero-dimensional branch used by
+the main theorems, not incidental duplicates. *Risk:* low. *Follow-up:* not justified.
+
+*F7. Adjoint/exponential reachable-subspace machinery already reuses Mathlib.*
+`Gramian.lean` builds `LinearSystem.controllabilityGramian` and
+`LinearSystem.observabilityGramian` on `ContinuousLinearMap.adjoint`, and the energy and
+positive-definiteness proofs use
+`ContinuousLinearMap.intervalIntegral_apply`, `ContinuousLinearMap.intervalIntegral_comp_comm`,
+`ContinuousLinearMap.adjoint_inner_left`/`adjoint_inner_right` and `real_inner_self_eq_norm_sq`.
+No local re-derivation of these adjoint facts was found. *Recommendation:* keep. *Risk:* none.
+*Follow-up:* not justified.
+
+## Exponential, decay and convolution reasoning
+
+*F8. Repeated exponential power-series expansion in `clm_map_exp_smul`.*
+`LinearSystem.clm_map_exp_smul` (`DynamicFeedback.lean`, the only `maxHeartbeats 800000` site)
+contains two nearly identical blocks, `hAtsum` and `hBtsum`, that expand
+`NormedSpace.exp (t • A) x` and `NormedSpace.exp (t • B) (L x)` as a `tsum` and then move the
+continuous linear map through it with `ContinuousLinearMap.map_tsum` and `tsum_congr`.
+`Stabilization.lean` has the same expansion pattern twice more in
+`LinearMap.exp_nilpotent_eq_sum` and `LinearMap.exp_nilpotent_apply_eq_sum`. *Recommendation:*
+extract `exp_smul_apply_eq_tsum`, a single rewrite of `NormedSpace.exp (t • A) x` to its factorial
+series, and use it inside `hAtsum`/`hBtsum`; derive the complex pointwise nilpotent lemma from
+the global one where the nilpotency hypotheses permit. *Risk:* low to moderate (the extracted
+lemma carries its own summability side goal). *Follow-up:* justified for `clm_map_exp_smul`;
+optional for the nilpotent pair.
+
+*F9. `LinearSystem.clm_map_exp_smul` is a reusable general lemma that the guide does not expose.*
+`LinearSystem.clm_map_exp_smul` is the intertwining statement
+`L (exp (t • A) x) = exp (t • B) (L x)` for `L ∘ A = B ∘ L`, and it is the engine behind
+`LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ` and
+`LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on`. It is public but was absent from the
+"Which API should I use?" decision guide and from the trajectory narrative; this audit adds the
+decision-guide cross-reference. *Recommendation:* also mention it in the trajectory narrative.
+*Risk:* none (documentation only). *Follow-up:* optional, as a one-line documentation change.
+
+*F10. Convolution API is split across two modules but already factored.* The convolution
+statements `LinearMap.forcedOutput_eq_convolution`,
+`LinearMap.disturbanceContribution_eq_convolution` and
+`LinearMap.isDisturbanceDecoupled_convolution_integral_eq_zero` live in
+`DisturbanceDecoupling.lean`; the closed-loop specializations
+`LinearSystem.DynamicInterconnection.externalResponse_eq_disturbanceImpulseResponse` and
+`LinearSystem.DynamicInterconnection.disturbanceContribution_eq_convolution_externalResponse`
+live in
+`DynamicFeedback.lean` and reuse the former through
+`LinearMap.disturbanceContribution_eq_convolution`. *Recommendation:* keep the split; there is no
+second copy of the integral identity. *Risk:* low. *Follow-up:* not justified.
+
+*F11. Gramian energy identities repeat the same integration skeleton.*
+`LinearSystem.inner_controllabilityGramian` and `LinearSystem.inner_observabilityGramian`
+(`Gramian.lean`) each define the integrand `L`, obtain continuity from
+`LinearSystem.continuous_controllabilityIntegrand`/`LinearSystem.continuous_observabilityIntegrand`,
+apply
+`ContinuousLinearMap.intervalIntegral_apply`, move `innerSL` through the interval integral with
+`ContinuousLinearMap.intervalIntegral_comp_comm`, and finish with `integral_congr` and the
+adjoint identities. *Recommendation:* extract an `inner_intervalIntegral_apply` skeleton
+parameterized by the continuity lemma, leaving only the adjoint bookkeeping in the two callers.
+*Risk:* low to moderate. *Follow-up:* optional.
+
+*F12. Scalar filter derivation already delegates to the common API.* In
+`Examples/Algebra.lean`, `DynamicalSystems.Linear.Examples.filterOutput_derivative` uses
+`intervalIntegral.integral_hasDerivAt_right`,
+`DynamicalSystems.Linear.Examples.filterOutput_integral` uses
+`intervalIntegral.integral_eq_sub_of_hasDerivAt`, and
+`DynamicalSystems.Linear.Examples.filterOutput_eq_variationOfConstants` routes through
+`LinearSystem.integralSolution_unique` and the variation-of-constants identities. The local
+`DynamicalSystems.Linear.Examples.exp_cancel` is the only bespoke scalar fact and
+is a two-line consequence of `Real.exp_add` and `Real.exp_zero`. *Recommendation:* keep; no
+duplication of the abstract API. *Risk:* low. *Follow-up:* not justified.
+
+## Positivity, duality and complexification
+
+*F13. Local `IsPositiveDefinite` versus Mathlib `LinearMap.IsPositive`.*
+`LinearSystem.IsPositiveDefinite` (`Gramian.lean`) is the strict predicate
+`∀ x ≠ 0, 0 < inner ℝ x (T x)` and is used only by
+`LinearSystem.controllabilityGramian_posDef_iff_isControllable` and
+`LinearSystem.observabilityGramian_posDef_iff_isObservable`. Mathlib's
+`LinearMap.IsPositive` (`Mathlib/Analysis/InnerProductSpace/Positive.lean`) is the
+semidefinite, self-adjoint notion, and `QuadraticMap.PosDef` is a second candidate.
+*Recommendation:* add a bridge
+`IsPositiveDefinite T ↔ T.IsPositive ∧ Function.Injective T` (under self-adjointness and finite
+dimension) so downstream reasoning can use Mathlib's positivity closure and eigenvalue API;
+do not change the existing predicate, which is referenced by public signatures. *Risk:* moderate.
+*Follow-up:* optional; only the bridge is recommended.
+
+*F14. Double-annihilator API is available but unused.* `Subspace.dualAnnihilator_dualCoannihilator_eq`
+and `Subspace.comap_dualAnnihilator_dualAnnihilator` from the verified inventory have zero
+references,
+whereas the corpus already avoids bases in its duality proofs. *Recommendation:* when adding
+future `S*(E)`/`Xdet` duality lemmas, prefer the double-annihilator API over a fresh coordinate
+construction. *Risk:* low. *Follow-up:* not justified as a standalone task; guidance only.
+
+*F15. Hautus complexification uses entrywise real/imaginary maps, not `LinearMap.baseChange`.*
+`Hautus.lean` defines `LinearMap.reFun`, `LinearMap.imFun`, `LinearMap.ofRealFun` and the
+matrix-level bridges `LinearMap.mulVecLin_complexify_re`/`_im`/`_ofReal` and
+`LinearMap.re_complex_pow`/`im_complex_pow`/`ofReal_complex_pow`. Mathlib has `LinearMap.baseChange`, but the Hautus statements are phrased for
+`Matrix.mulVecLin` with `Matrix.map (algebraMap ℝ ℂ)`, so a `baseChange` rewrite would change the
+ambient formulation, not merely the proof. *Recommendation:* keep the matrix formulation and reuse
+Mathlib's `Complex` linear maps (`Complex.ofReal`, real/imaginary projections) only where the
+entrywise definitions are unfolded. *Risk:* high if rewritten. *Follow-up:* not justified; a future
+spec task could state a `baseChange` version separately.
+
+*F16. `isDisturbanceDecoupled_iff_range_le_unobservableSubspace'` packages, not duplicates.*
+The primed statement in `DisturbanceDecoupling.lean` adds the invariance and `≤ ker H` conjuncts to
+the base `_iff` and is a two-line consequence of it. *Recommendation:* keep; it is the
+"greatest invariant witness" packaging used downstream. *Risk:* low. *Follow-up:* not justified.
+
+## Naming and hygiene observations
+
+*F17. Intentional `_zero_input`/`_zero_state` name twins across namespaces.*
+`LinearSystem.dynamics_zero_input`/`dynamics_zero_state` (`Basic.lean`) and
+`DynamicController.dynamics_zero_input`/`dynamics_zero_state` (`DynamicFeedback.lean`) share a
+name but concern different structures and different `dynamics` definitions, and each is proved by
+its own `simp [dynamics]`. *Recommendation:* keep; an automated deduplication must not merge them.
+*Risk:* low. *Follow-up:* not justified.
+
+*F18. The analysis-regularity inventory entries are deliberately not used.*
+`isCaratheodoryLinear`, `isCaratheodoryLipschitz_linear`, `intervalIntegrable_linear` and
+`exists_unique_caratheodory_solution_global` have zero references in the Linear corpus.
+`Trajectory.lean` instead proves `LinearSystem.integralSolution_unique` directly through the
+integrating-factor/`integral_hasDerivAt_right` argument, which is what the source contract's
+analysis hints recommend for locally integrable forcing; the global Caratheodory theorem would
+require compact-interval existence and uniqueness hypotheses that the direct proof does not need.
+*Recommendation:* keep the direct proof and treat the global theorem as an alternative for future
+nonlinear or non-autonomous extensions, not as a replacement. *Risk:* n/a. *Follow-up:* not
+justified.
+
+*F19. Pre-existing linter and deprecated-API warnings concentrated in three modules.* A build of
+the corpus reports 78 warnings, all in `Gramian.lean` (13), `PolePlacement.lean` (36) and
+`Stabilization.lean` (29); `Documentation.lean` itself reports none. The actionable categories are
+22 over-long lines, 18 `show` tactic uses, 13 `if_neg`, 9 `if_pos`, 8 `Try this` suggestions, 6
+`simpa` that should be `simp`, 5 unused `simp` arguments, 3 `dif_pos`, 2 `push_neg`, 2
+`ContinuousLinearMap.mul_apply`, 2 `ContinuousLinearMap.smul_apply`, 1 `dif_neg`, 1 unconsumed
+`ext` pattern, and 2 missing-space strings. These are exactly the "replace a local or deprecated
+name with the accepted common API" opportunities (`if_pos`/`if_neg` to `ite_eq_left`/`ite_eq_right`,
+`dif_pos`/`dif_neg` to `dite_eq_left`/`dite_eq_right`, `push_neg` to `push Not`,
+`ContinuousLinearMap.mul_apply`/`smul_apply` to `mul_apply_eq_comp`/`_root_.smul_apply`).
+*Recommendation:* schedule a dedicated hygiene task with write access to the three modules; none
+of the warnings is in this audit's owned file. *Risk:* low per change, but a large diff. *Follow-up:*
+justified.
+
+## Duplication that was checked and deliberately retained
+
+The following apparent duplications are correct as written and should not be refactored:
+
+* `LinearMap.isControllable_changeState`/`isObservable_changeState` (`Duality.lean`) versus the
+  `LinearSystem.isControllable_changeState`/`isObservable_changeState` wrappers: the wrappers are
+  one-line delegations through `changeState_A`/`changeState_C`, exactly the intended layer.
+* `LinearMap.map_hurwitzSubspace_restrict_le`/`LinearMap.map_unstableSubspace_restrict_le`
+  versus `LinearMap.map_iSup_maxGenEigenspace_restrict_le` (`Stabilization.lean`): the common transport lemma is
+  already extracted, and the two wrappers differ only in the predicate `μ.re < 0` versus
+  `¬ μ.re < 0`.
+* `LinearMap.hautusObservabilityMatrix`/`LinearMap.hautusControllabilityMatrix` versus the
+  Kalman matrices in
+  `Kalman.lean`: the Hautus matrices are given directly by `LinearMap.toMatrix` of the
+  `[A - μI; C]`/`[A - μI | B]` maps, whereas the Kalman matrices assemble the power block; they
+  characterize the same pair but by different statements (per-`μ` PBH versus all-powers Krylov)
+  and both are part of the source ledger.
+
+## Residual risk and summary
+
+No declaration was found to be a vacuous duplicate of another, and no local lemma was found that a
+single existing checked Mathlib declaration replaces verbatim. The genuine, low-risk reuse
+reductions are F1 (one `conj_pow` helper for three proofs) and F8 (one exponential-series rewrite
+for two blocks). F2 and F9 are completeness/documentation improvements; F5, F11 and F13 are
+optional clean-ups; F15 and F4 should not be attempted without a dedicated API-change task. The
+corpus is free of placeholder or trust-basis proof tokens (the standard forbidden-tactic scan over
+`DynamicalSystems/Linear/` returns no match), and the only heartbeat override is the justified
+`set_option maxHeartbeats 800000 in` guarding `clm_map_exp_smul`.
 
 # Theorem-to-source-page table
 
