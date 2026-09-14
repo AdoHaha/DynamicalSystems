@@ -1570,4 +1570,55 @@ theorem boundedOn_of_memLp_deriv
       exact hholder.uniformContinuousOn hαpos
   exact exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
 
+/-- **Boundedness half of Lemma 6 of Farkas–Wegner, paper-faithful form.** Let `p ≥ 1` and
+`q ∈ (1, ∞]`, and let `f : ℝ → ℝ` be absolutely continuous on `[0, T]` for every `T ≥ 0` with an
+a.e. derivative `f'` on `(0, ∞)`, with `f ∈ L^p(0, ∞)` and `f' ∈ L^q(0, ∞)`. Then `f` is bounded
+on `[0, ∞)`.
+
+This is the paper-faithful form of `boundedOn_of_memLp_deriv`: the derivative is only required to
+exist almost everywhere, and absolute continuity supplies the fundamental theorem of calculus. The
+derivative bound makes `f` uniformly continuous on the half-line
+(`lipschitzOn_of_absolutelyContinuousOnInterval` for `q = ∞`,
+`holderOn_of_absolutelyContinuousOnInterval` for finite `q`), and `‖f‖^p ∈ L¹` together with
+uniform continuity gives boundedness via
+`exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow`. This bundles the boundedness half
+of Lemma 6 for the paper's mixed Sobolev class `W^{1,p,q}(0, ∞)`, and is the AC-faithful companion
+of the Hölder estimate `holderOn_of_absolutelyContinuousOnInterval`. -/
+theorem boundedOn_of_absolutelyContinuous_memLp
+    {f f' : ℝ → ℝ} {p : ℝ} {q : ℝ≥0∞} (hp : 1 ≤ p) (hq : 1 < q)
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' q (volume.restrict (Set.Ioi 0))) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t : ℝ, 0 ≤ t → ‖f t‖ ≤ M := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa [ENNReal.toReal_ofReal hp0.le] using h
+  have huc : UniformContinuousOn f (Set.Ici 0) := by
+    rcases eq_or_ne q ∞ with rfl | hqtop
+    · obtain ⟨C, hC⟩ := eLpNormEssSup_lt_top_iff_isBoundedUnder.mp
+        (by simpa only [eLpNorm_exponent_top] using hf'.eLpNorm_lt_top)
+      have hC' : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ) :=
+        (Filter.eventually_map.mp hC).mono fun x hx ↦ by exact_mod_cast hx
+      exact (lipschitzOn_of_absolutelyContinuousOnInterval hac hderiv hC').uniformContinuousOn
+    · have hqreal : 1 < q.toReal := by
+        simpa only [ENNReal.toReal_one] using
+          (ENNReal.toReal_lt_toReal ENNReal.one_ne_top hqtop).mpr hq
+      have hqeq : q = ENNReal.ofReal q.toReal := (ENNReal.ofReal_toReal hqtop).symm
+      rw [hqeq] at hf'
+      set C : ℝ≥0 :=
+        (eLpNorm f' (ENNReal.ofReal q.toReal) (volume.restrict (Set.Ioi 0))).toNNReal
+      have hCtop : (C : ℝ≥0∞) =
+          eLpNorm f' (ENNReal.ofReal q.toReal) (volume.restrict (Set.Ioi 0)) :=
+        ENNReal.coe_toNNReal (hf'.eLpNorm_lt_top).ne
+      have hr : 0 ≤ (q.toReal - 1) / q.toReal := by positivity
+      have hholder : HolderOnWith C (Real.toNNReal ((q.toReal - 1) / q.toReal)) f (Set.Ici 0) :=
+        holderOn_of_absolutelyContinuousOnInterval hqreal hac hderiv hf' (le_of_eq hCtop.symm)
+      have hαpos : 0 < (Real.toNNReal ((q.toReal - 1) / q.toReal) : ℝ) := by
+        rw [Real.coe_toNNReal _ hr]
+        positivity
+      exact hholder.uniformContinuousOn hαpos
+  exact exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
+
 end Barbalat
