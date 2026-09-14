@@ -63,14 +63,19 @@ The tail supremum is finite, and tends to zero, whenever the improper integral c
 
 # An `L^q` derivative gives Hölder regularity
 
-The paper's Lemma 6: when `f` is differentiable with derivative in `L^q(0, ∞)`, then `f` is
-Hölder continuous with exponent `(q - 1) / q`, and Lipschitz in the endpoint case `q = ∞`.
-This is the estimate $`\lVert f(y) - f(x) \rVert \le (y - x)^{1/q'} \lVert f' \rVert_q`
-obtained from the fundamental theorem of calculus and Hölder's inequality.
+The paper's Lemma 6: when `f` has an `L^q(0, ∞)` derivative, then `f` is Hölder continuous
+with exponent `(q - 1) / q`, and Lipschitz in the endpoint case `q = ∞`. This is the
+estimate $`\lVert f(y) - f(x) \rVert \le (y - x)^{1/q'} \lVert f' \rVert_q` obtained from
+the fundamental theorem of calculus and Hölder's inequality. The paper's class uses the
+almost-everywhere derivative; here this is encoded by absolute continuity, and the FTC is
+the Lebesgue one for absolutely continuous functions.
 
-Compared with the paper, absolute continuity is replaced by the stronger hypothesis that
-`f` is differentiable everywhere with the stated derivative; this reshaping is recorded in
-the docstring.
+{docstring Barbalat.holderOn_of_absolutelyContinuousOnInterval}
+
+{docstring Barbalat.lipschitzOn_of_absolutelyContinuousOnInterval}
+
+For functions differentiable everywhere the same bounds hold under the stronger hypothesis
+`∀ x, HasDerivAt f (f' x) x`.
 
 {docstring Barbalat.holderOn_of_memLp_deriv}
 
@@ -81,19 +86,25 @@ the docstring.
 The paper's Theorem 5 unifies several "alternative versions" of Barbălat's lemma that
 appeared in the literature: Tao's version (`f ∈ L²`, `f' ∈ L^∞`) and the
 Desoer–Vidyasagar/Teel version (`f, f' ∈ L^p`). It states that every `f` in the mixed
-Sobolev space `W^{1,p,q}(0, ∞)` tends to zero at infinity.
+Sobolev space `W^{1,p,q}(0, ∞)` tends to zero at infinity. The paper's space uses the
+almost-everywhere derivative, encoded here by absolute continuity.
+
+{docstring Barbalat.tendsto_zero_of_absolutelyContinuous_memLp}
+
+The two named alternatives are corollaries.
+
+{docstring Barbalat.tendsto_zero_of_absolutelyContinuous_memLp_two_top}
+
+{docstring Barbalat.tendsto_zero_of_absolutelyContinuous_memLp_self}
+
+For functions that are differentiable everywhere the same conclusion holds under the
+stronger hypothesis `∀ x, HasDerivAt f (f' x) x`.
 
 {docstring Barbalat.tendsto_zero_of_memLp_deriv_finite}
 
 {docstring Barbalat.tendsto_zero_of_memLp_deriv_top}
 
 {docstring Barbalat.tendsto_zero_of_memLp_deriv}
-
-The two named alternatives are corollaries.
-
-{docstring Barbalat.tendsto_zero_of_memLp_two_deriv_top}
-
-{docstring Barbalat.tendsto_zero_of_memLp_deriv_self}
 
 The auxiliary boundedness statement used in the proof is the second half of Lemma 6.
 
@@ -115,6 +126,15 @@ function of order `α`, the exponent `1/2` in Lemma 2/3 improves to `α / (1 + �
 For `f ∈ W^{1,p,q}` this yields the paper's Corollary 9.
 
 {docstring Barbalat.norm_pow_le_tailIntegral_rate}
+
+The endpoint `q = ∞` (the space `W^{1,1,∞}` of the adaptive-control example) has exponent
+`1/2`.
+
+{docstring Barbalat.norm_pow_le_tailIntegral_rate_top}
+
+The boundedness half of Lemma 6 is also available in bundled form.
+
+{docstring Barbalat.boundedOn_of_memLp_deriv}
 
 # Relation to the rest of the library
 
