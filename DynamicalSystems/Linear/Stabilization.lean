@@ -403,6 +403,31 @@ The general spectral statement "Hurwitz implies exponential decay" is not used
 here; the bridge is proved for the explicit target polynomial that the
 stabilization theorem realises. -/
 
+/-- **The exponential power series, evaluated pointwise.** For a complete normed
+space `E` over a complete normed field `𝕜` and a continuous endomorphism `A`,
+applying `exp (t • A)` to a vector expands as the factorial series
+`∑ n, ((n !)⁻¹ : 𝕜) • ((t • A) ^ n x)`.
+
+This is the shared transport step behind the exponential push-forward and the
+nilpotent series: `NormedSpace.exp_eq_tsum` expands the exponential as an
+operator-valued sum and `ContinuousLinearMap.map_tsum` moves the
+evaluation-at-`x` map through it. -/
+theorem exp_smul_apply_eq_tsum
+    {𝕜 : Type*} [RCLike 𝕜]
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
+    (A : E →L[𝕜] E) (t : 𝕜) (x : E) :
+    NormedSpace.exp (t • A) x =
+      ∑' n : ℕ, ((n.factorial : 𝕜)⁻¹) • (((t • A) ^ n) x) := by
+  conv_lhs => rw [NormedSpace.exp_eq_tsum 𝕜]
+  change ((ContinuousLinearMap.apply 𝕜 E x)
+    (∑' n : ℕ, ((n.factorial : 𝕜)⁻¹) • (t • A) ^ n)) = _
+  rw [ContinuousLinearMap.map_tsum]
+  · apply tsum_congr
+    intro n
+    rw [map_smul, ContinuousLinearMap.apply_apply]
+  · exact NormedSpace.expSeries_summable_of_mem_ball' (t • A)
+      ((NormedSpace.expSeries_radius_eq_top 𝕜 (E →L[𝕜] E)).symm ▸ edist_lt_top _ _)
+
 section ExponentialDecay
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
@@ -1705,16 +1730,9 @@ lemma exp_nilpotent_apply_eq_sum (N : E →L[ℂ] E) {x : E} {n : ℕ}
     (hN : (N ^ n) x = 0) (t : ℝ) :
     NormedSpace.exp (t • N) x =
       ∑ k ∈ Finset.range n, ((k.factorial : ℂ)⁻¹) • ((t • N) ^ k) x := by
-  have hsumm : Summable (fun k : ℕ => ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) :=
-    NormedSpace.expSeries_summable' (t • N)
-  have h1 : NormedSpace.exp (t • N) x =
-      (∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) x := by
-    rw [NormedSpace.exp_eq_tsum ℂ]
-  have h2 : (∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • (t • N) ^ k) x =
-      ∑' (k : ℕ), ((k.factorial : ℂ)⁻¹) • ((t • N) ^ k) x := by
-    simpa [ContinuousLinearMap.apply_apply] using
-      ContinuousLinearMap.map_tsum (ContinuousLinearMap.apply ℂ E x) hsumm
-  rw [h1, h2]
+  have hseries := exp_smul_apply_eq_tsum N (t : ℂ) x
+  rw [show (t : ℂ) • N = t • N from rfl] at hseries
+  rw [hseries]
   rw [tsum_eq_sum (s := Finset.range n)]
   intro k hk
   rw [Finset.mem_range, not_lt] at hk

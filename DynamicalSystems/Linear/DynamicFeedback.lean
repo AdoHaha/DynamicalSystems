@@ -2974,25 +2974,11 @@ theorem clm_map_exp_smul
       intro y
       rw [pow_succ, pow_succ, mul_apply_eq_comp, ih, hscalar, mul_apply_eq_comp]
   have hAtsum : NormedSpace.exp (t • A) x =
-      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • A) ^ n) x) := by
-    conv_lhs => rw [NormedSpace.exp_eq_tsum ℝ]
-    change ((ContinuousLinearMap.apply ℝ X x)
-      (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (t • A) ^ n)) = _
-    rw [ContinuousLinearMap.map_tsum]
-    · apply tsum_congr; intro n
-      rw [map_smul, ContinuousLinearMap.apply_apply]
-    · exact NormedSpace.expSeries_summable_of_mem_ball' (t • A)
-        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • A) ^ n) x) :=
+    LinearMap.exp_smul_apply_eq_tsum A t x
   have hBtsum : NormedSpace.exp (t • B) (L x) =
-      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • B) ^ n) (L x)) := by
-    conv_lhs => rw [NormedSpace.exp_eq_tsum ℝ]
-    change ((ContinuousLinearMap.apply ℝ Y (L x))
-      (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (t • B) ^ n)) = _
-    rw [ContinuousLinearMap.map_tsum]
-    · apply tsum_congr; intro n
-      rw [map_smul, ContinuousLinearMap.apply_apply]
-    · exact NormedSpace.expSeries_summable_of_mem_ball' (t • B)
-        ((NormedSpace.expSeries_radius_eq_top ℝ (Y →L[ℝ] Y)).symm ▸ edist_lt_top _ _)
+      ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • B) ^ n) (L x)) :=
+    LinearMap.exp_smul_apply_eq_tsum B t (L x)
   rw [hAtsum, hBtsum]
   change L (∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • A) ^ n) x)) =
     ∑' n : ℕ, ((n.factorial : ℝ))⁻¹ • (((t • B) ^ n) (L x))
