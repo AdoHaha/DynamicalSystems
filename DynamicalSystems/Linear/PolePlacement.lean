@@ -304,7 +304,7 @@ theorem isControllable_of_forall_exists_feedback_charpoly
   have hp_monic : p.Monic := by
     rw [hpdef]
     have hX : (Polynomial.X : ℝ[X]).Monic := by
-      simpa using Polynomial.monic_X_add_C (0 : ℝ)
+      simp
     exact ((hX.pow k).mul hr_monic).add_of_left hdeg
   have hp_natDegree : p.natDegree = Module.finrank ℝ X := by
     rw [hpdef, Polynomial.natDegree_add_eq_left_of_degree_lt hdeg, hXk_nat, hkdef]
@@ -359,26 +359,26 @@ theorem charpoly_eq_of_companion (p : ℝ[X]) (hp : p.Monic)
     rw [PowerBasis.leftMulMatrix]
     ext i j
     rw [LinearMap.toMatrix_apply]
-    show (v.repr (T (v j))) i =
+    change (v.repr (T (v j))) i =
       (if (j : ℕ) + 1 = h.dim then -h.minpolyGen.coeff (i : ℕ)
         else if (i : ℕ) = (j : ℕ) + 1 then 1 else 0)
     rw [hmin]
     have hdim : h.dim = p.natDegree := rfl
     by_cases hj : (j : ℕ) + 1 = h.dim
-    · rw [if_pos hj]
+    · rw [ite_eq_left hj]
       have hnj : ¬ (j : ℕ) + 1 < p.natDegree := by omega
-      rw [hrel j, dif_neg hnj, map_neg, Finsupp.neg_apply, hrepr]
-    · rw [if_neg hj]
+      rw [hrel j, dite_eq_right hnj, map_neg, Finsupp.neg_apply, hrepr]
+    · rw [ite_eq_right hj]
       by_cases hij : (i : ℕ) = (j : ℕ) + 1
-      · rw [if_pos hij]
+      · rw [ite_eq_left hij]
         have hlt : (j : ℕ) + 1 < p.natDegree := by
           have : (j : ℕ) + 1 < h.dim := by rw [← hij]; exact i.2
           omega
-        rw [hrel j, dif_pos hlt, Basis.repr_self_apply, if_pos]
+        rw [hrel j, dite_eq_left hlt, Basis.repr_self_apply, ite_eq_left]
         exact Fin.ext hij.symm
-      · rw [if_neg hij]
+      · rw [ite_eq_right hij]
         by_cases hlt : (j : ℕ) + 1 < p.natDegree
-        · rw [hrel j, dif_pos hlt, Basis.repr_self_apply, if_neg]
+        · rw [hrel j, dite_eq_left hlt, Basis.repr_self_apply, ite_eq_right]
           exact fun h => hij (Fin.ext_iff.mp h).symm
         · exfalso; omega
   have h1 : T.charpoly = (Algebra.leftMulMatrix h.basis h.gen).charpoly := by
@@ -406,13 +406,13 @@ theorem exists_feedback_charpoly_of_finrank_zero [FiniteDimensional ℝ X]
     (hzero : Module.finrank ℝ X = 0) (p : ℝ[X]) (hp : p.Monic)
     (hpdeg : p.natDegree = Module.finrank ℝ X) :
     ∃ F : X →ₗ[ℝ] U, (A + B.comp F).charpoly = p := by
-  haveI : Subsingleton X := Module.finrank_zero_iff.mp hzero
+  have : Subsingleton X := Module.finrank_zero_iff.mp hzero
   have hp1 : p = 1 := by
     have h0 : p.natDegree = 0 := by rw [hpdeg, hzero]
     exact Polynomial.eq_one_of_monic_natDegree_zero hp h0
   refine ⟨0, ?_⟩
   rw [hp1, LinearMap.comp_zero, add_zero]
-  haveI : IsEmpty (Module.Free.ChooseBasisIndex ℝ X) := by
+  have : IsEmpty (Module.Free.ChooseBasisIndex ℝ X) := by
     rw [← Fintype.card_eq_zero_iff, ← Module.finrank_eq_card_chooseBasisIndex, hzero]
   rw [LinearMap.charpoly_def]
   exact Matrix.charpoly_isEmpty
@@ -642,24 +642,24 @@ theorem poleG_coeff (n : ℕ) (p q : ℝ[X]) (i m : ℕ) :
   rw [poleG, ← lcoeff_apply, map_sum]
   simp only [lcoeff_apply, coeff_C_mul, coeff_X_pow]
   by_cases hm : m ≤ i
-  · rw [if_pos hm]
+  · rw [ite_eq_left hm]
     rw [Finset.sum_eq_single (i - m)]
-    · rw [if_pos (Nat.sub_sub_self hm).symm, mul_one]
+    · rw [ite_eq_left (Nat.sub_sub_self hm).symm, mul_one]
     · intro k hk hk0
       have hne : m ≠ i - k := by
         intro h
         apply hk0
         have hk' : k ≤ i := by rw [Finset.mem_range] at hk; omega
         omega
-      rw [if_neg hne, mul_zero]
+      rw [ite_eq_right hne, mul_zero]
     · intro h0
       exact absurd (Finset.mem_range.mpr (by omega)) h0
-  · rw [if_neg hm]
+  · rw [ite_eq_right hm]
     apply Finset.sum_eq_zero
     intro k hk
     rw [Finset.mem_range] at hk
     have hne : m ≠ i - k := by omega
-    rw [if_neg hne, mul_zero]
+    rw [ite_eq_right hne, mul_zero]
 
 /-- The polynomial `H = X G_{n-1} + ∑_{j<n} p_j G_j` whose companion form is
 realised by the constructed feedback. Its coefficients in degrees `1, …, n`
@@ -677,7 +677,7 @@ theorem coeff_X_mul_poleG (n : ℕ) (p q : ℝ[X]) {m : ℕ} (hm : 1 ≤ m) :
   rw [Finset.sum_eq_single 1]
   · simp
   · intro k _ hk1
-    rw [coeff_X, if_neg (Ne.symm hk1), zero_mul]
+    rw [coeff_X, ite_eq_right (Ne.symm hk1), zero_mul]
   · intro h1
     exact absurd (Finset.mem_range.mpr (by omega)) h1
 
@@ -700,7 +700,7 @@ theorem poleH_coeff_eq (n : ℕ) (p q : ℝ[X]) (hp : p.Monic) (hpn : p.natDegre
     (poleH n p q).coeff m = (p.reverse * poleD n p q).coeff (n - m) := by
   rw [poleH, coeff_add, coeff_X_mul_poleG n p q hm1, coeff_sum_C_poleG]
   have hG : (poleG n p q (n-1)).coeff (m-1) = (poleD n p q).coeff (n-m) := by
-    rw [poleG_coeff, if_pos (by omega : m - 1 ≤ n - 1)]
+    rw [poleG_coeff, ite_eq_left (by omega : m - 1 ≤ n - 1)]
     congr 1
     omega
   rw [hG]
@@ -714,12 +714,12 @@ theorem poleH_coeff_eq (n : ℕ) (p q : ℝ[X]) (hp : p.Monic) (hpn : p.natDegre
       apply Finset.sum_eq_zero
       intro j hj
       rw [Finset.mem_range] at hj
-      rw [if_neg (by omega), mul_zero]
+      rw [ite_eq_right (by omega), mul_zero]
     rw [hzero, zero_add]
     apply Finset.sum_congr rfl
     intro i hi
     rw [Finset.mem_range] at hi
-    rw [if_pos (by omega : m ≤ m + i)]
+    rw [ite_eq_left (by omega : m ≤ m + i)]
     rw [show (m + i) - m = i by omega]
   rw [hL]
   have hR : (p.reverse * poleD n p q).coeff (n - m)
@@ -747,12 +747,12 @@ theorem poleH_coeff_gt (n : ℕ) (p q : ℝ[X]) {m : ℕ} (hn : 0 < n) (hm : n <
     (poleH n p q).coeff m = 0 := by
   rw [poleH, coeff_add, coeff_X_mul_poleG n p q (by omega : 1 ≤ m), coeff_sum_C_poleG]
   have hG : (poleG n p q (n-1)).coeff (m-1) = 0 := by
-    rw [poleG_coeff, if_neg (by omega : ¬ (m - 1 ≤ n - 1))]
+    rw [poleG_coeff, ite_eq_right (by omega : ¬ (m - 1 ≤ n - 1))]
   rw [hG, zero_add]
   apply Finset.sum_eq_zero
   intro j hj
   rw [Finset.mem_range] at hj
-  rw [if_neg (not_le.mpr (by omega : j < m)), mul_zero]
+  rw [ite_eq_right (not_le.mpr (by omega : j < m)), mul_zero]
 
 /-- `H` differs from `q = A.charpoly` by a constant. This is the polynomial
 content of the final companion relation: choosing the last feedback value as the
@@ -764,10 +764,10 @@ theorem poleH_eq (n : ℕ) (p q : ℝ[X]) (hp : p.Monic) (hpn : p.natDegree = n)
   ext m
   by_cases hm : m = 0
   · subst hm
-    rw [coeff_add, coeff_C, if_pos rfl]
+    rw [coeff_add, coeff_C, ite_eq_left rfl]
     ring
   · have hm1 : 1 ≤ m := Nat.one_le_iff_ne_zero.mpr hm
-    rw [coeff_add, coeff_C, if_neg hm, add_zero]
+    rw [coeff_add, coeff_C, ite_eq_right hm, add_zero]
     by_cases hmn : m ≤ n
     · have h1 : (poleH n p q).coeff m = (p.reverse * poleD n p q).coeff (n-m) :=
         poleH_coeff_eq n p q hp hpn hm1 hmn
@@ -787,7 +787,7 @@ theorem poleG_natDegree_le (n : ℕ) (p q : ℝ[X]) (i : ℕ) :
     (poleG n p q i).natDegree ≤ i := by
   rw [natDegree_le_iff_coeff_eq_zero]
   intro N hN
-  rw [poleG_coeff, if_neg (by omega : ¬ (N ≤ i))]
+  rw [poleG_coeff, ite_eq_right (by omega : ¬ (N ≤ i))]
 
 /-- **The triangular family `G_i(A) (b 1)` is linearly independent.** This is
 the key structural input for the companion basis: since each `G_i` is monic of
@@ -803,7 +803,7 @@ theorem linearIndependent_poleG [AddCommGroup X] [Module ℝ X] [FiniteDimension
   rw [Fintype.linearIndependent_iff]
   intro c hc
   by_contra hne
-  push_neg at hne
+  push Not at hne
   obtain ⟨i1, hi1⟩ := hne
   let s : Finset (Fin (Module.finrank ℝ X)) := Finset.univ.filter (fun i => c i ≠ 0)
   have hsne : s.Nonempty := ⟨i1, by simp [s, hi1]⟩
@@ -823,7 +823,7 @@ theorem linearIndependent_poleG [AddCommGroup X] [Module ℝ X] [FiniteDimension
       apply Finset.sum_congr rfl
       intro i _
       rw [map_mul, aeval_C]
-      simp [Algebra.algebraMap_eq_smul_one, smul_mul_assoc]
+      simp [Algebra.algebraMap_eq_smul_one]
     rw [h1]
     simp only [LinearMap.sum_apply, LinearMap.smul_apply]
     exact hc
@@ -850,7 +850,7 @@ theorem linearIndependent_poleG [AddCommGroup X] [Module ℝ X] [FiniteDimension
     rw [← lcoeff_apply, map_sum]
     simp only [lcoeff_apply, coeff_C_mul]
     rw [Finset.sum_eq_single i0]
-    · rw [poleG_coeff, if_pos le_rfl, Nat.sub_self, hD0, mul_one]
+    · rw [poleG_coeff, ite_eq_left le_rfl, Nat.sub_self, hD0, mul_one]
     · intro j _ hj
       by_cases hlt : i0 < j
       · have hcj : c j = 0 := by
@@ -861,7 +861,7 @@ theorem linearIndependent_poleG [AddCommGroup X] [Module ℝ X] [FiniteDimension
         have hif : ¬ (↑i0 ≤ ↑j) := by omega
         have hzero : (poleG (Module.finrank ℝ X) p q j).coeff i0 = 0 := by
           rw [poleG_coeff]
-          exact if_neg hif
+          exact ite_eq_right hif
         rw [hzero, mul_zero]
     · intro h
       exact absurd (Finset.mem_univ i0) h
@@ -912,7 +912,7 @@ theorem exists_feedback_charpoly_single [AddCommGroup X] [Module ℝ X] [FiniteD
     have hD0 : (poleD n p q).coeff 0 = 1 := coeff_zero_poleD hnpos' hp hqmonic
     have hLI : LinearIndependent ℝ (fun i : Fin n => aeval A (poleG n p q i) (b 1)) :=
       linearIndependent_poleG A b h n hnpos' hnrank p q hD0
-    haveI : Nonempty (Fin n) := ⟨⟨0, hnpos'⟩⟩
+    have : Nonempty (Fin n) := ⟨⟨0, hnpos'⟩⟩
     let v : Basis (Fin n) ℝ X :=
       basisOfLinearIndependentOfCardEqFinrank hLI (by rw [Fintype.card_fin]; exact hnrank)
     have hv : ∀ i : Fin n, v i = aeval A (poleG n p q i) (b 1) := by
@@ -1060,7 +1060,7 @@ theorem exists_controlled_chain (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
         set L : Submodule ℝ X := Submodule.span ℝ (Set.range v) with hL
         have hex : ∃ w : U, A (x (Fin.last k)) + B w ∉ L := by
           by_contra hc
-          push_neg at hc
+          push Not at hc
           have hlast : A (x (Fin.last k)) ∈ L := by
             have := hc 0
             simpa using this
@@ -1140,7 +1140,7 @@ theorem exists_feedback_charpoly_of_isControllable
   by_cases hzero : Module.finrank ℝ X = 0
   · exact exists_feedback_charpoly_of_finrank_zero A B hzero p hp hpdeg
   have hNpos : 0 < Module.finrank ℝ X := Nat.pos_of_ne_zero hzero
-  haveI : NeZero (Module.finrank ℝ X) := ⟨hNpos.ne'⟩
+  have : NeZero (Module.finrank ℝ X) := ⟨hNpos.ne'⟩
   obtain ⟨x, u, hx0, hchain, hind⟩ := exists_controlled_chain A B h
   let v : Fin (Module.finrank ℝ X) → X := fun i => x i.succ
   have hv_eq : ∀ i, v i = x i.succ := fun i => rfl
@@ -1174,7 +1174,7 @@ theorem exists_feedback_charpoly_of_isControllable
       have h1 : F₀ (vb i) = f₀ i := hF₀ i
       rw [hvb i] at h1
       rw [h1]
-      exact dif_pos hi
+      exact dite_eq_left hi
     have hT : T (v i) = A (v i) + B (u ⟨(i : ℕ) + 1, hi⟩) := by
       simp only [T, LinearMap.add_apply, LinearMap.comp_apply, hF0i]
     rw [hT, hv_eq i, hv_eq ⟨(i : ℕ) + 1, hi⟩]
@@ -1210,7 +1210,7 @@ theorem exists_feedback_charpoly_of_isControllable
   obtain ⟨f, hf⟩ := exists_feedback_charpoly_single T b hcont p hp hpdeg
   let u₀ : ℝ →ₗ[ℝ] U := LinearMap.toSpanSingleton ℝ U (u 0)
   have hBu₀ : B.comp u₀ = b := by
-    ext c
+    ext
     simp only [LinearMap.comp_apply, u₀, b, b₀, LinearMap.toSpanSingleton_apply,
       map_smul]
   refine ⟨F₀ + u₀.comp f, ?_⟩

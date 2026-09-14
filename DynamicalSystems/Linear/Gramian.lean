@@ -87,7 +87,10 @@ state space. Source: Trentelman–Stoorvogel–Hautus, Section 5.2. -/
 noncomputable def controllabilityGramian (sys : LinearSystem ℝ X U Y) (T : ℝ) :
     X →L[ℝ] X :=
   ∫ s in (0 : ℝ)..T,
-    (sys.expFlow s).comp (sys.continuousB.comp ((ContinuousLinearMap.adjoint sys.continuousB).comp ((ContinuousLinearMap.adjoint (sys.expFlow s)))))
+    (sys.expFlow s).comp
+      (sys.continuousB.comp
+        ((ContinuousLinearMap.adjoint sys.continuousB).comp
+          ((ContinuousLinearMap.adjoint (sys.expFlow s)))))
 
 /-- The finite-horizon observability Gramian
 `W_o(T) = ∫₀ᵀ exp(s A)* C* C exp(s A) ds`, as a continuous endomorphism of the
@@ -95,7 +98,9 @@ state space. Source: Trentelman–Stoorvogel–Hautus, Section 5.3. -/
 noncomputable def observabilityGramian (sys : LinearSystem ℝ X U Y) (T : ℝ) :
     X →L[ℝ] X :=
   ∫ s in (0 : ℝ)..T,
-    ((ContinuousLinearMap.adjoint (sys.expFlow s))).comp ((ContinuousLinearMap.adjoint sys.continuousC).comp (sys.continuousC.comp (sys.expFlow s)))
+    ((ContinuousLinearMap.adjoint (sys.expFlow s))).comp
+      ((ContinuousLinearMap.adjoint sys.continuousC).comp
+        (sys.continuousC.comp (sys.expFlow s)))
 
 /-! ### Continuity of the integrands -/
 
@@ -104,7 +109,9 @@ omit [FiniteDimensional ℝ Y] in
 theorem continuous_controllabilityIntegrand (sys : LinearSystem ℝ X U Y) :
     Continuous (fun s : ℝ =>
       (sys.expFlow s).comp
-        (sys.continuousB.comp ((ContinuousLinearMap.adjoint sys.continuousB).comp ((ContinuousLinearMap.adjoint (sys.expFlow s)))))) := by
+        (sys.continuousB.comp
+          ((ContinuousLinearMap.adjoint sys.continuousB).comp
+            ((ContinuousLinearMap.adjoint (sys.expFlow s)))))) := by
   have hE : Continuous (fun s : ℝ => sys.expFlow s) := by
     simpa using continuous_expFlow_sub sys 0
   have hEa : Continuous (fun s : ℝ => (ContinuousLinearMap.adjoint (sys.expFlow s))) :=
@@ -116,7 +123,8 @@ omit [FiniteDimensional ℝ U] in
 theorem continuous_observabilityIntegrand (sys : LinearSystem ℝ X U Y) :
     Continuous (fun s : ℝ =>
       ((ContinuousLinearMap.adjoint (sys.expFlow s))).comp
-        ((ContinuousLinearMap.adjoint sys.continuousC).comp (sys.continuousC.comp (sys.expFlow s)))) := by
+        ((ContinuousLinearMap.adjoint sys.continuousC).comp
+          (sys.continuousC.comp (sys.expFlow s)))) := by
   have hE : Continuous (fun s : ℝ => sys.expFlow s) := by
     simpa using continuous_expFlow_sub sys 0
   have hEa : Continuous (fun s : ℝ => (ContinuousLinearMap.adjoint (sys.expFlow s))) :=
@@ -130,9 +138,14 @@ omit [FiniteDimensional ℝ Y] in
 integral of the squared norm `‖B* exp(s A)* x‖²`. -/
 theorem inner_controllabilityGramian (sys : LinearSystem ℝ X U Y) (T : ℝ) (x : X) :
     inner ℝ x (sys.controllabilityGramian T x) =
-      ∫ s in (0 : ℝ)..T, ‖(ContinuousLinearMap.adjoint sys.continuousB) (((ContinuousLinearMap.adjoint (sys.expFlow s))) x)‖ ^ 2 := by
+      ∫ s in (0 : ℝ)..T,
+        ‖(ContinuousLinearMap.adjoint sys.continuousB)
+          (((ContinuousLinearMap.adjoint (sys.expFlow s))) x)‖ ^ 2 := by
   let L : ℝ → X →L[ℝ] X := fun s =>
-    (sys.expFlow s).comp (sys.continuousB.comp ((ContinuousLinearMap.adjoint sys.continuousB).comp ((ContinuousLinearMap.adjoint (sys.expFlow s)))))
+    (sys.expFlow s).comp
+      (sys.continuousB.comp
+        ((ContinuousLinearMap.adjoint sys.continuousB).comp
+          ((ContinuousLinearMap.adjoint (sys.expFlow s)))))
   have hcontL : Continuous L := continuous_controllabilityIntegrand sys
   have hIntL : IntervalIntegrable L volume (0 : ℝ) T := hcontL.intervalIntegrable _ _
   have happly : sys.controllabilityGramian T x = ∫ s in (0 : ℝ)..T, L s x := by
@@ -148,9 +161,13 @@ theorem inner_controllabilityGramian (sys : LinearSystem ℝ X U Y) (T : ℝ) (x
   refine intervalIntegral.integral_congr fun s _ => ?_
   simp only [L, ContinuousLinearMap.comp_apply, innerSL_apply_apply]
   rw [← ContinuousLinearMap.adjoint_inner_left (sys.expFlow s)
-    (sys.continuousB ((ContinuousLinearMap.adjoint sys.continuousB) (((ContinuousLinearMap.adjoint (sys.expFlow s))) x))) x]
+    (sys.continuousB
+      ((ContinuousLinearMap.adjoint sys.continuousB)
+        (((ContinuousLinearMap.adjoint (sys.expFlow s))) x))) x]
   rw [← ContinuousLinearMap.adjoint_inner_left sys.continuousB
-    ((ContinuousLinearMap.adjoint sys.continuousB) (((ContinuousLinearMap.adjoint (sys.expFlow s))) x)) (((ContinuousLinearMap.adjoint (sys.expFlow s))) x)]
+    ((ContinuousLinearMap.adjoint sys.continuousB)
+      (((ContinuousLinearMap.adjoint (sys.expFlow s))) x))
+    (((ContinuousLinearMap.adjoint (sys.expFlow s))) x)]
   rw [real_inner_self_eq_norm_sq]
 
 omit [FiniteDimensional ℝ U] in
@@ -160,7 +177,9 @@ theorem inner_observabilityGramian (sys : LinearSystem ℝ X U Y) (T : ℝ) (x :
     inner ℝ x (sys.observabilityGramian T x) =
       ∫ s in (0 : ℝ)..T, ‖sys.continuousC (sys.expFlow s x)‖ ^ 2 := by
   let L : ℝ → X →L[ℝ] X := fun s =>
-    ((ContinuousLinearMap.adjoint (sys.expFlow s))).comp ((ContinuousLinearMap.adjoint sys.continuousC).comp (sys.continuousC.comp (sys.expFlow s)))
+    ((ContinuousLinearMap.adjoint (sys.expFlow s))).comp
+      ((ContinuousLinearMap.adjoint sys.continuousC).comp
+        (sys.continuousC.comp (sys.expFlow s)))
   have hcontL : Continuous L := continuous_observabilityIntegrand sys
   have hIntL : IntervalIntegrable L volume (0 : ℝ) T := hcontL.intervalIntegrable _ _
   have happly : sys.observabilityGramian T x = ∫ s in (0 : ℝ)..T, L s x := by
@@ -270,7 +289,7 @@ omit [FiniteDimensional ℝ Y] in
 /-- The power series evaluation of `B* exp(s A*) x` vanishes when all `B* (A*)^k x` do. -/
 theorem continuousB_adjoint_expFlow_adjoint_eq_zero_of_forall
     (sys : LinearSystem ℝ X U Y) {x : X}
-    (h : ∀ k, ((sys.continuousB)†) ((((sys.continuousA)†)^k) x) = 0) (s : ℝ) :
+    (h : ∀ k, ((sys.continuousB)†) ((((sys.continuousA)†) ^ k) x) = 0) (s : ℝ) :
     ((sys.continuousB)†) (((sys.expFlow s)†) x) = 0 := by
   rw [adjoint_expFlow_eq]
   have hsum := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℝ) (s • (sys.continuousA)†)
@@ -360,7 +379,7 @@ omit [FiniteDimensional ℝ Y] in
 /-- The inner product of the state with the exponential of the forcing vanishes whenever
 `x` is orthogonal to the reachable subspace. -/
 theorem inner_expFlow_forcing_eq_zero (sys : LinearSystem ℝ X U Y) {x : X}
-    (hk : ∀ k, ((sys.continuousB)†) ((((sys.continuousA)†)^k) x) = 0)
+    (hk : ∀ k, ((sys.continuousB)†) ((((sys.continuousA)†) ^ k) x) = 0)
     (u : ℝ → U) (T s : ℝ) :
     inner ℝ x (sys.expFlow T (sys.forcing 0 u s)) = 0 := by
   have hstep : sys.expFlow T (sys.forcing 0 u s) =
@@ -431,7 +450,8 @@ theorem controllabilityGramian_mem_reachableSetAt (sys : LinearSystem ℝ X U Y)
       ∫ s in (0 : ℝ)..T,
         sys.expFlow s (sys.continuousB (((sys.continuousB)†) (((sys.expFlow s)†) z))) := by
     have h := intervalIntegral.integral_comp_sub_left
-      (f := fun r : ℝ => sys.expFlow r (sys.continuousB (((sys.continuousB)†) (((sys.expFlow r)†) z))))
+      (f := fun r : ℝ =>
+        sys.expFlow r (sys.continuousB (((sys.continuousB)†) (((sys.expFlow r)†) z))))
       (a := (0 : ℝ)) (b := T) T
     simpa using h
   rw [hrefl]
@@ -495,8 +515,10 @@ theorem ker_controllabilityGramian (sys : LinearSystem ℝ X U Y) {T : ℝ} (hT 
     rw [controllabilityGramian, ContinuousLinearMap.intervalIntegral_apply
       ((continuous_controllabilityIntegrand sys).intervalIntegrable _ _) x]
     have hfun : (fun s : ℝ =>
-        (sys.expFlow s).comp (sys.continuousB.comp ((ContinuousLinearMap.adjoint sys.continuousB).comp
-          ((ContinuousLinearMap.adjoint (sys.expFlow s))))) x) = fun _ => (0 : X) := by
+        (sys.expFlow s).comp
+          (sys.continuousB.comp
+            ((ContinuousLinearMap.adjoint sys.continuousB).comp
+              ((ContinuousLinearMap.adjoint (sys.expFlow s))))) x) = fun _ => (0 : X) := by
       funext s
       simp only [ContinuousLinearMap.comp_apply]
       rw [continuousB_adjoint_expFlow_adjoint_eq_zero_of_forall sys hk s, map_zero, map_zero]

@@ -1056,7 +1056,7 @@ theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
   have hπQ_A : πQ.comp A = A22.comp πQ := by
     apply LinearMap.ext
     intro x
-    show πQ (A x) = A22 (πQ x)
+    change πQ (A x) = A22 (πQ x)
     calc πQ (A x)
         = πQ (A ((πW x : X) + (πQ x : X))) := by rw [hdecomp]
       _ = πQ (A (πW x : X) + A (πQ x : X)) := by rw [map_add]
@@ -1069,7 +1069,7 @@ theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
   have hπQ_B : πQ.comp B = 0 := by
     apply LinearMap.ext
     intro u
-    show πQ (B u) = 0
+    change πQ (B u) = 0
     rw [Submodule.projectionOnto_apply_eq_zero_iff]
     exact range_le_reachableSubspace A B ⟨u, rfl⟩
   have hA22 : IsHurwitz A22 := by
@@ -1088,13 +1088,14 @@ theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
     have hξcomp : ξ.comp A22c = μ • ξ := by
       apply LinearMap.ext
       intro v
-      show ξ (A22c v) = (μ • ξ) v
+      change ξ (A22c v) = (μ • ξ) v
       have hh := congrArg (fun (f : (ℂ ⊗[ℝ] Q) →ₗ[ℂ] ℂ) => f v) hξeig
       simpa [LinearMap.dualMap_apply'] using hh
     let η : (ℂ ⊗[ℝ] X) →ₗ[ℂ] ℂ := ξ.comp (πQ.baseChange ℂ)
     have hηne : η ≠ 0 := by
       have hright : (πQ.baseChange ℂ).comp (Q.subtype.baseChange ℂ) = LinearMap.id := by
-        rw [← LinearMap.baseChange_comp, Submodule.projectionOnto_comp_subtype, LinearMap.baseChange_id]
+        rw [← LinearMap.baseChange_comp, Submodule.projectionOnto_comp_subtype,
+          LinearMap.baseChange_id]
       have hsurj : Function.Surjective (πQ.baseChange ℂ) := by
         intro y
         exact ⟨(Q.subtype.baseChange ℂ) y, by
@@ -1104,7 +1105,7 @@ theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
       apply hξne
       apply LinearMap.ext
       intro y
-      show ξ y = 0
+      change ξ y = 0
       obtain ⟨z, rfl⟩ := hsurj y
       have hz := congrArg (fun f : (ℂ ⊗[ℝ] X) →ₗ[ℂ] ℂ => f z) hη0
       simpa [η, LinearMap.comp_apply] using hz
@@ -1115,7 +1116,7 @@ theorem isStabilizable_of_uncontrollableEigenvalues_hurwitz
         simpa only [LinearMap.baseChange_comp] using hh
       apply LinearMap.ext
       intro v
-      show η ((A.baseChange ℂ) v) = (μ • η) v
+      change η ((A.baseChange ℂ) v) = (μ • η) v
       calc η ((A.baseChange ℂ) v)
           = ξ ((πQ.baseChange ℂ) ((A.baseChange ℂ) v)) := rfl
         _ = ξ (((πQ.baseChange ℂ).comp (A.baseChange ℂ)) v) := rfl
@@ -1261,7 +1262,7 @@ theorem isDetectable_of_unobservableEigenvalues_hurwitz
     exact map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
   have hπP_A : (P.projectionOnto N hP.symm).comp A = AP.comp (P.projectionOnto N hP.symm) := by
     apply LinearMap.ext; intro x
-    show (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
+    change (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
     have hdecomp : ((πN x : X) + (πP x : X)) = x := by
       have hh := Submodule.projection_add_projection_eq_self hP x
       simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
@@ -1283,7 +1284,7 @@ theorem isDetectable_of_unobservableEigenvalues_hurwitz
     have hpow : ∀ k, (AP ^ k) p = (P.projectionOnto N hP.symm) ((A ^ k) p) := by
       intro k
       induction k with
-      | zero => simpa using hπPP p
+      | zero => simp
       | succ k ih =>
           rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, ih]
           have h2 := congrArg (fun f : X →ₗ[ℝ] P => f ((A ^ k) p)) hπP_A
@@ -1400,7 +1401,7 @@ theorem isDetectable_of_isHurwitz_unobservableRestriction (C : X →ₗ[ℝ] Y) 
     exact map_unobservableSubspace_le C A ⟨_, n.2, rfl⟩
   have hπP_A : (P.projectionOnto N hP.symm).comp A = AP.comp (P.projectionOnto N hP.symm) := by
     apply LinearMap.ext; intro x
-    show (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
+    change (P.projectionOnto N hP.symm) (A x) = AP ((P.projectionOnto N hP.symm) x)
     have hdecomp : ((πN x : X) + (πP x : X)) = x := by
       have hh := Submodule.projection_add_projection_eq_self hP x
       simpa only [πN, πP, Submodule.coe_projectionOnto_apply] using hh
@@ -1422,7 +1423,7 @@ theorem isDetectable_of_isHurwitz_unobservableRestriction (C : X →ₗ[ℝ] Y) 
     have hpow : ∀ k, (AP ^ k) p = (P.projectionOnto N hP.symm) ((A ^ k) p) := by
       intro k
       induction k with
-      | zero => simpa using hπPP p
+      | zero => simp
       | succ k ih =>
           rw [pow_succ', Module.End.mul_eq_comp, LinearMap.comp_apply, ih]
           have h2 := congrArg (fun f : X →ₗ[ℝ] P => f ((A ^ k) p)) hπP_A
@@ -1547,8 +1548,7 @@ theorem charpoly_restrict_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ 
     intro p
     obtain ⟨v, q⟩ := p
     rw [LinearEquiv.conj_apply_apply, LinearEquiv.symm_symm]
-    simp only [T, LinearMap.prod_apply, LinearMap.add_apply,
-      LinearMap.comp_apply, LinearMap.fst_apply, LinearMap.snd_apply]
+    simp only [T, LinearMap.prod_apply]
     rw [Submodule.coe_prodEquivOfIsCompl']
     rw [Submodule.prodEquivOfIsCompl_symm_apply]
     rw [map_add, map_add, map_add]
@@ -1581,7 +1581,7 @@ theorem charpoly_restrict_of_invariant (A : X →ₗ[ℝ] X) (V : Submodule ℝ 
     intro x
     refine Submodule.Quotient.induction_on (p := V) x ?_
     intro y
-    show eQ.symm (A22 (eQ (Submodule.Quotient.mk y))) = _
+    change eQ.symm (A22 (eQ (Submodule.Quotient.mk y))) = _
     rw [Submodule.quotientEquivOfIsCompl_apply_mk]
     rw [Submodule.mapQ_apply]
     rw [hsymm (A22 (πQ y))]
@@ -1912,7 +1912,8 @@ variable {ι : Type*} [Fintype ι] [DecidableEq ι]
 
 lemma ofRealPi_exp (M : Matrix ι ι ℝ) (t : ℝ) (y : ι → ℝ) :
     ofRealPi (NormedSpace.exp (t • (Matrix.toLin' M).toContinuousLinearMap) y) =
-      NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y) := by
+      NormedSpace.exp
+        (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y) := by
   have hstep : ∀ z : ι → ℝ,
       ofRealPi ((Matrix.toLin' M).toContinuousLinearMap z) =
         (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap (ofRealPi z) := by
@@ -1921,33 +1922,47 @@ lemma ofRealPi_exp (M : Matrix ι ι ℝ) (t : ℝ) (y : ι → ℝ) :
     exact ofRealPi_mulVec M z
   have hpow : ∀ n : ℕ, ∀ z : ι → ℝ,
       ofRealPi (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) z) =
-        ((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi z) := by
+        ((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n)
+          (ofRealPi z) := by
     intro n
     induction n with
     | zero => intro z; simp
     | succ n ih =>
       intro z
       rw [pow_succ']
-      rw [ContinuousLinearMap.mul_apply, ContinuousLinearMap.smul_apply, map_smul]
+      rw [mul_apply_eq_comp, _root_.smul_apply, map_smul]
       rw [hstep, ih z]
-      rw [← ContinuousLinearMap.smul_apply, ← ContinuousLinearMap.mul_apply, ← pow_succ']
+      rw [← _root_.smul_apply, ← mul_apply_eq_comp, ← pow_succ']
   have hseries : ∀ n : ℕ,
       ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)) =
-        ((n.factorial : ℂ)⁻¹) • (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi y)) := by
+        ((n.factorial : ℂ)⁻¹) •
+          (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n)
+            (ofRealPi y)) := by
     intro n
     rw [map_smul, hpow n y, ← Complex.ofReal_natCast n.factorial, ← Complex.ofReal_inv]
     rfl
-  have h1 : HasSum (fun n : ℕ => ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
+  have h1 : HasSum
+      (fun n : ℕ => ofRealPi
+        (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
       (ofRealPi (NormedSpace.exp (t • (Matrix.toLin' M).toContinuousLinearMap) y)) := by
-    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℝ) (t • (Matrix.toLin' M).toContinuousLinearMap)
+    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℝ)
+      (t • (Matrix.toLin' M).toContinuousLinearMap)
     have h2 := h.mapL (ContinuousLinearMap.apply ℝ (ι → ℝ) y)
     exact h2.mapL (ofRealPi.toContinuousLinearMap)
-  have h2 : HasSum (fun n : ℕ => ((n.factorial : ℂ)⁻¹) • (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n) (ofRealPi y)))
-      (NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) := by
-    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℂ) (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap)
+  have h2 : HasSum
+      (fun n : ℕ => ((n.factorial : ℂ)⁻¹) •
+        (((t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) ^ n)
+          (ofRealPi y)))
+      (NormedSpace.exp
+        (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) := by
+    have h := NormedSpace.exp_series_hasSum_exp' (𝕂 := ℂ)
+      (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap)
     exact h.mapL (ContinuousLinearMap.apply ℂ (ι → ℂ) (ofRealPi y))
-  have h3 : HasSum (fun n : ℕ => ofRealPi (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
-      (NormedSpace.exp (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) :=
+  have h3 : HasSum
+      (fun n : ℕ => ofRealPi
+        (((n.factorial : ℝ)⁻¹) • (((t • (Matrix.toLin' M).toContinuousLinearMap) ^ n) y)))
+      (NormedSpace.exp
+        (t • (Matrix.toLin' (M.map (algebraMap ℝ ℂ))).toContinuousLinearMap) (ofRealPi y)) :=
     h2.congr_fun (fun n => hseries n)
   exact h1.unique h3
 
