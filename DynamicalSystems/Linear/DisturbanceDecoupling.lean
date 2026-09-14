@@ -420,8 +420,8 @@ theorem disturbanceResponse_changeState (A : X →ₗ[𝕜] X) (E : W →ₗ[�
     disturbanceResponse (e.symm.conj A) (e.symm.toLinearMap.comp E)
         (H.comp e.toLinearMap) k =
       disturbanceResponse A E H k := by
-  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) := fun k =>
-    (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm
+  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) :=
+    LinearEquiv.conj_pow e A
   ext w
   simp only [disturbanceResponse, LinearMap.comp_apply, LinearEquiv.coe_toLinearMap]
   rw [hpow k, LinearEquiv.conj_apply]

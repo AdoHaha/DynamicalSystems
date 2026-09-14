@@ -93,6 +93,29 @@ Dually, for a pair `(C, A)` with unobservable subspace `N = unobservableSubspace
 
 @[expose] public section
 
+section ConjPow
+
+variable {𝕜 X : Type*} [Field 𝕜] [AddCommGroup X] [Module 𝕜 X]
+variable {X' : Type*} [AddCommGroup X'] [Module 𝕜 X']
+
+namespace LinearEquiv
+
+/-- **Conjugation commutes with powers.** Changing state coordinates by a
+linear equivalence `e : X' ≃ₗ[𝕜] X` sends the state map `A` to `e.symm.conj A`,
+and this operation commutes with taking natural powers:
+`(e.symm.conj A) ^ k = e.symm.conj (A ^ k)`.
+
+This is the closed form of `map_pow (LinearEquiv.conjRingEquiv e.symm) A k`
+that the state-coordinate invariance proofs in `Duality.lean` and
+`DisturbanceDecoupling.lean` all need. -/
+theorem conj_pow (e : X' ≃ₗ[𝕜] X) (A : X →ₗ[𝕜] X) (k : ℕ) :
+    (e.symm.conj A) ^ k = e.symm.conj (A ^ k) :=
+  (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm
+
+end LinearEquiv
+
+end ConjPow
+
 namespace LinearMap
 
 variable {𝕜 X U Y : Type*}
@@ -201,8 +224,8 @@ theorem reachableSubspace_changeState (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜]
     (e : X' ≃ₗ[𝕜] X) :
     reachableSubspace (e.symm.conj A) (e.symm.toLinearMap.comp B) =
       Submodule.map e.symm.toLinearMap (reachableSubspace A B) := by
-  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) := fun k =>
-    (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm
+  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) :=
+    LinearEquiv.conj_pow e A
   have hcomp : ∀ k : ℕ,
       ((e.symm.conj A) ^ k).comp (e.symm.toLinearMap.comp B) =
         e.symm.toLinearMap.comp ((A ^ k).comp B) := by
@@ -233,8 +256,8 @@ theorem unobservableSubspace_changeState (C : X →ₗ[𝕜] Y) (A : X →ₗ[�
     (e : X' ≃ₗ[𝕜] X) :
     unobservableSubspace (C.comp e.toLinearMap) (e.symm.conj A) =
       Submodule.map e.symm.toLinearMap (unobservableSubspace C A) := by
-  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) := fun k =>
-    (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm
+  have hpow : ∀ k : ℕ, (e.symm.conj A) ^ k = e.symm.conj (A ^ k) :=
+    LinearEquiv.conj_pow e A
   have hkey : ∀ (k : ℕ) (x : X'),
       (C.comp e.toLinearMap) (((e.symm.conj A) ^ k) x) = C ((A ^ k) (e x)) := by
     intro k x
