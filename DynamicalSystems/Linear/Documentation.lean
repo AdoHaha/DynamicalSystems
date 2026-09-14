@@ -261,8 +261,9 @@ The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
 explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, the
 spectrum/internal-stability layer, and the Hurwitz-to-external-impulse-response stability
 sufficient direction and its BIBO/integrability consequence are formalized. Nonzero-`F` synthesis
-is formalized under an explicit factorization hypothesis; only the geometric necessary-and-
-sufficient external-stability converse remains deferred.
+is formalized under an explicit factorization hypothesis; the geometric necessary-and-
+sufficient external-stability converse and observer dual are now formalized with
+explicit finite-dimensional and admissibility hypotheses.
 
 # Algebraic examples
 
@@ -528,10 +529,9 @@ certificate and proves the closed loop decoupled.
 
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
-The exact zero-response geometric criterion and the stabilizable/detectable-subspace Corollary 6.22
-foundation (including spectral direct sum and both top-characterization equivalences) are formalized;
-the remaining deferred obligation is the full geometric external-stability converse, together
-with the nonlinear theory of Chapters 7–15 and the
+The exact zero-response geometric criterion, the stabilizable/detectable-subspace Corollary 6.22
+conditions, feedback/observer constructions, and transpose-exponential pairing are formalized;
+the nonlinear theory of Chapters 7–15 and the
 algebraic-methods reference of Conte, Moog and Perdon. The examples module supplies the
 nonzero-feedthrough observer, possible/impossible decoupling instances, and the proved scalar-filter
 representation bridge.
