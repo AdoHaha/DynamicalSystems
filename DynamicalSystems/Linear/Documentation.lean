@@ -517,30 +517,27 @@ The verified reuse inventory listed in the source contract is largely consumed b
 
 ## Coordinate and base-change arguments
 
-*F1. Repeated `conj`-power helper.* `LinearMap.reachableSubspace_changeState` and
+*F1. Repeated `conj`-power helper — implemented.* `LinearMap.reachableSubspace_changeState` and
 `LinearMap.unobservableSubspace_changeState` in `Duality.lean`, and
 `LinearMap.disturbanceResponse_changeState` in `DisturbanceDecoupling.lean`, each open with the
 same anonymous local fact
 `have hpow : ∀ k, (e.symm.conj A)^k = e.symm.conj (A^k) := fun k => (map_pow (LinearEquiv.conjRingEquiv e.symm) A k).symm`.
 The underlying accepted API is `map_pow` applied to `LinearEquiv.conjRingEquiv`, but the pinned
 Mathlib exposes no named `LinearEquiv.conj_pow` (searched), so the closed form is re-derived three
-times. *Recommendation:* add one named `LinearEquiv.conj_pow` (or `LinearMap.conj_pow`) lemma and
-rewrite the three proofs to invoke it. *Risk:* low, purely mechanical. *Follow-up:* justified.
+times. The shared `LinearEquiv.conj_pow` helper now packages this proof and all three sites use it
+(commit `9c6ecc4`).
 
-*F2. Missing state-coordinate invariance for controlled and conditioned invariance.*
+*F2. State-coordinate invariance for controlled and conditioned invariance — implemented.*
 `ControlledInvariant.lean` proves input-coordinate invariance
 (`LinearMap.isControlledInvariant_changeInput_iff`) but has no state-coordinate lemma, and
 `ConditionedInvariant.lean` proves output-space invariance
 (`LinearMap.isConditionedInvariant_changeOutput_iff`) but likewise has no state-coordinate
-lemma. Mathlib already provides the missing ingredient,
-`LinearEquiv.map_mem_invtSubmodule_conj_iff` (and the companion
-`LinearEquiv.map_mem_invtSubmodule_iff`), which is unused here. *Recommendation:* add
-`isControlledInvariant_changeState_iff` and `isConditionedInvariant_changeState_iff`, proving the
-invariance half through `map_mem_invtSubmodule_conj_iff` and transporting `range B`/`ker C` with
-`LinearMap.range_comp`, `LinearEquiv.range` and `LinearMap.ker_comp`. *Risk:* low to moderate
-(the supremum/infimum transport is routine but must be spelled out). *Follow-up:* justified,
-because it closes a stated class of coordinate arguments.
-
+lemma. Mathlib provides the key ingredient,
+`LinearEquiv.map_mem_invtSubmodule_conj_iff`. The reusable coordinate-transport lemmas
+`LinearMap.isControlledInvariant_changeState_iff` and
+`LinearMap.isConditionedInvariant_changeState_iff` now provide this result (commit `d673598`).
+The former recommendation to add them is therefore complete. *Recommendation:* keep these APIs
+central for future coordinate proofs. *Risk:* none.
 *F3. `disturbanceResponse_changeState` is a special case of subspace transport.*
 `LinearMap.disturbanceResponse_changeState` (`DisturbanceDecoupling.lean`) and
 `LinearMap.reachableSubspace_changeState` (`Duality.lean`) both prove that an `iSup` of ranges is
@@ -595,18 +592,16 @@ No local re-derivation of these adjoint facts was found. *Recommendation:* keep.
 
 ## Exponential, decay and convolution reasoning
 
-*F8. Repeated exponential power-series expansion in `clm_map_exp_smul`.*
+*F8. Repeated exponential power-series expansion — implemented.*
 `LinearSystem.clm_map_exp_smul` (`DynamicFeedback.lean`, the only `maxHeartbeats 800000` site)
-contains two nearly identical blocks, `hAtsum` and `hBtsum`, that expand
+formerly contained two nearly identical blocks, `hAtsum` and `hBtsum`, that expand
 `NormedSpace.exp (t • A) x` and `NormedSpace.exp (t • B) (L x)` as a `tsum` and then move the
 continuous linear map through it with `ContinuousLinearMap.map_tsum` and `tsum_congr`.
 `Stabilization.lean` has the same expansion pattern twice more in
 `LinearMap.exp_nilpotent_eq_sum` and `LinearMap.exp_nilpotent_apply_eq_sum`. *Recommendation:*
 extract `exp_smul_apply_eq_tsum`, a single rewrite of `NormedSpace.exp (t • A) x` to its factorial
-series, and use it inside `hAtsum`/`hBtsum`; derive the complex pointwise nilpotent lemma from
-the global one where the nilpotency hypotheses permit. *Risk:* low to moderate (the extracted
-lemma carries its own summability side goal). *Follow-up:* justified for `clm_map_exp_smul`;
-optional for the nilpotent pair.
+series. `LinearMap.exp_smul_apply_eq_tsum` now provides the common rewrite and is used by
+`clm_map_exp_smul` and the nilpotent pointwise proof (commit `1c62ffe`).
 
 *F9. `LinearSystem.clm_map_exp_smul` is a reusable general lemma that the guide does not expose.*
 `LinearSystem.clm_map_exp_smul` is the intertwining statement
@@ -708,8 +703,8 @@ require compact-interval existence and uniqueness hypotheses that the direct pro
 nonlinear or non-autonomous extensions, not as a replacement. *Risk:* n/a. *Follow-up:* not
 justified.
 
-*F19. Pre-existing linter and deprecated-API warnings concentrated in three modules.* A build of
-the corpus reports 78 warnings, all in `Gramian.lean` (13), `PolePlacement.lean` (36) and
+*F19. Warning/deprecation cleanup — implemented.* The corpus formerly reported 78 warnings, all in
+`Gramian.lean` (13), `PolePlacement.lean` (36) and
 `Stabilization.lean` (29); `Documentation.lean` itself reports none. The actionable categories are
 22 over-long lines, 18 `show` tactic uses, 13 `if_neg`, 9 `if_pos`, 8 `Try this` suggestions, 6
 `simpa` that should be `simp`, 5 unused `simp` arguments, 3 `dif_pos`, 2 `push_neg`, 2
@@ -718,9 +713,8 @@ the corpus reports 78 warnings, all in `Gramian.lean` (13), `PolePlacement.lean`
 name with the accepted common API" opportunities (`if_pos`/`if_neg` to `ite_eq_left`/`ite_eq_right`,
 `dif_pos`/`dif_neg` to `dite_eq_left`/`dite_eq_right`, `push_neg` to `push Not`,
 `ContinuousLinearMap.mul_apply`/`smul_apply` to `mul_apply_eq_comp`/`_root_.smul_apply`).
-*Recommendation:* schedule a dedicated hygiene task with write access to the three modules; none
-of the warnings is in this audit's owned file. *Risk:* low per change, but a large diff. *Follow-up:*
-justified.
+The dedicated hygiene task cleaned these without declaration changes (commit `7c60d08`); only
+three non-blocking `abel_nf` information hints remain.
 
 ## Duplication that was checked and deliberately retained
 
@@ -744,8 +738,7 @@ The following apparent duplications are correct as written and should not be ref
 
 No declaration was found to be a vacuous duplicate of another, and no local lemma was found that a
 single existing checked Mathlib declaration replaces verbatim. The genuine, low-risk reuse
-reductions are F1 (one `conj_pow` helper for three proofs) and F8 (one exponential-series rewrite
-for two blocks). F2 and F9 are completeness/documentation improvements; F5, F11 and F13 are
+reductions F1, F2, F8, and F19 are now implemented. F5, F11 and F13 are
 optional clean-ups; F15 and F4 should not be attempted without a dedicated API-change task. The
 corpus is free of placeholder or trust-basis proof tokens (the standard forbidden-tactic scan over
 `DynamicalSystems/Linear/` returns no match), and the only heartbeat override is the justified
