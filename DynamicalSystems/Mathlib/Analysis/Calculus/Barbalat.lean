@@ -649,7 +649,11 @@ theorem holderOn_of_absolutelyContinuousOnInterval
 with derivative `f'`, the derivative is in `L^∞(0, ∞)`, and `C` is an essential bound for `‖f'‖`,
 then `f` is Lipschitz continuous on `[0, ∞)` with constant `C`. This is the `q = ∞` case of
 `holderOn_of_memLp_deriv`, where the Hölder exponent `(q - 1) / q` tends to `1`. Again the
-`L^p` assumption on `f` itself is not needed for the estimate. -/
+`L^p` assumption on `f` itself is not needed for the estimate.
+
+The paper-faithful version, where differentiability is only assumed almost everywhere and absolute
+continuity supplies the fundamental theorem of calculus, is
+`lipschitzOn_of_absolutelyContinuousOnInterval`. -/
 theorem lipschitzOn_of_memLp_deriv
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f f' : ℝ → E} (hderiv : ∀ x, HasDerivAt f (f' x) x) {C : ℝ≥0}
@@ -680,6 +684,61 @@ theorem lipschitzOn_of_memLp_deriv
       rw [Real.dist_eq, abs_of_nonpos (sub_nonpos.mpr hab), neg_sub]
     rw [hdf, hdist, ← hftc]
     simpa [abs_of_nonneg (sub_nonneg.mpr hab)] using hbound
+  rcases le_total x y with hxy | hyx
+  · exact key hx hxy
+  · rw [dist_comm (f x) (f y), dist_comm x y]
+    exact key hy hyx
+
+/-- **Lemma 6 of Farkas–Wegner, endpoint `q = ∞`, paper-faithful form.** Let `f : ℝ → ℝ` be
+absolutely continuous on `[0, T]` for every `T ≥ 0` and let `f'` be an a.e. derivative of `f` on
+`(0, ∞)`. If `f' ∈ L^∞(0, ∞)` and `C` is an essential bound for `‖f'‖`, then `f` is Lipschitz
+continuous on `[0, ∞)` with constant `C`.
+
+This is the paper-faithful form of `lipschitzOn_of_memLp_deriv`: the derivative is only required to
+exist almost everywhere, and the fundamental theorem of calculus is supplied by
+`AbsolutelyContinuousOnInterval.integral_deriv_eq_sub` instead of an everywhere-differentiable
+hypothesis. The `L^∞` hypothesis is kept for compatibility with
+`holderOn_of_absolutelyContinuousOnInterval`; the estimate itself only uses the a.e. bound `hC`. -/
+theorem lipschitzOn_of_absolutelyContinuousOnInterval
+    {f f' : ℝ → ℝ} {C : ℝ≥0}
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (_hmem : MemLp f' ∞ (volume.restrict (Set.Ioi 0)))
+    (hC : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ)) :
+    LipschitzOnWith C f (Set.Ici 0) := by
+  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy => ?_
+  have key : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b →
+      dist (f a) (f b) ≤ (C : ℝ) * dist a b := by
+    intro a b ha hab
+    have hb : 0 ≤ b := le_trans ha hab
+    -- Absolute continuity on `[a, b]`, hence the FTC for `deriv f`.
+    have hacab : AbsolutelyContinuousOnInterval f a b :=
+      (hac b hb).mono fun z hz ↦ by
+        rw [Set.uIcc_of_le hab] at hz
+        rw [Set.uIcc_of_le hb]
+        exact ⟨le_trans ha hz.1, hz.2⟩
+    have hftc : ∫ t in a..b, deriv f t = f b - f a := hacab.integral_deriv_eq_sub
+    -- On `(a, b]` the a.e. derivative `f'` agrees with `deriv f`.
+    have hae : ∀ᵐ t ∂(volume.restrict (Set.Ioc a b)), f' t = deriv f t := by
+      rw [ae_restrict_iff' measurableSet_Ioc]
+      filter_upwards [(ae_restrict_iff' measurableSet_Ioi).mp hderiv] with t ht htioc
+      exact (ht (lt_of_le_of_lt ha htioc.1)).deriv.symm
+    have hint_eq : ∫ t in a..b, f' t = ∫ t in a..b, deriv f t := by
+      rw [intervalIntegral.integral_of_le hab, intervalIntegral.integral_of_le hab]
+      exact integral_congr_ae hae
+    have hftc' : ∫ t in a..b, f' t = f b - f a := by rw [hint_eq, hftc]
+    -- The a.e. bound on `f'` restricted to `(a, b]`.
+    have hνle : volume.restrict (Set.Ioc a b) ≤ volume.restrict (Set.Ioi 0) :=
+      Measure.restrict_mono (fun z hz ↦ lt_of_le_of_lt ha hz.1) le_rfl
+    have hbound : ∀ᵐ t ∂volume, t ∈ Set.uIoc a b → ‖f' t‖ ≤ (C : ℝ) := by
+      rw [Set.uIoc_of_le hab]
+      exact (ae_restrict_iff' measurableSet_Ioc).mp (hC.filter_mono (ae_mono hνle))
+    have hnorm := intervalIntegral.norm_integral_le_of_norm_le_const_ae hbound
+    have hdf : dist (f a) (f b) = ‖f b - f a‖ := by rw [dist_eq_norm, norm_sub_rev]
+    have hdist : dist a b = b - a := by
+      rw [Real.dist_eq, abs_of_nonpos (sub_nonpos.mpr hab), neg_sub]
+    rw [hdf, hdist, ← hftc']
+    simpa [abs_of_nonneg (sub_nonneg.mpr hab)] using hnorm
   rcases le_total x y with hxy | hyx
   · exact key hx hxy
   · rw [dist_comm (f x) (f y), dist_comm x y]
