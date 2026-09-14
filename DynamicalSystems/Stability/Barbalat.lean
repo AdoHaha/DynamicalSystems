@@ -6,7 +6,6 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
-public import DynamicalSystems.Stability.Basic
 public import Mathlib.Analysis.Calculus.Deriv.MeanValue
 public import Mathlib.Topology.Order.MonotoneConvergence
 
@@ -34,7 +33,7 @@ differentiability they assert; no existence or uniqueness of trajectories is for
 
 ## Main statements
 
-- `Barbalat.adaptiveControl_error_tendsto_zero`: for any trajectory `(e, θ)` of the
+* `Barbalat.adaptiveControl_error_tendsto_zero`: for any trajectory `(e, θ)` of the
   Hou–Duan–Guo system with bounded continuous `ω`, the error `e t` tends to `0` as
   `t → ∞`.
 
@@ -108,7 +107,7 @@ theorem adaptiveControl_error_tendsto_zero
       rw [(hVderiv x hx0).deriv]
       nlinarith [sq_nonneg (e x)]
   have hVle : ∀ t : ℝ, 0 ≤ t → V t ≤ V 0 :=
-    fun t ht => hVanti (Set.mem_Ici.mpr le_rfl) (Set.mem_Ici.mpr ht) ht
+    fun t ht ↦ hVanti (Set.mem_Ici.mpr le_rfl) (Set.mem_Ici.mpr ht) ht
   -- **Step 2.** Boundedness of `e` and `theta`.
   have he_sq_le : ∀ t : ℝ, 0 ≤ t → e t ^ 2 ≤ V 0 := by
     intro t ht
@@ -196,12 +195,12 @@ theorem adaptiveControl_error_tendsto_zero
   have hFmono : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b → F a ≤ F b := by
     intro a b ha hab
     have hInt1 : IntervalIntegrable (fun x : ℝ ↦ e x ^ 2) volume (0 : ℝ) a :=
-      ContinuousOn.intervalIntegrable_of_Icc ha (hcont_e2.mono fun x hx => hx.1)
+      ContinuousOn.intervalIntegrable_of_Icc ha (hcont_e2.mono fun x hx ↦ hx.1)
     have hInt2 : IntervalIntegrable (fun x : ℝ ↦ e x ^ 2) volume a b :=
-      ContinuousOn.intervalIntegrable_of_Icc hab (hcont_e2.mono fun x hx => le_trans ha hx.1)
+      ContinuousOn.intervalIntegrable_of_Icc hab (hcont_e2.mono fun x hx ↦ le_trans ha hx.1)
     have hadd := intervalIntegral.integral_add_adjacent_intervals hInt1 hInt2
     have hnn : 0 ≤ ∫ x in a..b, e x ^ 2 :=
-      intervalIntegral.integral_nonneg_of_forall hab fun x => sq_nonneg (e x)
+      intervalIntegral.integral_nonneg_of_forall hab fun x ↦ sq_nonneg (e x)
     change (∫ x in (0 : ℝ)..a, e x ^ 2) ≤ ∫ x in (0 : ℝ)..b, e x ^ 2
     linarith
   have hFle : ∀ t : ℝ, 0 ≤ t → F t ≤ V 0 := by
@@ -211,7 +210,7 @@ theorem adaptiveControl_error_tendsto_zero
       rw [Set.uIcc_of_le ht] at hx
       exact hVderiv x hx.1
     have hcont_deriv : ContinuousOn (fun x : ℝ ↦ -(2 * e x ^ 2)) (Set.Icc 0 t) :=
-      (((hcont_e.pow 2).mono fun x hx => hx.1).const_mul (2 : ℝ)).neg
+      (((hcont_e.pow 2).mono fun x hx ↦ hx.1).const_mul (2 : ℝ)).neg
     have hint : IntervalIntegrable (fun x : ℝ ↦ -(2 * e x ^ 2)) volume (0 : ℝ) t :=
       ContinuousOn.intervalIntegrable_of_Icc ht hcont_deriv
     have h := intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv hint

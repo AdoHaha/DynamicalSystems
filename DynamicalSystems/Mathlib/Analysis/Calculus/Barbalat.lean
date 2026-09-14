@@ -34,9 +34,9 @@ oscillation term small; the mean term is controlled by the Cauchy property.
 
 ## Main statements
 
-- `Barbalat.tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral`:
+* `Barbalat.tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral`:
   Barbălat's lemma for `f : ℝ → E` with `E` a Banach space.
-- `Barbalat.tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral_real`:
+* `Barbalat.tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral_real`:
   the scalar (`E = ℝ`) corollary.
 
 The main theorem would upstream to the root namespace under a Mathlib-style name.
@@ -59,9 +59,9 @@ namespace Barbalat
 is uniformly continuous on `[0, ∞)` and the improper integral `t ↦ ∫ x in 0..t, f x`
 converges as `t → ∞`, then `f t → 0`.
 
-The completeness assumption on `E` is necessary: the Bochner integral is defined to be
-zero on incomplete normed spaces, so without it the hypothesis would be vacuous while
-the conclusion need not hold. -/
+The completeness assumption on `E` is needed and not vacuous: the Bochner integral is
+only well behaved for complete codomains, so the Banach-space setting is the natural
+one (the paper's Theorem 4 is likewise stated for a Banach space). -/
 theorem tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f : ℝ → E} (huc : UniformContinuousOn f (Set.Ici 0))
@@ -79,11 +79,11 @@ theorem tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral
   have hslt : s < δ := half_lt_self hδpos
   rcases h with ⟨L, hL⟩
   -- Integrability on intervals contained in `[0, ∞)`.
-  have hInt : ∀ t : ℝ, 0 ≤ t → IntervalIntegrable f volume 0 t := fun t ht =>
-    ContinuousOn.intervalIntegrable_of_Icc ht (hcont.mono fun _ hx => hx.1)
-  have hInt2 : ∀ t : ℝ, 0 ≤ t → IntervalIntegrable f volume t (t + s) := fun t ht =>
+  have hInt : ∀ t : ℝ, 0 ≤ t → IntervalIntegrable f volume 0 t := fun t ht ↦
+    ContinuousOn.intervalIntegrable_of_Icc ht (hcont.mono fun _ hx ↦ hx.1)
+  have hInt2 : ∀ t : ℝ, 0 ≤ t → IntervalIntegrable f volume t (t + s) := fun t ht ↦
     ContinuousOn.intervalIntegrable_of_Icc (by linarith [hspos])
-      (hcont.mono fun _ hx => le_trans ht hx.1)
+      (hcont.mono fun _ hx ↦ le_trans ht hx.1)
   -- The difference of the shifted improper integrals is the tail interval integral.
   have htail_eq : ∀ t : ℝ, 0 ≤ t →
       ∫ x in t..(t + s), f x = (∫ x in (0 : ℝ)..(t + s), f x) - ∫ x in (0 : ℝ)..t, f x := by
@@ -457,31 +457,31 @@ private lemma intervalIntegral_le_rpow_mul_of_integral_rpow_le
   have hqpos : 0 < q := lt_trans zero_lt_one hq
   have hconj : (Real.conjExponent q).HolderConjugate q :=
     (Real.HolderConjugate.conjExponent hq).symm
-  have hsub : Set.Ioc a b ⊆ Set.Ioi (0 : ℝ) := fun x hx => lt_of_le_of_lt ha hx.1
+  have hsub : Set.Ioc a b ⊆ Set.Ioi (0 : ℝ) := fun x hx ↦ lt_of_le_of_lt ha hx.1
   have hνle : volume.restrict (Set.Ioc a b) ≤ volume.restrict (Set.Ioi 0) :=
     Measure.restrict_mono hsub le_rfl
   have hgν : MemLp g (ENNReal.ofReal q) (volume.restrict (Set.Ioc a b)) :=
     hg.mono_measure hνle
-  have h1ν : MemLp (fun _ : ℝ => (1 : ℝ))
+  have h1ν : MemLp (fun _ : ℝ ↦ (1 : ℝ))
       (ENNReal.ofReal (Real.conjExponent q)) (volume.restrict (Set.Ioc a b)) :=
     memLp_const 1
   have hholder := integral_mul_le_Lp_mul_Lq_of_nonneg hconj
-    (Eventually.of_forall fun _ => zero_le_one)
+    (Eventually.of_forall fun _ ↦ zero_le_one)
     (Eventually.of_forall hgnn) h1ν hgν
   simp only [one_mul, Real.one_rpow] at hholder
   have hfirst : (∫ _x : ℝ, (1 : ℝ) ∂(volume.restrict (Set.Ioc a b))) = b - a := by
     rw [integral_const, smul_eq_mul, mul_one, measureReal_def,
       Measure.restrict_apply MeasurableSet.univ, Set.univ_inter, Real.volume_Ioc,
       ENNReal.toReal_ofReal (by linarith)]
-  have hInt : Integrable (fun x => g x ^ q) (volume.restrict (Set.Ioi 0)) :=
+  have hInt : Integrable (fun x ↦ g x ^ q) (volume.restrict (Set.Ioi 0)) :=
     (hg.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hqpos) ENNReal.ofReal_ne_top).congr
-      (Eventually.of_forall fun x => by
+      (Eventually.of_forall fun x ↦ by
         simp only [ENNReal.toReal_ofReal hqpos.le, Real.norm_of_nonneg (hgnn x)])
   have hmono : (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ≤
       ∫ x, g x ^ q ∂(volume.restrict (Set.Ioi 0)) :=
-    integral_mono_measure hνle (Eventually.of_forall fun x => Real.rpow_nonneg (hgnn x) q) hInt
+    integral_mono_measure hνle (Eventually.of_forall fun x ↦ Real.rpow_nonneg (hgnn x) q) hInt
   have hsecond : (∫ x, g x ^ q ∂(volume.restrict (Set.Ioc a b))) ^ (1 / q) ≤ C :=
-    le_trans (Real.rpow_le_rpow (integral_nonneg fun x => Real.rpow_nonneg (hgnn x) q) hmono
+    le_trans (Real.rpow_le_rpow (integral_nonneg fun x ↦ Real.rpow_nonneg (hgnn x) q) hmono
       (by positivity)) hC
   rw [intervalIntegral.integral_of_le hab]
   calc ∫ x in Set.Ioc a b, g x
@@ -502,8 +502,10 @@ Compared with the paper, this is the everywhere-differentiable special case: abs
 and an a.e. derivative are replaced by the stronger hypothesis `∀ x, HasDerivAt f (f' x) x` (the
 paper-faithful form is `holderOn_of_absolutelyContinuousOnInterval`). The derivative bound
 `f' ∈ L^q(0, ∞)` is expressed through `MeasureTheory.MemLp` together with the norm bound
-`eLpNorm f' (ofReal q) ≤ C`; the `L^p` assumption on `f` itself is not needed for this estimate.
-The proof is exactly the paper's one-liner
+`eLpNorm f' (ofReal q) ≤ C`. The `L^p` assumption on `f` itself is needed only for the separate
+boundedness half of Lemma 6, supplied by
+`exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow`, and not for this estimate. The proof
+is exactly the paper's one-liner
 `‖f y - f x‖ = ‖∫ t in x..y, f' t‖ ≤ (y - x) ^ (1/q') * ‖f'‖_q`, with Hölder's inequality for the
 final step. -/
 theorem holderOn_of_memLp_deriv
@@ -529,14 +531,14 @@ theorem holderOn_of_memLp_deriv
       ‖f y - f x‖ ≤ (y - x) ^ ((q - 1) / q) * (C : ℝ) := by
     intro x y hx hxy
     have hmemν : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioc x y)) :=
-      hmem.mono_measure (Measure.restrict_mono (fun z hz => lt_of_le_of_lt hx hz.1) le_rfl)
+      hmem.mono_measure (Measure.restrict_mono (fun z hz ↦ lt_of_le_of_lt hx hz.1) le_rfl)
     have hint : IntervalIntegrable f' volume x y := by
       rw [intervalIntegrable_iff_integrableOn_Ioc_of_le hxy]
       exact hmemν.integrable (ENNReal.one_le_ofReal.mpr hq.le)
     have hftc : ∫ t in x..y, f' t = f y - f x :=
-      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ ↦ hderiv t) hint
     have hle := intervalIntegral_le_rpow_mul_of_integral_rpow_le hq hmem.norm
-      (fun t => norm_nonneg _) hreal hx hxy
+      (fun t ↦ norm_nonneg _) hreal hx hxy
     calc ‖f y - f x‖ = ‖∫ t in x..y, f' t‖ := by rw [hftc]
       _ ≤ ∫ t in x..y, ‖f' t‖ := intervalIntegral.norm_integral_le_integral_norm hxy
       _ ≤ (y - x) ^ (1 / Real.conjExponent q) * (C : ℝ) := hle
@@ -660,12 +662,12 @@ theorem lipschitzOn_of_memLp_deriv
     (hmem : MemLp f' ∞ (volume.restrict (Set.Ioi 0)))
     (hC : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ)) :
     LipschitzOnWith C f (Set.Ici 0) := by
-  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy => ?_
+  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy ↦ ?_
   have key : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b →
       dist (f a) (f b) ≤ (C : ℝ) * dist a b := by
     intro a b ha hab
     have hνle : volume.restrict (Set.Ioc a b) ≤ volume.restrict (Set.Ioi 0) :=
-      Measure.restrict_mono (fun z hz => lt_of_le_of_lt ha hz.1) le_rfl
+      Measure.restrict_mono (fun z hz ↦ lt_of_le_of_lt ha hz.1) le_rfl
     have hasm : AEStronglyMeasurable f' (volume.restrict (Set.Ioc a b)) :=
       hmem.aestronglyMeasurable.mono_measure hνle
     have hCae : ∀ᵐ z ∂(volume.restrict (Set.Ioc a b)), ‖f' z‖ ≤ (C : ℝ) :=
@@ -674,7 +676,7 @@ theorem lipschitzOn_of_memLp_deriv
       rw [intervalIntegrable_iff_integrableOn_Ioc_of_le hab]
       exact IntegrableOn.of_bound (by simp) hasm C hCae
     have hftc : ∫ t in a..b, f' t = f b - f a :=
-      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+      intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ ↦ hderiv t) hint
     have hCae' : ∀ᵐ t ∂volume, t ∈ Set.uIoc a b → ‖f' t‖ ≤ (C : ℝ) := by
       rw [Set.uIoc_of_le hab]
       exact (ae_restrict_iff' measurableSet_Ioc).mp hCae
@@ -691,22 +693,21 @@ theorem lipschitzOn_of_memLp_deriv
 
 /-- **Lemma 6 of Farkas–Wegner, endpoint `q = ∞`, paper-faithful form.** Let `f : ℝ → ℝ` be
 absolutely continuous on `[0, T]` for every `T ≥ 0` and let `f'` be an a.e. derivative of `f` on
-`(0, ∞)`. If `f' ∈ L^∞(0, ∞)` and `C` is an essential bound for `‖f'‖`, then `f` is Lipschitz
-continuous on `[0, ∞)` with constant `C`.
+`(0, ∞)`. If `C` is an essential bound for `‖f'‖`, then `f` is Lipschitz continuous on `[0, ∞)`
+with constant `C`.
 
 This is the paper-faithful form of `lipschitzOn_of_memLp_deriv`: the derivative is only required to
 exist almost everywhere, and the fundamental theorem of calculus is supplied by
 `AbsolutelyContinuousOnInterval.integral_deriv_eq_sub` instead of an everywhere-differentiable
-hypothesis. The `L^∞` hypothesis is kept for compatibility with
-`holderOn_of_absolutelyContinuousOnInterval`; the estimate itself only uses the a.e. bound `hC`. -/
+hypothesis. The estimate uses only the a.e. bound on `f'`, so no `L^∞` membership hypothesis is
+needed. -/
 theorem lipschitzOn_of_absolutelyContinuousOnInterval
     {f f' : ℝ → ℝ} {C : ℝ≥0}
     (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
     (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
-    (_hmem : MemLp f' ∞ (volume.restrict (Set.Ioi 0)))
     (hC : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ)) :
     LipschitzOnWith C f (Set.Ici 0) := by
-  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy => ?_
+  refine LipschitzOnWith.of_dist_le_mul fun x hx y hy ↦ ?_
   have key : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b →
       dist (f a) (f b) ≤ (C : ℝ) * dist a b := by
     intro a b ha hab
@@ -1040,7 +1041,7 @@ theorem tendsto_zero_of_absolutelyContinuous_memLp_top
   have hC' : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ) :=
     (Filter.eventually_map.mp hC).mono fun x hx ↦ by exact_mod_cast hx
   have huc : UniformContinuousOn f (Set.Ici 0) :=
-    (lipschitzOn_of_absolutelyContinuousOnInterval hac hderiv hf' hC').uniformContinuousOn
+    (lipschitzOn_of_absolutelyContinuousOnInterval hac hderiv hC').uniformContinuousOn
   have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
     have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
     simpa [ENNReal.toReal_ofReal hp0.le] using h
