@@ -5,7 +5,9 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import Mathlib.Analysis.Calculus.MeanValue
 public import Mathlib.Analysis.Real.Sqrt
+public import Mathlib.Analysis.SpecialFunctions.Pow.Deriv
 public import Mathlib.MeasureTheory.Integral.Bochner.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
@@ -599,5 +601,272 @@ theorem lipschitzOn_of_memLp_deriv
   · exact key hx hxy
   · rw [dist_comm (f x) (f y), dist_comm x y]
     exact key hy hyx
+
+/-! ## The mixed Sobolev space: Theorem 5
+
+A function `f` on the half-line belongs to the mixed Sobolev space `W^{1,p,q}(0, ∞)` when
+`f ∈ L^p(0, ∞)` and its derivative `f' ∈ L^q(0, ∞)`. The paper's Theorem 5 states that every such
+function tends to zero at infinity. The proof has two steps: Lemma 6 (Hölder/Lipschitz regularity
+of `f`, formalized in the previous section) makes `‖f‖^p` uniformly continuous, and then the main
+Barbălat theorem applies to `‖f‖^p`, whose improper integral converges because `f ∈ L^p`. -/
+
+/-- **Boundedness of a uniformly continuous `L^p` function on the half-line.** If `f : ℝ → E` is
+uniformly continuous on `[0, ∞)` and `‖f‖^p` is integrable on `(0, ∞)` for some `p ≥ 1`, then `f`
+is bounded on `[0, ∞)`. This supplies the boundedness part of Lemma 6 that the Hölder estimate alone
+does not give: with a uniform-continuity modulus `δ` for the tolerance `1`, on `[t, t + δ]` the
+norm `‖f‖` is at least `‖f t‖ - 1`, so `(‖f t‖ - 1)^p δ` is at most the integral of `‖f‖^p`. -/
+theorem exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow
+    {E : Type*} [NormedAddCommGroup E]
+    {f : ℝ → E} {p : ℝ} (hp : 1 ≤ p)
+    (huc : UniformContinuousOn f (Set.Ici 0))
+    (hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0))) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t : ℝ, 0 ≤ t → ‖f t‖ ≤ M := by
+  obtain ⟨δ, hδpos, hδ⟩ := (Metric.uniformContinuousOn_iff_le.mp huc) 1 zero_lt_one
+  set I : ℝ := ∫ x in Set.Ioi 0, ‖f x‖ ^ p with hI
+  have hInn : 0 ≤ I := integral_nonneg_of_ae (Eventually.of_forall fun x ↦
+    Real.rpow_nonneg (norm_nonneg (f x)) p)
+  refine ⟨1 + (I / δ) ^ (1 / p), ?_, fun t ht ↦ ?_⟩
+  · positivity
+  · by_cases hle : ‖f t‖ ≤ 1
+    · have hnn : 0 ≤ (I / δ) ^ (1 / p) := Real.rpow_nonneg (div_nonneg hInn hδpos.le) _
+      linarith
+    · simp only [not_le] at hle
+      set c : ℝ := ‖f t‖ - 1 with hc
+      have hcpos : 0 < c := sub_pos.mpr hle
+      have hpoint : ∀ x ∈ Set.Icc t (t + δ), c ^ p ≤ ‖f x‖ ^ p := by
+        intro x hx
+        have hx0 : 0 ≤ x := le_trans ht hx.1
+        have hxt : dist x t ≤ δ := by
+          rw [Real.dist_eq, abs_of_nonneg (sub_nonneg.mpr hx.1)]
+          linarith [hx.2]
+        have hfx : dist (f x) (f t) ≤ 1 := hδ x hx0 t ht hxt
+        have hcx : c ≤ ‖f x‖ := by
+          have h1 : ‖f t‖ ≤ ‖f x‖ + ‖f t - f x‖ := by
+            calc ‖f t‖ = ‖(f t - f x) + f x‖ := by rw [sub_add_cancel]
+              _ ≤ ‖f t - f x‖ + ‖f x‖ := norm_add_le _ _
+              _ = ‖f x‖ + ‖f t - f x‖ := by ring
+          have h2 : ‖f t - f x‖ ≤ 1 := by
+            rw [dist_eq_norm, norm_sub_rev] at hfx
+            exact hfx
+          rw [hc]
+          linarith
+        exact Real.rpow_le_rpow (le_of_lt hcpos) hcx (by linarith)
+      have hIntv : IntervalIntegrable (fun x ↦ ‖f x‖ ^ p) volume t (t + δ) := by
+        rw [intervalIntegrable_iff_integrableOn_Ioc_of_le (by linarith)]
+        exact (show IntegrableOn (fun x ↦ ‖f x‖ ^ p) (Set.Ioi 0) volume from hint).mono_set
+          fun x hx ↦ lt_of_le_of_lt ht hx.1
+      have hIntc : IntervalIntegrable (fun _ : ℝ ↦ c ^ p) volume t (t + δ) :=
+        intervalIntegrable_const
+      have hmono : (∫ x in t..(t + δ), c ^ p) ≤ ∫ x in t..(t + δ), ‖f x‖ ^ p :=
+        intervalIntegral.integral_mono_on (by linarith) hIntc hIntv hpoint
+      have hconst : (∫ x in t..(t + δ), c ^ p) = δ * c ^ p := by
+        rw [intervalIntegral.integral_const, add_sub_cancel_left]
+        simp [smul_eq_mul]
+      have hupper : (∫ x in t..(t + δ), ‖f x‖ ^ p) ≤ I := by
+        rw [intervalIntegral.integral_of_le (by linarith)]
+        exact setIntegral_mono_set
+          (show IntegrableOn (fun x ↦ ‖f x‖ ^ p) (Set.Ioi 0) volume from hint)
+          (Eventually.of_forall fun x ↦ Real.rpow_nonneg (norm_nonneg (f x)) p)
+          (Eventually.of_forall fun x hx ↦ lt_of_le_of_lt ht hx.1)
+      have hlow : δ * c ^ p ≤ I := by
+        rw [← hconst]
+        exact le_trans hmono hupper
+      have hcp_pos : 0 < c ^ p := Real.rpow_pos_of_pos hcpos p
+      have hIpos : 0 < I := lt_of_lt_of_le (mul_pos hδpos hcp_pos) hlow
+      have hIδ : 0 < I / δ := div_pos hIpos hδpos
+      have hcp_le : c ^ p ≤ I / δ := by
+        rw [le_div_iff₀ hδpos]
+        nlinarith [hlow]
+      have hmain : c ≤ (I / δ) ^ (1 / p) := by
+        rw [← Real.rpow_le_rpow_iff (le_of_lt hcpos)
+          (le_of_lt (Real.rpow_pos_of_pos hIδ _)) (by linarith : (0 : ℝ) < p)]
+        rw [← Real.rpow_mul (div_nonneg hInn hδpos.le) (1 / p) p,
+          show (1 / p) * p = 1 by field_simp, Real.rpow_one]
+        exact hcp_le
+      rw [hc] at hmain
+      linarith
+
+/-- **Uniform continuity of `‖f‖^p` on the half-line.** If `f` is uniformly continuous and bounded
+on `[0, ∞)` by `M ≥ 0` and `p ≥ 1`, then `t ↦ ‖f t‖^p` is uniformly continuous on `[0, ∞)`.
+This is the paper's equation (1): the mean value theorem bounds the oscillation of `u ↦ u^p` on
+`[0, M]` by `p M^{p-1} |u - v|`, while `|‖f x‖ - ‖f y‖| ≤ ‖f x - f y‖`. -/
+theorem uniformContinuousOn_norm_rpow_of_bounded
+    {E : Type*} [NormedAddCommGroup E]
+    {f : ℝ → E} {p M : ℝ} (hp : 1 ≤ p) (hM : 0 ≤ M)
+    (huc : UniformContinuousOn f (Set.Ici 0))
+    (hb : ∀ t : ℝ, 0 ≤ t → ‖f t‖ ≤ M) :
+    UniformContinuousOn (fun t : ℝ ↦ ‖f t‖ ^ p) (Set.Ici 0) := by
+  rw [Metric.uniformContinuousOn_iff]
+  intro ε hε
+  set L : ℝ := p * M ^ (p - 1) with hL
+  have hLnn : 0 ≤ L := by
+    rw [hL]
+    exact mul_nonneg (by linarith) (Real.rpow_nonneg hM _)
+  have hderiv : ∀ x ∈ Set.Icc 0 M, DifferentiableAt ℝ (fun y : ℝ ↦ y ^ p) x :=
+    fun x _ ↦ (Real.hasDerivAt_rpow_const (Or.inr hp)).differentiableAt
+  have hbound : ∀ x ∈ Set.Icc 0 M, ‖deriv (fun y : ℝ ↦ y ^ p) x‖ ≤ L := by
+    intro x hx
+    rw [Real.deriv_rpow_const, hL, Real.norm_eq_abs, abs_mul,
+      abs_of_nonneg (by linarith : (0 : ℝ) ≤ p),
+      abs_of_nonneg (Real.rpow_nonneg hx.1 _)]
+    exact mul_le_mul_of_nonneg_left (Real.rpow_le_rpow hx.1 hx.2 (by linarith)) (by linarith)
+  have hlip : ∀ u ∈ Set.Icc 0 M, ∀ v ∈ Set.Icc 0 M,
+      ‖(fun z : ℝ ↦ z ^ p) v - (fun z : ℝ ↦ z ^ p) u‖ ≤ L * ‖v - u‖ :=
+    fun u hu v hv ↦
+      Convex.norm_image_sub_le_of_norm_deriv_le hderiv hbound (convex_Icc 0 M) hu hv
+  obtain ⟨δ, hδpos, hδ⟩ := (Metric.uniformContinuousOn_iff.mp huc) (ε / (L + 1)) (by positivity)
+  refine ⟨δ, hδpos, fun x hx y hy hxy ↦ ?_⟩
+  have hfx : ‖f x‖ ∈ Set.Icc 0 M := ⟨norm_nonneg _, hb x hx⟩
+  have hfy : ‖f y‖ ∈ Set.Icc 0 M := ⟨norm_nonneg _, hb y hy⟩
+  have hdist : dist (‖f x‖ ^ p) (‖f y‖ ^ p) ≤ L * dist (f x) (f y) := by
+    have h1 : dist (‖f x‖ ^ p) (‖f y‖ ^ p) ≤ L * dist (‖f x‖) (‖f y‖) := by
+      rw [dist_eq_norm, dist_eq_norm, norm_sub_rev ((fun z : ℝ ↦ z ^ p) (‖f x‖)),
+        norm_sub_rev (‖f x‖) (‖f y‖)]
+      exact hlip (‖f x‖) hfx (‖f y‖) hfy
+    have h2 : dist (‖f x‖) (‖f y‖) ≤ dist (f x) (f y) := by
+      rw [dist_eq_norm, dist_eq_norm]
+      exact abs_norm_sub_norm_le (f x) (f y)
+    exact h1.trans (mul_le_mul_of_nonneg_left h2 hLnn)
+  have hδ' : dist (f x) (f y) < ε / (L + 1) := hδ x hx y hy hxy
+  have h2 : L * (ε / (L + 1)) < ε := by
+    have hlt : L / (L + 1) < 1 := (div_lt_one (by linarith)).mpr (by linarith)
+    calc L * (ε / (L + 1)) = ε * (L / (L + 1)) := by ring
+      _ < ε * 1 := mul_lt_mul_of_pos_left hlt hε
+      _ = ε := mul_one ε
+  exact lt_of_le_of_lt hdist (lt_of_le_of_lt (mul_le_mul_of_nonneg_left hδ'.le hLnn) h2)
+
+/-- **Barbălat's lemma applied to `‖f‖^p`** (the final step of Theorem 5). Suppose `f` is uniformly
+continuous and bounded on `[0, ∞)`, `p ≥ 1` and `‖f‖^p` is integrable on `(0, ∞)`. Then `f → 0`
+at infinity: `t ↦ ‖f t‖^p` is uniformly continuous, and its improper integral converges since it is
+nonnegative and integrable, so the main Barbălat theorem gives `‖f t‖^p → 0`, hence `f t → 0`. -/
+theorem tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow
+    {E : Type*} [NormedAddCommGroup E]
+    {f : ℝ → E} {p M : ℝ} (hp : 1 ≤ p) (hM : 0 ≤ M)
+    (huc : UniformContinuousOn f (Set.Ici 0))
+    (hb : ∀ t : ℝ, 0 ≤ t → ‖f t‖ ≤ M)
+    (hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  have hucp := uniformContinuousOn_norm_rpow_of_bounded hp hM huc hb
+  have hconv : ∃ L, Tendsto (fun t : ℝ ↦ ∫ x in (0 : ℝ)..t, ‖f x‖ ^ p) atTop (𝓝 L) := by
+    have hunion : (⋃ t : ℝ, Set.Ioc (0 : ℝ) t) = Set.Ioi 0 := by
+      ext x
+      simp only [Set.mem_iUnion, Set.mem_Ioc, Set.mem_Ioi]
+      exact ⟨fun ⟨t, hx0, _⟩ ↦ hx0, fun hx ↦ ⟨x, hx, le_rfl⟩⟩
+    have hmono : Monotone (fun t : ℝ ↦ Set.Ioc (0 : ℝ) t) :=
+      fun a b hab x hx ↦ ⟨hx.1, le_trans hx.2 hab⟩
+    have hset := tendsto_setIntegral_of_monotone (μ := volume)
+      (f := fun x ↦ ‖f x‖ ^ p) (fun t ↦ measurableSet_Ioc) hmono (by rw [hunion]; exact hint)
+    rw [hunion] at hset
+    refine ⟨∫ x in Set.Ioi 0, ‖f x‖ ^ p, hset.congr' ?_⟩
+    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+    exact (intervalIntegral.integral_of_le ht).symm
+  have hpow : Tendsto (fun t : ℝ ↦ ‖f t‖ ^ p) atTop (𝓝 0) :=
+    tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral hucp hconv
+  rw [Metric.tendsto_nhds] at hpow ⊢
+  intro ε hε
+  have hεp : 0 < ε ^ p := Real.rpow_pos_of_pos hε p
+  filter_upwards [hpow (ε ^ p) hεp] with t ht
+  rw [Real.dist_eq, sub_zero, abs_of_nonneg (Real.rpow_nonneg (norm_nonneg (f t)) p)] at ht
+  rw [dist_zero_right]
+  exact (Real.rpow_lt_rpow_iff (norm_nonneg (f t)) hε.le (by linarith : (0 : ℝ) < p)).mp ht
+
+/-- **Theorem 5 of Farkas–Wegner for finite `q`.** Let `p ≥ 1` and `q > 1`, and let
+`f : ℝ → E` be differentiable everywhere with derivative `f'`. If `f ∈ L^p(0, ∞)` and
+`f' ∈ L^q(0, ∞)`, then `f t → 0` as `t → ∞`. The proof combines Lemma 6 (via
+`holderOn_of_memLp_deriv`, giving uniform continuity) with the boundedness of an `L^p` uniformly
+continuous function, and then applies the main Barbălat theorem to `‖f‖^p`. -/
+theorem tendsto_zero_of_memLp_deriv_finite
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {p q : ℝ} (hp : 1 ≤ p) (hq : 1 < q)
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  have hr : 0 ≤ (q - 1) / q := by positivity
+  set C : ℝ≥0 := (eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0))).toNNReal with hC
+  have hCtop : (C : ℝ≥0∞) = eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)) :=
+    ENNReal.coe_toNNReal (hf'.eLpNorm_lt_top).ne
+  have hholder : HolderOnWith C (Real.toNNReal ((q - 1) / q)) f (Set.Ici 0) :=
+    holderOn_of_memLp_deriv hq hderiv hf' (le_of_eq hCtop.symm)
+  have hαpos : 0 < (Real.toNNReal ((q - 1) / q) : ℝ) := by
+    rw [Real.coe_toNNReal _ hr]
+    positivity
+  have huc : UniformContinuousOn f (Set.Ici 0) := hholder.uniformContinuousOn hαpos
+  have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa [ENNReal.toReal_ofReal hp0.le] using h
+  obtain ⟨M, hM, hb⟩ :=
+    exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
+  exact tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow hp hM huc hb hint
+
+/-- **Theorem 5 of Farkas–Wegner, endpoint `q = ∞`** (Tao's hypothesis with a general `p`). Let
+`p ≥ 1`, and let `f : ℝ → E` be differentiable everywhere with derivative `f'`. If
+`f ∈ L^p(0, ∞)` and `f' ∈ L^∞(0, ∞)`, then `f t → 0` as `t → ∞`. Here the derivative bound makes
+`f` Lipschitz (the `q = ∞` endpoint of Lemma 6), and the rest of the argument is unchanged. -/
+theorem tendsto_zero_of_memLp_deriv_top
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {p : ℝ} (hp : 1 ≤ p)
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' ∞ (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  obtain ⟨C, hC⟩ := eLpNormEssSup_lt_top_iff_isBoundedUnder.mp
+    (by simpa only [eLpNorm_exponent_top] using hf'.eLpNorm_lt_top)
+  have hC' : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), ‖f' x‖ ≤ (C : ℝ) :=
+    (Filter.eventually_map.mp hC).mono fun x hx ↦ by exact_mod_cast hx
+  have huc : UniformContinuousOn f (Set.Ici 0) :=
+    (lipschitzOn_of_memLp_deriv hderiv hf' hC').uniformContinuousOn
+  have hint : Integrable (fun x ↦ ‖f x‖ ^ p) (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa [ENNReal.toReal_ofReal hp0.le] using h
+  obtain ⟨M, hM, hb⟩ :=
+    exists_bound_of_uniformContinuousOn_of_integrable_norm_rpow hp huc hint
+  exact tendsto_zero_of_uniformContinuousOn_of_integrable_norm_rpow hp hM huc hb hint
+
+/-- **Theorem 5 of Farkas–Wegner.** Let `p ∈ [1, ∞)` and `q ∈ (1, ∞]`. Every function `f` in the
+mixed Sobolev space `W^{1,p,q}(0, ∞)`, encoded as `MemLp f p` and `MemLp f' q` on `(0, ∞)` for a
+derivative `f'` of `f`, tends to zero at infinity. The finite and infinite exponents are dispatched
+to `tendsto_zero_of_memLp_deriv_finite` and `tendsto_zero_of_memLp_deriv_top`. -/
+theorem tendsto_zero_of_memLp_deriv
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {p : ℝ} {q : ℝ≥0∞} (hp : 1 ≤ p) (hq : 1 < q)
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' q (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) := by
+  rcases eq_or_ne q ∞ with rfl | hqtop
+  · exact tendsto_zero_of_memLp_deriv_top hp hderiv hf hf'
+  · have hqreal : 1 < q.toReal := by
+      simpa only [ENNReal.toReal_one] using
+        (ENNReal.toReal_lt_toReal ENNReal.one_ne_top hqtop).mpr hq
+    have hqeq : q = ENNReal.ofReal q.toReal := (ENNReal.ofReal_toReal hqtop).symm
+    rw [hqeq] at hf'
+    exact tendsto_zero_of_memLp_deriv_finite hp hqreal hderiv hf hf'
+
+/-- **Tao's case** (Farkas–Wegner, Section 2): if `f ∈ L²(0, ∞)` and `f' ∈ L^∞(0, ∞)`, then
+`f t → 0` at infinity. This is the case `p = 2`, `q = ∞` of `tendsto_zero_of_memLp_deriv`. -/
+theorem tendsto_zero_of_memLp_two_deriv_top
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E}
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f 2 (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' ∞ (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) :=
+  tendsto_zero_of_memLp_deriv (p := 2) (q := ∞) (by norm_num) (by norm_num)
+    hderiv (by simpa using hf) hf'
+
+/-- **The `p = q` case** (Desoer–Vidyasagar, Teel). If `p > 1` and both `f` and `f'` lie in
+`L^p(0, ∞)`, then `f t → 0` at infinity. This is `tendsto_zero_of_memLp_deriv` with `q = p`. -/
+theorem tendsto_zero_of_memLp_deriv_self
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {p : ℝ} (hp : 1 < p)
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) :=
+  tendsto_zero_of_memLp_deriv (p := p) (q := ENNReal.ofReal p) hp.le
+    (ENNReal.one_lt_ofReal.mpr hp) hderiv hf hf'
 
 end Barbalat
