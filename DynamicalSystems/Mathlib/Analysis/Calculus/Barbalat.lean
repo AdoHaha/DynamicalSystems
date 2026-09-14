@@ -869,4 +869,167 @@ theorem tendsto_zero_of_memLp_deriv_self
   tendsto_zero_of_memLp_deriv (p := p) (q := ENNReal.ofReal p) hp.le
     (ENNReal.one_lt_ofReal.mpr hp) hderiv hf hf'
 
+/-! ## Corollary 9: the quantitative rate in `W^{1,p,q}` -/
+
+/-- The mean value estimate for `u ↦ u ^ p` on `[0, M]`: for `a, b ∈ [0, M]` and `p ≥ 1`,
+`|a ^ p - b ^ p| ≤ p * M ^ (p - 1) * |a - b|`. This is the derivative bound used in the
+paper's equation (1) to turn Hölder continuity of `f` into Hölder continuity of `‖f‖ ^ p`. -/
+private lemma abs_rpow_sub_rpow_le_mul_abs_sub
+    {p M a b : ℝ} (hp : 1 ≤ p)
+    (ha : a ∈ Set.Icc 0 M) (hb : b ∈ Set.Icc 0 M) :
+    |a ^ p - b ^ p| ≤ p * M ^ (p - 1) * |a - b| := by
+  have hderiv : ∀ x ∈ Set.Icc (0 : ℝ) M, DifferentiableAt ℝ (fun y : ℝ ↦ y ^ p) x :=
+    fun x _ ↦ (Real.hasDerivAt_rpow_const (Or.inr hp)).differentiableAt
+  have hbound : ∀ x ∈ Set.Icc (0 : ℝ) M,
+      ‖deriv (fun y : ℝ ↦ y ^ p) x‖ ≤ p * M ^ (p - 1) := by
+    intro x hx
+    rw [Real.deriv_rpow_const, Real.norm_eq_abs, abs_mul,
+      abs_of_nonneg (by linarith : (0 : ℝ) ≤ p),
+      abs_of_nonneg (Real.rpow_nonneg hx.1 _)]
+    exact mul_le_mul_of_nonneg_left (Real.rpow_le_rpow hx.1 hx.2 (by linarith)) (by linarith)
+  have h := Convex.norm_image_sub_le_of_norm_deriv_le hderiv hbound (convex_Icc 0 M) ha hb
+  have h' : |b ^ p - a ^ p| ≤ p * M ^ (p - 1) * |b - a| := by
+    simpa only [Real.norm_eq_abs] using h
+  calc |a ^ p - b ^ p| = |b ^ p - a ^ p| := abs_sub_comm _ _
+    _ ≤ p * M ^ (p - 1) * |b - a| := h'
+    _ = p * M ^ (p - 1) * |a - b| := by rw [abs_sub_comm]
+
+/-- The improper integral `t ↦ ∫ x in 0..t, g x` of an integrable real-valued function `g`
+converges: the integrals over the increasing family `Ioc 0 t` converge to the integral over
+`Ioi 0`. -/
+private lemma tendsto_intervalIntegral_of_integrableOn_Ioi
+    {g : ℝ → ℝ} (hg : Integrable g (volume.restrict (Set.Ioi 0))) :
+    ∃ L, Tendsto (fun t : ℝ ↦ ∫ x in (0 : ℝ)..t, g x) atTop (𝓝 L) := by
+  have hunion : (⋃ t : ℝ, Set.Ioc (0 : ℝ) t) = Set.Ioi 0 := by
+    ext x
+    simp only [Set.mem_iUnion, Set.mem_Ioc, Set.mem_Ioi]
+    exact ⟨fun ⟨t, hx0, _⟩ ↦ hx0, fun hx ↦ ⟨x, hx, le_rfl⟩⟩
+  have hmono : Monotone (fun t : ℝ ↦ Set.Ioc (0 : ℝ) t) :=
+    fun a b hab x hx ↦ ⟨hx.1, le_trans hx.2 hab⟩
+  have hset := tendsto_setIntegral_of_monotone (μ := volume) (f := g)
+    (fun t ↦ measurableSet_Ioc) hmono (by rw [hunion]; exact hg)
+  rw [hunion] at hset
+  refine ⟨∫ x in Set.Ioi 0, g x, hset.congr' ?_⟩
+  filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+  exact (intervalIntegral.integral_of_le ht).symm
+
+/-- **Corollary 9 of Farkas–Wegner** (the quantitative rate in `W^{1,p,q}`). Let `p ≥ 1` and
+`q > 1`, let `f : ℝ → E` be differentiable everywhere with derivative `f'`, with `f ∈ L^p(0, ∞)`
+and `f' ∈ L^q(0, ∞)`, and let `M ≥ 0` bound `‖f‖` on `[0, ∞)` and `C` bound the `L^q` seminorm
+of `f'`. Then for every `t ≥ 0`,
+`‖f t‖^p ≤ (1 + p M^{p-1} C) S(t)^((q-1)/(2q-1))`, where `S(t) = ⨆ u ≥ t, ‖∫ x in t..u, ‖f x‖^p‖`
+is the tail supremum of the primitive of `‖f‖^p`. This reuses the Hölder rate
+`norm_le_rpow_tailSup_of_holder` (Theorem 8) with exponent `α = (q - 1) / q` and the Hölder
+modulus `holderOn_of_memLp_deriv` (Lemma 6); note `α / (1 + α) = (q - 1) / (2q - 1)`. -/
+theorem norm_pow_le_tailIntegral_rate
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
+    {f f' : ℝ → E} {p q : ℝ} (hp : 1 ≤ p) (hq : 1 < q)
+    (hderiv : ∀ x, HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)))
+    {M : ℝ} (hM : 0 ≤ M) (hb : ∀ s : ℝ, 0 ≤ s → ‖f s‖ ≤ M)
+    {C : ℝ≥0}
+    (hC : eLpNorm f' (ENNReal.ofReal q) (volume.restrict (Set.Ioi 0)) ≤ (C : ENNReal))
+    {t : ℝ} (ht : 0 ≤ t) :
+    ‖f t‖ ^ p ≤
+      (1 + p * M ^ (p - 1) * (C : ℝ)) *
+        tailSup (fun x : ℝ ↦ ‖f x‖ ^ p) t ^ ((q - 1) / (2 * q - 1)) := by
+  have hp0 : 0 < p := lt_of_lt_of_le zero_lt_one hp
+  have hq0 : 0 < q := lt_trans zero_lt_one hq
+  have hαpos : 0 < (q - 1) / q := by positivity
+  have hαnonneg : 0 ≤ (q - 1) / q := hαpos.le
+  have hexp : ((q - 1) / q) / (1 + (q - 1) / q) = (q - 1) / (2 * q - 1) := by
+    field_simp
+    ring
+  -- Hölder continuity of `f` on the half-line, from Lemma 6.
+  have hfHolder : HolderOnWith C (Real.toNNReal ((q - 1) / q)) f (Set.Ici 0) :=
+    holderOn_of_memLp_deriv hq hderiv hf' hC
+  have hfHolder' : ∀ x ∈ Set.Ici (0 : ℝ), ∀ y ∈ Set.Ici (0 : ℝ),
+      dist (f x) (f y) ≤ (C : ℝ) * dist x y ^ ((q - 1) / q) := by
+    intro x hx y hy
+    have h := hfHolder.dist_le hx hy
+    rwa [Real.coe_toNNReal _ hαnonneg] at h
+  have hcontf : ContinuousOn f (Set.Ici 0) := hfHolder.continuousOn (Real.toNNReal_pos.mpr hαpos)
+  -- The function `‖f‖^p` whose tail supremum is `S(t)`.
+  set g : ℝ → ℝ := fun x ↦ ‖f x‖ ^ p with hg
+  have hgHolder : ∀ x ∈ Set.Ici (0 : ℝ), ∀ y ∈ Set.Ici (0 : ℝ),
+      dist (g x) (g y) ≤ (p * M ^ (p - 1) * (C : ℝ)) * dist x y ^ ((q - 1) / q) := by
+    intro x hx y hy
+    have hxM : ‖f x‖ ∈ Set.Icc (0 : ℝ) M := ⟨norm_nonneg _, hb x hx⟩
+    have hyM : ‖f y‖ ∈ Set.Icc (0 : ℝ) M := ⟨norm_nonneg _, hb y hy⟩
+    have hpow := abs_rpow_sub_rpow_le_mul_abs_sub hp hxM hyM
+    have hdist_norm : |‖f x‖ - ‖f y‖| ≤ dist (f x) (f y) := by
+      rw [dist_eq_norm]
+      exact abs_norm_sub_norm_le (f x) (f y)
+    have hfxy := hfHolder' x hx y hy
+    have hcoef : 0 ≤ p * M ^ (p - 1) :=
+      mul_nonneg (by linarith) (Real.rpow_nonneg hM _)
+    calc dist (g x) (g y) = |‖f x‖ ^ p - ‖f y‖ ^ p| := by
+          simp only [g, Real.dist_eq]
+      _ ≤ p * M ^ (p - 1) * |‖f x‖ - ‖f y‖| := hpow
+      _ ≤ p * M ^ (p - 1) * dist (f x) (f y) :=
+          mul_le_mul_of_nonneg_left hdist_norm hcoef
+      _ ≤ p * M ^ (p - 1) * ((C : ℝ) * dist x y ^ ((q - 1) / q)) :=
+          mul_le_mul_of_nonneg_left hfxy hcoef
+      _ = (p * M ^ (p - 1) * (C : ℝ)) * dist x y ^ ((q - 1) / q) := by ring
+  have hcontg : ContinuousOn g (Set.Ici 0) := by
+    have h2 : ContinuousOn (fun x : ℝ ↦ ‖f x‖ ^ p) (Set.Ici 0) :=
+      hcontf.norm.rpow_const fun x _ ↦ Or.inr hp0.le
+    simpa only [g] using h2
+  -- Clamp the argument at `0` so that the global Hölder rate of Theorem 8 applies.
+  let G : ℝ → ℝ := fun x ↦ g (max x 0)
+  have hcontG : ContinuousOn G (Set.Ici 0) :=
+    hcontg.congr fun x hx ↦ by simp only [G, max_eq_left (Set.mem_Ici.mp hx)]
+  have hholderG : ∀ x y : ℝ, dist (G x) (G y)
+      ≤ (p * M ^ (p - 1) * (C : ℝ)) * dist x y ^ ((q - 1) / q) := by
+    intro x y
+    have hx0 : max x 0 ∈ Set.Ici (0 : ℝ) := Set.mem_Ici.mpr (le_max_right x 0)
+    have hy0 : max y 0 ∈ Set.Ici (0 : ℝ) := Set.mem_Ici.mpr (le_max_right y 0)
+    have h1 := hgHolder (max x 0) hx0 (max y 0) hy0
+    have h2 : dist (max x 0) (max y 0) ≤ dist x y := by
+      rw [Real.dist_eq, Real.dist_eq]
+      exact abs_max_sub_max_le_abs x y 0
+    have h3 : dist (max x 0) (max y 0) ^ ((q - 1) / q) ≤ dist x y ^ ((q - 1) / q) :=
+      Real.rpow_le_rpow dist_nonneg h2 hαnonneg
+    have hcoef : 0 ≤ p * M ^ (p - 1) * (C : ℝ) :=
+      mul_nonneg (mul_nonneg (by linarith) (Real.rpow_nonneg hM _)) C.coe_nonneg
+    calc dist (G x) (G y) = dist (g (max x 0)) (g (max y 0)) := rfl
+      _ ≤ (p * M ^ (p - 1) * (C : ℝ)) * dist (max x 0) (max y 0) ^ ((q - 1) / q) := h1
+      _ ≤ (p * M ^ (p - 1) * (C : ℝ)) * dist x y ^ ((q - 1) / q) :=
+          mul_le_mul_of_nonneg_left h3 hcoef
+  -- The tail supremum is finite because `‖f‖^p` is integrable.
+  have hint : Integrable g (volume.restrict (Set.Ioi 0)) := by
+    have h := hf.integrable_norm_rpow (ENNReal.ofReal_ne_zero_iff.mpr hp0) ENNReal.ofReal_ne_top
+    simpa only [ENNReal.toReal_ofReal hp0.le, g] using h
+  have hconv : ∃ L, Tendsto (fun s : ℝ ↦ ∫ x in (0 : ℝ)..s, g x) atTop (𝓝 L) :=
+    tendsto_intervalIntegral_of_integrableOn_Ioi hint
+  have hSg : BddAbove (Set.range fun u : {u : ℝ // t ≤ u} ↦ ‖∫ x in t..u, g x‖) :=
+    bddAbove_range_tailSup hcontg hconv ht
+  -- The clamped function has the same tail integrals and the same value at `t`.
+  have hIntEq : ∀ u : {u : ℝ // t ≤ u}, (∫ x in t..u, G x) = ∫ x in t..u, g x := by
+    rintro ⟨u, htu⟩
+    refine intervalIntegral.integral_congr fun x hx ↦ ?_
+    rw [Set.uIcc_of_le htu] at hx
+    simp only [G]
+    rw [max_eq_left (le_trans ht hx.1)]
+  have hSG : BddAbove (Set.range fun u : {u : ℝ // t ≤ u} ↦ ‖∫ x in t..u, G x‖) := by
+    obtain ⟨b, hb'⟩ := hSg
+    refine ⟨b, ?_⟩
+    rintro _ ⟨u, rfl⟩
+    change ‖∫ x in t..u, G x‖ ≤ b
+    rw [hIntEq u]
+    exact hb' ⟨u, rfl⟩
+  have htail : tailSup G t = tailSup g t := by
+    simp only [tailSup]
+    exact iSup_congr fun u ↦ by rw [hIntEq u]
+  have hmain := norm_le_rpow_tailSup_of_holder
+    (show 0 ≤ p * M ^ (p - 1) * (C : ℝ) from
+      mul_nonneg (mul_nonneg (by linarith) (Real.rpow_nonneg hM _)) C.coe_nonneg)
+    hαpos hcontG hholderG ht hSG
+  have hGt : G t = ‖f t‖ ^ p := by
+    simp only [G, g, max_eq_left ht]
+  rw [hGt, Real.norm_of_nonneg (Real.rpow_nonneg (norm_nonneg (f t)) p), htail, hexp]
+    at hmain
+  exact hmain
+
 end Barbalat
