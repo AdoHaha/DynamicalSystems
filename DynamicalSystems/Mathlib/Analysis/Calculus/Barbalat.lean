@@ -1072,8 +1072,41 @@ theorem tendsto_zero_of_absolutelyContinuous_memLp
     rw [hqeq] at hf'
     exact tendsto_zero_of_absolutelyContinuous_memLp_finite hp hqreal hac hderiv hf hf'
 
-/-- **Tao's case** (Farkas–Wegner, Section 2): if `f ∈ L²(0, ∞)` and `f' ∈ L^∞(0, ∞)`, then
-`f t → 0` at infinity. This is the case `p = 2`, `q = ∞` of `tendsto_zero_of_memLp_deriv`. -/
+/-- **Tao's case**, paper-faithful absolutely continuous form (Farkas–Wegner, Section 2): if
+`f ∈ L²(0, ∞)` and `f' ∈ L^∞(0, ∞)`, with `f` absolutely continuous on `[0, T]` for every `T ≥ 0`
+and `f'` an a.e. derivative of `f` on `(0, ∞)`, then `f t → 0` at infinity. This is the case
+`p = 2`, `q = ∞` of `tendsto_zero_of_absolutelyContinuous_memLp`; it is the paper-faithful
+replacement for the everywhere-differentiable `tendsto_zero_of_memLp_two_deriv_top`. -/
+theorem tendsto_zero_of_absolutelyContinuous_memLp_two_top
+    {f f' : ℝ → ℝ}
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f 2 (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' ∞ (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) :=
+  tendsto_zero_of_absolutelyContinuous_memLp (p := 2) (q := ∞) (by norm_num) (by norm_num)
+    hac hderiv (by simpa using hf) hf'
+
+/-- **The `p = q` case**, paper-faithful absolutely continuous form (Desoer–Vidyasagar, Teel). If
+`p > 1` and both `f` and `f'` lie in `L^p(0, ∞)`, with `f` absolutely continuous on `[0, T]` for
+every `T ≥ 0` and `f'` an a.e. derivative of `f` on `(0, ∞)`, then `f t → 0` at infinity. This is
+the case `q = p` of `tendsto_zero_of_absolutelyContinuous_memLp`; it is the paper-faithful
+replacement for the everywhere-differentiable `tendsto_zero_of_memLp_deriv_self`. -/
+theorem tendsto_zero_of_absolutelyContinuous_memLp_self
+    {f f' : ℝ → ℝ} {p : ℝ} (hp : 1 < p)
+    (hac : ∀ T : ℝ, 0 ≤ T → AbsolutelyContinuousOnInterval f 0 T)
+    (hderiv : ∀ᵐ x ∂(volume.restrict (Set.Ioi 0)), HasDerivAt f (f' x) x)
+    (hf : MemLp f (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0)))
+    (hf' : MemLp f' (ENNReal.ofReal p) (volume.restrict (Set.Ioi 0))) :
+    Tendsto f atTop (𝓝 0) :=
+  tendsto_zero_of_absolutelyContinuous_memLp (p := p) (q := ENNReal.ofReal p) hp.le
+    (ENNReal.one_lt_ofReal.mpr hp) hac hderiv hf hf'
+
+/-- **Tao's case**, everywhere-differentiable form (Farkas–Wegner, Section 2): if `f ∈ L²(0, ∞)`
+and `f' ∈ L^∞(0, ∞)`, then `f t → 0` at infinity. This is the case `p = 2`, `q = ∞` of
+`tendsto_zero_of_memLp_deriv`; the paper-faithful statement, which assumes absolute continuity with
+an a.e. derivative instead of `∀ x, HasDerivAt f (f' x) x`, is
+`tendsto_zero_of_absolutelyContinuous_memLp_two_top`. -/
 theorem tendsto_zero_of_memLp_two_deriv_top
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f f' : ℝ → E}
@@ -1084,8 +1117,11 @@ theorem tendsto_zero_of_memLp_two_deriv_top
   tendsto_zero_of_memLp_deriv (p := 2) (q := ∞) (by norm_num) (by norm_num)
     hderiv (by simpa using hf) hf'
 
-/-- **The `p = q` case** (Desoer–Vidyasagar, Teel). If `p > 1` and both `f` and `f'` lie in
-`L^p(0, ∞)`, then `f t → 0` at infinity. This is `tendsto_zero_of_memLp_deriv` with `q = p`. -/
+/-- **The `p = q` case**, everywhere-differentiable form (Desoer–Vidyasagar, Teel). If `p > 1` and
+both `f` and `f'` lie in `L^p(0, ∞)`, then `f t → 0` at infinity. This is
+`tendsto_zero_of_memLp_deriv` with `q = p`; the paper-faithful statement, which assumes absolute
+continuity with an a.e. derivative instead of `∀ x, HasDerivAt f (f' x) x`, is
+`tendsto_zero_of_absolutelyContinuous_memLp_self`. -/
 theorem tendsto_zero_of_memLp_deriv_self
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
     {f f' : ℝ → E} {p : ℝ} (hp : 1 < p)
