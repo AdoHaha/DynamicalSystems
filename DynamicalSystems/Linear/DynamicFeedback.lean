@@ -3390,6 +3390,493 @@ theorem tendsto_readout_exp_of_geometricCondition
     (V ⊔ LinearMap.stabilizableSubspace A B) F
     (map_add_feedback_sup_stabilizableSubspace_le A B F hFV) hFV hVH hE hQ d
 
+/-! ## The isolated quotient-feedback lift
+
+This section closes the blocker left by the previous attempt: the subspace
+transport identity for the stabilizable subspace, the reachable/stable transport
+lemmas it rests on, and the `baseChange`/`mkQ` eigenvector lift that turns an
+uncontrollable eigenvalue of the quotient pair `(A|_W / V, B|_W)` into an
+uncontrollable eigenvalue of `(A|_W, B|_W)` annihilating `V`. Together with the
+accepted PBH lemma `isUncontrollableEigenvalue_stable_of_sup_stabilizableSubspace`
+this yields the quotient stabilizing feedback of Trentelman–Stoorvogel–Hautus
+Lemma 4.38. -/
+
+section QuotientFeedbackLift
+
+open scoped TensorProduct
+
+omit [FiniteDimensional ℝ X] in
+/-- **Reachable transport.** If `W` is `A`-invariant and contains `im B`, the
+reachable subspace of the restricted pair `(A|_W, B|_W)`, pushed forward along
+`W ↪ X`, is exactly the reachable subspace of `(A, B)`. -/
+theorem map_reachableSubspace_restrict_eq (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (W : Submodule ℝ X) (hW : ∀ x ∈ W, A x ∈ W) (hB : LinearMap.range B ≤ W) :
+    Submodule.map W.subtype
+        (LinearMap.reachableSubspace (A.restrict hW)
+          (B.codRestrict W (fun u => hB (LinearMap.mem_range_self B u)))) =
+      LinearMap.reachableSubspace A B := by
+  apply le_antisymm
+  · rw [Submodule.map_le_iff_le_comap]
+    apply LinearMap.reachableSubspace_le
+    · intro y hy
+      obtain ⟨u, rfl⟩ := hy
+      exact LinearMap.range_le_reachableSubspace A B ⟨u, rfl⟩
+    · rintro y ⟨x, hx, rfl⟩
+      exact Submodule.mem_comap.mpr (LinearMap.map_reachableSubspace_le A B
+        ⟨(x : X), Submodule.mem_comap.mp hx, rfl⟩)
+  · apply LinearMap.reachableSubspace_le
+    · rintro u ⟨v, rfl⟩
+      exact ⟨(B.codRestrict W (fun u => hB (LinearMap.mem_range_self B u))) v,
+        LinearMap.range_le_reachableSubspace _ _ (LinearMap.mem_range_self _ v), rfl⟩
+    · rintro y ⟨x, hx, rfl⟩
+      obtain ⟨w, hw, rfl⟩ := Submodule.mem_map.mp hx
+      exact ⟨(A.restrict hW) w,
+        LinearMap.map_reachableSubspace_le _ _ ⟨w, hw, rfl⟩, rfl⟩
+
+/-- **Reverse stable transport.** The `A`-stable part of an `A`-invariant
+subspace `W` is stable for the restriction `A|_W`. The proof decomposes a vector
+of `W` along the stable/antistable splitting of `A|_W`, transports its antistable
+part forward to `X` (`map_unstableSubspace_restrict_le`) and uses disjointness of
+the stable and antistable spectral subspaces of `A`. -/
+theorem hurwitzSubspace_inf_le_map_hurwitzSubspace_restrict
+    (A : X →ₗ[ℝ] X) (W : Submodule ℝ X) (hW : ∀ x ∈ W, A x ∈ W) :
+    LinearMap.hurwitzSubspace A ⊓ W ≤
+      Submodule.map W.subtype (LinearMap.hurwitzSubspace (A.restrict hW)) := by
+  intro x hx
+  obtain ⟨hxA, hxW⟩ := hx
+  let xW : W := ⟨x, hxW⟩
+  have hsup := LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top (A.restrict hW)
+  have hxmem : xW ∈ LinearMap.hurwitzSubspace (A.restrict hW) ⊔
+      LinearMap.unstableSubspace (A.restrict hW) := by
+    rw [hsup]; trivial
+  obtain ⟨g, hg, b, hb, hgb⟩ := Submodule.mem_sup.mp hxmem
+  refine ⟨g, hg, ?_⟩
+  have hgX : (g : X) ∈ LinearMap.hurwitzSubspace A :=
+    LinearMap.map_hurwitzSubspace_restrict_le A W hW ⟨g, hg, rfl⟩
+  have hbX : (b : X) ∈ LinearMap.unstableSubspace A :=
+    LinearMap.map_unstableSubspace_restrict_le A W hW ⟨b, hb, rfl⟩
+  have hb_eq : (b : X) = x - (g : X) := by
+    have h := congrArg (Subtype.val) hgb
+    simp only [Submodule.coe_add] at h
+    rw [eq_sub_iff_add_eq, add_comm]
+    exact h
+  have hbH : (b : X) ∈ LinearMap.hurwitzSubspace A := by
+    rw [hb_eq]
+    exact Submodule.sub_mem _ hxA hgX
+  have hb0 : (b : X) = 0 := by
+    have hmem : (b : X) ∈ LinearMap.hurwitzSubspace A ⊓ LinearMap.unstableSubspace A :=
+      ⟨hbH, hbX⟩
+    rw [disjoint_iff.mp (LinearMap.disjoint_hurwitzSubspace_unstableSubspace A),
+      Submodule.mem_bot] at hmem
+    exact hmem
+  have hgx : (g : X) = x := by
+    have h := congrArg (Subtype.val) hgb
+    simp only [Submodule.coe_add] at h
+    rw [hb0, add_zero] at h
+    exact h
+  exact hgx
+
+/-- **Reverse stable transport, comap form.** A vector of `W` whose image in `X`
+lies in the stable subspace of `A` lies in the stable subspace of `A|_W`. -/
+theorem comap_hurwitzSubspace_le_hurwitzSubspace_restrict
+    (A : X →ₗ[ℝ] X) (W : Submodule ℝ X) (hW : ∀ x ∈ W, A x ∈ W) :
+    (LinearMap.hurwitzSubspace A).comap W.subtype ≤
+      LinearMap.hurwitzSubspace (A.restrict hW) := by
+  intro x hx
+  rw [Submodule.mem_comap] at hx
+  obtain ⟨g, hg, hgx⟩ : ∃ g ∈ LinearMap.hurwitzSubspace (A.restrict hW),
+      (g : X) = (x : X) :=
+    hurwitzSubspace_inf_le_map_hurwitzSubspace_restrict A W hW ⟨hx, x.2⟩
+  rw [← Subtype.ext hgx]
+  exact hg
+
+omit [FiniteDimensional ℝ X] in
+/-- **Reverse reachable transport, comap form.** -/
+theorem comap_reachableSubspace_le_reachableSubspace_restrict
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (W : Submodule ℝ X) (hW : ∀ x ∈ W, A x ∈ W) (hB : LinearMap.range B ≤ W) :
+    (LinearMap.reachableSubspace A B).comap W.subtype ≤
+      LinearMap.reachableSubspace (A.restrict hW)
+        (B.codRestrict W (fun u => hB (LinearMap.mem_range_self B u))) := by
+  intro x hx
+  rw [Submodule.mem_comap] at hx
+  rw [← map_reachableSubspace_restrict_eq A B W hW hB] at hx
+  obtain ⟨y, hy, hyx⟩ := hx
+  rw [show y = x from Subtype.ext hyx] at hy
+  exact hy
+
+/-- **Stabilizable-subspace transport.** For an `A`-invariant subspace `W`
+containing `im B`, the stabilizable subspace of the restricted pair `(A|_W, B|_W)`
+is exactly the trace of the ambient stabilizable subspace:
+`Xstab(A|_W, B|_W) = W ∩ Xstab(A, B)`.
+
+Trentelman–Stoorvogel–Hautus, Lemma 4.38, uses this as "the stabilizable
+subspace of `(A₀, B)` is equal to `Xstab`". -/
+theorem stabilizableSubspace_restrict_eq (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (W : Submodule ℝ X) (hW : ∀ x ∈ W, A x ∈ W) (hB : LinearMap.range B ≤ W) :
+    LinearMap.stabilizableSubspace (A.restrict hW)
+        (B.codRestrict W (fun u => hB (LinearMap.mem_range_self B u))) =
+      (LinearMap.stabilizableSubspace A B).comap W.subtype := by
+  apply le_antisymm
+  · intro x hx
+    rw [LinearMap.stabilizableSubspace, Submodule.mem_sup] at hx
+    obtain ⟨h, hh, r, hr, hhr⟩ := hx
+    rw [Submodule.mem_comap, LinearMap.stabilizableSubspace, Submodule.mem_sup]
+    refine ⟨(h : X), LinearMap.map_hurwitzSubspace_restrict_le A W hW ⟨h, hh, rfl⟩,
+      (r : X), ?_, ?_⟩
+    · rw [← map_reachableSubspace_restrict_eq A B W hW hB]
+      exact ⟨r, hr, rfl⟩
+    · exact congrArg (Subtype.val) hhr
+  · intro x hx
+    rw [Submodule.mem_comap, LinearMap.stabilizableSubspace, Submodule.mem_sup] at hx
+    obtain ⟨h, hh, r, hr, hhr⟩ := hx
+    have hRW : LinearMap.reachableSubspace A B ≤ W :=
+      LinearMap.reachableSubspace_le A B hB (by
+        rintro y ⟨w, hw, rfl⟩; exact hW w hw)
+    have hrW : r ∈ W := hRW hr
+    have hhW : h ∈ W := by
+      have heq : h = (x : X) - r := eq_sub_iff_add_eq.mpr hhr
+      rw [heq]
+      exact W.sub_mem x.2 hrW
+    have hr' : (⟨r, hrW⟩ : W) ∈ LinearMap.reachableSubspace (A.restrict hW)
+        (B.codRestrict W (fun u => hB (LinearMap.mem_range_self B u))) :=
+      comap_reachableSubspace_le_reachableSubspace_restrict A B W hW hB
+        (by rw [Submodule.mem_comap]; exact hr)
+    have hh' : (⟨h, hhW⟩ : W) ∈ LinearMap.hurwitzSubspace (A.restrict hW) :=
+      comap_hurwitzSubspace_le_hurwitzSubspace_restrict A W hW
+        (by rw [Submodule.mem_comap]; exact hh)
+    rw [LinearMap.stabilizableSubspace, Submodule.mem_sup]
+    refine ⟨⟨h, hhW⟩, hh', ⟨r, hrW⟩, hr', ?_⟩
+    apply Subtype.ext
+    rw [Submodule.coe_add]; exact hhr
+
+/-- **Stabilizability is invariant under state feedback.** Replacing `A` by
+`A + B.comp F` does not change whether the pair admits a stabilizing feedback:
+the gains shift by `F`, and `B.comp` is additive in the gain. -/
+theorem isStabilizable_add_comp (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (F : X →ₗ[ℝ] U) :
+    LinearMap.IsStabilizable (A + B.comp F) B ↔ LinearMap.IsStabilizable A B := by
+  constructor
+  · rintro ⟨G, hG⟩
+    refine ⟨F + G, ?_⟩
+    have h : A + B.comp (F + G) = (A + B.comp F) + B.comp G := by
+      rw [LinearMap.comp_add]; abel
+    rwa [h]
+  · rintro ⟨G, hG⟩
+    refine ⟨G - F, ?_⟩
+    have h : (A + B.comp F) + B.comp (G - F) = A + B.comp G := by
+      rw [LinearMap.comp_sub]; abel
+    rwa [h]
+
+/-- **The stabilizable subspace grows under state feedback.** Replacing `A` by
+`A + B.comp F` can only enlarge `Xstab`: every state that can be asymptotically
+driven to the origin using `(A, B)` can also be driven there using
+`(A + B F, B)` with the adjusted input, so
+`Xstab(A, B) ≤ Xstab(A + B F, B)`.
+
+The proof avoids the trajectory characterisation. It shows that
+`S = Xstab(A, B)` is stabilizable as a pair in its own right: restricting to `S`,
+the stabilizable-subspace transport identity gives
+`Xstab(A|_S, B|_S) = S ∩ Xstab(A, B) = S`, so `(A|_S, B|_S)` is stabilizable and,
+by feedback invariance `isStabilizable_add_comp`, so is `(M|_S, B|_S)` for
+`M = A + B F`. Applying the transport identity to `M` then gives
+`S ∩ Xstab(M, B) = S`, i.e. `S ≤ Xstab(M, B)`. -/
+theorem stabilizableSubspace_le_add_feedback (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (F : X →ₗ[ℝ] U) :
+    LinearMap.stabilizableSubspace A B ≤
+      LinearMap.stabilizableSubspace (A + B.comp F) B := by
+  let S : Submodule ℝ X := LinearMap.stabilizableSubspace A B
+  have hAinv : ∀ x ∈ S, A x ∈ S := fun x hx =>
+    LinearMap.map_stabilizableSubspace_le A B ⟨x, hx, rfl⟩
+  have hBle : LinearMap.range B ≤ S :=
+    le_trans (LinearMap.range_le_reachableSubspace A B)
+      (LinearMap.reachableSubspace_le_stabilizableSubspace A B)
+  have hA_stab : LinearMap.IsStabilizable (A.restrict hAinv)
+      (B.codRestrict S (fun u => hBle (LinearMap.mem_range_self B u))) := by
+    apply LinearMap.isStabilizable_of_stabilizableSubspace_eq_top
+    rw [stabilizableSubspace_restrict_eq A B S hAinv hBle]
+    apply le_antisymm le_top
+    intro x _
+    rw [Submodule.mem_comap]
+    exact x.2
+  have hMinv : ∀ x ∈ S, (A + B.comp F) x ∈ S := by
+    intro x hx
+    simp only [LinearMap.add_apply, LinearMap.comp_apply]
+    exact S.add_mem (hAinv x hx) (hBle (LinearMap.mem_range_self B (F x)))
+  have hM_stab : LinearMap.IsStabilizable ((A + B.comp F).restrict hMinv)
+      (B.codRestrict S (fun u => hBle (LinearMap.mem_range_self B u))) := by
+    have hsplit : (A + B.comp F).restrict hMinv =
+        (A.restrict hAinv) +
+          (B.codRestrict S (fun u => hBle (LinearMap.mem_range_self B u))).comp
+            (F.comp S.subtype) := by
+      apply LinearMap.ext
+      intro x
+      exact Subtype.ext rfl
+    rw [hsplit]
+    exact (isStabilizable_add_comp (A.restrict hAinv)
+      (B.codRestrict S (fun u => hBle (LinearMap.mem_range_self B u)))
+      (F.comp S.subtype)).mpr hA_stab
+  have htop : LinearMap.stabilizableSubspace ((A + B.comp F).restrict hMinv)
+      (B.codRestrict S (fun u => hBle (LinearMap.mem_range_self B u))) = ⊤ :=
+    LinearMap.stabilizableSubspace_eq_top_of_isStabilizable _ _ hM_stab
+  rw [stabilizableSubspace_restrict_eq (A + B.comp F) B S hMinv hBle] at htop
+  intro x hx
+  have hx' : (⟨x, hx⟩ : S) ∈
+      (LinearMap.stabilizableSubspace (A + B.comp F) B).comap S.subtype := by
+    rw [htop]; exact Submodule.mem_top
+  exact hx'
+
+/-- **The quotient eigenvector lift.** Let `η` be a nonzero complex linear
+functional on `ℂ ⊗ (W ⧸ V)` whose pullback along `mkQ.baseChange` is a left
+eigenvector of `A|_W` at `μ` and which annihilates `B`, and suppose
+`V ⊔ Xstab(A|_W, B|_W) = ⊤`. Then `μ` is stable. This is the `baseChange`/`mkQ`
+functoriality step: pulling back along the (surjective) base change of the
+quotient map preserves the eigenvector equation, annihilates `B`, and vanishes
+on `V`, so the accepted PBH lemma
+`isUncontrollableEigenvalue_stable_of_sup_stabilizableSubspace` applies. -/
+theorem isUncontrollableEigenvalue_stable_of_quotient
+    {W U' : Type*} [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+    [NormedAddCommGroup U'] [NormedSpace ℝ U']
+    (AW : W →ₗ[ℝ] W) (BW : U' →ₗ[ℝ] W) (VW : Submodule ℝ W)
+    (hVW : VW ⊔ LinearMap.stabilizableSubspace AW BW = ⊤)
+    (μ : ℂ) (η : (ℂ ⊗[ℝ] (W ⧸ VW)) →ₗ[ℂ] ℂ) (hη : η ≠ 0)
+    (hBη : η.comp ((VW.mkQ.comp BW).baseChange ℂ) = 0)
+    (hAη : (η.comp (VW.mkQ.baseChange ℂ)).comp (AW.baseChange ℂ) =
+      μ • (η.comp (VW.mkQ.baseChange ℂ))) :
+    μ.re < 0 := by
+  let ηt : (ℂ ⊗[ℝ] W) →ₗ[ℂ] ℂ := η.comp (VW.mkQ.baseChange ℂ)
+  have hsurj : Function.Surjective (VW.mkQ.baseChange ℂ) :=
+    LinearMap.baseChange_surjective ℂ (Submodule.mkQ_surjective VW)
+  have hηne : ηt ≠ 0 := by
+    intro h0
+    apply hη
+    apply LinearMap.ext
+    intro y
+    obtain ⟨z, rfl⟩ := hsurj y
+    have hz := congrArg (fun f : (ℂ ⊗[ℝ] W) →ₗ[ℂ] ℂ => f z) h0
+    simpa [ηt, LinearMap.comp_apply] using hz
+  have hηA : ηt.comp (AW.baseChange ℂ) = μ • ηt :=
+    hAη
+  have hηB : ηt.comp (BW.baseChange ℂ) = 0 := by
+    have hbc : (VW.mkQ.comp BW).baseChange ℂ =
+        (VW.mkQ.baseChange ℂ).comp (BW.baseChange ℂ) :=
+      LinearMap.baseChange_comp BW VW.mkQ
+    calc ηt.comp (BW.baseChange ℂ)
+        = η.comp ((VW.mkQ.baseChange ℂ).comp (BW.baseChange ℂ)) := by
+          rw [← LinearMap.comp_assoc]
+      _ = η.comp ((VW.mkQ.comp BW).baseChange ℂ) := by rw [hbc]
+      _ = 0 := hBη
+  have hVη : ∀ x : VW, ηt ((1 : ℂ) ⊗ₜ[ℝ] (x : W)) = 0 := by
+    intro x
+    have hx0 : VW.mkQ (x : W) = 0 :=
+      LinearMap.mem_ker.mp (by rw [Submodule.ker_mkQ]; exact x.2)
+    have h1 : (VW.mkQ.baseChange ℂ) ((1 : ℂ) ⊗ₜ[ℝ] (x : W)) = 0 := by
+      simp [LinearMap.baseChange_tmul, hx0]
+    change η ((VW.mkQ.baseChange ℂ) ((1 : ℂ) ⊗ₜ[ℝ] (x : W))) = 0
+    rw [h1, map_zero]
+  exact isUncontrollableEigenvalue_stable_of_sup_stabilizableSubspace AW BW VW
+    hVW ηt μ hηne hηA hηB hVη
+
+/-- **Quotient PBH from the eigenvector lift.** If `VW` is `AW`-invariant and
+`VW ⊔ Xstab(AW, B) = ⊤`, then every uncontrollable eigenvalue of the quotient pair
+is stable. This is the PBH input consumed by
+`isStabilizable_of_uncontrollableEigenvalues_hurwitz`. -/
+theorem isUncontrollableEigenvalue_stable_of_quotient_mapQ
+    {W U' : Type*} [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+    [NormedAddCommGroup U'] [NormedSpace ℝ U']
+    (AW : W →ₗ[ℝ] W) (BW : U' →ₗ[ℝ] W) (VW : Submodule ℝ W)
+    (hmap : ∀ v ∈ VW, AW v ∈ VW)
+    (hVW : VW ⊔ LinearMap.stabilizableSubspace AW BW = ⊤)
+    (μ : ℂ) (η : (ℂ ⊗[ℝ] (W ⧸ VW)) →ₗ[ℂ] ℂ) (hη : η ≠ 0)
+    (hAη : η.comp ((Submodule.mapQ VW VW AW hmap).baseChange ℂ) = μ • η)
+    (hBη : η.comp ((VW.mkQ.comp BW).baseChange ℂ) = 0) :
+    μ.re < 0 := by
+  apply isUncontrollableEigenvalue_stable_of_quotient AW BW VW hVW μ η hη hBη
+  have hbc : VW.mkQ.baseChange ℂ ∘ₗ AW.baseChange ℂ =
+      (Submodule.mapQ VW VW AW hmap).baseChange ℂ ∘ₗ VW.mkQ.baseChange ℂ := by
+    have h := congrArg (fun f : W →ₗ[ℝ] (W ⧸ VW) => f.baseChange ℂ)
+      (Submodule.mapQ_mkQ (p := VW) (q := VW) (f := AW) (h := hmap))
+    rw [LinearMap.baseChange_comp, LinearMap.baseChange_comp] at h
+    exact h.symm
+  calc (η.comp (VW.mkQ.baseChange ℂ)).comp (AW.baseChange ℂ)
+      = η.comp ((VW.mkQ.baseChange ℂ).comp (AW.baseChange ℂ)) := by
+        rw [LinearMap.comp_assoc]
+    _ = η.comp ((Submodule.mapQ VW VW AW hmap).baseChange ℂ ∘ₗ VW.mkQ.baseChange ℂ) := by
+        rw [hbc]
+    _ = (η.comp ((Submodule.mapQ VW VW AW hmap).baseChange ℂ)).comp
+          (VW.mkQ.baseChange ℂ) := by rw [← LinearMap.comp_assoc]
+    _ = μ • (η.comp (VW.mkQ.baseChange ℂ)) := by rw [hAη, LinearMap.smul_comp]
+
+/-- **The quotient stabilizing feedback exists.** If `VW` is `AW`-invariant and
+`VW ⊔ Xstab(AW, B) = ⊤`, the quotient pair
+`(A|_W / V, B|_W)` admits a stabilizing feedback `G : W ⧸ VW → U'`. This is the
+feedback constructed in Trentelman–Stoorvogel–Hautus Lemma 4.38, before it is
+lifted back to `W`. -/
+theorem isStabilizable_quotient_of_sup_stabilizableSubspace
+    {W U' : Type*} [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+    [NormedAddCommGroup U'] [NormedSpace ℝ U']
+    (AW : W →ₗ[ℝ] W) (BW : U' →ₗ[ℝ] W) (VW : Submodule ℝ W)
+    (hmap : ∀ v ∈ VW, AW v ∈ VW)
+    (hVW : VW ⊔ LinearMap.stabilizableSubspace AW BW = ⊤) :
+    LinearMap.IsStabilizable (Submodule.mapQ VW VW AW hmap) (VW.mkQ.comp BW) := by
+  apply LinearMap.isStabilizable_of_uncontrollableEigenvalues_hurwitz
+  intro μ hμ
+  obtain ⟨η, hη, hAη, hBη⟩ := hμ
+  exact isUncontrollableEigenvalue_stable_of_quotient_mapQ AW BW VW hmap hVW μ η
+    hη hAη hBη
+
+omit [FiniteDimensional ℝ X] in
+/-- Pulling back a spanning decomposition along a subspace inclusion keeps the
+spanning decomposition. If `V ⊔ S = W` and both summands lie in `W`, then the
+preimages of `V` and `S` in `W` span `W`. -/
+theorem comap_sup_subtype_eq_top {V S W : Submodule ℝ X} (hVW : V ≤ W)
+    (hSW : S ≤ W) (h : V ⊔ S = W) :
+    V.comap W.subtype ⊔ S.comap W.subtype = ⊤ := by
+  apply le_antisymm le_top
+  intro x _
+  have hx : (x : X) ∈ V ⊔ S := by rw [h]; exact x.2
+  obtain ⟨v, hv, s, hs, hvs⟩ := Submodule.mem_sup.mp hx
+  refine Submodule.mem_sup.mpr ⟨⟨v, hVW hv⟩, ?_, ⟨s, hSW hs⟩, ?_, ?_⟩
+  · rw [Submodule.mem_comap]; exact hv
+  · rw [Submodule.mem_comap]; exact hs
+  · apply Subtype.ext; simpa using hvs
+
+/-- **The external-stabilization state feedback of Trentelman–Stoorvogel–Hautus
+Lemma 4.38 / Theorem 4.39.** Let `V` be a controlled-invariant subspace
+contained in `ker H`, and suppose the disturbance image satisfies
+`im E ≤ V + Xstab(A, B)`. Then there is a state feedback `F` that preserves `V`
+and makes the closed loop externally stable, in the sense that the controlled
+output of every disturbance direction decays to zero:
+`t ↦ H (exp (t (A + B F)) (E d)) → 0`.
+
+The gain is assembled from the friend gain `F₀` produced by the controlled
+invariance of `V`, the quotient stabilising gain `G` of
+`isStabilizable_quotient_of_sup_stabilizableSubspace` on `W / V` (where
+`W = V ⊔ Xstab(A, B)`), the transport identity
+`stabilizableSubspace_restrict_eq`, the feedback monotonicity
+`stabilizableSubspace_le_add_feedback`, and the analytic quotient-decay bridge
+`tendsto_readout_exp_of_geometricCondition`. -/
+theorem exists_feedback_tendsto_readout_of_geometricCondition
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (V : Submodule ℝ X)
+    (hV : Submodule.map A V ≤ V ⊔ LinearMap.range B)
+    (hVH : V ≤ LinearMap.ker H)
+    (hE : LinearMap.range E ≤ V ⊔ LinearMap.stabilizableSubspace A B) :
+    ∃ F : X →ₗ[ℝ] U,
+      Submodule.map (A + B.comp F) V ≤ V ∧
+      ∀ d : D, Tendsto (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) (E d))) atTop (nhds 0) := by
+  classical
+  obtain ⟨F₀, hF₀⟩ := LinearMap.exists_stateFeedback_of_isControlledInvariant hV
+  let W : Submodule ℝ X := V ⊔ LinearMap.stabilizableSubspace A B
+  have hWle : V ≤ W := le_sup_left
+  have hBleW : LinearMap.range B ≤ W := range_le_sup_stabilizableSubspace A B V
+  have hWinv : ∀ x ∈ W, (A + B.comp F₀) x ∈ W := fun x hx =>
+    map_add_feedback_sup_stabilizableSubspace_le A B F₀ hF₀ ⟨x, hx, rfl⟩
+  let AW : W →ₗ[ℝ] W := (A + B.comp F₀).restrict hWinv
+  let BW : U →ₗ[ℝ] W :=
+    B.codRestrict W (fun u => hBleW (LinearMap.mem_range_self B u))
+  let VW : Submodule ℝ W := V.comap W.subtype
+  have hVWinv : ∀ v ∈ VW, AW v ∈ VW := by
+    intro v hv
+    rw [Submodule.mem_comap] at hv ⊢
+    exact hF₀ ⟨(v : X), hv, rfl⟩
+  have hmono : (LinearMap.stabilizableSubspace A B).comap W.subtype ≤
+      (LinearMap.stabilizableSubspace (A + B.comp F₀) B).comap W.subtype :=
+    Submodule.comap_mono (stabilizableSubspace_le_add_feedback A B F₀)
+  have hsupV : VW ⊔ (LinearMap.stabilizableSubspace A B).comap W.subtype = ⊤ :=
+    comap_sup_subtype_eq_top hWle le_sup_right (by rfl)
+  have hsup : VW ⊔ LinearMap.stabilizableSubspace AW BW = ⊤ := by
+    rw [stabilizableSubspace_restrict_eq (A + B.comp F₀) B W hWinv hBleW]
+    apply le_antisymm le_top
+    calc ⊤ = VW ⊔ (LinearMap.stabilizableSubspace A B).comap W.subtype := hsupV.symm
+      _ ≤ VW ⊔ (LinearMap.stabilizableSubspace (A + B.comp F₀) B).comap W.subtype :=
+          sup_le_sup_left hmono _
+  have hstabQ : LinearMap.IsStabilizable (Submodule.mapQ VW VW AW hVWinv)
+      (VW.mkQ.comp BW) :=
+    isStabilizable_quotient_of_sup_stabilizableSubspace AW BW VW hVWinv hsup
+  obtain ⟨G, hG⟩ := hstabQ
+  obtain ⟨F₁, hF₁⟩ := LinearMap.exists_extend (G.comp VW.mkQ)
+  let F : X →ₗ[ℝ] U := F₀ + F₁
+  have hFV : Submodule.map (A + B.comp F) V ≤ V := by
+    rintro y ⟨v, hv, rfl⟩
+    have hvW : v ∈ W := hWle hv
+    have hvVW : (⟨v, hvW⟩ : W) ∈ VW := by
+      rw [Submodule.mem_comap]; exact hv
+    have hF1v : F₁ v = 0 := by
+      have h := congrArg (fun f : W →ₗ[ℝ] U => f ⟨v, hvW⟩) hF₁
+      have h' : F₁ (W.subtype ⟨v, hvW⟩) = G (VW.mkQ ⟨v, hvW⟩) := by
+        simpa only [LinearMap.comp_apply] using h
+      have hv' : W.subtype ⟨v, hvW⟩ = v := rfl
+      have hG0 : G (VW.mkQ ⟨v, hvW⟩) = 0 := by
+        have hmk : VW.mkQ ⟨v, hvW⟩ = 0 := by
+          rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+          exact hvVW
+        rw [hmk, map_zero]
+      rw [hv'] at h'
+      rw [h', hG0]
+    have hEq : (A + B.comp F) v = (A + B.comp F₀) v := by
+      simp [F, hF1v]
+    rw [hEq]
+    exact hF₀ ⟨v, hv, rfl⟩
+  refine ⟨F, hFV, fun d => ?_⟩
+  have hMinv : ∀ x ∈ W, (A + B.comp F) x ∈ W :=
+    fun x hx => map_add_feedback_sup_stabilizableSubspace_le A B F hFV ⟨x, hx, rfl⟩
+  have hmap : ∀ x ∈ VW, ((A + B.comp F).restrict hMinv) x ∈ VW := fun x hx => by
+    have hxV : (x : X) ∈ V := hx
+    change (((A + B.comp F).restrict hMinv) x : X) ∈ V
+    have hrestrict : (((A + B.comp F).restrict hMinv) x : X) =
+        (A + B.comp F) (x : X) := rfl
+    rw [hrestrict]
+    exact hFV ⟨(x : X), hxV, rfl⟩
+  have hmapEq : Submodule.mapQ VW VW ((A + B.comp F).restrict hMinv) hmap =
+      Submodule.mapQ VW VW AW hVWinv + (VW.mkQ.comp BW).comp G := by
+    apply LinearMap.ext
+    intro y
+    refine Submodule.Quotient.induction_on (p := VW) y ?_
+    intro x
+    have hF1x : F₁ x = G (VW.mkQ x) := by
+      have := congrArg (fun f : W →ₗ[ℝ] U => f x) hF₁
+      simpa using this
+    have hxM : ((A + B.comp F).restrict hMinv) x = AW x + BW (G (VW.mkQ x)) := by
+      apply Subtype.ext
+      simp only [LinearMap.restrict_apply, LinearMap.add_apply, LinearMap.comp_apply,
+        Submodule.coe_add, AW, F, hF1x, map_add]
+      abel
+    simp only [Submodule.mapQ_apply, LinearMap.add_apply, LinearMap.comp_apply,
+      Submodule.mkQ_apply, hxM]
+    rw [← Submodule.Quotient.mk_add]
+  have hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ VW VW ((A + B.comp F).restrict hMinv) hmap) := by
+    rw [hmapEq]; exact hG
+  exact tendsto_readout_exp_of_geometricCondition A B H E V F hFV hVH hE hQ d
+
+/-- **State-feedback external stabilization from the geometric condition of
+Corollary 6.22.** Specialising the general construction to the largest
+controlled-invariant subspace `V*(ker H) = controlledInvariantSubspace A B
+(ker H)`: if the disturbance image lies in `V*(ker H) ⊔ Xstab(A, B)`, then there
+is a state feedback `F` that preserves `V*(ker H)` and makes the closed-loop
+controlled output of every disturbance direction decay to zero. This is the
+state-feedback sufficiency direction of Trentelman–Stoorvogel–Hautus Theorem
+4.39 / Corollary 6.22, with the geometric condition exactly as in the source. -/
+theorem exists_feedback_tendsto_readout_of_corollary622
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (hE : LinearMap.range E ≤
+      LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) ⊔
+        LinearMap.stabilizableSubspace A B) :
+    ∃ F : X →ₗ[ℝ] U,
+      Submodule.map (A + B.comp F)
+        (LinearMap.controlledInvariantSubspace A B (LinearMap.ker H)) ≤
+        LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) ∧
+      ∀ d : D, Tendsto (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) (E d))) atTop (nhds 0) :=
+  exists_feedback_tendsto_readout_of_geometricCondition A B H E
+    (LinearMap.controlledInvariantSubspace A B (LinearMap.ker H))
+    (LinearMap.isControlledInvariant_controlledInvariantSubspace A B (LinearMap.ker H))
+    (LinearMap.controlledInvariantSubspace_le_K A B (LinearMap.ker H)) hE
+
+end QuotientFeedbackLift
+
 end GeometricFeedbackConstruction
 
 end LinearSystem
