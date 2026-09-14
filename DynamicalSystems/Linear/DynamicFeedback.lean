@@ -3998,6 +3998,30 @@ theorem conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition
   rw [Subspace.dualAnnihilator_inf_eq, dualAnnihilator_conditionedInvariantSubspace,
     dualAnnihilator_detectableSubspace, LinearMap.range_dualMap_eq_dualAnnihilator_ker]
 
+/-- **Dual output-injection condition in real-coordinate (stable-subspace)
+form.** Replacing the antistable annihilator `(X_b(A))ᵃⁿⁿ` by the stable subspace
+of the algebraic transpose with the completed real-coordinate transport
+`dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`, the dual algebraic
+condition of Corollary 6.22 becomes
+
+`im Hᵀ ≤ V*(ker Eᵀ) ⊔ (⟨Aᵀ | im Cᵀ⟩ ⊔ X_g(Aᵀ))`,
+
+the transpose of the primal geometric condition `im E ≤ V*(ker H) + Xstab(A, B)`.
+This exposes the completed transport to the output-injection layer without
+introducing a norm or a basis on `Module.Dual ℝ X` beyond the canonical finite
+basis `Module.finBasis ℝ (Module.Dual ℝ X)`. -/
+theorem conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    conditionedInvariantSubspace C A (LinearMap.range E) ⊓ detectableSubspace C A ≤
+        LinearMap.ker H ↔
+      LinearMap.range H.dualMap ≤
+        controlledInvariantSubspace A.dualMap C.dualMap
+            (LinearMap.range E).dualAnnihilator ⊔
+          (reachableSubspace A.dualMap C.dualMap ⊔
+            stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap) := by
+  rw [conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition,
+    dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap]
+
 end LinearMap
 
 /-! ### Handoff: the remaining output-injection bridge
@@ -4090,3 +4114,37 @@ transposed pair and the resulting gain transposed back with
 `dualMap_surjective`, yielding the observer gain `G` of
 Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21. Until then no output-injection
 statement is claimed. -/
+
+/-! ### Update: the real-coordinate transport is complete
+
+The transport recorded above as missing is now formalised in
+`DynamicalSystems/Linear/Stabilization.lean`:
+
+* `span_inter_range_ofRealPi_eq_of_star_mem`: the complex span of the real
+  points of a conjugation-stable subspace of `ι → ℂ` is the subspace itself.
+* `complexUnstableSubspace_eq_baseChange_unstableSubspace`: the abstract
+  complexification `complexUnstableSubspace A` is the base change of the real
+  antistable subspace `unstableSubspace A`.
+* `dualAnnihilator_baseChange_iff`: annihilators commute with the base change
+  `ℝ → ℂ`.
+* `toDualBaseChange_one_tmul` and `map_toDualBaseChange_complexStableSubspace`:
+  the ℂ-linear dual base-change equivalence
+  `IsBaseChange.toDualBaseChange` sends `1 ⊗ φ` to the base-changed functional
+  and intertwines the stable subspaces of `A.dualMap` and
+  `(A.baseChange ℂ).dualMap`.
+* `dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`: the real
+  statement
+  `(unstableSubspace A).dualAnnihilator =
+   stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap`,
+
+the missing bridge `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`. With it, the dual algebraic
+condition of Corollary 6.22 is exposed in real-coordinate form as
+`conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition`.
+
+The next milestone is to run the accepted state-feedback construction on the
+transposed dual pair, with the roles of the disturbance channel `E` and the
+controlled output `H` exchanged, and then transpose the resulting gain back with
+`dualMap_surjective`, yielding the observer injection `G` of
+Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21 and the corresponding dual
+external-stability theorem. That observer construction is not claimed here.
+-/

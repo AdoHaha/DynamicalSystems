@@ -15,6 +15,7 @@ public import Mathlib.Analysis.SpecialFunctions.Exponential
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 public import Mathlib.LinearAlgebra.Matrix.Dual
+public import Mathlib.LinearAlgebra.Dual.BaseChange
 public import Mathlib.Data.Matrix.Block
 public import Mathlib.LinearAlgebra.Matrix.ToLin
 public import Mathlib.LinearAlgebra.TensorProduct.Tower
@@ -4284,5 +4285,287 @@ theorem unstableSubspaceOfBasis_eq_of_basis {ι ι' : Type*} [Fintype ι] [Finty
   rw [mem_unstableSubspaceOfBasis_iff b A, mem_unstableSubspaceOfBasis_iff b' A]
 
 end BasisSpectralSubspace
+
+/-! ## Real-coordinate transport of the antistable annihilator
+
+The abstract complex transpose duality `dualAnnihilator_antistable_eq_stable`
+identifies the annihilator of the antistable generalized-eigenspace sum of a
+complex endomorphism with the stable generalized-eigenspace sum of its
+transpose. This section transports that identity to the real state space: the
+annihilator of the real antistable subspace `X_b(A) = unstableSubspace A` is the
+stable subspace of the algebraic transpose `A.dualMap`, computed in the
+canonical basis of the algebraic dual `Module.Dual ℝ X`.
+
+The transport combines three ingredients.
+
+* `complexUnstableSubspace_eq_baseChange_unstableSubspace`: the abstract
+  complexification `complexUnstableSubspace A` is the base change of the real
+  antistable subspace. The hard inclusion is
+  `span_inter_range_ofRealPi_eq_of_star_mem`, which says that the complex span of
+  the real points of a conjugation-stable subspace is the whole subspace.
+* `dualAnnihilator_baseChange_iff`: the annihilator commutes with base change
+  along `ℝ → ℂ`.
+* `toDualBaseChange_one_tmul` and `map_toDualBaseChange_complexStableSubspace`:
+  the ℂ-linear base-change equivalence of the dual
+  `IsBaseChange.toDualBaseChange : ℂ ⊗[ℝ] Module.Dual ℝ X ≃ₗ[ℂ]
+  Module.Dual ℂ (ℂ ⊗[ℝ] X)` sends `1 ⊗ φ` to the base-changed functional and
+  intertwines the stable subspaces of `A.dualMap` and
+  `(A.baseChange ℂ).dualMap`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 5.13 and display (5.3), the
+spectral form of the duality between stabilizability and detectability, with
+the complexification bridge of Theorem 3.38. -/
+
+open scoped TensorProduct in
+/-- The complex span of the real points of a conjugation-stable subspace of
+`ι → ℂ` is the subspace itself. Writing a vector `v` as
+`v = ofRealPi (re v) + I • ofRealPi (im v)` exhibits it as a complex combination
+of two real-valued vectors `(v ± star v) / 2` and `(v - star v) / (2 I)`, which
+lie in `V` by conjugation stability. -/
+theorem span_inter_range_ofRealPi_eq_of_star_mem {ι : Type*}
+    (V : Submodule ℂ (ι → ℂ)) (hV : ∀ v ∈ V, star v ∈ V) :
+    Submodule.span ℂ ((V : Set (ι → ℂ)) ∩ Set.range ofRealPi) = V := by
+  refine le_antisymm ?_ ?_
+  · rw [Submodule.span_le]
+    rintro v ⟨hv, -⟩
+    exact hv
+  · intro v hv
+    let re_v : ι → ℝ := fun i => (v i).re
+    let im_v : ι → ℝ := fun i => (v i).im
+    have hre : ofRealPi re_v ∈ V := by
+      have h1 : ofRealPi re_v = (2 : ℂ)⁻¹ • (v + star v) := by
+        ext i
+        simp only [ofRealPi_apply, Pi.add_apply, Pi.star_apply, Pi.smul_apply, smul_eq_mul,
+          re_v]
+        rw [show star (v i) = (starRingEnd ℂ) (v i) from rfl]
+        rw [Complex.re_eq_add_conj]
+        ring
+      rw [h1]
+      exact V.smul_mem _ (V.add_mem hv (hV v hv))
+    have him : ofRealPi im_v ∈ V := by
+      have h1 : ofRealPi im_v = ((2 : ℂ) * Complex.I)⁻¹ • (v - star v) := by
+        ext i
+        simp only [ofRealPi_apply, Pi.sub_apply, Pi.star_apply, Pi.smul_apply, smul_eq_mul,
+          im_v]
+        rw [show star (v i) = (starRingEnd ℂ) (v i) from rfl]
+        rw [Complex.im_eq_sub_conj]
+        ring
+      rw [h1]
+      exact V.smul_mem _ (V.sub_mem hv (hV v hv))
+    have hgen1 : ofRealPi re_v ∈ Submodule.span ℂ ((V : Set (ι → ℂ)) ∩ Set.range ofRealPi) :=
+      Submodule.subset_span ⟨hre, ⟨re_v, rfl⟩⟩
+    have hgen2 : ofRealPi im_v ∈ Submodule.span ℂ ((V : Set (ι → ℂ)) ∩ Set.range ofRealPi) :=
+      Submodule.subset_span ⟨him, ⟨im_v, rfl⟩⟩
+    have hvdecomp : v = ofRealPi re_v + Complex.I • ofRealPi im_v := by
+      ext i
+      simp only [ofRealPi_apply, Pi.add_apply, Pi.smul_apply, smul_eq_mul, re_v, im_v]
+      rw [mul_comm Complex.I]
+      exact (Complex.re_add_im (v i)).symm
+    rw [hvdecomp]
+    exact (Submodule.span ℂ _).add_mem hgen1 ((Submodule.span ℂ _).smul_mem Complex.I hgen2)
+
+section ComplexAntistableBaseChange
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+
+open scoped TensorProduct
+
+/-- The canonical complex antistable subspace is the base change of the real
+antistable subspace: `complexUnstableSubspace A = (unstableSubspace A).baseChange ℂ`.
+The nontrivial inclusion uses that the coordinate image of the base change is
+the complex span of the real points of `unstableComplexSubspace A`, which is
+generated by those real points because the subspace is conjugation-stable. -/
+theorem complexUnstableSubspace_eq_baseChange_unstableSubspace (A : X →ₗ[ℝ] X) :
+    complexUnstableSubspace A = (unstableSubspace A).baseChange ℂ := by
+  let b := Module.finBasis ℝ X
+  let eX : ℂ ⊗[ℝ] X →ₗ[ℂ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    (b.baseChange ℂ).equivFun.toLinearMap
+  have einj : Function.Injective eX := (b.baseChange ℂ).equivFun.injective
+  let ψ : X →ₗ[ℝ] (Fin (Module.finrank ℝ X) → ℂ) :=
+    ofRealPi.comp b.equivFun.toLinearMap
+  have hcomp_fun : ∀ x : X, eX (TensorProduct.mk ℝ ℂ X 1 x) = ψ x := by
+    intro x
+    change (b.baseChange ℂ).equivFun (1 ⊗ₜ[ℝ] x) = ofRealPi (b.equivFun x)
+    rw [← baseChange_equivFun_symm_one_tmul x]
+    exact (b.baseChange ℂ).equivFun.apply_symm_apply _
+  have hmapUnstable : Submodule.map eX (complexUnstableSubspace A) =
+      unstableComplexSubspace A := by
+    rw [map_complexUnstableSubspace b A]
+    rfl
+  have hψU : Set.image ψ (unstableSubspace A : Set X) =
+      ((unstableComplexSubspace A : Submodule ℂ _) : Set _) ∩ Set.range ofRealPi := by
+    ext z
+    constructor
+    · rintro ⟨x, hx, rfl⟩
+      refine ⟨?_, ⟨b.equivFun x, rfl⟩⟩
+      change x ∈ unstableSubspace A at hx
+      rw [mem_unstableSubspace] at hx
+      exact hx
+    · rintro ⟨hzV, y, hy⟩
+      refine ⟨b.equivFun.symm y, ?_, ?_⟩
+      · change b.equivFun.symm y ∈ unstableSubspace A
+        rw [mem_unstableSubspace, b.equivFun.apply_symm_apply]
+        exact hy.symm ▸ hzV
+      · simp only [ψ, LinearMap.comp_apply]
+        exact (congrArg ofRealPi (b.equivFun.apply_symm_apply y)).trans hy
+  have hstar : ∀ v ∈ unstableComplexSubspace A, star v ∈ unstableComplexSubspace A :=
+    fun v hv => star_mem_unstableComplexSubspace A hv
+  have hspan : Submodule.span ℂ (Set.image ψ (unstableSubspace A : Set X)) =
+      unstableComplexSubspace A := by
+    rw [hψU]
+    exact span_inter_range_ofRealPi_eq_of_star_mem _ hstar
+  have hmapBase : Submodule.map eX ((unstableSubspace A).baseChange ℂ) =
+      unstableComplexSubspace A := by
+    rw [Submodule.baseChange_eq_span, Submodule.map_span]
+    rw [show (↑(Submodule.map (TensorProduct.mk ℝ ℂ X 1) (unstableSubspace A)) : Set _) =
+        (TensorProduct.mk ℝ ℂ X 1) '' (unstableSubspace A : Set X) from rfl]
+    rw [show eX '' ((TensorProduct.mk ℝ ℂ X 1) '' (unstableSubspace A : Set X)) =
+        Set.image ψ (unstableSubspace A : Set X) from ?_]
+    · exact hspan
+    · rw [← Set.image_comp]
+      exact Set.image_congr (fun x _ => hcomp_fun x)
+  have : Submodule.map eX ((unstableSubspace A).baseChange ℂ) =
+      Submodule.map eX (complexUnstableSubspace A) := by
+    rw [hmapBase, hmapUnstable]
+  exact Submodule.map_injective_of_injective einj this.symm
+
+end ComplexAntistableBaseChange
+
+section DualAnnihilatorBaseChange
+
+variable {M : Type*} [AddCommGroup M] [Module ℝ M]
+
+open scoped TensorProduct
+
+/-- Base change of a submodule and the algebraic dual commute: a functional
+lies in the annihilator of `U` exactly when its base change lies in the
+annihilator of the base-changed submodule. -/
+theorem dualAnnihilator_baseChange_iff (U : Submodule ℝ M) (φ : Module.Dual ℝ M) :
+    Module.Dual.baseChange ℂ φ ∈ (U.baseChange ℂ).dualAnnihilator ↔
+      φ ∈ U.dualAnnihilator := by
+  rw [Submodule.mem_dualAnnihilator, Submodule.mem_dualAnnihilator]
+  constructor
+  · intro h x hx
+    have hmem : (1 : ℂ) ⊗ₜ[ℝ] x ∈ U.baseChange ℂ :=
+      Submodule.tmul_mem_baseChange_of_mem 1 hx
+    have h0 := h _ hmem
+    rw [Module.Dual.baseChange_apply_tmul] at h0
+    exact Complex.ofReal_injective (by simpa using h0)
+  · intro h z hz
+    have hK : U.baseChange ℂ ≤ LinearMap.ker (Module.Dual.baseChange ℂ φ) := by
+      rw [Submodule.baseChange_eq_span]
+      refine Submodule.span_le.mpr ?_
+      rintro w ⟨x, hx, rfl⟩
+      rw [SetLike.mem_coe, LinearMap.mem_ker]
+      change (Module.Dual.baseChange ℂ φ) ((1 : ℂ) ⊗ₜ[ℝ] x) = 0
+      rw [Module.Dual.baseChange_apply_tmul, h x hx, zero_smul]
+    exact hK hz
+
+end DualAnnihilatorBaseChange
+
+section DualBaseChangeTransport
+
+variable {X : Type*} [AddCommGroup X] [Module ℝ X] [Module.Free ℝ X] [Module.Finite ℝ X]
+
+open scoped TensorProduct
+
+/-- The base-change equivalence of the dual sends `1 ⊗ φ` to the base-changed
+functional. -/
+theorem toDualBaseChange_one_tmul (φ : Module.Dual ℝ X) :
+    (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange ((1 : ℂ) ⊗ₜ[ℝ] φ) =
+      Module.Dual.baseChange ℂ φ := by
+  apply IsBaseChange.algHom_ext (TensorProduct.isBaseChange ℝ X ℂ)
+  intro v
+  rw [IsBaseChange.toDualBaseChange_tmul]
+  simp [Module.Dual.baseChange_apply_tmul]
+
+/-- Dualising commutes with base change for the algebraic transpose. -/
+theorem toDualBaseChange_comp_dualMap_baseChange (A : X →ₗ[ℝ] X) :
+    ((A.baseChange ℂ).dualMap).comp
+        (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange.toLinearMap =
+      (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange.toLinearMap.comp
+        ((A.dualMap).baseChange ℂ) := by
+  apply LinearMap.ext
+  intro w
+  induction w using TensorProduct.induction_on with
+  | zero => simp
+  | add x y hx hy => simp [map_add, hx, hy]
+  | tmul a φ =>
+      apply IsBaseChange.algHom_ext (TensorProduct.isBaseChange ℝ X ℂ)
+      intro v
+      rw [LinearMap.comp_apply, LinearMap.comp_apply]
+      have hL : ((A.baseChange ℂ).dualMap)
+          ((TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange (a ⊗ₜ[ℝ] φ))
+          (TensorProduct.mk ℝ ℂ X 1 v) = a * algebraMap ℝ ℂ (φ (A v)) := by
+        rw [LinearMap.dualMap_apply]
+        have h1 : (A.baseChange ℂ) (TensorProduct.mk ℝ ℂ X 1 v) =
+            TensorProduct.mk ℝ ℂ X 1 (A v) := LinearMap.baseChange_tmul A v (a := (1 : ℂ))
+        rw [h1, IsBaseChange.toDualBaseChange_tmul]
+      have hR : (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange
+          ((A.dualMap).baseChange ℂ (a ⊗ₜ[ℝ] φ))
+          (TensorProduct.mk ℝ ℂ X 1 v) = a * algebraMap ℝ ℂ (φ (A v)) := by
+        rw [LinearMap.baseChange_tmul, IsBaseChange.toDualBaseChange_tmul]
+        rfl
+      exact hL.trans hR.symm
+
+/-- The base-change equivalence of the dual transports the complex stable
+subspace of `A.dualMap` to that of the dualised base change of `A`. -/
+theorem map_toDualBaseChange_complexStableSubspace (A : X →ₗ[ℝ] X) :
+    Submodule.map (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange.toLinearMap
+        (complexStableSubspace A.dualMap) =
+      ⨆ ν : {ν : ℂ // ν.re < 0},
+        Module.End.maxGenEigenspace ((A.baseChange ℂ).dualMap) ν.1 := by
+  rw [complexStableSubspace, Submodule.map_iSup]
+  apply iSup_congr
+  intro ν
+  exact map_maxGenEigenspace_of_equiv
+    (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange
+    ((A.dualMap).baseChange ℂ) ((A.baseChange ℂ).dualMap) ν.1
+    (toDualBaseChange_comp_dualMap_baseChange A)
+
+end DualBaseChangeTransport
+
+section DualAnnihilatorUnstableTransport
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+
+open scoped TensorProduct
+
+/-- **Real-coordinate transport of the antistable annihilator.** The annihilator
+of the real antistable subspace `X_b(A) = unstableSubspace A` is the stable
+subspace of the algebraic transpose `A.dualMap`, computed in the canonical
+basis of the algebraic dual `Module.Dual ℝ X`:
+
+`(unstableSubspace A).dualAnnihilator =
+  stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap`.
+
+This is the real form of the complex transpose spectral duality
+`dualAnnihilator_antistable_eq_stable`, transported across the base-change
+equivalence `IsBaseChange.toDualBaseChange` of the dual. It is the missing
+bridge for the output-injection half of Trentelman–Stoorvogel–Hautus Corollary
+6.22: `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`. -/
+theorem dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap (A : X →ₗ[ℝ] X) :
+    (unstableSubspace A).dualAnnihilator =
+      stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap := by
+  ext φ
+  rw [Submodule.mem_dualAnnihilator, mem_stableSubspaceOfBasis_iff]
+  have h1 : (∀ x ∈ unstableSubspace A, φ x = 0) ↔
+      Module.Dual.baseChange ℂ φ ∈ (complexUnstableSubspace A).dualAnnihilator := by
+    rw [complexUnstableSubspace_eq_baseChange_unstableSubspace A,
+      ← Submodule.mem_dualAnnihilator]
+    exact (dualAnnihilator_baseChange_iff (unstableSubspace A) φ).symm
+  rw [h1]
+  unfold complexUnstableSubspace
+  rw [dualAnnihilator_antistable_eq_stable (A.baseChange ℂ)]
+  rw [← toDualBaseChange_one_tmul φ, ← map_toDualBaseChange_complexStableSubspace A]
+  constructor
+  · rintro ⟨y, hy, hyx⟩
+    have h : y = (1 : ℂ) ⊗ₜ[ℝ] φ :=
+      (TensorProduct.isBaseChange ℝ X ℂ).toDualBaseChange.injective hyx
+    rwa [h] at hy
+  · intro h
+    exact ⟨_, h, rfl⟩
+
+end DualAnnihilatorUnstableTransport
 
 end LinearMap
