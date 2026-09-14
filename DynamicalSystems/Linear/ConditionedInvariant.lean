@@ -217,6 +217,36 @@ theorem isConditionedInvariant_changeOutput_iff {Y' : Type*} [AddCommGroup Y']
     exact ⟨fun h => T.injective (by simpa using h), fun h => by simp [h]⟩
   rw [isConditionedInvariant_iff, isConditionedInvariant_iff, hker]
 
+/-! ## Invariance under a state-space linear equivalence -/
+
+section ChangeState
+
+variable {X' : Type*} [AddCommGroup X'] [Module 𝕜 X']
+
+/-- **Conditioned invariance is invariant under a state-space equivalence.**
+Changing the state coordinates by `e : X' ≃ₗ[𝕜] X` transports the conditioned
+invariant subspaces: with `C' = C ∘ e`, `A' = e.symm.conj A` and
+`S' = e.symm '' S`, the subspace `S` is `(C, A)`-invariant if and only if `S'` is
+`(C', A')`-invariant.
+
+The invariance half is `map_le_changeState_iff`; the `ker C` half is transported
+with `LinearMap.ker_comp`, `Submodule.comap_equiv_eq_map_symm` and
+`Submodule.map_inf`.
+
+Source: Trentelman–Stoorvogel–Hautus, Section 5.1, invariance of the class of
+conditioned invariant subspaces under a state-space isomorphism. -/
+theorem isConditionedInvariant_changeState_iff (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X)
+    (e : X' ≃ₗ[𝕜] X) (S : Submodule 𝕜 X) :
+    IsConditionedInvariant C A S ↔
+      IsConditionedInvariant (C.comp e.toLinearMap) (e.symm.conj A)
+        (Submodule.map e.symm.toLinearMap S) := by
+  simp only [IsConditionedInvariant]
+  rw [LinearMap.ker_comp, Submodule.comap_equiv_eq_map_symm,
+    ← Submodule.map_inf e.symm.toLinearMap e.symm.injective]
+  exact (map_le_changeState_iff A (S ⊓ ker C) S e).symm
+
+end ChangeState
+
 /-! ## Closure properties -/
 
 /-- The whole state space is conditioned invariant. -/

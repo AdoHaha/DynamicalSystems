@@ -7,6 +7,7 @@ module
 
 public import DynamicalSystems.Linear.Duality
 public import Mathlib.Algebra.Module.Projective
+public import Mathlib.Algebra.Module.Submodule.Invariant
 public import Mathlib.LinearAlgebra.Basis.VectorSpace
 public import Mathlib.RingTheory.Artinian.Module
 
@@ -238,6 +239,70 @@ theorem isControlledInvariant_changeInput_iff {U' : Type*} [AddCommGroup U']
   have hrange : range (B.comp G.toLinearMap) = range B := by
     rw [LinearMap.range_comp, LinearEquiv.range, Submodule.map_top]
   rw [isControlledInvariant_iff, isControlledInvariant_iff, hrange]
+
+/-! ## Invariance under a state-space linear equivalence -/
+
+section ChangeState
+
+variable {X' : Type*} [AddCommGroup X'] [Module 𝕜 X']
+
+/-- **Conjugation commutes with `Submodule.map`.** Changing the state coordinates
+by `e : X' ≃ₗ[𝕜] X` sends `A` to `e.symm.conj A` and a subspace `W` to
+`Submodule.map e.symm.toLinearMap W`; the image subspace `A '' W` is carried to
+`(e.symm.conj A) '' (e.symm '' W)`. -/
+theorem map_conj_changeState (A : X →ₗ[𝕜] X) (W : Submodule 𝕜 X) (e : X' ≃ₗ[𝕜] X) :
+    Submodule.map (e.symm.conj A) (Submodule.map e.symm.toLinearMap W) =
+      Submodule.map e.symm.toLinearMap (Submodule.map A W) := by
+  rw [← Submodule.map_comp, ← Submodule.map_comp]
+  congr 1
+  ext x
+  simp [LinearEquiv.conj_apply]
+
+/-- **`A`-invariance is invariant under a state-space equivalence.** This is
+Mathlib's `LinearEquiv.map_mem_invtSubmodule_conj_iff` phrased with explicit
+transported maps: `e.symm '' V` is invariant under `e.symm.conj A` if and only if
+`V` is invariant under `A`. -/
+theorem map_le_self_changeState_iff (A : X →ₗ[𝕜] X) (e : X' ≃ₗ[𝕜] X)
+    (V : Submodule 𝕜 X) :
+    Submodule.map (e.symm.conj A) (Submodule.map e.symm.toLinearMap V) ≤
+        Submodule.map e.symm.toLinearMap V ↔
+      Submodule.map A V ≤ V := by
+  rw [← Module.End.mem_invtSubmodule_iff_map_le,
+    ← Module.End.mem_invtSubmodule_iff_map_le]
+  exact LinearEquiv.map_mem_invtSubmodule_conj_iff
+
+/-- **Transport of an invariance relation.** For `A' = e.symm.conj A`,
+`W' = e.symm '' W` and `S' = e.symm '' S` we have `A' W' ≤ S'` if and only if
+`A W ≤ S`. The special case `W = S` is `map_le_self_changeState_iff`. -/
+theorem map_le_changeState_iff (A : X →ₗ[𝕜] X) (W S : Submodule 𝕜 X)
+    (e : X' ≃ₗ[𝕜] X) :
+    Submodule.map (e.symm.conj A) (Submodule.map e.symm.toLinearMap W) ≤
+        Submodule.map e.symm.toLinearMap S ↔
+      Submodule.map A W ≤ S := by
+  rw [map_conj_changeState]
+  exact Submodule.map_le_map_iff_of_injective e.symm.injective _ _
+
+/-- **Controlled invariance is invariant under a state-space equivalence.**
+Changing the state coordinates by `e : X' ≃ₗ[𝕜] X` transports the controlled
+invariant subspaces: with `A' = e.symm.conj A`, `B' = e.symm ∘ B` and
+`V' = e.symm '' V`, the subspace `V` is `(A, B)`-invariant if and only if `V'` is
+`(A', B')`-invariant.
+
+The invariance half is `map_le_changeState_iff`; the `range B` half is
+transported with `LinearMap.range_comp` and `Submodule.map_sup`.
+
+Source: Trentelman–Stoorvogel–Hautus, Section 4.1, invariance of the class of
+controlled invariant subspaces under a state-space isomorphism. -/
+theorem isControlledInvariant_changeState_iff (A : X →ₗ[𝕜] X) (B : U →ₗ[𝕜] X)
+    (e : X' ≃ₗ[𝕜] X) (V : Submodule 𝕜 X) :
+    IsControlledInvariant A B V ↔
+      IsControlledInvariant (e.symm.conj A) (e.symm.toLinearMap.comp B)
+        (Submodule.map e.symm.toLinearMap V) := by
+  simp only [IsControlledInvariant]
+  rw [LinearMap.range_comp, ← Submodule.map_sup]
+  exact (map_le_changeState_iff A V (V ⊔ range B) e).symm
+
+end ChangeState
 
 /-! ## Closure properties -/
 
