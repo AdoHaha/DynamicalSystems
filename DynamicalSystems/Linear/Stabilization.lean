@@ -3134,6 +3134,268 @@ theorem dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace
     Subspace.dual_finrank_eq
   rw [← hfin, ← Module.End.maxGenEigenspace_eq_genEigenspace_finrank A.dualMap ν]
 
+/-- **Per-eigenvalue dimension matching under transposition.** For a
+finite-dimensional complex endomorphism `A` and any `μ`, the generalized
+eigenspaces of `A` and of its algebraic transpose `A.dualMap` at `μ` have the
+same complex dimension. The proof is rank–nullity for `(A - μ)^n` together with
+the accepted single-eigenvalue annihilator identity: the transpose of the
+`μ`-generalized eigenrange is the `μ`-generalized eigenspace of `A.dualMap`.
+This is the dimension input for the transpose spectral duality. -/
+theorem finrank_maxGenEigenspace_dualMap
+    {E : Type*} [AddCommGroup E] [Module ℂ E] [FiniteDimensional ℂ E]
+    (A : E →ₗ[ℂ] E) (μ : ℂ) :
+    Module.finrank ℂ (Module.End.maxGenEigenspace A μ) =
+      Module.finrank ℂ (Module.End.maxGenEigenspace A.dualMap μ) := by
+  rw [Module.End.maxGenEigenspace_eq_genEigenspace_finrank A μ,
+    Module.End.maxGenEigenspace_eq_genEigenspace_finrank A.dualMap μ,
+    Module.End.genEigenspace_nat, Module.End.genEigenspace_nat]
+  have hann : (LinearMap.ker ((A - μ • 1) ^ Module.finrank ℂ E)).dualAnnihilator =
+      LinearMap.range ((A.dualMap - μ • 1) ^ Module.finrank ℂ E) := by
+    rw [← LinearMap.range_dualMap_eq_dualAnnihilator_ker]
+    congr 1
+    rw [← dualMap_pow, dualMap_sub_smul_one]
+  have h1 := Subspace.finrank_add_finrank_dualAnnihilator_eq
+    (W := LinearMap.ker ((A - μ • 1) ^ Module.finrank ℂ E))
+  rw [hann] at h1
+  have h2 := LinearMap.finrank_range_add_finrank_ker
+    ((A.dualMap - μ • 1) ^ Module.finrank ℂ E)
+  have hd : Module.finrank ℂ (Module.Dual ℂ E) = Module.finrank ℂ E :=
+    Subspace.dual_finrank_eq
+  rw [hd]
+  omega
+
+/-- **Finite dimension of a supremum-independent finite family.** For a finite
+set `s` on which a family of subspaces is supremum-independent, the dimension of
+the finite supremum is the sum of the dimensions. This is the `Finset` form of
+the finite-support dimension formula used to compute the dimensions of the stable
+and antistable generalized-eigenspace suprema. -/
+theorem finset_supIndep_finrank_sup_eq_sum {E : Type*} [AddCommGroup E] [Module ℂ E]
+    [FiniteDimensional ℂ E] {ι : Type*} (s : Finset ι)
+    (p : ι → Submodule ℂ E) (hs : s.SupIndep p) :
+    Module.finrank ℂ ↥(s.sup p) = ∑ i ∈ s, Module.finrank ℂ ↥(p i) := by
+  classical
+  induction s using Finset.induction with
+  | empty => simp
+  | insert a t hat ih =>
+      rw [Finset.sup_insert, Finset.sum_insert hat]
+      have hdisj : Disjoint (p a) (t.sup p) :=
+        hs (Finset.subset_insert a t) (Finset.mem_insert_self a t) hat
+      have hst : t.SupIndep p := hs.subset (Finset.subset_insert a t)
+      have h := Submodule.finrank_sup_add_finrank_inf_eq (p a) (t.sup p)
+      rw [hdisj.eq_bot, finrank_bot, add_zero] at h
+      rw [h, ih hst]
+
+/-- **Finite-support dimension formula.** For a supremum-independent family
+indexed by a finite type, the dimension of the supremum is the sum of the
+dimensions. -/
+theorem finrank_iSup_fintype {E : Type*} [AddCommGroup E] [Module ℂ E]
+    [FiniteDimensional ℂ E] {ι : Type*} [Fintype ι]
+    (p : ι → Submodule ℂ E) (hp : iSupIndep p) :
+    Module.finrank ℂ ↥(⨆ i, p i) = ∑ i, Module.finrank ℂ ↥(p i) := by
+  classical
+  rw [show (⨆ i, p i) = Finset.univ.sup p by
+    rw [Finset.sup_eq_iSup]; simp]
+  rw [show (∑ i, Module.finrank ℂ ↥(p i)) = ∑ i ∈ Finset.univ, Module.finrank ℂ ↥(p i) by
+    simp]
+  exact finset_supIndep_finrank_sup_eq_sum Finset.univ p
+    (iSupIndep.sup_indep_univ hp)
+
+/-- **Finite-support dimension formula for an arbitrary independent family.** For a
+supremum-independent family in a finite-dimensional space, only finitely many
+members are nonzero (`iSupIndep.fintypeNeBotOfFiniteDimensional`), and the
+dimension of the supremum is the sum of the dimensions over that finite support.
+This is the named finite-support dimension formula for independent generalized
+eigenspace suprema. -/
+theorem finrank_iSup_of_iSupIndep {E : Type*} [AddCommGroup E] [Module ℂ E]
+    [FiniteDimensional ℂ E] {ι : Type*} (p : ι → Submodule ℂ E) (hp : iSupIndep p)
+    [Fintype {i : ι // p i ≠ ⊥}] :
+    Module.finrank ℂ ↥(⨆ i, p i) =
+      ∑ i : {i : ι // p i ≠ ⊥}, Module.finrank ℂ ↥(p i.1) := by
+  classical
+  have hsupeq : (⨆ i, p i) = ⨆ i : {i : ι // p i ≠ ⊥}, p i.1 := by
+    apply le_antisymm
+    · apply iSup_le
+      intro i
+      by_cases h : p i = ⊥
+      · rw [h]; exact bot_le
+      · exact le_iSup (fun i : {i : ι // p i ≠ ⊥} => p i.1) ⟨i, h⟩
+    · apply iSup_le
+      intro i
+      exact le_iSup p i.1
+  rw [hsupeq]
+  exact finrank_iSup_fintype (fun i : {i : ι // p i ≠ ⊥} => p i.1)
+    (hp.comp Subtype.val_injective)
+
+/-- **Finite-support dimension formula, filtered form.** For a
+supremum-independent family `p` on `ℂ` and a finite set `s` containing every
+nontrivial member, the dimension of the supremum over a predicate `P` is the
+filtered sum of the dimensions. This is the form that lets the stable and
+antistable partial sums of two families with pointwise equal dimensions be
+compared. -/
+theorem finrank_iSup_subtype_eq_sum_filter {E : Type*} [AddCommGroup E] [Module ℂ E]
+    [FiniteDimensional ℂ E] {P : ℂ → Prop} [DecidablePred P]
+    (p : ℂ → Submodule ℂ E) (hp : iSupIndep p) (s : Finset ℂ)
+    (hs : ∀ μ, p μ ≠ ⊥ → μ ∈ s) :
+    Module.finrank ℂ ↥(⨆ μ : {μ : ℂ // P μ}, p μ.1) =
+      ∑ μ ∈ s.filter P, Module.finrank ℂ ↥(p μ) := by
+  have hsupeq : (⨆ μ : {μ : ℂ // P μ}, p μ.1) = (s.filter P).sup p := by
+    apply le_antisymm
+    · apply iSup_le
+      intro μ
+      by_cases h : p μ.1 = ⊥
+      · rw [h]; exact bot_le
+      · exact Finset.le_sup (Finset.mem_filter.mpr ⟨hs μ.1 h, μ.2⟩)
+    · apply Finset.sup_le
+      intro ν hν
+      exact le_iSup (fun μ : {μ : ℂ // P μ} => p μ.1)
+        ⟨ν, (Finset.mem_filter.mp hν).2⟩
+  rw [hsupeq]
+  exact finset_supIndep_finrank_sup_eq_sum (s.filter P) p (hp.supIndep' _)
+
+/-- **Pairwise generalized-eigenspace separation.** For distinct scalars
+`μ ≠ ν`, the `μ`-generalized eigenspace of `A` is contained in the
+`ν`-generalized eigenrange `range ((A - ν)^n)`. On `X_μ(A)` the map
+`A - ν = (A - μ) + (μ - ν)` has trivial kernel because `μ ≠ ν` makes the
+generalized eigenspaces disjoint; since `X_μ(A)` is finite-dimensional, that
+restricted map is surjective, so its `n`-th power is too. This is the
+separation step that feeds the transpose annihilator duality. -/
+theorem maxGenEigenspace_le_genEigenrange_of_ne
+    {E : Type*} [AddCommGroup E] [Module ℂ E] [FiniteDimensional ℂ E]
+    (A : E →ₗ[ℂ] E) {μ ν : ℂ} (hμν : μ ≠ ν) :
+    Module.End.maxGenEigenspace A μ ≤
+      Module.End.genEigenrange A ν (Module.finrank ℂ E) := by
+  rw [Module.End.genEigenrange_nat]
+  intro x hx
+  let p : Submodule ℂ E := Module.End.maxGenEigenspace A μ
+  have hx' : x ∈ p := hx
+  have hpA : ∀ y ∈ p, A y ∈ p :=
+    fun y hy => Module.End.mapsTo_maxGenEigenspace_of_comm (Commute.refl A) μ hy
+  have hpν : ∀ y ∈ p, (A - ν • 1) y ∈ p :=
+    fun y hy => p.sub_mem (hpA y hy) (p.smul_mem ν hy)
+  have hker : LinearMap.ker ((A - ν • 1).restrict hpν) = ⊥ := by
+    rw [Submodule.eq_bot_iff]
+    intro y hy
+    rw [LinearMap.mem_ker] at hy
+    apply Subtype.ext
+    have hy0 : (A - ν • 1) (y : E) = 0 := by
+      have := congrArg Subtype.val hy
+      simpa using this
+    have heig : (y : E) ∈ Module.End.eigenspace A ν := by
+      rw [Module.End.mem_eigenspace_iff]
+      exact sub_eq_zero.mp hy0
+    have hdisj := Module.End.disjoint_genEigenspace A hμν (⊤ : ℕ∞) 1
+    have hbot : (y : E) ∈ (⊥ : Submodule ℂ E) := by
+      rw [← hdisj.eq_bot]
+      exact ⟨y.2, by simpa [Module.End.genEigenspace_one] using heig⟩
+    simpa using hbot
+  have hinj : Function.Injective ((A - ν • 1).restrict hpν) :=
+    LinearMap.ker_eq_bot.mp hker
+  have hsurj : Function.Surjective ((A - ν • 1).restrict hpν) :=
+    LinearMap.injective_iff_surjective.mp hinj
+  have hsurj' : Function.Surjective (((A - ν • 1).restrict hpν) ^ Module.finrank ℂ E) := by
+    rw [Module.End.coe_pow]
+    exact hsurj.iterate _
+  obtain ⟨y, hy⟩ := hsurj' ⟨x, hx'⟩
+  refine ⟨(y : E), ?_⟩
+  have hcoe := congrArg Subtype.val hy
+  rw [Module.End.pow_restrict] at hcoe
+  simpa using hcoe
+
+/-- **Inclusion half of the complex transpose spectral duality.** The sum of the
+stable generalized eigenspaces of the transpose `A.dualMap` lies in the
+annihilator of the sum of the antistable generalized eigenspaces of `A`. Each
+stable eigenspace `X_ν(A.dualMap)` with `re ν < 0` is the annihilator of the
+generalized eigenrange at `ν` (accepted single-eigenvalue annihilator lemma),
+and pairwise separation puts every antistable `X_μ(A)` with `re μ ≥ 0` inside
+that eigenrange. -/
+theorem stable_le_dualAnnihilator_antistable
+    {E : Type*} [AddCommGroup E] [Module ℂ E] [FiniteDimensional ℂ E]
+    (A : E →ₗ[ℂ] E) :
+    (⨆ ν : {ν : ℂ // ν.re < 0}, Module.End.maxGenEigenspace A.dualMap ν.1) ≤
+      (⨆ μ : {μ : ℂ // ¬ μ.re < 0},
+        Module.End.maxGenEigenspace A μ.1).dualAnnihilator := by
+  rw [Submodule.dualAnnihilator_iSup_eq]
+  refine iSup_le fun ν => ?_
+  refine le_iInf fun μ => ?_
+  have hμν : μ.1 ≠ ν.1 := by
+    intro h
+    have hlt : μ.1.re < 0 := h ▸ ν.2
+    exact μ.2 hlt
+  rw [← dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace A ν.1]
+  exact Subspace.dualAnnihilator_le_dualAnnihilator_iff.mpr
+    (maxGenEigenspace_le_genEigenrange_of_ne A hμν)
+
+/-- **Complex transpose spectral duality, equality form.** The annihilator of the
+sum of the antistable generalized eigenspaces of `A` is exactly the sum of the
+stable generalized eigenspaces of the transpose `A.dualMap`. The inclusion
+`stable_le_dualAnnihilator_antistable` gives one direction; the reverse follows
+from the finite-support dimension formula. The finite-dimensional
+generalized-eigenspace decomposition gives `finrank U + finrank W = finrank E` for
+the antistable/stable parts of `A`, and `finrank_maxGenEigenspace_dualMap` makes
+the stable part of `A.dualMap` have the same dimension as the stable part of `A`.
+-/
+theorem dualAnnihilator_antistable_eq_stable
+    {E : Type*} [AddCommGroup E] [Module ℂ E] [FiniteDimensional ℂ E]
+    (A : E →ₗ[ℂ] E) :
+    (⨆ μ : {μ : ℂ // ¬ μ.re < 0},
+        Module.End.maxGenEigenspace A μ.1).dualAnnihilator =
+      (⨆ ν : {ν : ℂ // ν.re < 0}, Module.End.maxGenEigenspace A.dualMap ν.1) := by
+  let p : ℂ → Submodule ℂ E := fun μ => Module.End.maxGenEigenspace A μ
+  let q : ℂ → Submodule ℂ (Module.Dual ℂ E) :=
+    fun ν => Module.End.maxGenEigenspace A.dualMap ν
+  change (⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1).dualAnnihilator =
+    (⨆ ν : {ν : ℂ // ν.re < 0}, q ν.1)
+  have hp : iSupIndep p := Module.End.independent_maxGenEigenspace A
+  have hq : iSupIndep q := Module.End.independent_maxGenEigenspace A.dualMap
+  let s : Finset ℂ :=
+    (iSupIndep.fintypeNeBotOfFiniteDimensional hp).elems.image Subtype.val
+  have hs : ∀ μ, p μ ≠ ⊥ → μ ∈ s := fun μ hμ =>
+      Finset.mem_image.mpr ⟨⟨μ, hμ⟩,
+        (iSupIndep.fintypeNeBotOfFiniteDimensional hp).complete ⟨μ, hμ⟩, rfl⟩
+  have hs_q : ∀ ν, q ν ≠ ⊥ → ν ∈ s := by
+    intro ν hν
+    apply hs ν
+    intro hpbot
+    apply hν
+    have heq : Module.finrank ℂ (p ν) = Module.finrank ℂ (q ν) :=
+      finrank_maxGenEigenspace_dualMap A ν
+    have hz : Module.finrank ℂ (p ν) = 0 := by rw [hpbot]; simp
+    rw [hz] at heq
+    exact Submodule.finrank_eq_zero.mp heq.symm
+  have hU : Module.finrank ℂ ↥(⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1) =
+      ∑ μ ∈ s.filter (fun μ : ℂ => ¬ μ.re < 0), Module.finrank ℂ ↥(p μ) :=
+    finrank_iSup_subtype_eq_sum_filter (P := fun μ : ℂ => ¬ μ.re < 0) p hp s hs
+  have hV : Module.finrank ℂ ↥(⨆ ν : {ν : ℂ // ν.re < 0}, q ν.1) =
+      ∑ ν ∈ s.filter (fun ν : ℂ => ν.re < 0), Module.finrank ℂ ↥(q ν) :=
+    finrank_iSup_subtype_eq_sum_filter (P := fun ν : ℂ => ν.re < 0) q hq s hs_q
+  have hV' : Module.finrank ℂ ↥(⨆ ν : {ν : ℂ // ν.re < 0}, q ν.1) =
+      ∑ ν ∈ s.filter (fun ν : ℂ => ν.re < 0), Module.finrank ℂ ↥(p ν) := by
+    rw [hV]
+    apply Finset.sum_congr rfl
+    intro ν _
+    exact (finrank_maxGenEigenspace_dualMap A ν).symm
+  have hE : Module.finrank ℂ E = ∑ μ ∈ s, Module.finrank ℂ ↥(p μ) := by
+    have h := finrank_iSup_subtype_eq_sum_filter (P := fun _ : ℂ => True) p hp s hs
+    simp only [Finset.filter_true] at h
+    rw [show (⨆ μ : {μ : ℂ // True}, p μ.1) = ⨆ μ : ℂ, p μ by
+      rw [iSup_subtype]; simp] at h
+    rw [Module.End.iSup_maxGenEigenspace_eq_top A, finrank_top] at h
+    exact h
+  have h2 : Module.finrank ℂ ↥(⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1) +
+      Module.finrank ℂ ↥(⨆ ν : {ν : ℂ // ν.re < 0}, q ν.1) = Module.finrank ℂ E := by
+    rw [hU, hV', hE, add_comm]
+    rw [Finset.sum_filter_add_sum_filter_not s (fun μ : ℂ => μ.re < 0)
+      (fun μ => Module.finrank ℂ ↥(p μ))]
+  have h1 : Module.finrank ℂ ↥(⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1) +
+      Module.finrank ℂ ↥((⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1)).dualAnnihilator =
+      Module.finrank ℂ E :=
+    Subspace.finrank_add_finrank_dualAnnihilator_eq _
+  have hdim : Module.finrank ℂ ↥(⨆ ν : {ν : ℂ // ν.re < 0}, q ν.1) =
+      Module.finrank ℂ ↥((⨆ μ : {μ : ℂ // ¬ μ.re < 0}, p μ.1)).dualAnnihilator := by
+    omega
+  exact (Submodule.eq_of_le_of_finrank_eq (stable_le_dualAnnihilator_antistable A)
+    hdim).symm
+
 /-- Matrix transport of generalized eigenspaces. -/
 theorem map_toLin'_maxGenEigenspace {m n : ℕ}
     (M : Matrix (Fin m) (Fin n) ℂ) (A : Matrix (Fin n) (Fin n) ℂ)
@@ -3833,6 +4095,193 @@ the basis-agnostic antistable subspace is definitionally the accepted
 `unstableSubspace`. -/
 theorem unstableSubspaceOfBasis_finBasis_eq_unstableSubspace (A : X →ₗ[ℝ] X) :
     unstableSubspaceOfBasis (Module.finBasis ℝ X) A = unstableSubspace A := rfl
+
+/-! ### The canonical complexified spectral subspaces and basis independence
+
+The coordinate definitions `complexSpectralSubspaceOfBasis` and
+`stableSubspaceOfBasis`/`unstableSubspaceOfBasis` above compute a basis-dependent
+matrix, but the generalized eigenspaces they collect are the base-changed ones.
+Below we record the canonical objects inside the complexification `ℂ ⊗[ℝ] M` and
+show that the coordinate pull-back along *any* basis `b` recovers exactly those
+objects. Consequently the stable and antistable subspaces do not depend on the
+chosen basis, which is the norm-free spectral identity needed to apply the
+definitions to the algebraic dual `Module.Dual ℝ X`.
+
+The only new input is the arbitrary-basis `baseChange` dictionary:
+`b.equivFun` intertwines `A.baseChange ℂ` with the complexified coordinate matrix
+`(toMatrix b b A).map (algebraMap ℝ ℂ)`. This is the general-field form of
+`baseChange_repr_comp`, and it is exactly the commuting-square hypothesis of the
+accepted `map_maxGenEigenspace_of_equiv`. -/
+
+open scoped TensorProduct in
+/-- The canonical complex **stable subspace** of `A` inside the complexification
+`ℂ ⊗[ℝ] M`: the sum of generalized eigenspaces of the base-changed operator
+`A.baseChange ℂ` at the eigenvalues with negative real part. This is the
+basis-independent object computed by `complexSpectralSubspaceOfBasis`. -/
+noncomputable def complexStableSubspace (A : M →ₗ[ℝ] M) : Submodule ℂ (ℂ ⊗[ℝ] M) :=
+  ⨆ μ : {μ : ℂ // μ.re < 0}, Module.End.maxGenEigenspace (A.baseChange ℂ) μ.1
+
+open scoped TensorProduct in
+/-- The canonical complex **antistable subspace** of `A` inside the
+complexification `ℂ ⊗[ℝ] M`: the sum of generalized eigenspaces of the
+base-changed operator `A.baseChange ℂ` at the eigenvalues with nonnegative real
+part. This is the basis-independent object computed by
+`complexSpectralSubspaceOfBasis`. -/
+noncomputable def complexUnstableSubspace (A : M →ₗ[ℝ] M) : Submodule ℂ (ℂ ⊗[ℝ] M) :=
+  ⨆ μ : {μ : ℂ // ¬ μ.re < 0}, Module.End.maxGenEigenspace (A.baseChange ℂ) μ.1
+
+omit [FiniteDimensional ℝ M] in
+/-- **Arbitrary-basis `baseChange` dictionary, basis form.** The base-changed
+basis `b.baseChange ℂ` is the tensor-product basis `Algebra.TensorProduct.basis`.
+This is the form used to invoke `LinearMap.toMatrix_baseChange` for an arbitrary
+basis rather than only `Module.finBasis`. -/
+theorem baseChange_eq_basis_gen {ι : Type*}
+    (b : Basis ι ℝ M) :
+    b.baseChange ℂ = Algebra.TensorProduct.basis ℂ b := by
+  ext i
+  simp [Module.Basis.baseChange_apply, Algebra.TensorProduct.basis_apply]
+
+omit [FiniteDimensional ℝ M] in
+/-- **Arbitrary-basis `baseChange` dictionary, coordinate form.** For any finite
+basis `b` of `M`, the real-coordinate equivalence `b.equivFun` intertwines the
+base-changed operator `A.baseChange ℂ` with the complexified coordinate matrix
+`(toMatrix b b A).map (algebraMap ℝ ℂ)`. This is the general-basis form of
+`baseChange_repr_comp` and the input to basis independence. -/
+theorem baseChange_repr_comp_gen {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) :
+    (b.baseChange ℂ).equivFun.toLinearMap.comp (A.baseChange ℂ) =
+      (Matrix.toLin' ((LinearMap.toMatrix b b A).map (algebraMap ℝ ℂ))).comp
+        (b.baseChange ℂ).equivFun.toLinearMap := by
+  apply LinearMap.ext
+  intro z
+  rw [LinearMap.comp_apply, LinearMap.comp_apply]
+  change (b.baseChange ℂ).repr ((A.baseChange ℂ) z) =
+    (Matrix.toLin' ((LinearMap.toMatrix b b A).map (algebraMap ℝ ℂ)))
+      ((b.baseChange ℂ).repr z)
+  rw [baseChange_eq_basis_gen b,
+    ← LinearMap.toMatrix_mulVec_repr (Algebra.TensorProduct.basis ℂ b)
+      (Algebra.TensorProduct.basis ℂ b) (A.baseChange ℂ) z,
+    LinearMap.toMatrix_baseChange, Matrix.toLin'_apply]
+
+set_option linter.style.haveILetI false in
+omit [FiniteDimensional ℝ M] in
+/-- **Arbitrary-basis `baseChange` dictionary, tensor form.** The inverse real
+coordinates of `x` recover the pure tensor `1 ⊗ₜ x` inside the complexification.
+This is the general-basis form of `baseChange_equivFun_symm_one_tmul`. -/
+theorem baseChange_equivFun_symm_one_tmul_gen {ι : Type*} [Finite ι]
+    (b : Basis ι ℝ M) (x : M) :
+    (b.baseChange ℂ).equivFun.symm (ofRealPi (b.equivFun x)) = (1 : ℂ) ⊗ₜ[ℝ] x := by
+  classical
+  haveI : Fintype ι := Fintype.ofFinite ι
+  rw [Basis.equivFun_symm_apply]
+  conv_rhs => rw [← b.sum_equivFun x, TensorProduct.tmul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  rw [Module.Basis.baseChange_apply]
+  simp only [ofRealPi_apply]
+  rw [TensorProduct.tmul_smul]
+  rfl
+
+omit [FiniteDimensional ℝ M] in
+/-- The coordinate pull-back along `b` identifies the canonical complex stable
+subspace with the basis-dependent `complexSpectralSubspaceOfBasis`. This is the
+commuting-eigenspace transport `map_maxGenEigenspace_of_equiv` applied to the
+arbitrary-basis `baseChange` dictionary. -/
+theorem map_complexStableSubspace {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) :
+    Submodule.map (b.baseChange ℂ).equivFun.toLinearMap (complexStableSubspace A) =
+      complexSpectralSubspaceOfBasis b A (fun μ => μ.re < 0) := by
+  rw [complexStableSubspace, complexSpectralSubspaceOfBasis, Submodule.map_iSup]
+  apply iSup_congr
+  intro μ
+  exact map_maxGenEigenspace_of_equiv (b.baseChange ℂ).equivFun (A.baseChange ℂ)
+    (Matrix.toLin' ((LinearMap.toMatrix b b A).map (algebraMap ℝ ℂ))) μ.1
+    (baseChange_repr_comp_gen b A).symm
+
+omit [FiniteDimensional ℝ M] in
+/-- The coordinate pull-back along `b` identifies the canonical complex
+antistable subspace with the basis-dependent `complexSpectralSubspaceOfBasis`. -/
+theorem map_complexUnstableSubspace {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) :
+    Submodule.map (b.baseChange ℂ).equivFun.toLinearMap (complexUnstableSubspace A) =
+      complexSpectralSubspaceOfBasis b A (fun μ => ¬ μ.re < 0) := by
+  rw [complexUnstableSubspace, complexSpectralSubspaceOfBasis, Submodule.map_iSup]
+  apply iSup_congr
+  intro μ
+  exact map_maxGenEigenspace_of_equiv (b.baseChange ℂ).equivFun (A.baseChange ℂ)
+    (Matrix.toLin' ((LinearMap.toMatrix b b A).map (algebraMap ℝ ℂ))) μ.1
+    (baseChange_repr_comp_gen b A).symm
+
+omit [FiniteDimensional ℝ M] in
+/-- **Basis-independent characterisation of the stable subspace.** A vector `x`
+lies in the stable subspace computed in the basis `b` exactly when the pure
+tensor `1 ⊗ₜ x` lies in the canonical complex stable subspace. This makes no
+reference to `b`, so basis independence is immediate. -/
+theorem mem_stableSubspaceOfBasis_iff {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) {x : M} :
+    x ∈ stableSubspaceOfBasis b A ↔ (1 : ℂ) ⊗ₜ[ℝ] x ∈ complexStableSubspace A := by
+  rw [mem_stableSubspaceOfBasis, ← map_complexStableSubspace b A]
+  constructor
+  · rintro ⟨y, hy, hyx⟩
+    have he1 : (b.baseChange ℂ).equivFun.toLinearMap ((1 : ℂ) ⊗ₜ[ℝ] x) =
+        ofRealPi (b.equivFun x) := by
+      rw [← baseChange_equivFun_symm_one_tmul_gen b x]
+      exact (b.baseChange ℂ).equivFun.apply_symm_apply _
+    have : y = (1 : ℂ) ⊗ₜ[ℝ] x := by
+      apply (b.baseChange ℂ).equivFun.injective
+      change (b.baseChange ℂ).equivFun.toLinearMap y =
+        (b.baseChange ℂ).equivFun.toLinearMap ((1 : ℂ) ⊗ₜ[ℝ] x)
+      rw [hyx, he1]
+    rwa [this] at hy
+  · intro hx
+    exact ⟨(1 : ℂ) ⊗ₜ[ℝ] x, hx, by
+      rw [← baseChange_equivFun_symm_one_tmul_gen b x]
+      exact (b.baseChange ℂ).equivFun.apply_symm_apply _⟩
+
+omit [FiniteDimensional ℝ M] in
+/-- **Basis-independent characterisation of the antistable subspace.** -/
+theorem mem_unstableSubspaceOfBasis_iff {ι : Type*} [Fintype ι] [DecidableEq ι]
+    (b : Basis ι ℝ M) (A : M →ₗ[ℝ] M) {x : M} :
+    x ∈ unstableSubspaceOfBasis b A ↔ (1 : ℂ) ⊗ₜ[ℝ] x ∈ complexUnstableSubspace A := by
+  rw [unstableSubspaceOfBasis, Submodule.mem_comap, Submodule.restrictScalars_mem,
+    ← map_complexUnstableSubspace b A]
+  constructor
+  · rintro ⟨y, hy, hyx⟩
+    have he1 : (b.baseChange ℂ).equivFun.toLinearMap ((1 : ℂ) ⊗ₜ[ℝ] x) =
+        ofRealPi (b.equivFun x) := by
+      rw [← baseChange_equivFun_symm_one_tmul_gen b x]
+      exact (b.baseChange ℂ).equivFun.apply_symm_apply _
+    have : y = (1 : ℂ) ⊗ₜ[ℝ] x := by
+      apply (b.baseChange ℂ).equivFun.injective
+      change (b.baseChange ℂ).equivFun.toLinearMap y =
+        (b.baseChange ℂ).equivFun.toLinearMap ((1 : ℂ) ⊗ₜ[ℝ] x)
+      rw [hyx, he1]
+      rfl
+    rwa [this] at hy
+  · intro hx
+    exact ⟨(1 : ℂ) ⊗ₜ[ℝ] x, hx, by
+      rw [← baseChange_equivFun_symm_one_tmul_gen b x]
+      exact (b.baseChange ℂ).equivFun.apply_symm_apply _⟩
+
+omit [FiniteDimensional ℝ M] in
+/-- **Basis independence of the stable subspace.** The stable subspace
+`stableSubspaceOfBasis b A` does not depend on the chosen finite basis. -/
+theorem stableSubspaceOfBasis_eq_of_basis {ι ι' : Type*} [Fintype ι] [Fintype ι']
+    [DecidableEq ι] [DecidableEq ι']
+    (b : Basis ι ℝ M) (b' : Basis ι' ℝ M) (A : M →ₗ[ℝ] M) :
+    stableSubspaceOfBasis b A = stableSubspaceOfBasis b' A := by
+  ext x
+  rw [mem_stableSubspaceOfBasis_iff b A, mem_stableSubspaceOfBasis_iff b' A]
+
+omit [FiniteDimensional ℝ M] in
+/-- **Basis independence of the antistable subspace.** The antistable subspace
+`unstableSubspaceOfBasis b A` does not depend on the chosen finite basis. -/
+theorem unstableSubspaceOfBasis_eq_of_basis {ι ι' : Type*} [Fintype ι] [Fintype ι']
+    [DecidableEq ι] [DecidableEq ι']
+    (b : Basis ι ℝ M) (b' : Basis ι' ℝ M) (A : M →ₗ[ℝ] M) :
+    unstableSubspaceOfBasis b A = unstableSubspaceOfBasis b' A := by
+  ext x
+  rw [mem_unstableSubspaceOfBasis_iff b A, mem_unstableSubspaceOfBasis_iff b' A]
 
 end BasisSpectralSubspace
 

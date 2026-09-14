@@ -4005,7 +4005,7 @@ end LinearMap
 The dual output-injection half of Corollary 6.22 is now reduced to a single
 missing declaration. After the accepted commit `0229756` the antistable
 annihilator `(X_b(A))ᵃⁿⁿ` has not yet been identified with the stable subspace
-of the transpose. The stabilizable/stable spaces are now available on any
+of the transpose. The stabilizable/stable spaces are available on any
 finite-dimensional real vector space through the norm-free API in
 `DynamicalSystems/Linear/Stabilization.lean`
 (`stableSubspaceOfBasis`, `unstableSubspaceOfBasis`, with
@@ -4017,43 +4017,74 @@ well-typed:
    stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap`,
 
 equivalently, after basis independence, `(detectableSubspace C A).dualAnnihilator
-= stabilizableSubspace` of the transposed pair. The two reusable ingredients
-named in the previous handoff are now proved (in
-`DynamicalSystems/Linear/Stabilization.lean`):
+= stabilizableSubspace` of the transposed pair.
 
-1. **Commuting-map generalized-eigenspace transport.**
-   `map_maxGenEigenspace_le_of_comp_eq` gives `map e (X_μ(f)) ≤ X_μ(g)` for
-   `g ∘ e = e ∘ f`, and `map_maxGenEigenspace_of_equiv` upgrades this to the
-   conjugation identity `e '' X_μ(f) = X_μ(g)` for a linear equivalence `e`.
-   The matrix lemma `map_toLin'_maxGenEigenspace` is now the specialization of
-   the former. What is still missing for basis independence is the
-   `baseChange` dictionary: generalizing `baseChange_repr_comp` and
-   `baseChange_equivFun_symm_one_tmul` from `Module.finBasis` to an arbitrary
-   basis `b`, so that `b.equivFun` intertwines `A.baseChange ℂ` with the
-   complexified coordinate matrix; `map_maxGenEigenspace_of_equiv` then
-   identifies the `iSup` of generalized eigenspaces in any basis with the
-   canonical complexification `X_g(A.baseChange ℂ)`.
-2. **Single-eigenvalue annihilator lemma.**
-   `dualAnnihilator_genEigenrange_eq_genEigenspace_dualMap` proves
-   `(genEigenrange A ν k)ᵃⁿⁿ = genEigenspace Aᵀ ν k` for the algebraic
-   transpose `Aᵀ = A.dualMap`, and
-   `dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace` gives the
-   `finrank`/maximal form `(genEigenrange A ν n)ᵃⁿⁿ = X_ν(Aᵀ)` used below.
-   What is still missing is the inclusion `X_μ(A) ≤ genEigenrange A ν n` for
-   `ν ≠ μ`: on `X_μ(A)` the map `A - μ` is nilpotent
-   (`Module.End.isNilpotent_restrict_maxGenEigenspace_sub_algebraMap`), hence
-   `A - ν = (A - μ) + (μ - ν)` is a unit there by
-   `IsNilpotent.isUnit_add_right_of_commute`, so `A - ν` is surjective on
-   `X_μ(A)` and `X_μ(A) ≤ range ((A - ν)^n)`. Combined with the annihilator
-   lemma this yields the single-eigenvalue orthogonality
-   `X_ν(Aᵀ) ≤ (X_μ(A))ᵃⁿⁿ` for `ν ≠ μ`; summing over `{re ≥ 0}` gives one
-   inclusion of the transpose spectral duality. The reverse inclusion still
-   needs the finite-dimensional generalized-eigenspace decomposition
-   (equivalently, `finrank_maxGenEigenspace_eq` and `charpoly_dualMap_ofField`
-   to match the stable/antistable dimensions), which is the remaining
-   finite-dimensional bookkeeping.
+**Completed in the current attempt** (all in
+`DynamicalSystems/Linear/Stabilization.lean`, compiled and audited):
 
-With that identification the accepted state-feedback construction
+1. **Arbitrary-basis `baseChange` dictionary.**
+   `baseChange_eq_basis_gen`, `baseChange_repr_comp_gen` and
+   `baseChange_equivFun_symm_one_tmul_gen` generalise the accepted
+   `baseChange`/`baseChange_repr_comp`/`baseChange_equivFun_symm_one_tmul`
+   lemmas from `Module.finBasis` to an arbitrary finite basis `b`, with no norm
+   hypotheses. `baseChange_repr_comp_gen` states that `b.equivFun` intertwines
+   `A.baseChange ℂ` with the complexified coordinate matrix
+   `(toMatrix b b A).map (algebraMap ℝ ℂ)`.
+2. **Basis independence.** The canonical complex objects
+   `complexStableSubspace A`/`complexUnstableSubspace A` live in
+   `ℂ ⊗[ℝ] M`; `map_complexStableSubspace`/`map_complexUnstableSubspace`
+   identify their coordinate pull-backs with
+   `complexSpectralSubspaceOfBasis` in any basis via the accepted
+   `map_maxGenEigenspace_of_equiv`.
+   `mem_stableSubspaceOfBasis_iff`/`mem_unstableSubspaceOfBasis_iff` give the
+   basis-free characterisation `x ∈ stableSubspaceOfBasis b A ↔
+   1 ⊗ₜ x ∈ complexStableSubspace A`, and
+   `stableSubspaceOfBasis_eq_of_basis`/`unstableSubspaceOfBasis_eq_of_basis`
+   prove that the stable and antistable subspaces do not depend on `b`. This is
+   what makes `stableSubspaceOfBasis` on the algebraic dual `Module.Dual ℝ X`
+   well defined.
+3. **Per-eigenvalue transpose dimension match.**
+   `finrank_maxGenEigenspace_dualMap`: over `ℂ`, the generalized eigenspaces of
+   `A` and `A.dualMap` at `μ` have equal `finrank`, from rank–nullity plus the
+   accepted `range_dualMap_eq_dualAnnihilator_ker`. This is the dimension input
+   for the transpose duality.
+
+**Complex transpose spectral duality, equality form.** The abstract
+finite-dimensional complex statement
+
+`(⨆_{re μ ≥ 0} X_μ(f)).dualAnnihilator = ⨆_{re ν < 0} X_ν(f.dualMap)`
+
+is now proved for every finite-dimensional complex endomorphism `f` as
+`dualAnnihilator_antistable_eq_stable`. The `≤` half is
+`stable_le_dualAnnihilator_antistable` (`maxGenEigenspace_le_genEigenrange_of_ne`
+plus the accepted `dualAnnihilator_genEigenrange_finrank_eq_maxGenEigenspace`).
+For the reverse half, the finite-support dimension formula is supplied by
+`finset_supIndep_finrank_sup_eq_sum`, `finrank_iSup_fintype`,
+`finrank_iSup_of_iSupIndep` and the filtered form
+`finrank_iSup_subtype_eq_sum_filter`. Applied to the generalized-eigenspace
+families of `f` and `f.dualMap`, these give
+`finrank U + finrank V = finrank E` for `U = ⨆_{re μ ≥ 0} X_μ(f)` and
+`V = ⨆_{re ν < 0} X_ν(f.dualMap)`: the full decomposition
+`⨆_μ X_μ(f) = ⊤` (`Module.End.iSup_maxGenEigenspace_eq_top`) splits the sum
+into the antistable and stable parts, and `finrank_maxGenEigenspace_dualMap`
+makes the two stable partial sums agree pointwise. With
+`Subspace.finrank_add_finrank_dualAnnihilator_eq` the dimensions force the
+inclusion to be an equality.
+
+The named lemmas `LinearMap.finrank_maxGenEigenspace_eq` (Mathlib,
+`finrank X_μ(f) = f.charpoly.rootMultiplicity μ`) and
+`LinearMap.charpoly_dualMap_ofField` (already proved in
+`Stabilization.lean`, `f.dualMap.charpoly = f.charpoly` over any field) are
+available, but the dimension input here is obtained more directly from the
+finite-dimensional generalized-eigenspace decomposition plus
+`finrank_maxGenEigenspace_dualMap`, so neither is needed in the argument.
+
+The remaining step to the real statement
+`(unstableSubspace A).dualAnnihilator =
+stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap` is the
+transport across `IsBaseChange.toDualBaseChange` (base change commutes with the
+dual), which is **not** formalised here. Once that transport is available the
+accepted state-feedback construction
 `exists_feedback_tendsto_readout_of_geometricCondition` can be run on the
 transposed pair and the resulting gain transposed back with
 `dualMap_surjective`, yielding the observer gain `G` of
