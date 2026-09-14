@@ -265,6 +265,112 @@ is formalized under an explicit factorization hypothesis; the geometric necessar
 sufficient external-stability converse and observer dual are now formalized with
 explicit finite-dimensional and admissibility hypotheses.
 
+# Stabilizable and detectable spectral subspaces
+
+The *stable* (Hurwitz) subspace `hurwitzSubspace A` is the real form of the direct sum of the
+generalized eigenspaces of `A` at eigenvalues with negative real part; the *antistable*
+subspace `unstableSubspace A` collects the complement, at eigenvalues with nonnegative real
+part. Both are `A`-invariant, and together they form the spectral decomposition
+`X = X_g(A) ⊕ X_b(A)`.
+
+{docstring LinearMap.hurwitzSubspace}
+{docstring LinearMap.unstableSubspace}
+{docstring LinearMap.map_hurwitzSubspace_le}
+{docstring LinearMap.map_unstableSubspace_le}
+{docstring LinearMap.isCompl_hurwitzSubspace_unstableSubspace}
+{docstring LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top}
+
+The stabilizable subspace `Xstab(A, B) = X_g(A) ⊔ ⟨A | im B⟩` and the detectable subspace
+`Xdet(C, A) = ⟨ker C | A⟩ ⊓ X_b(A)` are the ambient geometric objects behind stabilizability and
+detectability: a pair is stabilizable exactly when `Xstab = ⊤` and detectable exactly when
+`Xdet = ⊥`. The induced maps on the unreachable quotient and the unobservable restriction are
+Hurwitz.
+
+{docstring LinearMap.stabilizableSubspace}
+{docstring LinearMap.detectableSubspace}
+{docstring LinearMap.map_stabilizableSubspace_le}
+{docstring LinearMap.map_detectableSubspace_le}
+{docstring LinearMap.isStabilizable_iff_stabilizableSubspace_eq_top}
+{docstring LinearMap.isDetectable_iff_detectableSubspace_eq_bot}
+{docstring LinearMap.isHurwitz_on_stabilizableComplement}
+{docstring LinearMap.isHurwitz_on_detectableComplement}
+
+The basis-independent API (`stableSubspaceOfBasis`, `unstableSubspaceOfBasis`) computes the same
+subspaces from any finite basis. This is what makes the spectral split well defined on the
+algebraic dual `Module.Dual ℝ X`, where the ambient space carries no canonical norm.
+
+{docstring LinearMap.stableSubspaceOfBasis}
+{docstring LinearMap.unstableSubspaceOfBasis}
+{docstring LinearMap.stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace}
+{docstring LinearMap.stableSubspaceOfBasis_eq_of_basis}
+{docstring LinearMap.mem_stableSubspaceOfBasis_iff}
+
+The annihilator of the antistable subspace is the stable subspace of the algebraic transpose.
+This is the algebraic input to the Corollary 6.22 observer half below.
+
+{docstring LinearMap.dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap}
+
+# Geometric external stability
+
+External stability is a *stable-nonzero* notion, distinct from exact disturbance decoupling. The
+exact-zero response property is captured separately from BIBO stability, so the two are never
+conflated.
+
+A strictly proper plant (`D = 0`) admits an externally zero-responding dynamic
+measurement-feedback controller exactly when it carries a `(C, A, B)`-pair between `im E` and
+`ker H`; this is the externally stated form of the Chapter 6 exact-decoupling criterion (TST
+Theorem 6.6 and Corollary 6.7). The Corollary 6.22 subspace conditions --- `im E ≤ V*(ker H) +
+Xstab` and `S*(im E) ∩ Xdet ≤ ker H` --- are recovered as part of the certificate.
+
+{docstring LinearSystem.GeometricCertificate}
+{docstring LinearSystem.ExternalStability}
+{docstring LinearSystem.ExternalStabilizationConditions}
+{docstring LinearSystem.externalStability_iff_geometricCertificate}
+{docstring LinearSystem.externalStabilizationConditions_of_externalStability}
+{docstring LinearSystem.externalStability_iff_geometricCertificate_and_conditions}
+
+BIBO stability is the genuinely nonzero-response property: it needs the extra Hurwitz gain data
+(`A + B F` and `A + G C` Hurwitz) on top of the geometric pair, so the zero-response and BIBO
+conclusions are stated together but never identified.
+
+{docstring LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz}
+
+The analytic half of the source's external-stabilization proof (TST Lemma 4.35 and Theorem 4.37)
+is the quotient-spectrum decay bridge: if a readout vanishes on an invariant subspace and the
+induced quotient map is Hurwitz, the readout trajectory decays. The geometric feedback
+construction of Lemma 4.38 is proved as `exists_feedback_tendsto_readout_of_corollary622`.
+
+{docstring LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ}
+{docstring LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on}
+{docstring LinearSystem.exists_feedback_tendsto_readout_of_corollary622}
+
+# Observer duality
+
+The observation half of Corollary 6.22 follows from the state-feedback half by algebraic duality.
+The annihilator of the smallest conditioned-invariant subspace `S*(im E)` is the largest
+controlled-invariant subspace of the transposed pair, and the annihilator of the detectable
+subspace is a reachable-plus-stable subspace of the transpose.
+
+{docstring LinearMap.dualAnnihilator_conditionedInvariantSubspace}
+{docstring LinearMap.dualAnnihilator_detectableSubspace}
+{docstring LinearMap.conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition}
+
+The transpose of the exponential is the exponential of the transpose, which converts the dual
+observer readout into the primal one.
+
+{docstring LinearMap.exp_smul_dualMap_eq}
+{docstring LinearMap.exp_smul_dualMap_apply}
+
+Running the state-feedback construction on the transposed pair and transporting the gain back with
+`dualMap_surjective` produces the observer-error decay of TST Lemmas 6.20–6.21 under the Corollary
+6.22 output-injection condition, in both the `A + G C` and the contract's `A - L C` conventions,
+and finally in primal norm form.
+
+{docstring LinearSystem.exists_outputInjection_dualReadout_tendsto_of_dualCondition}
+{docstring LinearSystem.exists_observerError_dualReadout_tendsto_of_dualCondition}
+{docstring LinearSystem.exists_observerError_readout_tendsto_of_dualCondition}
+{docstring LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions}
+
 # Algebraic examples
 
 These concrete algebraic examples exercise the pair API. In particular the planar rotation with
@@ -303,6 +409,159 @@ connected to the abstract trajectory API by a proved representation bridge.
 {docstring DynamicalSystems.Linear.Examples.filterOutput_derivative}
 {docstring DynamicalSystems.Linear.Examples.filterSystem}
 {docstring DynamicalSystems.Linear.Examples.filterOutput_eq_variationOfConstants}
+
+# Which API should I use?
+
+A short decision guide for future proofs. Prefer the named `_iff` lemmas to unfolding
+definitions.
+
+* *Is this pair controllable or observable?* Start from `LinearMap.IsControllable` and
+  `LinearMap.IsObservable`. For a finite-dimensional rank test use
+  `LinearMap.isControllable_iff_surjective_kalmanControllabilityMap` and
+  `LinearMap.isObservable_iff_injective_kalmanObservabilityMap`; for a spectral test use
+  `LinearMap.isControllable_iff_hautus` and `LinearMap.isObservable_iff_hautus`.
+* *The field is real and non-real eigenvalues are possible.* Complexify before applying PBH:
+  `LinearMap.isControllable_iff_hautus_complex` and `LinearMap.isObservable_iff_hautus_complex`.
+  The planar-rotation regression `DynamicalSystems.Linear.Examples.rotation_real_not_observable`
+  is why the complexification bridge is substantive, not a renaming.
+* *You need the reachable or unobservable subspace.* Use `LinearMap.reachableSubspace` and
+  `LinearMap.unobservableSubspace` with the extremal properties `LinearMap.reachableSubspace_le`
+  and `LinearMap.le_unobservableSubspace`. These are purely algebraic and need no dimension bound.
+* *You have a trajectory question.* Use `LinearSystem.variationOfConstants` for the explicit
+  curve, `LinearSystem.variationOfConstants_integral` and
+  `LinearSystem.variationOfConstants_ae_hasDerivAt` for the identities, and
+  `LinearSystem.ltiStateTrajectoryRel_existsUnique` for existence and uniqueness of the locally
+  integrable trajectory. For reachability use `LinearSystem.reachableSetAt_eq_reachableSubspace`;
+  for indistinguishability use `LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace`.
+* *You need an energy or Gramian argument.* Use `LinearSystem.inner_controllabilityGramian` and
+  `LinearSystem.inner_observabilityGramian` with the positive-definiteness criteria
+  `LinearSystem.controllabilityGramian_posDef_iff_isControllable` and
+  `LinearSystem.observabilityGramian_posDef_iff_isObservable`. These require real inner-product
+  spaces and a strictly positive horizon.
+* *You want a gain, not just an existence statement.* Pole placement gives
+  `LinearMap.exists_feedback_charpoly_of_isControllable`; the stabilization layer gives
+  `LinearMap.isStabilizable_of_isControllable`,
+  `LinearMap.exists_stabilizing_feedback_stable_attractive`, and dually
+  `LinearMap.isDetectable_of_isObservable`,
+  `LinearMap.exists_observer_stable_attractive_of_isObservable`. Never assume the gain exists: it
+  is constructed.
+* *You want decay from a spectral hypothesis.* Use `LinearMap.tendsto_exp_of_isHurwitz` for the
+  homogeneous flow and `LinearMap.isStableOn_expFlow_of_isHurwitz` for the filter predicate. For a
+  readout that vanishes on an invariant subspace use
+  `LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ`; its state-feedback quotient form is
+  `LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on`.
+* *You want to preserve a controlled- or conditioned-invariant subspace.* Use
+  `LinearMap.isControlledInvariant_iff_exists_stateFeedback` and
+  `LinearMap.isConditionedInvariant_iff_exists_outputInjection` to extract the witness, and
+  `LinearMap.controlledInvariantSubspace` / `LinearMap.conditionedInvariantSubspace` for the
+  extremal subspaces.
+* *You want a dynamic measurement-feedback controller.* From a `(C, A, B)`-pair use
+  `LinearSystem.exists_dynamicController_of_isCABPairBetween` and
+  `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`; well-posedness is
+  `LinearSystem.DynamicInterconnection.IsWellPosed` (invertibility of `1 - D N`, automatic when
+  `D = 0`). From the geometric condition use
+  `LinearSystem.exists_feedback_tendsto_readout_of_corollary622`.
+* *You want external stability.* Use `LinearSystem.externalStability_iff_geometricCertificate`
+  for the exact-zero response, `LinearSystem.ExternalStabilizationConditions` for the Corollary
+  6.22 subspace data, and
+  `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz` when the Hurwitz
+  gains are available. The observer half is
+  `LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
+* *You are checking duality.* Use `LinearMap.isControllable_iff_isObservable_dualMap`,
+  `LinearMap.dualAnnihilator_conditionedInvariantSubspace`, and
+  `LinearMap.dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`; the transpose of the
+  exponential is `LinearMap.exp_smul_dualMap_eq`, with pointwise form
+  `LinearMap.exp_smul_dualMap_apply`.
+
+# Theorem-to-source-page table
+
+A compact index from the conceptual layers to representative Lean declarations and their
+Trentelman–Stoorvogel–Hautus ("TST") source location. "PDF" is the one-based physical page of
+the supplied book; where a chapter or section is more useful than a single page it is given
+directly.
+
+:::table +header
+*
+  * Layer
+  * Representative Lean declarations
+  * TST source
+  * PDF / printed
+*
+  * Algebraic subspaces
+  * `LinearMap.reachableSubspace`, `LinearMap.unobservableSubspace`
+  * Corollary 3.3; §3.3 (3.7)
+  * 54 / 40
+*
+  * Kalman tests
+  * `LinearMap.kalmanControllabilityMap`, `..._iff_surjective_...`
+  * Corollaries 3.2–3.4; Theorem 3.8
+  * §3.2–3.3
+*
+  * Duality and four-block
+  * `LinearMap.isControllable_iff_isObservable_dualMap`, `LinearMap.kalmanEquiv`
+  * Theorems 3.10–3.11; Exercise 3.7
+  * 57–59 / 43–45
+*
+  * PBH / Hautus
+  * `LinearMap.isControllable_iff_hautus`, `..._iff_hautus_complex`
+  * Theorem 3.13; §3.5
+  * §3.5
+*
+  * Trajectories
+  * `LinearSystem.variationOfConstants`, `..._integral`
+  * equation (2.19); §3.1
+  * 41 / 27
+*
+  * Gramians
+  * `LinearSystem.controllabilityGramian`, `..._posDef_iff_isControllable`
+  * §5.2–5.3
+  * §5.2–5.3
+*
+  * Geometric invariance
+  * `LinearMap.IsControlledInvariant`, `LinearMap.IsConditionedInvariant`
+  * Theorem 4.2; Theorem 5.5
+  * 90 / 76; 123 / 109
+*
+  * ISA / CISA
+  * `LinearMap.controlledInvariantSubspace`, `LinearMap.conditionedInvariantSubspace`
+  * Theorems 4.5, 4.10, 5.6–5.8
+  * §4.3; §5.1
+*
+  * Pole placement
+  * `LinearMap.exists_feedback_charpoly_of_isControllable`
+  * Theorem 3.29
+  * 72–74 / 58–60
+*
+  * Spectral subspaces
+  * `LinearMap.stabilizableSubspace`, `LinearMap.detectableSubspace`
+  * Theorems 4.26, 4.30, 5.15, 5.16
+  * §4.6; §5.2
+*
+  * Hurwitz decay
+  * `LinearMap.tendsto_exp_of_isHurwitz`
+  * Theorem 2.6 region
+  * §2.6
+*
+  * Disturbance decoupling
+  * `LinearMap.IsDisturbanceDecoupled`, `..._iff_exists_invariant`
+  * Theorems 4.6, 4.8; Corollary 4.9
+  * §4.2–4.3
+*
+  * Dynamic feedback
+  * `LinearSystem.exists_dynamicController_of_isCABPairBetween`, `...IsWellPosed`
+  * Theorems 6.2, 6.4, 6.6
+  * §6.1–6.2
+*
+  * External stability
+  * `LinearSystem.externalStability_iff_geometricCertificate`
+  * Theorems 6.6, 4.39; Corollaries 6.7, 6.22
+  * 159–160 / 145–146
+*
+  * Observer duality
+  * `LinearSystem.exists_observerError_readout_tendsto_of_dualCondition`
+  * Lemmas 4.35, 6.20, 6.21
+  * §6.6
+:::
 
 # Source-to-theorem ledger
 
@@ -443,6 +702,20 @@ Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bu
   `LinearMap.isDetectable_of_unobservableEigenvalues_hurwitz`.
 * Separation-principle block spectrum: Lean `LinearMap.charpoly_blockOperator`,
   `LinearMap.exists_separation_block_hurwitz`.
+* Stable/antistable spectral subspaces and their complementarity (TST Theorem 2.6 and
+  Section 4.6): Lean `LinearMap.hurwitzSubspace`, `LinearMap.unstableSubspace`,
+  `LinearMap.isCompl_hurwitzSubspace_unstableSubspace`,
+  `LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top`.
+* Stabilizable/detectable subspaces and the stabilizability/detectability characterisations
+  (TST Theorems 4.26, 4.30, 5.15, 5.16): Lean `LinearMap.stabilizableSubspace`,
+  `LinearMap.detectableSubspace`, `LinearMap.isStabilizable_iff_stabilizableSubspace_eq_top`,
+  `LinearMap.isDetectable_iff_detectableSubspace_eq_bot`,
+  `LinearMap.isHurwitz_on_stabilizableComplement`,
+  `LinearMap.isHurwitz_on_detectableComplement`.
+* Basis-independent spectral API and the transpose stable/antistable duality: Lean
+  `LinearMap.stableSubspaceOfBasis`, `LinearMap.unstableSubspaceOfBasis`,
+  `LinearMap.stableSubspaceOfBasis_eq_of_basis`,
+  `LinearMap.dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`.
 
 ## `DynamicalSystems.Linear.Observer`
 
@@ -486,6 +759,22 @@ Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bu
   `LinearSystem.DynamicInterconnection.IsWellPosed`.
 * Closed-loop disturbance decoupling (TST Theorem 6.4): Lean
   `LinearSystem.isClosedLoopDisturbanceDecoupled_of_isCABPairBetween`.
+* Geometric external zero-response criterion (TST Theorem 6.6 and Corollary 6.7): Lean
+  `LinearSystem.GeometricCertificate`, `LinearSystem.ExternalStability`,
+  `LinearSystem.externalStability_iff_geometricCertificate`.
+* Corollary 6.22 subspace conditions and BIBO/zero-response combination: Lean
+  `LinearSystem.ExternalStabilizationConditions`,
+  `LinearSystem.externalStabilizationConditions_of_externalStability`,
+  `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`.
+* Quotient-spectrum decay and the Lemma 4.38 feedback construction (TST Lemma 4.35, Theorem
+  4.37, Lemma 4.38): Lean `LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ`,
+  `LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on`,
+  `LinearSystem.exists_feedback_tendsto_readout_of_corollary622`.
+* Observer/output-injection duality (TST Lemmas 6.20–6.21): Lean
+  `LinearMap.dualAnnihilator_conditionedInvariantSubspace`,
+  `LinearMap.conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition`,
+  `LinearMap.exp_smul_dualMap_eq`, `LinearMap.exp_smul_dualMap_apply`,
+  `LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
 
 ## `DynamicalSystems.Linear.Examples.Algebra`
 
@@ -529,9 +818,22 @@ certificate and proves the closed loop decoupled.
 
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
-The exact zero-response geometric criterion, the stabilizable/detectable-subspace Corollary 6.22
-conditions, feedback/observer constructions, and transpose-exponential pairing are formalized;
-the nonlinear theory of Chapters 7–15 and the
-algebraic-methods reference of Conte, Moog and Perdon. The examples module supplies the
-nonzero-feedthrough observer, possible/impossible decoupling instances, and the proved scalar-filter
-representation bridge.
+
+External stability is recorded in two distinct forms and they are never identified. The exact-zero
+response is characterised geometrically by a `(C, A, B)`-pair; the stable-nonzero (BIBO) property
+additionally requires the Hurwitz gain data. The stabilizable/detectable spectral subspaces, the
+Corollary 6.22 conditions, the state-feedback and output-injection constructions, the
+transpose-exponential pairing, and the primal observer-error readout decay are formalized with
+their explicit finite-dimensional and admissibility hypotheses. The external-stability statements
+assume a strictly proper plant (`D = 0`); the general feedthrough-well-posedness case is left to
+the hypotheses of `LinearSystem.DynamicInterconnection.IsWellPosed`.
+
+Out of scope: the nonlinear theory of Trentelman–Stoorvogel–Hautus Chapters 7–15 (system zeros and
+strong observability, distributions and system invertibility, tracking and regulation, and the
+LQ, H₂ and H∞ chapters) and the nonlinear algebraic-methods reference of Conte, Moog and Perdon.
+Those chapters are not formalized and no linear declaration is claimed to represent them. Optional
+refinements not yet claimed include the sharp dimension bound for the ISA/CISA stationary index,
+the trajectory/observer reading (i) of the geometric invariance definitions as a separate bridge,
+and continuous-time minimal-realization statements. The examples module supplies the
+nonzero-feedthrough observer, the possible/impossible decoupling instances, the planar-rotation
+PBH regression, and the proved scalar-filter representation bridge.
