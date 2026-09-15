@@ -21,7 +21,7 @@ e'(t) = -e(t) + θ(t) ω(t)
 θ'(t) = -e(t) ω(t)
 ```
 
-with `ω` continuous and bounded. The Lyapunov function `V = e² + θ²` satisfies
+with `ω` continuous and bounded on `[0, ∞)`. The Lyapunov function `V = e² + θ²` satisfies
 `V' = -2 e² ≤ 0` along solutions, so `V` is nonincreasing, `e` and `θ` are bounded,
 and the primitive `t ↦ ∫ x in 0..t, e x ^ 2` is nondecreasing and bounded by `V 0`.
 Hence `e ^ 2` has a convergent improper integral and, being Lipschitz on `[0, ∞)` because
@@ -34,8 +34,8 @@ differentiability they assert; no existence or uniqueness of trajectories is for
 ## Main statements
 
 * `Barbalat.adaptiveControl_error_tendsto_zero`: for any trajectory `(e, θ)` of the
-  Hou–Duan–Guo system with bounded continuous `ω`, the error `e t` tends to `0` as
-  `t → ∞`.
+  Hou–Duan–Guo system with `ω` continuous and bounded on `[0, ∞)`, the error `e t`
+  tends to `0` as `t → ∞`.
 
 ## References
 
@@ -56,18 +56,20 @@ namespace Barbalat
 /-- **Example 10 of Farkas–Wegner** (Hou–Duan–Guo adaptive control). Let
 `e θ ω : ℝ → ℝ` satisfy the adaptive control equations
 `e'(t) = -e(t) + θ(t) ω(t)` and `θ'(t) = -e(t) ω(t)` for all `t ≥ 0`, with `ω`
-continuous and bounded. Then the error `e t` tends to `0` as `t → ∞`.
+continuous on `[0, ∞)` and bounded there. Then the error `e t` tends to `0` as
+`t → ∞`.
 
 The ODEs and the differentiability they assert are hypotheses; only the asymptotic
 behaviour of the trajectory is proved. -/
 theorem adaptiveControl_error_tendsto_zero
     {e theta omega : ℝ → ℝ}
-    (hω : Continuous omega ∧ ∃ C : ℝ, ∀ t : ℝ, |omega t| ≤ C)
+    (hω : ContinuousOn omega (Set.Ici 0) ∧
+      ∃ C : ℝ, ∀ t : ℝ, 0 ≤ t → |omega t| ≤ C)
     (he : ∀ t : ℝ, 0 ≤ t → HasDerivAt e (-e t + theta t * omega t) t)
     (hθ : ∀ t : ℝ, 0 ≤ t → HasDerivAt theta (-(e t) * omega t) t) :
     Tendsto e atTop (𝓝 0) := by
   obtain ⟨Cω, hCω⟩ := hω.2
-  have hCω_nonneg : 0 ≤ Cω := le_trans (abs_nonneg (omega 0)) (hCω 0)
+  have hCω_nonneg : 0 ≤ Cω := le_trans (abs_nonneg (omega 0)) (hCω 0 le_rfl)
   -- The Lyapunov function `V = e ^ 2 + theta ^ 2`.
   let V : ℝ → ℝ := fun t ↦ e t ^ 2 + theta t ^ 2
   have hVnonneg : ∀ t : ℝ, 0 ≤ V t := by
@@ -150,7 +152,7 @@ theorem adaptiveControl_error_tendsto_zero
     rw [hderiv_e2 x hx, Real.norm_eq_abs]
     have he1 : |e x| ≤ A := he_abs_le x hx
     have hθ1 : |theta x| ≤ A := hθ_abs_le x hx
-    have hx_ω : |omega x| ≤ Cω := hCω x
+    have hx_ω : |omega x| ≤ Cω := hCω x hx
     have hinside : |(-e x + theta x * omega x)| ≤ B := by
       calc |(-e x + theta x * omega x)|
           ≤ |-e x| + |theta x * omega x| := abs_add_le _ _
