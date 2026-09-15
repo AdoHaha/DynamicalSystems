@@ -68,14 +68,16 @@ with exponent `(q - 1) / q`, and Lipschitz in the endpoint case `q = ∞`. This 
 estimate $`\lVert f(y) - f(x) \rVert \le (y - x)^{1/q'} \lVert f' \rVert_q` obtained from
 the fundamental theorem of calculus and Hölder's inequality. The paper's class uses the
 almost-everywhere derivative; here this is encoded by absolute continuity, and the FTC is
-the Lebesgue one for absolutely continuous functions.
+the Lebesgue one for absolutely continuous functions. Since that Lebesgue FTC is only
+available for scalar codomains, these absolutely continuous statements are scalar-valued
+(`f : ℝ → ℝ`).
 
 {docstring Barbalat.holderOn_of_absolutelyContinuousOnInterval}
 
 {docstring Barbalat.lipschitzOn_of_absolutelyContinuousOnInterval}
 
 For functions differentiable everywhere the same bounds hold under the stronger hypothesis
-`∀ x, HasDerivAt f (f' x) x`.
+`∀ x, HasDerivAt f (f' x) x`; these everywhere-differentiable versions are Banach-valued.
 
 {docstring Barbalat.holderOn_of_memLp_deriv}
 
@@ -87,7 +89,9 @@ The paper's Theorem 5 unifies several "alternative versions" of Barbălat's lemm
 appeared in the literature: Tao's version (`f ∈ L²`, `f' ∈ L^∞`) and the
 Desoer–Vidyasagar/Teel version (`f, f' ∈ L^p`). It states that every `f` in the mixed
 Sobolev space `W^{1,p,q}(0, ∞)` tends to zero at infinity. The paper's space uses the
-almost-everywhere derivative, encoded here by absolute continuity.
+almost-everywhere derivative, encoded here by absolute continuity. Because the underlying
+Lebesgue fundamental theorem of calculus is scalar, this paper-faithful statement is
+scalar-valued (`f : ℝ → ℝ`).
 
 {docstring Barbalat.tendsto_zero_of_absolutelyContinuous_memLp}
 
@@ -98,7 +102,8 @@ The two named alternatives are corollaries.
 {docstring Barbalat.tendsto_zero_of_absolutelyContinuous_memLp_self}
 
 For functions that are differentiable everywhere the same conclusion holds under the
-stronger hypothesis `∀ x, HasDerivAt f (f' x) x`.
+stronger hypothesis `∀ x, HasDerivAt f (f' x) x`; these everywhere-differentiable versions
+are Banach-valued.
 
 {docstring Barbalat.tendsto_zero_of_memLp_deriv_finite}
 
@@ -123,18 +128,29 @@ function of order `α`, the exponent `1/2` in Lemma 2/3 improves to `α / (1 + �
 
 {docstring Barbalat.norm_le_rpow_tailSup_of_holder_of_tendsto}
 
-For `f ∈ W^{1,p,q}` this yields the paper's Corollary 9.
+For `f ∈ W^{1,p,q}`, again in the paper's almost-everywhere, absolutely continuous sense,
+this yields the paper-faithful Corollary 9. Since the estimate rests on the scalar Lebesgue
+fundamental theorem of calculus, this statement is scalar-valued (`f : ℝ → ℝ`).
+
+{docstring Barbalat.norm_pow_le_tailIntegral_rate_of_absolutelyContinuous}
+
+The everywhere-differentiable special case keeps the same rate under the stronger hypothesis
+`∀ x, HasDerivAt f (f' x) x`, and is Banach-valued.
 
 {docstring Barbalat.norm_pow_le_tailIntegral_rate}
 
-The endpoint `q = ∞` (the space `W^{1,1,∞}` of the adaptive-control example) has exponent
-`1/2`.
+The endpoint `q = ∞` (relevant to the space `W^{1,1,∞}` of the adaptive-control example) has
+exponent `1/2`.
 
 {docstring Barbalat.norm_pow_le_tailIntegral_rate_top}
 
-The boundedness half of Lemma 6 is also available in bundled form.
+The boundedness half of Lemma 6 is also available in bundled form, both for the
+everywhere-differentiable (Banach-valued) and the absolutely continuous (scalar-valued)
+forms.
 
 {docstring Barbalat.boundedOn_of_memLp_deriv}
+
+{docstring Barbalat.boundedOn_of_absolutelyContinuous_memLp}
 
 # Relation to the rest of the library
 
