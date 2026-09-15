@@ -161,6 +161,72 @@ theorem tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral_real
     Tendsto f atTop (𝓝 0) :=
   tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral huc h
 
+/-- **The Lyapunov/Barbălat bridge.** Let `V w : ℝ → ℝ` be such that `V` and `w` are
+nonnegative on `[0, ∞)` and `V` has derivative `-w` there. If `w` is uniformly continuous on
+`[0, ∞)`, then `w t → 0` as `t → ∞`.
+
+This is the abstract form of the Lyapunov argument used in adaptive control: the primitive
+`t ↦ ∫ x in 0..t, w x = V 0 - V t` is monotone and bounded above by `V 0`, hence convergent,
+and Barbălat's lemma
+`Barbalat.tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral` applies to the
+uniformly continuous `w`. It refines the monotone-convergence statement
+`exists_tendsto_of_hasDerivAt` (in `DynamicalSystems.Stability.LaSalle`), which only produces
+a limit for `V` itself; here the limit of the *derivative signal* `w` is identified as `0`. -/
+theorem tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn
+    {V w : ℝ → ℝ} (hV : ∀ t, 0 ≤ t → 0 ≤ V t) (hw : ∀ t, 0 ≤ t → 0 ≤ w t)
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt V (-(w t)) t)
+    (huc : UniformContinuousOn w (Set.Ici 0)) :
+    Tendsto w atTop (𝓝 0) := by
+  have hcont : ContinuousOn w (Set.Ici 0) := huc.continuousOn
+  -- The primitive `F t = ∫ x in 0..t, w x` of `w` is monotone on `[0, ∞)`.
+  let F : ℝ → ℝ := fun t ↦ ∫ x in (0 : ℝ)..t, w x
+  have hFmono : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b → F a ≤ F b := by
+    intro a b ha hab
+    have hInt1 : IntervalIntegrable w volume (0 : ℝ) a :=
+      ContinuousOn.intervalIntegrable_of_Icc ha (hcont.mono fun x hx ↦ hx.1)
+    have hInt2 : IntervalIntegrable w volume a b :=
+      ContinuousOn.intervalIntegrable_of_Icc hab (hcont.mono fun x hx ↦ le_trans ha hx.1)
+    have hadd := intervalIntegral.integral_add_adjacent_intervals hInt1 hInt2
+    have hnn : 0 ≤ ∫ x in a..b, w x := by
+      have hzero : (∫ x in a..b, (0 : ℝ)) = 0 := by simp
+      rw [← hzero]
+      exact intervalIntegral.integral_mono_on hab intervalIntegrable_const hInt2
+        fun x hx ↦ hw x (le_trans ha hx.1)
+    change (∫ x in (0 : ℝ)..a, w x) ≤ ∫ x in (0 : ℝ)..b, w x
+    linarith
+  -- The fundamental theorem of calculus identifies `F` with `V 0 - V`, so `F ≤ V 0`.
+  have hFle : ∀ t : ℝ, 0 ≤ t → F t ≤ V 0 := by
+    intro t ht
+    have hderiv' : ∀ x ∈ Set.uIcc (0 : ℝ) t, HasDerivAt V (-(w x)) x := by
+      intro x hx
+      rw [Set.uIcc_of_le ht] at hx
+      exact hderiv x hx.1
+    have hcont' : ContinuousOn (fun x : ℝ ↦ -(w x)) (Set.Icc 0 t) :=
+      (hcont.mono fun x hx ↦ hx.1).neg
+    have hint : IntervalIntegrable (fun x : ℝ ↦ -(w x)) volume (0 : ℝ) t :=
+      ContinuousOn.intervalIntegrable_of_Icc ht hcont'
+    have h := intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv' hint
+    rw [intervalIntegral.integral_neg] at h
+    change (∫ x in (0 : ℝ)..t, w x) ≤ V 0
+    linarith [h, hV t ht]
+  -- Clamp at `0` so that `tendsto_atTop_ciSup` applies to a globally monotone function.
+  let G : ℝ → ℝ := fun t ↦ F (max t 0)
+  have hGmono : Monotone G := by
+    intro a b hab
+    change F (max a 0) ≤ F (max b 0)
+    exact hFmono (le_max_right a 0) (max_le_max hab le_rfl)
+  have hGbdd : BddAbove (Set.range G) := by
+    refine ⟨V 0, ?_⟩
+    rintro y ⟨t, rfl⟩
+    exact hFle (max t 0) (le_max_right t 0)
+  have hGtend : Tendsto G atTop (𝓝 (⨆ t, G t)) := tendsto_atTop_ciSup hGmono hGbdd
+  have hFeq : G =ᶠ[atTop] F := by
+    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+    change F (max t 0) = F t
+    rw [max_eq_left ht]
+  have hconv : ∃ L, Tendsto F atTop (𝓝 L) := ⟨_, hGtend.congr' hFeq⟩
+  exact tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral huc hconv
+
 /-- The tail supremum `S(t) = ⨆ u ≥ t, ‖∫ x in t..u, f x‖` of the norms of the tail
 integrals of `f`. This is the quantitative scale appearing in the direct proof of
 Barbălat's lemma (Farkas–Wegner, Lemma 2). -/

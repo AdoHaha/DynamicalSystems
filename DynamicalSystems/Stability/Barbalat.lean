@@ -6,6 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
+public import DynamicalSystems.Stability.Lyapunov
 public import Mathlib.Analysis.Calculus.Deriv.MeanValue
 public import Mathlib.Topology.Order.MonotoneConvergence
 
@@ -52,6 +53,32 @@ open Filter Set MeasureTheory
 open scoped Topology
 
 namespace Barbalat
+
+-- `hx` belongs to the flow-level interface but is not needed by the scalar bridge lemma, which
+-- only uses the nonnegativity supplied by `h.pos`.
+set_option linter.unusedVariables false
+
+/-- **Lyapunov/Barbălat bridge.** Let `v` be a Lyapunov function for the flow `Φ` on a set `s`,
+let `x` be a point whose trajectory stays in `s` for `t ≥ 0`, and let `w : ℝ → ℝ` be the decay
+rate along the trajectory: `t ↦ v (Φ t x)` has derivative `-w t` for every `t ≥ 0`. If `w` is
+nonnegative and uniformly continuous on `[0, ∞)`, then `w t → 0` as `t → ∞`.
+
+`IsLyapunovOn` supplies the nonnegativity of `t ↦ v (Φ t x)` through `IsLyapunovOn.pos`. This
+refines `IsLyapunovOn.exists_tendsto`, which only gives convergence of the Lyapunov function
+`t ↦ v (Φ t x)` to *some* limit: here the limit of the decay rate `w`, not just of `v ∘ Φ`, is
+identified as `0`. This is the flow-level form of
+`Barbalat.tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn`. -/
+@[nolint unusedArguments]
+theorem tendsto_zero_of_isLyapunovOn_of_hasDerivAt_neg
+    {E : Type*} [TopologicalSpace E]
+    {v : E → ℝ} {Φ : ℝ → E → E} {s : Set E} {x : E} (h : IsLyapunovOn v Φ s)
+    (hx : ∀ t, 0 ≤ t → Φ t x ∈ s) {w : ℝ → ℝ} (hw : ∀ t, 0 ≤ t → 0 ≤ w t)
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt (fun s ↦ v (Φ s x)) (-(w t)) t)
+    (huc : UniformContinuousOn w (Set.Ici 0)) : Tendsto w atTop (𝓝 0) :=
+  tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn
+    (fun t _ ↦ h.pos (Φ t x)) hw hderiv huc
+
+set_option linter.unusedVariables true
 
 /-- **Example 10 of Farkas–Wegner** (Hou–Duan–Guo adaptive control). Let
 `e θ ω : ℝ → ℝ` satisfy the adaptive control equations
@@ -191,56 +218,21 @@ theorem adaptiveControl_error_tendsto_zero
             rw [div_lt_one (by linarith : (0 : ℝ) < M + 1)]
             linarith
         _ = ε := mul_one ε
-  -- **Step 5.** The primitive of `e ^ 2` is monotone and bounded; hence it converges.
-  have hcont_e2 : ContinuousOn (fun t : ℝ ↦ e t ^ 2) (Set.Ici 0) := hcont_e.pow 2
-  let F : ℝ → ℝ := fun t ↦ ∫ x in (0 : ℝ)..t, e x ^ 2
-  have hFmono : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b → F a ≤ F b := by
-    intro a b ha hab
-    have hInt1 : IntervalIntegrable (fun x : ℝ ↦ e x ^ 2) volume (0 : ℝ) a :=
-      ContinuousOn.intervalIntegrable_of_Icc ha (hcont_e2.mono fun x hx ↦ hx.1)
-    have hInt2 : IntervalIntegrable (fun x : ℝ ↦ e x ^ 2) volume a b :=
-      ContinuousOn.intervalIntegrable_of_Icc hab (hcont_e2.mono fun x hx ↦ le_trans ha hx.1)
-    have hadd := intervalIntegral.integral_add_adjacent_intervals hInt1 hInt2
-    have hnn : 0 ≤ ∫ x in a..b, e x ^ 2 :=
-      intervalIntegral.integral_nonneg_of_forall hab fun x ↦ sq_nonneg (e x)
-    change (∫ x in (0 : ℝ)..a, e x ^ 2) ≤ ∫ x in (0 : ℝ)..b, e x ^ 2
-    linarith
-  have hFle : ∀ t : ℝ, 0 ≤ t → F t ≤ V 0 := by
-    intro t ht
-    have hderiv : ∀ x ∈ Set.uIcc (0 : ℝ) t, HasDerivAt V (-(2 * e x ^ 2)) x := by
-      intro x hx
-      rw [Set.uIcc_of_le ht] at hx
-      exact hVderiv x hx.1
-    have hcont_deriv : ContinuousOn (fun x : ℝ ↦ -(2 * e x ^ 2)) (Set.Icc 0 t) :=
-      (((hcont_e.pow 2).mono fun x hx ↦ hx.1).const_mul (2 : ℝ)).neg
-    have hint : IntervalIntegrable (fun x : ℝ ↦ -(2 * e x ^ 2)) volume (0 : ℝ) t :=
-      ContinuousOn.intervalIntegrable_of_Icc ht hcont_deriv
-    have h := intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv hint
-    rw [intervalIntegral.integral_neg, intervalIntegral.integral_const_mul] at h
-    have hVt0 : 0 ≤ V t := hVnonneg t
-    have hVtV0 : V t ≤ V 0 := hVle t ht
-    change (∫ x in (0 : ℝ)..t, e x ^ 2) ≤ V 0
-    nlinarith [h, hVt0, hVtV0]
-  let G : ℝ → ℝ := fun t ↦ F (max t 0)
-  have hGmono : Monotone G := by
-    intro a b hab
-    change F (max a 0) ≤ F (max b 0)
-    exact hFmono (le_max_right a 0) (max_le_max hab le_rfl)
-  have hGbdd : BddAbove (Set.range G) := by
-    refine ⟨V 0, ?_⟩
-    rintro y ⟨t, rfl⟩
-    change F (max t 0) ≤ V 0
-    exact hFle (max t 0) (le_max_right t 0)
-  have hGtend : Tendsto G atTop (𝓝 (⨆ t, G t)) := tendsto_atTop_ciSup hGmono hGbdd
-  have hFeq : G =ᶠ[atTop] F := by
-    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
-    change F (max t 0) = F t
-    rw [max_eq_left ht]
-  have hconv : ∃ L, Tendsto (fun t : ℝ ↦ ∫ x in (0 : ℝ)..t, e x ^ 2) atTop (𝓝 L) :=
-    ⟨_, hGtend.congr' hFeq⟩
-  -- **Step 6.** Apply Barbălat's lemma to `e ^ 2`, then extract `e → 0`.
-  have hmain : Tendsto (fun t : ℝ ↦ e t ^ 2) atTop (𝓝 0) :=
-    tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral huc hconv
+  -- **Step 5.** Apply the Lyapunov/Barbălat bridge to `V` and the decay rate `w = 2 * e ^ 2`.
+  have hw_nonneg : ∀ t : ℝ, 0 ≤ t → 0 ≤ 2 * e t ^ 2 := fun _ _ ↦ by positivity
+  have hw_uc : UniformContinuousOn (fun t : ℝ ↦ 2 * e t ^ 2) (Set.Ici 0) :=
+    (Real.uniformContinuous_const_mul (x := 2)).comp_uniformContinuousOn huc
+  have hw_tend : Tendsto (fun t : ℝ ↦ 2 * e t ^ 2) atTop (𝓝 0) :=
+    tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn (fun t _ ↦ hVnonneg t)
+      hw_nonneg hVderiv hw_uc
+  -- **Step 6.** Halve the decay rate and extract `e → 0`.
+  have hmain : Tendsto (fun t : ℝ ↦ e t ^ 2) atTop (𝓝 0) := by
+    have hfun : (fun t : ℝ ↦ (1 / 2) * (2 * e t ^ 2)) = fun t : ℝ ↦ e t ^ 2 := by
+      funext t
+      ring
+    have h := hw_tend.const_mul (1 / 2)
+    rw [hfun, mul_zero] at h
+    exact h
   have habs : Tendsto (fun t : ℝ ↦ |e t|) atTop (𝓝 0) := by
     have hsqrt : Tendsto (fun t : ℝ ↦ Real.sqrt (e t ^ 2)) atTop (𝓝 0) := by
       have h := (Real.continuous_sqrt.tendsto 0).comp hmain
