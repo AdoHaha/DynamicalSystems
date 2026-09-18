@@ -22,6 +22,8 @@ public import Mathlib.LinearAlgebra.TensorProduct.Tower
 public import Mathlib.LinearAlgebra.Charpoly.BaseChange
 public import Mathlib.LinearAlgebra.Eigenspace.Charpoly
 public import Mathlib.Topology.Algebra.Module.FiniteDimension
+public import Mathlib.Algebra.Field.GeomSum
+public import Mathlib.Analysis.Asymptotics.SpecificAsymptotics
 
 /-! # Stabilization and detectability of real linear systems
 
@@ -159,6 +161,16 @@ quantitative operator-norm bound `‖exp (t A)‖ ≤ C * exp (-γ * t)` is
 `LinearMap.exists_exponential_norm_bound_of_isHurwitz`, obtained from the
 operator-norm convergence `LinearMap.tendsto_norm_exp_of_isHurwitz` and the
 gometric step `LinearMap.norm_exp_le_mul_pow_floor`.
+
+The degree-zero case of the Bohl exponential-polynomial independence used by the
+antistable readout argument is also provided here:
+`LinearMap.tendsto_inv_mul_geom_sum` computes the Cesàro average of a
+unit-modulus geometric progression, and `LinearMap.tendsto_zero_of_sum_pow_smul`
+shows that a finite sum of distinct unit-modulus characters with coefficients in
+a complex normed space cannot tend to zero unless every coefficient vanishes.
+This is the cancellation argument at the heart of the spectral readout lemma;
+the polynomial-exponential reduction on top of it is recorded as the remaining
+step in `DynamicalSystems.Linear.DynamicFeedback`.
 
 The PBH criteria are complete in both directions. The necessity results
 `LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue` and
@@ -1871,6 +1883,157 @@ theorem tendsto_exp_complex_apply (f : E →ₗ[ℂ] E)
   simpa using hfin0
 
 end ComplexHurwitzDecay
+
+/-! ## Exponential independence of unit-modulus characters
+
+The degree-zero case of the independence of exponential polynomials, which is
+the analytic core of the Bohl leading-term argument: a finite sum of distinct
+unit-modulus exponential characters with vector coefficients cannot tend to zero
+at `+∞` unless every coefficient vanishes. The proof is elementary: the Cesàro
+average of `n ↦ z ^ n` is `1` for `z = 1` and `0` otherwise, so averaging a
+convergent sum after shifting by one character isolates each coefficient.
+
+This is the reusable building block for the antistable readout lemma: the
+remaining polynomial-exponential reduction (factoring the dominant real part and
+the top power of `t`) is a separate step, but the cancellation argument that
+actually forces one mode at a time is contained here. -/
+
+/-- **Cesàro average of a unit-modulus geometric progression.** For a complex
+number `z` of modulus one, the average `n⁻¹ ∑_{k<n} z^k` tends to `1` when
+`z = 1` and to `0` otherwise. When `z ≠ 1` the geometric-sum formula bounds the
+partial sums by `2 / ‖z - 1‖`, while for `z = 1` the average is eventually `1`. -/
+lemma tendsto_inv_mul_geom_sum (z : ℂ) (hz : ‖z‖ = 1) :
+    Tendsto (fun n : ℕ => (n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, z ^ k) atTop
+      (𝓝 (if z = 1 then 1 else 0)) := by
+  by_cases h1 : z = 1
+  · subst h1
+    rw [ite_eq_left rfl]
+    apply tendsto_const_nhds.congr'
+    filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+    have hn0 : (n : ℂ) ≠ 0 := by
+      rw [Nat.cast_ne_zero]; omega
+    rw [show (∑ k ∈ Finset.range n, (1 : ℂ) ^ k) = (n : ℂ) by
+      simp [Finset.sum_const, nsmul_eq_mul]]
+    exact (inv_mul_cancel₀ hn0).symm
+  · rw [ite_eq_right h1]
+    rw [tendsto_zero_iff_norm_tendsto_zero]
+    have hbd : ∀ n : ℕ, ‖(n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, z ^ k‖ ≤
+        (2 / ‖z - 1‖) / n := by
+      intro n
+      rcases Nat.eq_zero_or_pos n with hn | hn
+      · subst hn; simp
+      · have hS : ‖∑ k ∈ Finset.range n, z ^ k‖ ≤ 2 / ‖z - 1‖ := by
+          rw [geom_sum_eq h1 n, norm_div]
+          apply div_le_div_of_nonneg_right _ (norm_nonneg _)
+          calc ‖z ^ n - 1‖ ≤ ‖z ^ n‖ + ‖(1 : ℂ)‖ := norm_sub_le _ _
+            _ = 2 := by rw [norm_pow, hz, one_pow]; norm_num
+        calc ‖(n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, z ^ k‖
+            = ‖(n : ℂ)⁻¹‖ * ‖∑ k ∈ Finset.range n, z ^ k‖ := norm_mul _ _
+          _ = (n : ℝ)⁻¹ * ‖∑ k ∈ Finset.range n, z ^ k‖ := by
+              rw [norm_inv, Complex.norm_natCast]
+          _ ≤ (n : ℝ)⁻¹ * (2 / ‖z - 1‖) :=
+              mul_le_mul_of_nonneg_left hS (by positivity)
+          _ = (2 / ‖z - 1‖) / n := by rw [div_eq_mul_inv]; ring
+    refine squeeze_zero (g := fun n : ℕ => (2 / ‖z - 1‖) / n)
+      (fun n => norm_nonneg _) (fun n => hbd n) ?_
+    exact tendsto_const_div_atTop_nhds_zero_nat (𝕜 := ℝ) (2 / ‖z - 1‖)
+
+/-- **Exponential independence of unit-modulus characters.** A finite sum of
+distinct unit-modulus characters `n ↦ z i ^ n` with coefficients `a i` in a
+complex normed space cannot tend to zero unless every coefficient vanishes. The
+proof shifts the sum by the inverse of one character, applies the Cesàro average
+`tendsto_inv_mul_geom_sum`, and reads off the corresponding coefficient. -/
+lemma tendsto_zero_of_sum_pow_smul {W : Type*} [NormedAddCommGroup W] [NormedSpace ℂ W]
+    {ι : Type*} (s : Finset ι) (z : ι → ℂ) (hz : ∀ i ∈ s, ‖z i‖ = 1)
+    (hinj : ∀ i ∈ s, ∀ j ∈ s, z i = z j → i = j) (a : ι → W)
+    (h : Tendsto (fun n : ℕ => ∑ i ∈ s, (z i) ^ n • a i) atTop (𝓝 0)) :
+    ∀ i ∈ s, a i = 0 := by
+  intro j hj
+  have hzj : ‖z j‖ = 1 := hz j hj
+  have hzj0 : z j ≠ 0 := by
+    intro h0; rw [h0, norm_zero] at hzj; exact one_ne_zero hzj.symm
+  have hcoescale : ∀ (r : ℝ) (w : W), r • w = (r : ℂ) • w :=
+    fun r w => RCLike.real_smul_eq_coe_smul r w
+  have hnorm : Tendsto (fun n : ℕ => ‖∑ i ∈ s, (z i) ^ n • a i‖) atTop (𝓝 0) := by
+    simpa using h.norm
+  have hvnorm : Tendsto (fun n : ℕ =>
+      ‖((z j)⁻¹) ^ n • ∑ i ∈ s, (z i) ^ n • a i‖) atTop (𝓝 0) := by
+    refine hnorm.congr' ?_
+    filter_upwards with n
+    rw [norm_smul, norm_pow]
+    have h1 : ‖(z j)⁻¹‖ = 1 := by rw [norm_inv, hzj, inv_one]
+    rw [h1, one_pow, one_mul]
+  have hv : Tendsto (fun n : ℕ =>
+      ((z j)⁻¹) ^ n • ∑ i ∈ s, (z i) ^ n • a i) atTop (𝓝 0) :=
+    tendsto_zero_iff_norm_tendsto_zero.mpr hvnorm
+  have hv' : Tendsto (fun k : ℕ => ∑ i ∈ s, ((z j)⁻¹ * z i) ^ k • a i) atTop (𝓝 0) := by
+    refine hv.congr' ?_
+    filter_upwards with k
+    rw [Finset.smul_sum]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [smul_smul, mul_pow]
+  have hces := hv'.cesaro_smul
+  have hrewrite : ∀ n : ℕ,
+      (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n,
+          ∑ i ∈ s, ((z j)⁻¹ * z i) ^ k • a i) =
+        ∑ i ∈ s, ((n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, ((z j)⁻¹ * z i) ^ k) • a i := by
+    intro n
+    calc (n : ℝ)⁻¹ • (∑ k ∈ Finset.range n,
+            ∑ i ∈ s, ((z j)⁻¹ * z i) ^ k • a i)
+        = ∑ k ∈ Finset.range n,
+            (n : ℝ)⁻¹ • ∑ i ∈ s, ((z j)⁻¹ * z i) ^ k • a i := by rw [Finset.smul_sum]
+      _ = ∑ k ∈ Finset.range n,
+            ∑ i ∈ s, (n : ℝ)⁻¹ • (((z j)⁻¹ * z i) ^ k • a i) := by
+            apply Finset.sum_congr rfl
+            intro k hk
+            rw [Finset.smul_sum]
+      _ = ∑ i ∈ s,
+            ∑ k ∈ Finset.range n, (n : ℝ)⁻¹ • (((z j)⁻¹ * z i) ^ k • a i) :=
+            Finset.sum_comm
+      _ = ∑ i ∈ s,
+            ∑ k ∈ Finset.range n, ((n : ℂ)⁻¹ * ((z j)⁻¹ * z i) ^ k) • a i := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            apply Finset.sum_congr rfl
+            intro k hk
+            rw [hcoescale, Complex.ofReal_inv, Complex.ofReal_natCast, smul_smul]
+      _ = ∑ i ∈ s,
+            ((n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, ((z j)⁻¹ * z i) ^ k) • a i := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [Finset.mul_sum, ← Finset.sum_smul]
+  have hlim : Tendsto (fun n : ℕ =>
+      ∑ i ∈ s, ((n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, ((z j)⁻¹ * z i) ^ k) • a i)
+      atTop (𝓝 (∑ i ∈ s, (if (z j)⁻¹ * z i = 1 then (1 : ℂ) else 0) • a i)) := by
+    apply tendsto_finsetSum
+    intro i hi
+    have hzi : ‖z i‖ = 1 := hz i hi
+    have hnorm2 : ‖(z j)⁻¹ * z i‖ = 1 := by rw [norm_mul, norm_inv, hzj, hzi]; simp
+    exact (tendsto_inv_mul_geom_sum ((z j)⁻¹ * z i) hnorm2).smul_const (a i)
+  have hces' : Tendsto (fun n : ℕ =>
+      ∑ i ∈ s, ((n : ℂ)⁻¹ * ∑ k ∈ Finset.range n, ((z j)⁻¹ * z i) ^ k) • a i)
+      atTop (𝓝 0) := by
+    apply hces.congr'
+    filter_upwards with n
+    exact hrewrite n
+  have hzero : (∑ i ∈ s, (if (z j)⁻¹ * z i = 1 then (1 : ℂ) else 0) • a i) = 0 :=
+    tendsto_nhds_unique hlim hces'
+  have hcollapse : (∑ i ∈ s, (if (z j)⁻¹ * z i = 1 then (1 : ℂ) else 0) • a i) = a j := by
+    rw [Finset.sum_eq_single j]
+    · rw [ite_eq_left (inv_mul_cancel₀ hzj0), one_smul]
+    · intro i hi hij
+      have hne : ¬ ((z j)⁻¹ * z i = 1) := by
+        intro hc
+        have hzi : z i = z j := by
+          calc z i = z j * ((z j)⁻¹ * z i) := by field_simp
+            _ = z j * 1 := by rw [hc]
+            _ = z j := mul_one _
+        exact hij (hinj i hi j hj hzi)
+      rw [ite_eq_right hne, zero_smul]
+    · intro hjnot; exact absurd hj hjnot
+  rw [hcollapse] at hzero
+  exact hzero
 
 open scoped Matrix
 

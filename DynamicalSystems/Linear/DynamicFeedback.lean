@@ -5502,3 +5502,43 @@ zero-operator non-vacuity witness is `hspectral_zero_operator`, giving the
 hypothesis-free instance `isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_zero_operator`.
 The general-`B` necessity `mem_outputStabilizableSubspace_of_isOutputStabilizable`
 remains the single open obligation. -/
+
+/-! ### The character-independence bridge added by the antistable-readout task
+
+The degree-zero case of the missing Bohl/spectral function decomposition is now
+formalised in `Stabilization.lean`:
+
+* `LinearMap.tendsto_inv_mul_geom_sum`: the Cesàro average of a unit-modulus
+  geometric progression `n ↦ z ^ n` is `1` for `z = 1` and `0` otherwise;
+* `LinearMap.tendsto_zero_of_sum_pow_smul`: a finite sum of *distinct*
+  unit-modulus characters with coefficients in a complex normed space cannot
+  tend to zero unless every coefficient vanishes.
+
+The second lemma is the cancellation-free core of the antistable readout
+statement: it is exactly the step that isolates one character from a sum. The
+remaining reduction from this degree-zero statement to the full obligation
+`∀ x ∈ X_b(A), Tendsto (fun t ↦ H (e^{tA} x)) atTop (nhds 0) → x ∈ ⟨ker H | A⟩`
+is now a finite, precisely-scoped list:
+
+1. *Polynomial-exponential reduction (basis-independent).* Prove that if
+   `Σ_{i} exp (t * μ i) • q i t → 0` with `0 ≤ (μ i).re` and `q i` vector
+   polynomials, then the whole sum is identically zero. Route: factor out the
+   dominant real part `R = max (μ i).re` (multiplying by the bounded factor
+   `e^{-Rt}`), discard the strictly smaller real parts (polynomial times a
+   decaying exponential), divide by the top power `t^D`, apply
+   `tendsto_zero_of_sum_pow_smul` to the resulting leading character sum, and
+   induct on `D`. The single missing elementary ingredient is
+   "a vector polynomial tending to `0` at `+∞` is identically `0`".
+2. *Complex-linear readout transport.* Complexify the real readout `H` and the
+   real coordinates of `Stabilization.lean` (`ofRealPi`), or test against
+   continuous real-linear functionals and extend them to complex-linear ones
+   (`ψ ↦ ψ - i ψ∘(i·)`), so that step 1 applies to `L (e^{t f} z)` for
+   `z = ofRealPi (b.equivFun x)` in `unstableComplexSubspace A`.
+3. *Differentiate at zero.* If `L (e^{t f} z) ≡ 0`, then all derivatives at
+   `0` vanish, i.e. `L (f ^ k z) = 0`; transporting back gives
+   `H (A ^ k x) = 0` for all `k`, hence `x ∈ ⟨ker H | A⟩`.
+
+None of these three steps is claimed here. In particular, the `hspectral`
+hypothesis of `mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` is still an
+explicit hypothesis, not a proved theorem, and the general-`B` necessity is not
+claimed. -/
