@@ -5010,3 +5010,221 @@ here; the exact-zero criterion
 stable-nonzero synthesis under explicit Hurwitz/quotient-Hurwitz data remain the
 certified statements. -/
 
+
+/-! ## The `W_g(ker H)` necessity bridge: algebraic form and dual
+
+Trentelman–Stoorvogel–Hautus, Theorem 4.37 (PDF page 115 / printed page 99)
+identifies the *open-loop output-stabilizable* set
+
+`W_g(ker H) = {x | ∃ Bohl input u, H x_u(·, x) is stable}`
+
+with the algebraic sum `V*(ker H) + Xstab(A, B)`. The easy inclusion is
+formalised here as `outputStabilizableSubspace` together with its structural
+properties, and the state-feedback form of the reversed inclusion as
+`exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`. The dual
+condition is derived from the transposed inclusion with the accepted
+detectable-top-characterisation `isDetectable_iff_detectableSubspace_eq_bot`.
+The spectral `W_g(ker H) ⊆ V*(ker H) + Xstab` step — decomposing a Bohl input
+and trajectory into stable and antistable parts and splitting the error equation
+at the spectrum — is **not** formalised; the section note at the end of the file
+records the exact missing statement. -/
+
+namespace LinearSystem
+
+section WgSubspace
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- **The algebraic `W_g(ker H)`.** The sum of the largest controlled invariant
+subspace contained in `ker H` and the stabilizable subspace of `(A, B)`. This is
+the right-hand side of the Trentelman–Stoorvogel–Hautus Theorem 4.37 identity
+`W_g(ker H) = V*(ker H) + Xstab`; the trajectory characterisation of the
+left-hand side is recorded by `IsOutputStabilizable` and its relation to this
+definition is the object of the necessity bridge. -/
+noncomputable def outputStabilizableSubspace (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) : Submodule ℝ X :=
+  LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) ⊔
+    LinearMap.stabilizableSubspace A B
+
+omit [FiniteDimensional ℝ U] in
+/-- The controlled-invariant witness `V*(ker H)` is contained in `W_g(ker H)`. -/
+theorem controlledInvariantSubspace_le_outputStabilizableSubspace
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) ≤
+      outputStabilizableSubspace A B H := le_sup_left
+
+omit [FiniteDimensional ℝ U] in
+/-- The stabilizable subspace `Xstab(A, B)` is contained in `W_g(ker H)`. -/
+theorem stabilizableSubspace_le_outputStabilizableSubspace
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.stabilizableSubspace A B ≤ outputStabilizableSubspace A B H :=
+  le_sup_right
+
+omit [FiniteDimensional ℝ U] in
+/-- The input image lies in `W_g(ker H)`, because `im B ⊆ Xstab(A, B)`. This is
+the `im B ⊂ W_g` remark following Theorem 4.37. -/
+theorem range_le_outputStabilizableSubspace
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.range B ≤ outputStabilizableSubspace A B H :=
+  le_trans (LinearMap.range_le_reachableSubspace A B)
+    (le_trans (LinearMap.reachableSubspace_le_stabilizableSubspace A B)
+      (stabilizableSubspace_le_outputStabilizableSubspace A B H))
+
+omit [FiniteDimensional ℝ U] in
+/-- **`W_g(ker H)` is `A`-invariant.** The `V*` component maps into
+`V* ⊔ im B ⊆ W_g` by controlled invariance, the stabilizable component into
+itself, and `im B ⊆ W_g`. This is the `AW_g ⊂ W_g` structural remark following
+Theorem 4.37. -/
+theorem map_outputStabilizableSubspace_le
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    Submodule.map A (outputStabilizableSubspace A B H) ≤
+      outputStabilizableSubspace A B H :=
+  map_sup_stabilizableSubspace_le A B
+    (LinearMap.isControlledInvariant_controlledInvariantSubspace A B (LinearMap.ker H))
+
+/-- **The open-loop output-stabilizability predicate.** A state `x` lies in the
+source's `W_g(ker H)` if there is a locally integrable open-loop input `u` for
+which the controlled output of the variation-of-constants trajectory decays:
+`t ↦ H (x_u(t, x)) → 0`. The input quantifier is explicit and the disturbance
+channel is absent: this is the *open-loop* output-stabilizable set of
+Trentelman–Stoorvogel–Hautus, equation (4.28). -/
+def IsOutputStabilizable (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
+    (x : X) : Prop :=
+  ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧
+    Filter.Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t))
+      Filter.atTop (nhds 0)
+
+omit [FiniteDimensional ℝ U] in
+/-- **State-feedback sufficiency for `W_g(ker H)`.** Every state in
+`W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a static state feedback `F` whose
+closed-loop controlled output decays: `t ↦ H (e^{t(A + B F)} x) → 0`.
+
+This is the state-feedback form of the easy inclusion of Theorem 4.37 combined
+with Lemma 4.38/Theorem 4.39. It is obtained by applying the accepted geometric
+construction `exists_feedback_tendsto_readout_of_geometricCondition` to the
+one-dimensional disturbance map `c ↦ c • x`; the trajectory-to-open-loop
+translation is the separate step of the necessity bridge and is not used here. -/
+theorem exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) {x : X}
+    (hx : x ∈ outputStabilizableSubspace A B H) :
+    ∃ F : X →ₗ[ℝ] U, Filter.Tendsto
+      (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) x)) Filter.atTop (nhds 0) := by
+  let E : ℝ →ₗ[ℝ] X :=
+    { toFun := fun c => c • x
+      map_add' := fun c d => add_smul c d x
+      map_smul' := fun c d => mul_smul c d x }
+  have hE : LinearMap.range E ≤ outputStabilizableSubspace A B H := by
+    rintro y ⟨c, rfl⟩
+    exact (outputStabilizableSubspace A B H).smul_mem c hx
+  obtain ⟨F, -, hdec⟩ := exists_feedback_tendsto_readout_of_geometricCondition A B H E
+    (LinearMap.controlledInvariantSubspace A B (LinearMap.ker H))
+    (LinearMap.isControlledInvariant_controlledInvariantSubspace A B (LinearMap.ker H))
+    (LinearMap.controlledInvariantSubspace_le_K A B (LinearMap.ker H)) hE
+  refine ⟨F, ?_⟩
+  simpa [E] using hdec 1
+
+end WgSubspace
+
+/-! ### The dual conditioned-invariant/detectable condition
+
+The second half of the Corollary 6.22 pair is the output-injection condition
+`S*(im E) ∩ Xdet(C, A) ≤ ker H`. Its dual form is the transposed `W_g` inclusion
+`im Hᵀ ≤ V*(ker Eᵀ) + Xstab(Aᵀ, Cᵀ)`. The derivation below rewrites
+`Xstab(Aᵀ, Cᵀ)` as `⟨Aᵀ | im Cᵀ⟩ ⊔ X_g(Aᵀ)` using
+`stabilizableSubspace` and the accepted basis-agnostic
+`stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace`, then applies the accepted
+duality `conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition`.
+The detectability content enters through the same duality as
+`isDetectable_iff_detectableSubspace_eq_bot`: the subspace `Xdet` vanishes
+exactly when `(C, A)` is detectable, so the inclusion is the detectable-top
+statement of Trentelman–Stoorvogel–Hautus Theorem 5.16. -/
+
+section DualCondition
+
+variable {X Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- **The conditioned-invariant/detectable condition from its dual `W_g`
+inclusion.** If the transposed disturbance image `im Hᵀ` lies in the transposed
+`W_g(Eᵀ) = V*(ker Eᵀ) + Xstab(Aᵀ, Cᵀ)`, then the primal output-injection
+condition `S*(im E) ∩ Xdet(C, A) ≤ ker H` holds. This is the dual half of the
+Theorem 4.37 necessity bridge: it turns the transposed algebraic `W_g`
+characterisation into the conditioned-invariant condition used by Corollary
+6.22, with `Xstab` expanded through `stabilizableSubspace` and the stable
+subspace of the transpose. -/
+theorem conditionedInvariant_inf_detectable_le_ker_of_dual_mem_outputStabilizableSubspace
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : LinearMap.range H.dualMap ≤
+      LinearMap.controlledInvariantSubspace A.dualMap C.dualMap
+          (LinearMap.range E).dualAnnihilator ⊔
+        LinearMap.stabilizableSubspace A.dualMap C.dualMap) :
+    LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A ≤ LinearMap.ker H := by
+  rw [LinearMap.conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition]
+  have hstab : LinearMap.stabilizableSubspace A.dualMap C.dualMap =
+      LinearMap.reachableSubspace A.dualMap C.dualMap ⊔
+        LinearMap.stableSubspaceOfBasis
+          (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap := by
+    rw [LinearMap.stabilizableSubspace,
+      ← LinearMap.stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace A.dualMap, sup_comm]
+  rwa [hstab] at h
+
+end DualCondition
+
+end LinearSystem
+
+/-! ### Exact remaining blocker for the `W_g` necessity direction
+
+The state-feedback *sufficiency* half of Trentelman–Stoorvogel–Hautus Theorem
+4.37 / 4.39 is now available in algebraic form:
+
+* `LinearSystem.outputStabilizableSubspace` — the algebraic `W_g(ker H)`,
+  `V*(ker H) ⊔ Xstab(A, B)`;
+* `LinearSystem.map_outputStabilizableSubspace_le`,
+  `LinearSystem.range_le_outputStabilizableSubspace` — its structural
+  properties (`A`-invariance and `im B ⊆ W_g`);
+* `LinearSystem.exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`
+  — every `x ∈ W_g(ker H)` admits a state feedback `F` making
+  `t ↦ H (e^{t(A + B F)} x)` decay to zero;
+* `LinearSystem.IsOutputStabilizable` — the source's open-loop trajectory
+  predicate, with the input quantifier explicit (`∃ u : ℝ → U,` locally
+  integrable, `H (x_u(t, x)) → 0`);
+* `LinearSystem.conditionedInvariant_inf_detectable_le_ker_of_dual_mem_outputStabilizableSubspace`
+  — the conditioned-invariant/detectable dual condition derived from the
+  transposed `W_g` inclusion (and hence, through
+  `LinearMap.isDetectable_iff_detectableSubspace_eq_bot`, from the transposed
+  detectable-top characterisation).
+
+The *necessity* half — the spectral inclusion `W_g(ker H) ⊆ V*(ker H) ⊔ Xstab`,
+which would turn a decaying open-loop output trajectory into membership in
+`outputStabilizableSubspace` — is **not** formalised. The exact missing statement
+is:
+
+```lean
+theorem LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x : X)
+    (h : IsOutputStabilizable sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H
+```
+
+The source proof (PDF page 115 / printed page 99) decomposes a witness Bohl
+input `u` and trajectory `x_u(·, x)` as `u = u₁ + u₂`,
+`x = x₁ + x₂` with the spectra of `u₁, x₁` in `C_g` and of `u₂, x₂` in `C_b`,
+uses that the two sides of the error equation have disjoint spectra to split it
+into two state equations, concludes `x₁(0) ∈ Xstab` from the stable trajectory
+and `x₂(0) ∈ V*(ker H)` from `H x₂ = 0`. The pinned library has no Bohl-function
+or spectrum-of-a-function API, so this decomposition must be rebuilt from the
+stable/antistable spectral subspaces of the *system matrix* and the variation-of-
+constants integral representation; the finite-dimensional spectral decomposition
+of `Stabilization.lean` and the accepted trajectory API of `Trajectory.lean` are
+the intended ingredients. Until that step is available the stable-nonzero
+necessity direction of Corollary 6.22 is not claimed, and the exact-zero
+necessity `externalStabilizationConditions_of_externalStability` remains the only
+certified forward direction. -/
