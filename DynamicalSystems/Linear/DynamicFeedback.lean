@@ -3289,6 +3289,246 @@ theorem tendsto_readout_exp_of_isHurwitz_quotient_on
 
 end TrajectorySpectralBridge
 
+/-! ## Forced/convolution quotient decay for the dynamic closed loop
+
+The accepted bridge `tendsto_readout_exp_of_isHurwitz_quotient_on` is stated with
+a feedback term `A + B F`; the dynamic closed loop is an autonomous map, so this
+section records the feedback-free specialisation
+`tendsto_readout_exp_of_isHurwitz_mapQ_on` and then applies it to the forced
+disturbance-to-output channel of a dynamic measurement-feedback interconnection.
+
+The resulting wrapper `externalResponse_tendsto_zero_of_quotient_hurwitz` is the
+smallest theorem that can feed `StableNonzeroExternalResponse`: it needs only an
+unobservable closed-loop-invariant subspace `Ve ⊆ ker H_e`, a closed-loop-
+invariant window `We ⊇ im B_e` carrying the disturbance image, and the Hurwitz
+property of the induced map on `We / Ve`. No global Hurwitz property of the
+extended map is assumed, so the *stable-nonzero* forced response is obtained from
+the same quotient spectral data that the geometric Corollary 6.22 construction
+supplies for the two separation-principle blocks. The identically-zero response
+(`ExternalStability`) is not identified with this decay statement.
+
+The general forced output of the channel is the convolution of the impulse
+response `s ↦ H_e e^{s A_e} B_e` with the locally integrable disturbance; the
+zero-initial-state response `externalResponse` is exactly that impulse response,
+so its decay is the convolution kernel statement needed for external stability.
+Strict-properness (`D = 0`) enters only through the well-posedness proof; the
+well-posed *feedthrough* case is covered by keeping `IsWellPosed` explicit. -/
+
+section FeedbackFreeQuotientDecay
+
+variable {X D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- **Feedback-free quotient window decay.** If `A` preserves a subspace `V` on
+which the readout `H` vanishes and an intermediate window `W ⊇ V`, if the
+disturbance image `im E` lies in `W`, and if the induced map on `W ⧸ V` is
+Hurwitz, then the readout of every `A`-trajectory starting in `im E` decays:
+`t ↦ H (exp (t A) (E d)) → 0`.
+
+This is the feedback-free form of `tendsto_readout_exp_of_isHurwitz_quotient_on`:
+the state stays in the closed-loop-invariant window `W`, the readout is blind to
+the invariant subspace `V`, and only `W ⧸ V` carries the spectral hypothesis. It
+is the analytic content of Trentelman–Stoorvogel–Hautus, Lemma 4.35, used here
+for the autonomous extended closed loop of equation (6.12). -/
+theorem tendsto_readout_exp_of_isHurwitz_mapQ_on
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (V W : Submodule ℝ X)
+    (hW : Submodule.map A W ≤ W)
+    (hV : Submodule.map A V ≤ V)
+    (hVH : V ≤ LinearMap.ker H)
+    (hE : LinearMap.range E ≤ W)
+    (hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ (V.comap W.subtype) (V.comap W.subtype)
+        (A.restrict (fun x hx => hW ⟨x, hx, rfl⟩))
+        (fun x hx => hV ⟨(x : X), hx, rfl⟩)))
+    (d : D) :
+    Tendsto (fun t : ℝ => H (NormedSpace.exp
+      (t • A.toContinuousLinearMap) (E d))) atTop (nhds 0) := by
+  let VW : Submodule ℝ W := V.comap W.subtype
+  let AW : W →ₗ[ℝ] W := A.restrict (fun x hx => hW ⟨x, hx, rfl⟩)
+  let HW : W →ₗ[ℝ] Z := H.comp W.subtype
+  have hVW' : VW ≤ VW.comap AW := by
+    intro x hx
+    change A (x : X) ∈ V
+    exact hV ⟨(x : X), hx, rfl⟩
+  have hVWH : VW ≤ LinearMap.ker HW := by
+    intro x hx
+    exact hVH hx
+  have hxW : E d ∈ W := hE ⟨d, rfl⟩
+  letI : IsTopologicalRing (W →L[ℝ] W) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  have hmain := tendsto_readout_exp_of_isHurwitz_mapQ AW HW VW hVW' hVWH hQ ⟨E d, hxW⟩
+  have hsub : W.subtype.toContinuousLinearMap.comp AW.toContinuousLinearMap =
+      A.toContinuousLinearMap.comp W.subtype.toContinuousLinearMap := by
+    ext x
+    rfl
+  have hflow : ∀ t : ℝ,
+      W.subtype.toContinuousLinearMap
+        (NormedSpace.exp (t • AW.toContinuousLinearMap) ⟨E d, hxW⟩) =
+      NormedSpace.exp (t • A.toContinuousLinearMap) (E d) := by
+    intro t
+    have := clm_map_exp_smul W.subtype.toContinuousLinearMap AW.toContinuousLinearMap
+      A.toContinuousLinearMap hsub t ⟨E d, hxW⟩
+    simpa using this
+  have hgoal : (fun t : ℝ => H (NormedSpace.exp
+        (t • A.toContinuousLinearMap) (E d))) =
+      fun t : ℝ => HW (NormedSpace.exp (t • AW.toContinuousLinearMap) ⟨E d, hxW⟩) := by
+    funext t
+    rw [← hflow t]
+    rfl
+  rw [hgoal]
+  exact hmain
+
+end FeedbackFreeQuotientDecay
+
+section ForcedExternalResponseDecay
+
+variable {X U Y W D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable (ic : DynamicInterconnection ℝ X U Y W D Z)
+
+/-- **Forced external readout decay from a quotient-Hurwitz window.** For a
+well-posed dynamic interconnection, if the extended closed-loop map preserves a
+subspace `Ve` on which the controlled output `He` vanishes, if it preserves a
+window `We ⊇ Ve` that contains the total disturbance image `im Be`, and if the
+induced map `We ⧸ Ve` is Hurwitz, then the forced disturbance-to-output response
+decays to zero in every disturbance direction,
+`t ↦ H_e e^{t A_e} B_e d → 0`.
+
+This is the smallest theorem that can feed `StableNonzeroExternalResponse`: it
+reuses the accepted quotient-spectrum decay
+`tendsto_readout_exp_of_isHurwitz_mapQ_on` on the extended state space and the
+variation-of-constants identification of the forced channel with the closed-loop
+exponential `closedLoopSystem_expFlow_eq`. It is stated for a general
+well-posed interconnection so that both the strictly proper and the feedthrough
+well-posedness hypotheses are explicit. -/
+theorem externalResponse_tendsto_zero_of_quotient_hurwitz
+    (h : ic.IsWellPosed) (Ve We : Submodule ℝ (X × W))
+    (hWe : Submodule.map (ic.closedLoopMap h) We ≤ We)
+    (hVe : Submodule.map (ic.closedLoopMap h) Ve ≤ Ve)
+    (hVeH : Ve ≤ LinearMap.ker ic.outputMap)
+    (hEe : LinearMap.range (ic.disturbanceMapWithF h) ≤ We)
+    (hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ (Ve.comap We.subtype) (Ve.comap We.subtype)
+        ((ic.closedLoopMap h).restrict (fun x hx => hWe ⟨x, hx, rfl⟩))
+        (fun x hx => hVe ⟨(x : X × W), hx, rfl⟩)))
+    (d : D) :
+    Filter.Tendsto (fun t : ℝ => ic.externalResponse h t d) Filter.atTop (nhds 0) := by
+  have hmain := tendsto_readout_exp_of_isHurwitz_mapQ_on
+    (ic.closedLoopMap h) ic.outputMap (ic.disturbanceMapWithF h) Ve We
+    hWe hVe hVeH hEe hQ d
+  have hfun : (fun t : ℝ => ic.externalResponse h t d) =
+      fun t : ℝ => ic.outputMap (NormedSpace.exp
+        (t • (ic.closedLoopMap h).toContinuousLinearMap)
+        (ic.disturbanceMapWithF h d)) := by
+    funext t
+    rw [ic.externalResponse_apply, ic.closedLoopSystem_expFlow_eq h t]
+  rw [hfun]
+  exact hmain
+
+/-- **Forced external readout decay from a globally Hurwitz closed loop.** The
+degenerate window `Ve = ⊥`, `We = ⊤` specialises the quotient bridge to a
+globally Hurwitz extended map, recovering the forced-response decay used by
+`stableNonzeroExternalResponse_of_isHurwitz_cabPair` directly from the
+quotient-spectrum API. -/
+theorem externalResponse_tendsto_zero_of_isHurwitz_closedLoopMap
+    (h : ic.IsWellPosed) (hH : LinearMap.IsHurwitz (ic.closedLoopMap h)) (d : D) :
+    Filter.Tendsto (fun t : ℝ => ic.externalResponse h t d) Filter.atTop (nhds 0) := by
+  have hflow : (fun t : ℝ => ic.externalResponse h t d) =
+      fun t : ℝ => ic.outputMap (NormedSpace.exp
+        (t • (ic.closedLoopMap h).toContinuousLinearMap)
+        (ic.disturbanceMapWithF h d)) := by
+    funext t
+    rw [ic.externalResponse_apply, ic.closedLoopSystem_expFlow_eq h t]
+  rw [hflow]
+  have htend : Filter.Tendsto (fun t : ℝ => NormedSpace.exp
+      (t • (ic.closedLoopMap h).toContinuousLinearMap)
+      (ic.disturbanceMapWithF h d)) Filter.atTop (nhds 0) :=
+    LinearMap.tendsto_exp_of_isHurwitz (ic.closedLoopMap h) hH _
+  have hcont := (ic.outputMap.toContinuousLinearMap.continuous.tendsto 0).comp htend
+  rw [map_zero] at hcont
+  exact hcont
+
+end ForcedExternalResponseDecay
+
+section StableNonzeroQuotientBridge
+
+variable {X U Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- **Stable-nonzero external response from a quotient-Hurwitz dynamic loop.**
+For a strictly proper plant, a dynamic controller (with state space `X`) whose
+extended closed loop admits an unobservable invariant subspace `Ve` and an
+invariant window `We` with `im B_e ⊆ We`, `Ve ≤ ker H_e` and `We ⧸ Ve` Hurwitz,
+realises the stable-nonzero external response. The well-posedness is automatic
+from strict properness (`isWellPosed_of_D_eq_zero`); the decay is the forced
+readout bridge `externalResponse_tendsto_zero_of_quotient_hurwitz`.
+
+This is the *sufficiency* skeleton of the stable-nonzero Corollary 6.22
+criterion: the geometric construction supplies `Ve`, `We` from the two
+separation-principle blocks, and the quotient-Hurwitz hypothesis is the spectral
+input. The exact-zero response is not used or claimed. -/
+theorem stableNonzeroExternalResponse_of_quotient_hurwitz
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (ctrl : DynamicController ℝ X Y U) (Ve We : Submodule ℝ (X × X))
+    (hWe : Submodule.map
+      ((cabPairInterconnection sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)) We ≤ We)
+    (hVe : Submodule.map
+      ((cabPairInterconnection sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)) Ve ≤ Ve)
+    (hVeH : Ve ≤ LinearMap.ker (cabPairInterconnection sys ctrl E H).outputMap)
+    (hEe : LinearMap.range
+      ((cabPairInterconnection sys ctrl E H).disturbanceMapWithF
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)) ≤ We)
+    (hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ (Ve.comap We.subtype) (Ve.comap We.subtype)
+        (((cabPairInterconnection sys ctrl E H).closedLoopMap
+          ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).restrict
+            (fun x hx => hWe ⟨x, hx, rfl⟩))
+        (fun x hx => hVe ⟨(x : X × X), hx, rfl⟩))) :
+    StableNonzeroExternalResponse sys hD E H := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z := cabPairInterconnection sys ctrl E H
+  have h : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  refine ⟨ctrl, fun d => ?_⟩
+  change Filter.Tendsto (fun t : ℝ => ic.externalResponse h t d) Filter.atTop (nhds 0)
+  exact externalResponse_tendsto_zero_of_quotient_hurwitz ic h Ve We hWe hVe hVeH hEe hQ d
+
+/-- **Stable-nonzero external response from a globally Hurwitz dynamic loop.**
+The generic controller form of the accepted
+`stableNonzeroExternalResponse_of_isHurwitz_cabPair`: any dynamic controller
+whose strictly proper extended closed loop is Hurwitz realises the
+stable-nonzero external response. It is the `Ve = ⊥`, `We = ⊤` case of
+`stableNonzeroExternalResponse_of_quotient_hurwitz` read through the direct
+Hurwitz-exp decay, and it certifies that the quotient bridge is not vacuous. -/
+theorem stableNonzeroExternalResponse_of_isHurwitz_closedLoopMap
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (ctrl : DynamicController ℝ X Y U)
+    (hH : LinearMap.IsHurwitz
+      ((cabPairInterconnection sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD))) :
+    StableNonzeroExternalResponse sys hD E H := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z := cabPairInterconnection sys ctrl E H
+  have h : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  refine ⟨ctrl, fun d => ?_⟩
+  change Filter.Tendsto (fun t : ℝ => ic.externalResponse h t d) Filter.atTop (nhds 0)
+  exact externalResponse_tendsto_zero_of_isHurwitz_closedLoopMap ic h hH d
+
+end StableNonzeroQuotientBridge
+
 /-! ## The geometric feedback construction: reduction lemmas
 
 Trentelman–Stoorvogel–Hautus, Lemma 4.38 constructs a state feedback `F` from
@@ -4739,3 +4979,34 @@ The syntactic bridge recorded in the previous handoff is now complete.
 The exact-zero (decoupling) and stable-nonzero (decay) readings remain distinct:
 this layer proves only the decay of the observer-error readout; it does not
 collapse it into the identically-zero external-response predicate. -/
+
+/-! ### Stable-nonzero forced-readout bridge: current status
+
+The forced/convolution quotient-decay bridge isolated by the previous handoff is
+now formalised in two layers:
+
+* `LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ_on`: the feedback-free
+  form of `tendsto_readout_exp_of_isHurwitz_quotient_on`, decay of
+  `t ↦ H (exp (t A) (E d))` from an invariant window `W ⊇ im E` and an invariant
+  `V ≤ ker H` with `W ⧸ V` Hurwitz.
+* `LinearSystem.externalResponse_tendsto_zero_of_quotient_hurwitz` (and its
+  `..._of_isHurwitz_closedLoopMap` specialisation): decay of the forced external
+  readout `H_e e^{t A_e} B_e d` of a well-posed dynamic interconnection from an
+  invariant `Ve ≤ ker H_e` and an invariant window `We ⊇ im B_e` with `We ⧸ Ve`
+  Hurwitz.
+* `LinearSystem.stableNonzeroExternalResponse_of_quotient_hurwitz`: the
+  `StableNonzeroExternalResponse` feed for an arbitrary dynamic controller with
+  explicit `Ve`, `We` data, together with the consistent
+  `..._of_isHurwitz_closedLoopMap` global-Hurwitz case.
+
+The remaining geometric obligation is to *construct* the extended subspace pair
+`(Ve, We)` from the two Corollary 6.22 blocks — `We = V_{e,2}` and `Ve = V_{e,1}`
+of Trentelman–Stoorvogel–Hautus Lemma 6.21, equations (6.40)–(6.41) — and to
+derive `We ⧸ Ve` Hurwitz from the state-feedback quotient on `W_g / V*` and the
+observer quotient on `S* / T_g` (Theorem 6.18). That construction, and the
+matching necessity direction from the merely stable response, are not claimed
+here; the exact-zero criterion
+(`externalStability_iff_geometricCertificate_and_conditions`) and the
+stable-nonzero synthesis under explicit Hurwitz/quotient-Hurwitz data remain the
+certified statements. -/
+
