@@ -223,11 +223,14 @@ from the certificate and from the exact external zero response
 `LinearSystem.externalStabilizationConditions_of_externalStability`); the
 integrated form is
 `LinearSystem.externalStability_iff_geometricCertificate_and_conditions`. The
-remaining analytic direction — a merely stable *nonzero* transfer function —
-still requires the trajectory characterisation
-`W_g(ker H) = V*(ker H) + Xstab` (Trentelman Theorem 4.37) and the
-quotient-spectrum transfer lemma (Lemma 4.35), which are not available in the
-pinned library. In particular the
+trajectory/spectral direction — a merely stable *nonzero* transfer function — is
+now supported by the formalised quotient-decay bridge
+`tendsto_readout_exp_of_isHurwitz_mapQ`, the geometric state-feedback
+construction of Lemma 4.38 `exists_feedback_tendsto_readout_of_corollary622`,
+and its observer dual
+`exists_observerError_readout_tendsto_of_externalStabilizationConditions`; the
+full necessary-and-sufficient dynamic-controller form of Corollary 6.22 is not
+claimed. In particular the
 zero-response predicate above must not be read as BIBO/external asymptotic
 stability; the two are separated by
 `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`,
@@ -2785,11 +2788,13 @@ The two inclusions are recorded by
 `ExternalStabilizationConditions`; the accepted
 `(C, A, B)`-pair certificate already entails both, and the necessary-direction
 extraction `externalStabilizationConditions_of_externalStability` obtains them
-from the exact external zero response. The genuinely analytic converse (a stable
-but nonzero transfer function) additionally requires the trajectory
-characterisation `W_g(ker H) = V*(ker H) + Xstab` (Theorem 4.37) and the
-quotient-spectrum transfer lemma (Lemma 4.35); those are **not** available and are
-recorded in the handoff rather than assumed. -/
+from the exact external zero response. The trajectory/spectral stable-nonzero
+direction is now supported by the formalised quotient-decay bridge
+`tendsto_readout_exp_of_isHurwitz_mapQ` and the geometric state-feedback
+construction `exists_feedback_tendsto_readout_of_corollary622`, with observer dual
+`exists_observerError_readout_tendsto_of_externalStabilizationConditions`; the
+full necessary-and-sufficient dynamic-controller form of Corollary 6.22 is not
+claimed. -/
 
 /-- **The geometric subspace conditions of Corollary 6.22.** The disturbance
 image lies in the sum of the largest controlled invariant subspace inside
@@ -2937,10 +2942,13 @@ any `A`-trajectory decays. The state-feedback form
 invariant subspace `W` containing the disturbance image, so only the quotient
 `W / V` need be Hurwitz.
 
-The remaining source obligation — constructing the feedback `F` of Lemma 4.38
-from `im E ≤ V*(ker H) + Xstab` so that `σ(A_F | W_g/V*) ⊂ C_g` — is **not**
-formalised here; it is recorded as the handoff item. These theorems supply the
-analytic half of the bridge with the spectral hypothesis explicit. -/
+The feedback construction of Lemma 4.38 — producing `F` from
+`im E ≤ V*(ker H) + Xstab` so that `σ(A_F | W_g/V*) ⊂ C_g` — is formalised as
+`exists_feedback_tendsto_readout_of_geometricCondition` and its Corollary 6.22
+specialisation `exists_feedback_tendsto_readout_of_corollary622`; the observer
+dual is `exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
+These theorems supply the analytic half of the bridge with the spectral
+hypothesis explicit. -/
 
 set_option linter.style.haveILetI false
 
@@ -3063,8 +3071,9 @@ This is the state-feedback form of Lemma 4.35 (the sufficiency step of
 Theorem 4.39): the disturbance enters through `im E ≤ W`, `W` is closed-loop
 invariant, the readout vanishes on `V`, and only the quotient `W / V` carries the
 spectral stability hypothesis. The construction of such an `F` from the
-geometric condition `im E ≤ V*(ker H) + Xstab` (Lemma 4.38) is the remaining
-source obligation and is not assumed here. -/
+geometric condition `im E ≤ V*(ker H) + Xstab` (Lemma 4.38) is supplied
+separately by `exists_feedback_tendsto_readout_of_geometricCondition`; it is not
+assumed here. -/
 theorem tendsto_readout_exp_of_isHurwitz_quotient_on
     (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
     (V W : Submodule ℝ X) (F : X →ₗ[ℝ] U)
@@ -3141,10 +3150,10 @@ Lemma 4.35 operate:
   `map_add_feedback_sup_stabilizableSubspace_le`: any feedback that preserves the
   controlled-invariant witness `V` also preserves `W`.
 
-These lemmas supply `hW` and `range E ≤ W` for the accepted quotient-decay
-bridge once an `F` with `(A + B F) V ≤ V` and `W/V` Hurwitz is available; the
-construction of that `F` from the geometric inclusion is recorded as the handoff
-item (see the module note above and `gaps.json`). -/
+These lemmas supply `hW` and `range E ≤ W` for the quotient-decay bridge used by
+the construction below; the construction of that `F` from the geometric
+inclusion is provided by `exists_feedback_tendsto_readout_of_geometricCondition`
+and its Corollary 6.22 specialisation. -/
 
 section GeometricFeedbackConstruction
 
@@ -3356,8 +3365,9 @@ Trentelman–Stoorvogel–Hautus Theorem 4.39: `(A + B F) W ≤ W` is supplied b
 bridge `tendsto_readout_exp_of_isHurwitz_quotient_on` finishes the argument.
 
 The *construction* of the gain `F` from the geometric inclusion
-`im E ≤ V ⊔ Xstab(A, B)` (Lemma 4.38) is the hypothesis `hQ` and is not
-produced here; see the module handoff. -/
+`im E ≤ V ⊔ Xstab(A, B)` (Lemma 4.38), together with the quotient-Hurwitz
+property, is produced by `exists_feedback_tendsto_readout_of_geometricCondition`;
+here it is taken as data. -/
 theorem tendsto_readout_exp_of_geometricCondition
     (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
     (V : Submodule ℝ X) (F : X →ₗ[ℝ] U)
@@ -3966,12 +3976,12 @@ algebraic condition on the transposed pair
 where `V*(ker Eᵀ) = controlledInvariantSubspace A.dualMap C.dualMap
 (im E)ᵃⁿⁿ = S*(im E)ᵃⁿⁿ` by `dualAnnihilator_conditionedInvariantSubspace`.
 
-The only remaining identification needed to match the primal geometric condition
+The identification needed to match the primal geometric condition
 `im E ≤ V*(ker H) + Xstab(A, B)` is `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`, i.e. the transpose
-stable/antistable duality; because `Module.Dual ℝ X` carries no norm and no
-`Module.finBasis`, `X_g(A.dualMap)` is not currently a definable object here.
-This equivalence is therefore the precise reusable bridge and the point at which
-the output-injection half is blocked. -/
+stable/antistable duality; it is provided by the accepted
+`dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap` in
+`DynamicalSystems/Linear/Stabilization.lean` and is consumed by
+`conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition` below. -/
 theorem conditionedInvariant_inf_detectable_le_ker_iff_dualAlgebraicCondition
     (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
     conditionedInvariantSubspace C A (LinearMap.range E) ⊓ detectableSubspace C A ≤
@@ -4012,7 +4022,7 @@ theorem conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition
 
 end LinearMap
 
-/-! ### Handoff: the remaining output-injection bridge
+/-! ### The output-injection duality bridge
 
 The dual output-injection half of Corollary 6.22 is formalised by
 `exists_outputInjection_dualReadout_tendsto_of_dualCondition` and
@@ -4023,14 +4033,15 @@ finite-dimensional real vector space through the norm-free API in
 `DynamicalSystems/Linear/Stabilization.lean`
 (`stableSubspaceOfBasis`, `unstableSubspaceOfBasis`, with
 `stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace` recovering the accepted
-`hurwitzSubspace` definitionally). The missing reusable lemma is therefore now
-well-typed:
+`hurwitzSubspace` definitionally). The reusable lemma is:
 
 `(unstableSubspace A).dualAnnihilator =
    stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap`,
 
 equivalently, after basis independence, `(detectableSubspace C A).dualAnnihilator
-= stabilizableSubspace` of the transposed pair.
+= stabilizableSubspace` of the transposed pair. It is accepted as
+`dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`; the supporting
+development is summarised below.
 
 **Completed in the current attempt** (all in
 `DynamicalSystems/Linear/Stabilization.lean`, compiled and audited):
@@ -4092,17 +4103,17 @@ available, but the dimension input here is obtained more directly from the
 finite-dimensional generalized-eigenspace decomposition plus
 `finrank_maxGenEigenspace_dualMap`, so neither is needed in the argument.
 
-The remaining step to the real statement
+The step to the real statement
 `(unstableSubspace A).dualAnnihilator =
 stableSubspaceOfBasis (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap` is the
 transport across `IsBaseChange.toDualBaseChange` (base change commutes with the
-dual), which is **not** formalised here. Once that transport is available the
-accepted state-feedback construction
-`exists_feedback_tendsto_readout_of_geometricCondition` can be run on the
+dual), which is described in the update below. The accepted state-feedback
+construction
+`exists_feedback_tendsto_readout_of_geometricCondition` is then run on the
 transposed pair and the resulting gain transposed back with
 `dualMap_surjective`, yielding the observer gain `G` of
-Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21. Until then no output-injection
-statement is claimed. -/
+Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21 in the observer-gain assembly
+below. -/
 
 /-! ### Update: the real-coordinate transport is complete
 
@@ -4130,12 +4141,16 @@ the missing bridge `(X_b(A))ᵃⁿⁿ = X_g(Aᵀ)`. With it, the dual algebraic
 condition of Corollary 6.22 is exposed in real-coordinate form as
 `conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition`.
 
-The next milestone is to run the accepted state-feedback construction on the
-transposed dual pair, with the roles of the disturbance channel `E` and the
-controlled output `H` exchanged, and then transpose the resulting gain back with
-`dualMap_surjective`, yielding the observer injection `G` of
-Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21 and the corresponding dual
-external-stability theorem. That observer construction is not claimed here.
+Running the accepted state-feedback construction on the transposed dual pair,
+with the roles of the disturbance channel `E` and the controlled output `H`
+exchanged, and transposing the resulting gain back with `dualMap_surjective`
+yields the observer injection `G` of Trentelman–Stoorvogel–Hautus Lemma 6.20/6.21;
+this is formalised in the observer-gain assembly below as
+`exists_outputInjection_dualReadout_tendsto_of_dualCondition`, its
+observer-error form `exists_observerError_dualReadout_tendsto_of_dualCondition`,
+and the primal statements
+`exists_observerError_readout_tendsto_of_dualCondition` and
+`exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
 -/
 
 /-! ## The dual observer/output-injection gain assembly

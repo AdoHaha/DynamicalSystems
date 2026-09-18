@@ -261,9 +261,15 @@ The converse extraction of a `(C, A, B)`-pair from a decoupled closed loop, the
 explicit-hypothesis transfer-function bridge, the measurement-disturbance bookkeeping, the
 spectrum/internal-stability layer, and the Hurwitz-to-external-impulse-response stability
 sufficient direction and its BIBO/integrability consequence are formalized. Nonzero-`F` synthesis
-is formalized under an explicit factorization hypothesis; the geometric necessary-and-
-sufficient external-stability converse and observer dual are now formalized with
-explicit finite-dimensional and admissibility hypotheses.
+is formalized under an explicit factorization hypothesis. The exact-zero response converse
+`LinearSystem.externalStability_iff_geometricCertificate` (TST Theorem 6.6 / Corollary 6.7), the
+state-feedback construction `LinearSystem.exists_feedback_tendsto_readout_of_corollary622` for the
+Corollary 6.22 subspace condition, and the observer-error decay
+`LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions` are
+formalized with their explicit finite-dimensional and admissibility hypotheses. The full
+*stable-nonzero* Corollary 6.22 necessary-and-sufficient criterion is not claimed; only the
+sufficiency under controllability and observability in
+`LinearSystem.exists_externallyStabilizing_cabPair_gains` is proved.
 
 # Stabilizable and detectable spectral subspaces
 
@@ -312,9 +318,12 @@ This is the algebraic input to the Corollary 6.22 observer half below.
 
 # Geometric external stability
 
-External stability is a *stable-nonzero* notion, distinct from exact disturbance decoupling. The
-exact-zero response property is captured separately from BIBO stability, so the two are never
-conflated.
+The Lean predicate `LinearSystem.ExternalStability` is the *exact-zero* (disturbance-decoupling)
+reading of external stability, not the source's stable-nonzero property: its defining docstring
+records that it is "explicitly the zero-response predicate, not BIBO stability". The
+stable-nonzero property of TST Corollary 6.22 is carried separately by
+`LinearSystem.ExternalStabilizationConditions` together with the BIBO predicate
+`LinearSystem.DynamicInterconnection.IsBIBOStable`. The two are never conflated.
 
 A strictly proper plant (`D = 0`) admits an externally zero-responding dynamic
 measurement-feedback controller exactly when it carries a `(C, A, B)`-pair between `im E` and
@@ -568,7 +577,7 @@ only. *Risk:* high (API break). *Follow-up:* not justified for the available ben
 `DynamicalSystems.Linear.Examples.zeroDim_observable`,
 `DynamicalSystems.Linear.Examples.zeroDim_kalman_surjective` and
 `DynamicalSystems.Linear.Examples.zeroDim_kalman_injective`. *Recommendation:* standardize the `finrank = 0` to `Subsingleton X`
-conversion on `Module.finrank_zero_iff` / `Module.finrank_zero_iff_forall_zero` and add a single
+conversion on `Module.finrank_zero_iff` / `finrank_zero_iff_forall_zero` and add a single
 named dispatch lemma so the recurring `by_cases hzero : Module.finrank ℝ X = 0` is written once.
 *Risk:* low. *Follow-up:* optional.
 
@@ -687,7 +696,7 @@ the base `_iff` and is a two-line consequence of it. *Recommendation:* keep; it 
 
 *F17. Intentional `_zero_input`/`_zero_state` name twins across namespaces.*
 `LinearSystem.dynamics_zero_input`/`dynamics_zero_state` (`Basic.lean`) and
-`DynamicController.dynamics_zero_input`/`dynamics_zero_state` (`DynamicFeedback.lean`) share a
+`LinearSystem.DynamicController.dynamics_zero_input`/`dynamics_zero_state` (`DynamicFeedback.lean`) share a
 name but concern different structures and different `dynamics` definitions, and each is proved by
 its own `simp [dynamics]`. *Recommendation:* keep; an automated deduplication must not merge them.
 *Risk:* low. *Follow-up:* not justified.
@@ -824,7 +833,8 @@ directly.
   * §6.1–6.2
 *
   * External stability
-  * `LinearSystem.externalStability_iff_geometricCertificate`
+  * `LinearSystem.externalStability_iff_geometricCertificate`,
+    `LinearSystem.ExternalStabilizationConditions`
   * Theorems 6.6, 4.39; Corollaries 6.7, 6.22
   * 159–160 / 145–146
 *
@@ -833,6 +843,10 @@ directly.
   * Lemmas 4.35, 6.20, 6.21
   * §6.6
 :::
+
+In the external-stability row the first declaration is the exact-zero criterion (TST Theorem 6.6 /
+Corollary 6.7); the second records the stable-nonzero Corollary 6.22 subspace conditions, whose
+full necessary-and-sufficient dynamic-controller form is not claimed.
 
 # Source-to-theorem ledger
 
@@ -921,27 +935,29 @@ Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bu
   `LinearMap.isControlledInvariant_iff_exists_stateFeedback`.
 * Invariant subspace algorithm `V₀ = K`, `V_{k+1} = K ∩ A⁻¹(V_k + im B)` (TST (4.9)): Lean
   `LinearMap.controlledInvariantSeq`, `LinearMap.isGreatest_controlledInvariantSubspace`.
-* Duality with conditioned invariance (TST Section 4.4): Lean
-  `LinearMap.isControlledInvariant_iff_isConditionedInvariant_dualMap`.
 
 ## `DynamicalSystems.Linear.ConditionedInvariant`
 
 * Conditioned invariance `A (S ∩ ker C) ≤ S` (TST Definition 5.1): Lean
   `LinearMap.IsConditionedInvariant`,
   `LinearMap.isConditionedInvariant_iff_exists_outputInjection`.
+* Duality with controlled invariance (TST Section 4.4): Lean
+  `LinearMap.isControlledInvariant_iff_isConditionedInvariant_dualMap` (declared in
+  `ConditionedInvariant.lean`).
 * Conditioned invariant subspace algorithm `S₀ = E`, `S_{k+1} = E + A(S_k ∩ ker C)`
   (TST (5.5)–(5.6)): Lean `LinearMap.conditionedInvariantSeq`,
   `LinearMap.isLeast_conditionedInvariantSubspace`.
 
 ## `DynamicalSystems.Linear.Reachability`
 
-* Reachable set equals the algebraic reachable subspace for positive horizons (TST
-  Theorem 3.1): Lean `LinearSystem.reachableSetAt_eq_reachableSubspace`.
 * Indistinguishability `C e^{tA} v = 0` (TST Definition 3.6 and Theorem 3.8(iv)): Lean
   `LinearSystem.indistinguishableOn_iff_mem_unobservableSubspace`.
 
 ## `DynamicalSystems.Linear.Gramian`
 
+* Reachable set equals the algebraic reachable subspace for positive horizons (TST
+  Theorem 3.1): Lean `LinearSystem.reachableSetAt_eq_reachableSubspace` (declared in
+  `Gramian.lean`, not in `Reachability.lean`).
 * Controllability and observability Gramians and their energy identities (TST Sections 3.2–3.3):
   Lean `LinearSystem.controllabilityGramian`, `LinearSystem.observabilityGramian`,
   `LinearSystem.inner_controllabilityGramian`, `LinearSystem.inner_observabilityGramian`.
@@ -1108,3 +1124,94 @@ the trajectory/observer reading (i) of the geometric invariance definitions as a
 and continuous-time minimal-realization statements. The examples module supplies the
 nonzero-feedthrough observer, the possible/impossible decoupling instances, the planar-rotation
 PBH regression, and the proved scalar-filter representation bridge.
+
+# Consistency and fullness review
+
+This is a read-only cross-check of the completed corpus against its own declarations and against
+the supplied Trentelman–Stoorvogel–Hautus text. Every `{docstring ...}` target and every
+backticked API name in the ledger was resolved with `#check`; each ledger name was matched to its
+declaring module with `rg`; the theorem-map PDF pages were spot-checked against the supplied PDF.
+No proof declaration, statement, or declaration docstring outside this manual was changed. The
+severity ranking is High, Medium, Low; "non-owned" marks a defect in a proof module that this
+documentation-only review records but cannot edit.
+
+:::table +header
+*
+  * Severity
+  * Area
+  * Finding and evidence
+  * Status
+*
+  * Medium
+  * Nomenclature
+  * `LinearSystem.ExternalStability` is the exact-zero (decoupling) response, but the manual
+    called external stability "stable-nonzero"; the source's Corollary 6.22 stable-nonzero
+    property is separate (`DynamicFeedback.lean`, `def ExternalStability`).
+  * Corrected in the prose above.
+*
+  * Medium
+  * Fullness overclaim
+  * The manual said the "geometric necessary-and-sufficient external-stability converse" was
+    formalized, but the stable-nonzero Corollary 6.22 criterion is explicitly not claimed
+    (`exists_externallyStabilizing_cabPair_gains` docstring; `DynamicFeedback.lean` 229, 2544,
+    2755).
+  * Corrected in the prose above.
+*
+  * Medium
+  * Stale handoff (non-owned)
+  * `DynamicFeedback.lean` module notes still call the Lemma 4.38 feedback construction, the
+    Lemma 4.35 quotient bridge, and the transpose-stable transport unformalised or unavailable
+    (lines 229, 2942, 4013–4135), contradicting
+    `tendsto_readout_exp_of_isHurwitz_mapQ`, `exists_feedback_tendsto_readout_of_corollary622`,
+    `dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap`, and
+    `exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
+  * Follow-up cleanup needed in `DynamicFeedback.lean` (non-owned).
+*
+  * Low
+  * Source attribution
+  * The theorem-map row attributed `externalStability_iff_geometricCertificate` to TST Theorems
+    6.6 and 4.39 and Corollaries 6.7 and 6.22; that declaration is the exact-zero criterion alone
+    (Theorem 6.6 / Corollary 6.7).
+  * Corrected in the table row.
+*
+  * Low
+  * Ledger module attribution
+  * `LinearSystem.reachableSetAt_eq_reachableSubspace` was listed under `Reachability` but is
+    declared in `Gramian.lean` (line 531);
+    `LinearMap.isControlledInvariant_iff_isConditionedInvariant_dualMap` was listed under
+    `ControlledInvariant` but is declared in `ConditionedInvariant.lean` (line 321).
+  * Corrected in the ledger.
+*
+  * Low
+  * Reference names
+  * The reuse audit cited `Module.finrank_zero_iff_forall_zero` (actual root name
+    `finrank_zero_iff_forall_zero`) and `DynamicController.dynamics_zero_input` (actual
+    `LinearSystem.DynamicController.dynamics_zero_input`); `LinearMap.range_conj_pow_comp` (F3) is
+    a proposed name, not a declaration.
+  * Corrected in the audit text; F3 remains a recommendation only.
+*
+  * Low
+  * Observer sign convention
+  * The Lean error is `ξ - x` (estimate minus true state; `Observer.lean` header), while the
+    source contract writes `x - xhat`; both satisfy `e' = (A - L C) e`
+    (`LinearSystem.observerError_dynamics`).
+  * Recorded here; no code change.
+*
+  * Low
+  * Accepted synonyms
+  * The stable subspace appears as `hurwitzSubspace` and `stableSubspaceOfBasis` (bridged by
+    `stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace`), and the source's "antistable" is Lean
+    `unstableSubspace`. These are deliberate, documented synonyms.
+  * Accepted.
+*
+  * Info
+  * Source pages
+  * Every theorem-map PDF/printed pair satisfies the linear book's constant offset 14, spot-checked
+    against the PDF (PDF 54 = printed 40, PDF 73 = printed 59, PDF 160 = printed 146).
+  * Verified; no change.
+:::
+
+Positive checks that passed: all `{docstring ...}` targets and all ledger names resolve; every
+ledger name is declared in or re-exported through its stated module; no forbidden proof placeholder
+or trust-basis construct occurs in `DynamicalSystems/Linear`; and the standard audit reports
+only the three standard axioms.
