@@ -3128,8 +3128,10 @@ stability of the closed-loop transfer function through the analytic Lemma 4.35,
 already formalised as
 `tendsto_readout_exp_of_isHurwitz_quotient_on`.
 
-The construction of `F` (the genuinely missing step) is not formalised here.
-What *is* formalised in this section are the two structural facts about the
+The construction of `F` is formalised by
+`exists_feedback_tendsto_readout_of_geometricCondition` and
+`exists_feedback_tendsto_readout_of_corollary622`.
+This section also records the structural facts about the
 geometric subspace `W = V*(ker H) ⊔ Xstab(A, B)` on which Lemma 4.38 and
 Lemma 4.35 operate:
 
@@ -4012,9 +4014,10 @@ end LinearMap
 
 /-! ### Handoff: the remaining output-injection bridge
 
-The dual output-injection half of Corollary 6.22 is now reduced to a single
-missing declaration. After the accepted commit `0229756` the antistable
-annihilator `(X_b(A))ᵃⁿⁿ` has not yet been identified with the stable subspace
+The dual output-injection half of Corollary 6.22 is formalised by
+`exists_outputInjection_dualReadout_tendsto_of_dualCondition` and
+`exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
+The antistable annihilator `(X_b(A))ᵃⁿⁿ` is identified with the stable subspace
 of the transpose. The stabilizable/stable spaces are available on any
 finite-dimensional real vector space through the norm-free API in
 `DynamicalSystems/Linear/Stabilization.lean`
