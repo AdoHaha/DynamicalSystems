@@ -168,9 +168,19 @@ antistable readout argument is also provided here:
 unit-modulus geometric progression, and `LinearMap.tendsto_zero_of_sum_pow_smul`
 shows that a finite sum of distinct unit-modulus characters with coefficients in
 a complex normed space cannot tend to zero unless every coefficient vanishes.
-This is the cancellation argument at the heart of the spectral readout lemma;
-the polynomial-exponential reduction on top of it is recorded as the remaining
-step in `DynamicalSystems.Linear.DynamicFeedback`.
+This is the cancellation argument at the heart of the spectral readout lemma.
+
+The polynomial-exponential reduction on top of it is now formalised as well.
+`LinearMap.tendsto_zero_of_sum_pow_smul_polynomial` extends the accepted
+character lemma to polynomial coefficients by inducting on the degree;
+`LinearMap.tendsto_zero_of_sum_exp_polynomial_re_zero` transfers it to the
+continuous characters `exp (t * μ i)` with purely imaginary modes; and
+`LinearMap.tendsto_zero_of_sum_exp_polynomial` proves the general
+`Re μ i ≥ 0` form by factoring out the dominant real part and inducting on the
+number of modes. Thus a finite sum of vector-valued polynomial terms times
+`exp (t * μ)`, with `Re μ ≥ 0`, that tends to zero at `+∞` has all coefficients
+zero. The transport to the antistable readout (`H (e^{tA} x)`) remains the next
+step recorded in `DynamicalSystems.Linear.DynamicFeedback`.
 
 The PBH criteria are complete in both directions. The necessity results
 `LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue` and
@@ -4763,5 +4773,474 @@ theorem dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap (A : X →ₗ
     exact ⟨_, h, rfl⟩
 
 end DualAnnihilatorUnstableTransport
+
+/-! ## Polynomial-exponential reduction
+
+The accepted character-isolation lemma `tendsto_zero_of_sum_pow_smul` handles a
+finite sum of *constant* coefficients against distinct unit-modulus characters.
+The Bohl/spectral readout argument needs the next layer: a finite sum of
+vector-valued *polynomial* terms times a character that tends to zero must have
+all coefficients zero. The reduction is done in three steps, mirroring the
+source proof recorded in `DynamicalSystems.Linear.DynamicFeedback`:
+
+* `tendsto_zero_of_sum_pow_smul_polynomial`: the discrete reduction
+  `∑ i, z i ^ n • (∑ k ≤ D, n ^ k • a i k) → 0` with distinct unit-modulus
+  `z i`, proved by induction on the degree `D`, isolating the top coefficient
+  with the accepted character lemma and discarding the lower-order terms.
+* `tendsto_zero_of_sum_exp_polynomial_re_zero`: the continuous version when all
+  real parts vanish, obtained by sampling `t = n * δ` for a scaling `δ` chosen
+  so that the unit-modulus characters `exp (δ * μ i)` stay distinct.
+
+The general `Re μ i ≥ 0` case is obtained by factoring out the dominant real
+part and inducting on the number of modes; see
+`tendsto_zero_of_sum_exp_polynomial`. -/
+
+/-- **A polynomial of degree `< D` divided by one extra power.** For `n ≥ 1`
+and `k ≤ D`, `n ^ k / n ^ (D + 1) ≤ 1 / n`. This elementary bound removes the
+lower-order terms after the top coefficient has been isolated. -/
+lemma inv_pow_mul_pow_le_inv (n D k : ℕ) (hn : 0 < n) (hk : k ≤ D) :
+    ((n : ℝ) ^ (D + 1))⁻¹ * (n : ℝ) ^ k ≤ (n : ℝ)⁻¹ := by
+  have hnpos : (0 : ℝ) < n := by exact_mod_cast hn
+  have hn1 : (1 : ℝ) ≤ n := by
+    have : (1 : ℕ) ≤ n := hn
+    exact_mod_cast this
+  have hle : k ≤ D + 1 := by omega
+  have h1 : ((n : ℝ) ^ (D + 1))⁻¹ * (n : ℝ) ^ k = 1 / (n : ℝ) ^ (D + 1 - k) := by
+    rw [mul_comm, ← div_eq_mul_inv, pow_sub₀ (n:ℝ) (by positivity) hle]
+    rw [div_eq_mul_inv, one_div, mul_inv, inv_inv, mul_comm]
+  rw [h1]
+  have hle2 : (n : ℝ) ≤ (n : ℝ) ^ (D + 1 - k) := by
+    simpa using pow_le_pow_right₀ hn1 (by omega : 1 ≤ D + 1 - k)
+  simpa [one_div] using one_div_le_one_div_of_le hnpos hle2
+
+/-- **Polynomial growth is dominated by one extra power.** For unit-modulus
+characters `z i`, a polynomial in `n` of degree at most `D` divided by
+`n ^ (D + 1)` tends to zero. This is the elementary step that removes the
+lower-degree terms after the top coefficient has been isolated. -/
+lemma tendsto_inv_pow_smul_sum_range {W : Type*} [NormedAddCommGroup W] [NormedSpace ℂ W]
+    {ι : Type*} (s : Finset ι) (z : ι → ℂ) (hz : ∀ i ∈ s, ‖z i‖ = 1)
+    (D : ℕ) (a : ι → ℕ → W) :
+    Tendsto (fun n : ℕ => ((n : ℂ) ^ (D + 1))⁻¹ •
+      (∑ i ∈ s, (z i) ^ n •
+        (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k))) atTop (𝓝 0) := by
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  set C : ℝ := ∑ i ∈ s, ∑ k ∈ Finset.range (D + 1), ‖a i k‖ with hC
+  refine squeeze_zero (g := fun n : ℕ => C / n) (fun n => by positivity) (fun n => ?_) ?_
+  · rcases Nat.eq_zero_or_pos n with hn | hn
+    · subst hn; simp
+    · calc
+        ‖((n : ℂ) ^ (D + 1))⁻¹ •
+            (∑ i ∈ s, (z i) ^ n •
+              (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k))‖
+            ≤ ∑ i ∈ s, ‖((n : ℂ) ^ (D + 1))⁻¹ •
+                ((z i) ^ n •
+                  (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k))‖ := by
+              rw [Finset.smul_sum]
+              exact norm_sum_le _ _
+          _ ≤ ∑ i ∈ s, (n : ℝ)⁻¹ * (∑ k ∈ Finset.range (D + 1), ‖a i k‖) := by
+              apply Finset.sum_le_sum
+              intro i hi
+              rw [smul_smul, norm_smul, norm_mul, norm_pow, hz i hi, one_pow, mul_one]
+              rw [norm_inv, norm_pow, Complex.norm_natCast]
+              have hX : ‖∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k‖ ≤
+                  ∑ k ∈ Finset.range (D + 1), (n : ℝ) ^ k * ‖a i k‖ := by
+                calc ‖∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k‖
+                    ≤ ∑ k ∈ Finset.range (D + 1), ‖(n : ℂ) ^ k • a i k‖ :=
+                      norm_sum_le _ _
+                  _ = ∑ k ∈ Finset.range (D + 1), (n : ℝ) ^ k * ‖a i k‖ := by
+                      apply Finset.sum_congr rfl
+                      intro k hk
+                      rw [norm_smul, norm_pow, Complex.norm_natCast]
+              calc ((n : ℝ) ^ (D + 1))⁻¹ *
+                    ‖∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k‖
+                  ≤ ((n : ℝ) ^ (D + 1))⁻¹ *
+                      (∑ k ∈ Finset.range (D + 1), (n : ℝ) ^ k * ‖a i k‖) :=
+                    mul_le_mul_of_nonneg_left hX (by positivity)
+                _ = ∑ k ∈ Finset.range (D + 1),
+                      ((n : ℝ) ^ (D + 1))⁻¹ * ((n : ℝ) ^ k * ‖a i k‖) := by
+                    rw [Finset.mul_sum]
+                _ ≤ ∑ k ∈ Finset.range (D + 1), (n : ℝ)⁻¹ * ‖a i k‖ := by
+                    apply Finset.sum_le_sum
+                    intro k hk
+                    rw [Finset.mem_range] at hk
+                    rw [← mul_assoc]
+                    exact mul_le_mul_of_nonneg_right
+                      (inv_pow_mul_pow_le_inv n D k hn (Nat.lt_succ_iff.mp hk))
+                      (norm_nonneg (a i k))
+                _ = (n : ℝ)⁻¹ * (∑ k ∈ Finset.range (D + 1), ‖a i k‖) := by
+                    rw [Finset.mul_sum]
+          _ = (n : ℝ)⁻¹ * C := by rw [hC, Finset.mul_sum]
+          _ = C / n := by rw [div_eq_inv_mul]
+  · exact tendsto_const_div_atTop_nhds_zero_nat (𝕜 := ℝ) C
+
+/-- **Polynomial-exponential reduction, discrete form.** A finite sum of
+polynomial terms against distinct unit-modulus characters cannot tend to zero
+at `+∞` unless every polynomial coefficient vanishes. The proof is induction on
+the degree bound `D`: dividing by `n ^ (D + 1)` isolates the top coefficient,
+which the accepted character lemma `tendsto_zero_of_sum_pow_smul` forces to be
+zero, and the remaining lower-degree sum is handled by the induction
+hypothesis. -/
+lemma tendsto_zero_of_sum_pow_smul_polynomial {W : Type*} [NormedAddCommGroup W]
+    [NormedSpace ℂ W] {ι : Type*} (s : Finset ι) (z : ι → ℂ)
+    (hz : ∀ i ∈ s, ‖z i‖ = 1)
+    (hinj : ∀ i ∈ s, ∀ j ∈ s, z i = z j → i = j)
+    (D : ℕ) (a : ι → ℕ → W)
+    (h : Tendsto (fun n : ℕ => ∑ i ∈ s, (z i) ^ n •
+        (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k)) atTop (𝓝 0)) :
+    ∀ i ∈ s, ∀ k ≤ D, a i k = 0 := by
+  induction D generalizing a with
+  | zero =>
+    intro i hi k hk
+    have hk0 : k = 0 := Nat.eq_zero_of_le_zero hk
+    subst hk0
+    exact tendsto_zero_of_sum_pow_smul s z hz hinj (fun i => a i 0)
+      (by simpa using h) i hi
+  | succ D ih =>
+    set b : ι → W := fun i => a i (D + 1) with hb
+    set R : ℕ → W := fun n => ∑ i ∈ s, (z i) ^ n •
+        (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a i k) with hR
+    set q : ℕ → ℂ := fun n => ((n : ℂ) ^ (D + 1))⁻¹ with hq
+    have hq_zero : Tendsto q atTop (𝓝 0) := by
+      rw [tendsto_zero_iff_norm_tendsto_zero]
+      have h1 : Tendsto (fun n : ℕ => ((n : ℝ)⁻¹) ^ (D + 1)) atTop (𝓝 0) := by
+        have := (tendsto_inv_atTop_zero.comp
+          (tendsto_natCast_atTop_atTop (R := ℝ))).pow (D + 1)
+        rwa [zero_pow (Nat.succ_ne_zero D)] at this
+      refine h1.congr' ?_
+      filter_upwards with n
+      rw [hq, norm_inv, norm_pow, Complex.norm_natCast, inv_pow]
+    have hf_eq : ∀ n : ℕ, (∑ i ∈ s, (z i) ^ n •
+          (∑ k ∈ Finset.range (D + 1 + 1), (n : ℂ) ^ k • a i k)) =
+        (n : ℂ) ^ (D + 1) • (∑ i ∈ s, (z i) ^ n • b i) + R n := by
+      intro n
+      rw [hR, hb, Finset.smul_sum, ← Finset.sum_add_distrib]
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [Finset.sum_range_succ, smul_add, smul_smul, smul_smul, mul_comm]
+      abel
+    have hqf : Tendsto (fun n : ℕ => q n •
+        (∑ i ∈ s, (z i) ^ n •
+          (∑ k ∈ Finset.range (D + 1 + 1), (n : ℂ) ^ k • a i k))) atTop (𝓝 0) := by
+      simpa using hq_zero.smul h
+    have hqR : Tendsto (fun n : ℕ => q n • R n) atTop (𝓝 0) := by
+      have := tendsto_inv_pow_smul_sum_range s z hz D a
+      simpa [hR, hq] using this
+    have hL : Tendsto (fun n : ℕ => ∑ i ∈ s, (z i) ^ n • b i) atTop (𝓝 0) := by
+      have hsub : Tendsto (fun n : ℕ => q n •
+          (∑ i ∈ s, (z i) ^ n •
+            (∑ k ∈ Finset.range (D + 1 + 1), (n : ℂ) ^ k • a i k)) - q n • R n)
+          atTop (𝓝 0) := by
+        simpa using hqf.sub hqR
+      refine hsub.congr' ?_
+      filter_upwards [eventually_ge_atTop 1] with n hn
+      have hn0 : (n : ℂ) ≠ 0 := by
+        have : (n : ℕ) ≠ 0 := by omega
+        exact_mod_cast this
+      have hcancel : q n * (n : ℂ) ^ (D + 1) = 1 := by
+        rw [hq, inv_mul_cancel₀ (pow_ne_zero _ hn0)]
+      rw [hf_eq n, smul_add, smul_smul, hcancel, one_smul]
+      abel
+    have hbzero : ∀ i ∈ s, b i = 0 :=
+      tendsto_zero_of_sum_pow_smul s z hz hinj b hL
+    have hRconv : Tendsto R atTop (𝓝 0) := by
+      refine h.congr' ?_
+      filter_upwards with n
+      rw [hf_eq n]
+      have : (∑ i ∈ s, (z i) ^ n • b i) = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        rw [hbzero i hi, smul_zero]
+      rw [this, smul_zero, zero_add]
+    intro i hi k hk
+    rcases Nat.lt_or_eq_of_le hk with hklt | hkeq
+    · exact ih a hRconv i hi k (Nat.lt_succ_iff.mp hklt)
+    · subst hkeq
+      exact hbzero i hi
+
+/-- **Polynomial-exponential reduction, purely imaginary modes.** If every mode
+`μ i` is purely imaginary (`(μ i).re = 0`) and the modes are distinct, then a
+finite sum of vector-valued polynomial terms times `exp (t * μ i)` that tends to
+zero at `+∞` has all coefficients zero. The proof samples `t = n * δ` for a
+scaling `δ` chosen so that the unit-modulus characters `exp (δ * μ i)` remain
+distinct, reducing to the discrete form
+`tendsto_zero_of_sum_pow_smul_polynomial`. -/
+lemma tendsto_zero_of_sum_exp_polynomial_re_zero {W : Type*} [NormedAddCommGroup W]
+    [NormedSpace ℂ W] {ι : Type*} (s : Finset ι) (μ : ι → ℂ)
+    (hre : ∀ i ∈ s, (μ i).re = 0)
+    (hinj : ∀ i ∈ s, ∀ j ∈ s, μ i = μ j → i = j)
+    (D : ℕ) (a : ι → ℕ → W)
+    (h : Tendsto (fun t : ℝ => ∑ i ∈ s, Complex.exp (t * μ i) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) atTop (𝓝 0)) :
+    ∀ i ∈ s, ∀ k ≤ D, a i k = 0 := by
+  classical
+  by_cases hs : s = ∅
+  · intro i hi; rw [hs] at hi; simp at hi
+  set B : ℝ := ∑ i ∈ s, ∑ j ∈ s, ‖μ i - μ j‖ with hB
+  have hBnn : 0 ≤ B := by
+    rw [hB]
+    exact Finset.sum_nonneg fun i _ => Finset.sum_nonneg fun j _ => norm_nonneg _
+  obtain ⟨M, hM⟩ := exists_nat_gt (B / (2 * Real.pi))
+  have hMposR : (0 : ℝ) < M := lt_of_le_of_lt (by positivity) hM
+  have hMpos : 0 < M := by exact_mod_cast hMposR
+  set δ : ℝ := (M : ℝ)⁻¹ with hδ
+  have hδpos : 0 < δ := by rw [hδ]; positivity
+  have hδB : δ * B < 2 * Real.pi := by
+    rw [hδ, inv_mul_eq_div, div_lt_iff₀ (by positivity : (0:ℝ) < (M:ℝ))]
+    have h2 : B < (2 * Real.pi) * M := by
+      have := (div_lt_iff₀ (by positivity : (0:ℝ) < 2 * Real.pi)).mp hM
+      linarith
+    linarith
+  set z : ι → ℂ := fun i => Complex.exp ((δ : ℂ) * μ i) with hz
+  set a' : ι → ℕ → W := fun i k => ((δ : ℂ) ^ k) • a i k with ha'
+  have hz_norm : ∀ i ∈ s, ‖z i‖ = 1 := by
+    intro i hi
+    rw [hz, Complex.norm_exp]
+    have hre0 : ((δ : ℂ) * μ i).re = 0 := by
+      simp [Complex.mul_re, hre i hi]
+    rw [hre0, Real.exp_zero]
+  have hz_inj : ∀ i ∈ s, ∀ j ∈ s, z i = z j → i = j := by
+    intro i hi j hj heq
+    by_contra hij
+    have hμij : μ i ≠ μ j := fun hh => hij (hinj i hi j hj hh)
+    have hne : μ i - μ j ≠ 0 := sub_ne_zero.mpr hμij
+    have heq' : Complex.exp ((δ : ℂ) * μ i) = Complex.exp ((δ : ℂ) * μ j) := by
+      simpa [hz] using heq
+    obtain ⟨n, hn⟩ := Complex.exp_eq_exp_iff_exists_int.mp heq'
+    have hd : (δ : ℂ) * (μ i - μ j) = (n : ℂ) * (2 * (Real.pi : ℂ) * Complex.I) := by
+      rw [mul_sub, hn]; ring
+    have hnorm := congrArg norm hd
+    rw [norm_mul, norm_mul, Complex.norm_intCast] at hnorm
+    have hnormδ : ‖(δ : ℂ)‖ = δ := by
+      rw [Complex.norm_real, Real.norm_eq_abs, abs_of_nonneg (le_of_lt hδpos)]
+    have hnormI : ‖(2 * (Real.pi : ℂ) * Complex.I)‖ = 2 * Real.pi := by
+      rw [show (2 * (Real.pi : ℂ) * Complex.I) = ((2 * Real.pi : ℝ) : ℂ) * Complex.I by
+        push_cast; ring]
+      rw [norm_mul, Complex.norm_real, Complex.norm_I, mul_one, Real.norm_eq_abs,
+        abs_of_nonneg (by positivity)]
+    rw [hnormδ, hnormI] at hnorm
+    have hδnn : 0 ≤ δ := le_of_lt hδpos
+    have hpos : 0 < ‖μ i - μ j‖ := norm_pos_iff.mpr hne
+    have hle : δ * ‖μ i - μ j‖ ≤ δ * B := by
+      apply mul_le_mul_of_nonneg_left _ hδnn
+      rw [hB]
+      calc ‖μ i - μ j‖ ≤ ∑ j' ∈ s, ‖μ i - μ j'‖ :=
+            Finset.single_le_sum (s := s) (f := fun j' => ‖μ i - μ j'‖)
+              (fun j' _ => norm_nonneg _) hj
+        _ ≤ ∑ i' ∈ s, ∑ j' ∈ s, ‖μ i' - μ j'‖ :=
+            Finset.single_le_sum (s := s)
+              (f := fun i' => ∑ j' ∈ s, ‖μ i' - μ j'‖)
+              (fun i' _ => Finset.sum_nonneg fun j' _ => norm_nonneg _) hi
+    have hn1 : (1 : ℝ) ≤ |(n : ℝ)| := by
+      have hn0 : n ≠ 0 := by
+        intro h0
+        rw [h0] at hnorm
+        simp only [Int.cast_zero, abs_zero, zero_mul] at hnorm
+        nlinarith [hpos, hδpos]
+      have h1 : (1 : ℤ) ≤ |n| := Int.one_le_abs hn0
+      rw [← Int.cast_abs]
+      exact_mod_cast h1
+    have h2 : 2 * Real.pi ≤ δ * B := by
+      calc 2 * Real.pi = 1 * (2 * Real.pi) := by ring
+        _ ≤ |(n : ℝ)| * (2 * Real.pi) := mul_le_mul_of_nonneg_right hn1 (by positivity)
+        _ = δ * ‖μ i - μ j‖ := hnorm.symm
+        _ ≤ δ * B := hle
+    exact absurd h2 (not_le.mpr hδB)
+  have htend : Tendsto (fun n : ℕ => (n : ℝ) * δ) atTop atTop :=
+    Tendsto.atTop_mul_const hδpos (tendsto_natCast_atTop_atTop (R := ℝ))
+  have hcomp := h.comp htend
+  have hseq : Tendsto (fun n : ℕ => ∑ i ∈ s, (z i) ^ n •
+      (∑ k ∈ Finset.range (D + 1), (n : ℂ) ^ k • a' i k)) atTop (𝓝 0) := by
+    refine hcomp.congr' ?_
+    filter_upwards with n
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [hz, ha']
+    congr 1
+    · rw [show ((((n : ℝ) * δ : ℝ) : ℂ)) = (n : ℂ) * (δ : ℂ) by push_cast; ring]
+      rw [mul_assoc]
+      exact Complex.exp_nat_mul _ _
+    · apply Finset.sum_congr rfl
+      intro k hk
+      rw [show ((((n : ℝ) * δ : ℝ) : ℂ)) = (n : ℂ) * (δ : ℂ) by push_cast; ring]
+      rw [mul_pow, smul_smul]
+  have hmain := tendsto_zero_of_sum_pow_smul_polynomial s z hz_norm hz_inj D a' hseq
+  intro i hi k hk
+  have hzero := hmain i hi k hk
+  rw [ha'] at hzero
+  have hδk : ((δ : ℂ) ^ k) ≠ 0 := pow_ne_zero _ (by exact_mod_cast (ne_of_gt hδpos))
+  exact (smul_eq_zero.mp hzero).resolve_left hδk
+
+/-- **The strictly-decaying part.** If every real part is negative, then a finite
+sum of vector-valued polynomial terms times `exp (t * μ i)` tends to zero at
+`+∞`: the exponential decay beats the polynomial growth term by term. This is
+the part of the reduction discarded after the dominant real part is factored
+out. -/
+lemma tendsto_zero_of_sum_exp_polynomial_of_re_neg {W : Type*} [NormedAddCommGroup W]
+    [NormedSpace ℂ W] {ι : Type*} (s : Finset ι) (μ : ι → ℂ)
+    (hre : ∀ i ∈ s, (μ i).re < 0) (D : ℕ) (a : ι → ℕ → W) :
+    Tendsto (fun t : ℝ => ∑ i ∈ s, Complex.exp (t * μ i) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) atTop (𝓝 0) := by
+  have hterm : ∀ i ∈ s, Tendsto (fun t : ℝ => Complex.exp (t * μ i) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) atTop (𝓝 0) := by
+    intro i hi
+    have hinner : ∀ k ∈ Finset.range (D + 1),
+        Tendsto (fun t : ℝ => Complex.exp (t * μ i) • ((t : ℂ) ^ k • a i k))
+          atTop (𝓝 0) := by
+      intro k hk
+      have hk' := (tendsto_exp_mul_pow (μ i) (hre i hi) k).smul_const (a i k)
+      simpa [smul_smul] using hk'
+    simpa [Finset.smul_sum] using tendsto_finsetSum (Finset.range (D + 1)) hinner
+  simpa using tendsto_finsetSum s hterm
+
+/-- **Polynomial-exponential reduction.** A finite sum of vector-valued
+polynomial terms times characters `exp (t * μ i)` with `0 ≤ (μ i).re` that tends
+to zero at `+∞` must have all coefficients zero. The proof factors out the
+dominant real part `R` (bounded multiplier `exp (-t R)`), discards the strictly
+smaller real parts by `tendsto_zero_of_sum_exp_polynomial_of_re_neg`, applies
+the purely imaginary reduction `tendsto_zero_of_sum_exp_polynomial_re_zero` to
+the top group, and then inducts on the number of modes. -/
+theorem tendsto_zero_of_sum_exp_polynomial {W : Type*} [NormedAddCommGroup W]
+    [NormedSpace ℂ W] {ι : Type*} (s : Finset ι) (μ : ι → ℂ)
+    (hμ : ∀ i ∈ s, 0 ≤ (μ i).re)
+    (hinj : ∀ i ∈ s, ∀ j ∈ s, μ i = μ j → i = j)
+    (D : ℕ) (a : ι → ℕ → W)
+    (h : Tendsto (fun t : ℝ => ∑ i ∈ s, Complex.exp (t * μ i) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) atTop (𝓝 0)) :
+    ∀ i ∈ s, ∀ k ≤ D, a i k = 0 := by
+  classical
+  suffices hgen : ∀ n, ∀ (s : Finset ι), s.card = n → ∀ (μ : ι → ℂ) (D : ℕ) (a : ι → ℕ → W),
+      (∀ i ∈ s, 0 ≤ (μ i).re) → (∀ i ∈ s, ∀ j ∈ s, μ i = μ j → i = j) →
+      (Tendsto (fun t : ℝ => ∑ i ∈ s, Complex.exp (t * μ i) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) atTop (𝓝 0)) →
+      ∀ i ∈ s, ∀ k ≤ D, a i k = 0 by
+    exact hgen s.card s rfl μ D a hμ hinj h
+  intro n
+  induction n using Nat.strong_induction_on with
+  | h n ih =>
+    intro s hcard μ D a hμ hinj h
+    by_cases hs : s = ∅
+    · intro i hi; rw [hs] at hi; simp at hi
+    have hsne : s.Nonempty := Finset.nonempty_iff_ne_empty.mpr hs
+    set R : ℝ := s.sup' hsne (fun i => (μ i).re) with hR
+    obtain ⟨i0, hi0, hi0R⟩ := Finset.exists_mem_eq_sup' hsne (fun i => (μ i).re)
+    have hReq : R = (μ i0).re := hR.trans hi0R
+    have hRnn : 0 ≤ R := hReq.symm ▸ hμ i0 hi0
+    have hleR : ∀ i ∈ s, (μ i).re ≤ R := by
+      intro i hi
+      rw [hR]
+      have := Finset.le_sup' (fun i => (μ i).re) hi
+      rwa [show s.sup' ⟨i, hi⟩ (fun i => (μ i).re) = s.sup' hsne (fun i => (μ i).re) from
+        congrArg (fun H => s.sup' H (fun i => (μ i).re)) (Subsingleton.elim _ _)] at this
+    set s0 : Finset ι := s.filter (fun i => (μ i).re = R) with hs0
+    set s' : Finset ι := s.filter (fun i => (μ i).re ≠ R) with hs'
+    have hs0ne : s0.Nonempty := ⟨i0, Finset.mem_filter.mpr ⟨hi0, hReq.symm⟩⟩
+    have hsub : s' ⊆ s := Finset.filter_subset _ _
+    have hne : s' ≠ s := by
+      intro heq
+      have : i0 ∈ s' := heq ▸ hi0
+      rw [hs', Finset.mem_filter] at this
+      exact this.2 hReq.symm
+    have hcardlt : s'.card < s.card :=
+      Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩)
+    set f : ℝ → W := fun t => ∑ i ∈ s, Complex.exp (t * μ i) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k) with hf
+    set g : ℝ → W := fun t => ∑ i ∈ s, Complex.exp ((t : ℂ) * (μ i - (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k) with hg
+    set g0 : ℝ → W := fun t => ∑ i ∈ s0, Complex.exp ((t : ℂ) * (μ i - (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k) with hg0
+    set g1 : ℝ → W := fun t => ∑ i ∈ s', Complex.exp ((t : ℂ) * (μ i - (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k) with hg1
+    have hg_eq : ∀ t, g t = Complex.exp (-((t : ℂ) * (R : ℂ))) • f t := by
+      intro t
+      simp only [hg, hf]
+      rw [Finset.smul_sum]
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [smul_smul]
+      congr 1
+      rw [← Complex.exp_add]
+      congr 1
+      ring
+    have hg_split : ∀ t, g t = g0 t + g1 t := by
+      intro t
+      simp only [hg, hg0, hg1, hs0, hs']
+      rw [← Finset.sum_filter_add_sum_filter_not s (fun i => (μ i).re = R)
+        (fun i => Complex.exp ((t : ℂ) * (μ i - (R : ℂ))) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k))]
+    have hg_tend : Tendsto g atTop (𝓝 0) := by
+      rw [tendsto_zero_iff_norm_tendsto_zero]
+      have hf_norm : Tendsto (fun t : ℝ => ‖f t‖) atTop (𝓝 0) := by
+        rw [hf]; simpa using h.norm
+      refine squeeze_zero' (Eventually.of_forall fun t => norm_nonneg _) ?_ hf_norm
+      filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+      rw [hg_eq t, norm_smul]
+      have hc : ‖Complex.exp (-((t : ℂ) * (R : ℂ)))‖ ≤ 1 := by
+        rw [Complex.norm_exp]
+        rw [show (-((t : ℂ) * (R : ℂ))).re = -(t * R) by
+          simp [Complex.mul_re]]
+        rw [Real.exp_le_one_iff]
+        nlinarith
+      calc ‖Complex.exp (-((t : ℂ) * (R : ℂ)))‖ * ‖f t‖ ≤ 1 * ‖f t‖ :=
+            mul_le_mul_of_nonneg_right hc (norm_nonneg _)
+        _ = ‖f t‖ := one_mul _
+    have hg1_tend : Tendsto g1 atTop (𝓝 0) := by
+      rw [hg1]
+      exact tendsto_zero_of_sum_exp_polynomial_of_re_neg s' (fun i => μ i - (R : ℂ))
+        (fun i hi => by
+          rw [hs', Finset.mem_filter] at hi
+          have hlt : (μ i).re < R := lt_of_le_of_ne (hleR i hi.1) hi.2
+          rw [Complex.sub_re, Complex.ofReal_re]
+          linarith) D a
+    have hg0_tend : Tendsto g0 atTop (𝓝 0) := by
+      have hsub2 : Tendsto (fun t => g t - g1 t) atTop (𝓝 0) := by
+        simpa using hg_tend.sub hg1_tend
+      refine hsub2.congr' ?_
+      filter_upwards with t
+      simp [hg_split t]
+    have h0zero : ∀ i ∈ s0, ∀ k ≤ D, a i k = 0 := by
+      refine tendsto_zero_of_sum_exp_polynomial_re_zero s0 (fun i => μ i - (R : ℂ))
+        ?_ ?_ D a ?_
+      · intro i hi
+        rw [hs0, Finset.mem_filter] at hi
+        rw [Complex.sub_re, Complex.ofReal_re, hi.2, sub_self]
+      · intro i hi j hj hij
+        rw [hs0, Finset.mem_filter] at hi hj
+        exact hinj i hi.1 j hj.1 (by
+          have h := congrArg (fun z : ℂ => z + (R : ℂ)) hij
+          simpa [sub_add_cancel] using h)
+      · exact hg0_tend
+    intro i hi k hk
+    by_cases hiR : (μ i).re = R
+    · exact h0zero i (Finset.mem_filter.mpr ⟨hi, hiR⟩) k hk
+    · have hmem : i ∈ s' := Finset.mem_filter.mpr ⟨hi, hiR⟩
+      have hf_eq_g1 : Tendsto (fun t : ℝ => ∑ j ∈ s', Complex.exp (t * μ j) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k)) atTop (𝓝 0) := by
+        refine (show Tendsto f atTop (𝓝 0) from hf ▸ h).congr' ?_
+        filter_upwards with t
+        show f t = ∑ j ∈ s', Complex.exp (t * μ j) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k)
+        have hsplit : f t = (∑ j ∈ s0, Complex.exp (t * μ j) •
+              (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k)) +
+              (∑ j ∈ s', Complex.exp (t * μ j) •
+              (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k)) := by
+          simp only [hf, hs0, hs']
+          rw [← Finset.sum_filter_add_sum_filter_not s (fun i => (μ i).re = R)
+            (fun i => Complex.exp (t * μ i) •
+              (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k))]
+        have hzero : (∑ j ∈ s0, Complex.exp (t * μ j) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k)) = 0 := by
+          apply Finset.sum_eq_zero
+          intro j hj
+          have hjzero : ∀ k ≤ D, a j k = 0 := h0zero j hj
+          have hinner : (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a j k) = 0 := by
+            apply Finset.sum_eq_zero
+            intro k hk'
+            rw [hjzero k (Nat.lt_succ_iff.mp (Finset.mem_range.mp hk')), smul_zero]
+          rw [hinner, smul_zero]
+        rw [hsplit, hzero, zero_add]
+      have hres := ih s'.card (by rw [← hcard]; exact hcardlt) s' rfl μ D a
+        (fun i hi => hμ i (hsub hi))
+        (fun i hi j hj hij => hinj i (hsub hi) j (hsub hj) hij) hf_eq_g1
+      exact hres i hmem k hk
 
 end LinearMap
