@@ -5127,6 +5127,247 @@ theorem exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace
   refine ⟨F, ?_⟩
   simpa [E] using hdec 1
 
+/-! ### The `B = 0` spectral decomposition of `W_g(ker H)`
+
+With no input channel (`B = 0`) the algebraic `W_g(ker H)` collapses to a sum of
+pure spectral objects. A subspace is controlled invariant for `(A, 0)` exactly
+when it is `A`-invariant and contained in `ker H`, so the largest one is the
+unobservable subspace `⟨ker H | A⟩`; and the stabilizable subspace is the stable
+subspace `X_g(A)` because the reachable subspace is trivial. Hence
+
+`W_g(ker H) = X_g(A) ⊔ ⟨ker H | A⟩`.
+
+The structural lemmas below record that reduction. They are the algebraic core
+of the `B = 0` *spectral stable-observability necessity*: the missing analytic
+step, isolated as the explicit `hspectral` hypothesis of
+`mem_outputStabilizableSubspace_of_decay_of_B_eq_zero`, is the statement that an
+antistable state whose readout decays must be unobservable (Trentelman–Stoorvogel–
+Hautus, Theorem 4.37 necessity for the no-input case). The reduction of the
+trajectory predicate `IsOutputStabilizable` to that spectral statement is
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`. -/
+
+omit [FiniteDimensional ℝ U] in
+/-- **The `B = 0` controlled-invariant subspace is the unobservable subspace.**
+With no input channel a subspace is controlled invariant for `(A, 0)` exactly
+when it is `A`-invariant and contained in `ker H`; consequently the largest such
+subspace `V*(ker H)` is the unobservable subspace `⟨ker H | A⟩`.
+
+This is the `im B = 0` degenerate case of `controlledInvariantSubspace`. -/
+theorem controlledInvariantSubspace_zero_eq_unobservableSubspace
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.controlledInvariantSubspace A (0 : U →ₗ[ℝ] X) (LinearMap.ker H) =
+      LinearMap.unobservableSubspace H A := by
+  apply le_antisymm
+  · have hV := LinearMap.isControlledInvariant_controlledInvariantSubspace A (0 : U →ₗ[ℝ] X)
+      (LinearMap.ker H)
+    have hVK := LinearMap.controlledInvariantSubspace_le_K A (0 : U →ₗ[ℝ] X) (LinearMap.ker H)
+    apply LinearMap.le_unobservableSubspace H A hVK
+    rw [LinearMap.IsControlledInvariant] at hV
+    simpa using hV
+  · apply LinearMap.le_controlledInvariantSubspace
+    · exact LinearMap.unobservableSubspace_le_ker H A
+    · rw [LinearMap.IsControlledInvariant]
+      simpa using LinearMap.map_unobservableSubspace_le H A
+
+omit [FiniteDimensional ℝ U] in
+/-- **Spectral decomposition of `W_g(ker H)` when `B = 0`.** With no input
+channel the algebraic `W_g(ker H) = V*(ker H) ⊔ Xstab(A, 0)` is
+`X_g(A) ⊔ ⟨ker H | A⟩`: the controlled-invariant component is the unobservable
+subspace and the stabilizable component is the stable subspace `X_g(A)`, because
+the reachable subspace of `(A, 0)` is trivial. -/
+theorem outputStabilizableSubspace_zero_eq_sup_unobservableSubspace
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    outputStabilizableSubspace A (0 : U →ₗ[ℝ] X) H =
+      LinearMap.hurwitzSubspace A ⊔ LinearMap.unobservableSubspace H A := by
+  rw [outputStabilizableSubspace, controlledInvariantSubspace_zero_eq_unobservableSubspace,
+    LinearMap.stabilizableSubspace, LinearMap.reachableSubspace]
+  rw [sup_comm]
+  simp
+
+/-- **Stable states have decaying readout.** A state in the stable subspace
+`X_g(A)` has `t ↦ H (e^{t A} x) → 0` because the exponential orbit itself decays
+(`tendsto_exp_restrict_hurwitzSubspace`) and `H` is continuous. -/
+theorem tendsto_readout_exp_of_mem_hurwitzSubspace
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) {x : X} (hx : x ∈ LinearMap.hurwitzSubspace A) :
+    Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+      Filter.atTop (nhds 0) := by
+  have h := (H.continuous_of_finiteDimensional.tendsto 0).comp
+    (LinearMap.tendsto_exp_restrict_hurwitzSubspace A hx)
+  simpa [Function.comp_def] using h
+
+/-- **Unobservable states have identically zero readout.** If `x ∈ ⟨ker H | A⟩`
+then every derivative `H A^k x` vanishes, so `H (e^{t A} x) = 0` for all `t`.
+This is the algebraic-to-trajectory direction of the accepted bridge
+`continuousC_expFlow_eq_zero_of_mem_unobservableSubspace`. -/
+theorem readout_exp_eq_zero_of_mem_unobservableSubspace
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) {x : X}
+    (hx : x ∈ LinearMap.unobservableSubspace H A) (t : ℝ) :
+    H (NormedSpace.exp (t • A.toContinuousLinearMap) x) = 0 := by
+  let sys : LinearSystem ℝ X X Z := ⟨A, 0, H, 0⟩
+  have hx' : x ∈ LinearMap.unobservableSubspace sys.C sys.A := by simpa [sys] using hx
+  have h := continuousC_expFlow_eq_zero_of_mem_unobservableSubspace sys (z := x) hx' t
+  simpa [sys, LinearSystem.expFlow, LinearSystem.continuousA] using h
+
+omit [FiniteDimensional ℝ U] in
+/-- **The `B = 0` spectral stable-observability necessity, reduced form.** Assume
+the isolated spectral statement `hspectral`: every state in the antistable
+subspace `X_b(A)` whose readout `t ↦ H (e^{t A} x)` decays is unobservable. Then
+every state with decaying readout lies in `W_g(ker H) = X_g(A) ⊔ ⟨ker H | A⟩`.
+
+Split `x = x_g + x_b` along the accepted stable/antistable direct sum. The stable
+part is in `X_g(A)` by definition, and linearity transports the decay of `H e^{tA} x`
+and of `H e^{tA} x_g` to the antistable part, so `hspectral` puts `x_b` in the
+unobservable subspace. The analytic content of `hspectral` — that a nonzero
+antistable orbit cannot have a decaying readout — is the remaining obligation and
+is *not* assumed to hold for free; no witness for it is introduced here. -/
+theorem mem_outputStabilizableSubspace_of_decay_of_B_eq_zero
+    (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hspectral : ∀ x : X, x ∈ LinearMap.unstableSubspace A →
+      Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+        Filter.atTop (nhds 0) → x ∈ LinearMap.unobservableSubspace H A)
+    {x : X}
+    (hdec : Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+      Filter.atTop (nhds 0)) :
+    x ∈ outputStabilizableSubspace A (0 : U →ₗ[ℝ] X) H := by
+  rw [outputStabilizableSubspace_zero_eq_sup_unobservableSubspace]
+  have hxmem : x ∈ LinearMap.hurwitzSubspace A ⊔ LinearMap.unstableSubspace A := by
+    rw [LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top]; trivial
+  obtain ⟨xg, hxg, xb, hxb, rfl⟩ := Submodule.mem_sup.mp hxmem
+  have hgdec := tendsto_readout_exp_of_mem_hurwitzSubspace A H hxg
+  have hxb_dec : Filter.Tendsto (fun t : ℝ =>
+      H (NormedSpace.exp (t • A.toContinuousLinearMap) xb)) Filter.atTop (nhds 0) := by
+    have h1 : (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (xg + xb))) =
+        fun t => H (NormedSpace.exp (t • A.toContinuousLinearMap) xg) +
+          H (NormedSpace.exp (t • A.toContinuousLinearMap) xb) := by
+      funext t; rw [map_add, map_add]
+    rw [h1] at hdec
+    simpa using hdec.sub hgdec
+  exact Submodule.mem_sup.mpr ⟨xg, hxg, xb, hspectral xb hxb hxb_dec, rfl⟩
+
+/-- **Zero input channel collapses variation of constants to the exponential
+orbit.** With `B = 0` the forcing integrand vanishes, so the forced solution is
+the homogeneous flow `t ↦ e^{t A} x`. -/
+theorem variationOfConstants_of_B_eq_zero (sys : LinearSystem ℝ X U Z) (hB : sys.B = 0)
+    (x : X) (u : ℝ → U) (t : ℝ) :
+    sys.variationOfConstants 0 x u t = sys.expFlow t x := by
+  simp [LinearSystem.variationOfConstants, LinearSystem.forcing, hB]
+
+/-- **The `B = 0` necessity bridge from the trajectory predicate.** If `B = 0`,
+then the open-loop output-stabilizability predicate `IsOutputStabilizable`
+reduces to the zero-input readout decay `t ↦ H (e^{t A} x) → 0`
+(`variationOfConstants_of_B_eq_zero`), so the reduced spectral bridge
+`mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` yields membership in
+`W_g(ker H)`. The `hspectral` hypothesis is the isolated remaining spectral
+obligation, exactly as in the reduced form above. -/
+theorem mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x : X)
+    (hspectral : ∀ x : X, x ∈ LinearMap.unstableSubspace sys.A →
+      Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x))
+        Filter.atTop (nhds 0) → x ∈ LinearMap.unobservableSubspace H sys.A)
+    (hB : sys.B = 0)
+    (h : IsOutputStabilizable sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H := by
+  obtain ⟨u, -, htend⟩ := h
+  rw [hB]
+  apply mem_outputStabilizableSubspace_of_decay_of_B_eq_zero sys.A H hspectral
+  have hfun : (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x)) =
+      fun t => H (sys.variationOfConstants 0 x u t) := by
+    funext t
+    rw [variationOfConstants_of_B_eq_zero sys hB x u t]
+    rfl
+  rwa [hfun]
+
+/-- **The `B = 0` sufficiency direction of the trajectory characterisation.**
+Every state in `W_g(ker H) = X_g(A) ⊔ ⟨ker H | A⟩` has decaying zero-input
+readout when `B = 0`: a stable state decays by
+`tendsto_readout_exp_of_mem_hurwitzSubspace` and an unobservable state has
+identically zero readout by `readout_exp_eq_zero_of_mem_unobservableSubspace`.
+Together with `mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`
+this identifies the open-loop output-stabilizable set with the algebraic
+`W_g(ker H)`, modulo the isolated antistable spectral obligation. -/
+theorem isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (hB : sys.B = 0) {x : X}
+    (hx : x ∈ outputStabilizableSubspace sys.A sys.B H) :
+    IsOutputStabilizable sys H x := by
+  have hx' : x ∈ LinearMap.hurwitzSubspace sys.A ⊔
+      LinearMap.unobservableSubspace H sys.A := by
+    rw [hB] at hx
+    rwa [outputStabilizableSubspace_zero_eq_sup_unobservableSubspace] at hx
+  obtain ⟨xg, hxg, xb, hxb, rfl⟩ := Submodule.mem_sup.mp hx'
+  refine ⟨fun _ => (0 : U), MeasureTheory.locallyIntegrable_zero, ?_⟩
+  have hfun : (fun t : ℝ =>
+      H (sys.variationOfConstants 0 (xg + xb) (fun _ => (0 : U)) t)) =
+      fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xg) +
+        H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xb) := by
+    funext t
+    rw [variationOfConstants_of_B_eq_zero sys hB (xg + xb) (fun _ => (0 : U)) t]
+    simp only [LinearSystem.expFlow, LinearSystem.continuousA, map_add]
+  rw [hfun]
+  have hb : (fun t : ℝ =>
+      H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xb)) = fun _ : ℝ => (0 : Z) := by
+    funext t
+    exact readout_exp_eq_zero_of_mem_unobservableSubspace sys.A H hxb t
+  have hbt : Filter.Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xb))
+      Filter.atTop (nhds 0) := by
+    rw [hb]
+    exact tendsto_const_nhds
+  simpa using (tendsto_readout_exp_of_mem_hurwitzSubspace sys.A H hxg).add hbt
+
+/-- **The `B = 0` open-loop trajectory characterisation.** The source's
+output-stabilizable set equals the algebraic `W_g(ker H) = V*(ker H) ⊔ Xstab`
+in the no-input case, modulo the single isolated antistable spectral statement
+`hspectral`: an antistable state with decaying readout is unobservable. The
+forward implication is
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`; the
+unconditional converse is
+`isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero`. -/
+theorem isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
+    (hspectral : ∀ x : X, x ∈ LinearMap.unstableSubspace sys.A →
+      Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x))
+        Filter.atTop (nhds 0) → x ∈ LinearMap.unobservableSubspace H sys.A)
+    (hB : sys.B = 0) (x : X) :
+    IsOutputStabilizable sys H x ↔ x ∈ outputStabilizableSubspace sys.A sys.B H :=
+  ⟨mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero sys H x hspectral hB,
+   isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero sys H hB⟩
+
+omit [FiniteDimensional ℝ U] in
+/-- The isolated antistable spectral obligation is discharged in the zero-operator
+case: with `A = 0` the orbit is constant, so a readout tending to zero must
+already be zero, hence the state is unobservable. This is a non-vacuity witness
+for `hspectral` and covers the zero-eigenvalue spectrum `{0}`. -/
+theorem hspectral_zero_operator (H : X →ₗ[ℝ] Z) :
+    ∀ x : X, x ∈ LinearMap.unstableSubspace (0 : X →ₗ[ℝ] X) →
+      Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp
+        (t • (0 : X →ₗ[ℝ] X).toContinuousLinearMap) x)) Filter.atTop (nhds 0) →
+      x ∈ LinearMap.unobservableSubspace H (0 : X →ₗ[ℝ] X) := by
+  intro x _ hdec
+  have hconst : (fun t : ℝ => H (NormedSpace.exp
+      (t • (0 : X →ₗ[ℝ] X).toContinuousLinearMap) x)) = fun _ : ℝ => H x := by
+    funext t
+    simp
+  rw [hconst] at hdec
+  have hHx : H x = 0 := tendsto_nhds_unique tendsto_const_nhds hdec
+  rw [LinearMap.mem_unobservableSubspace]
+  intro k
+  cases k with
+  | zero => simpa using hHx
+  | succ k => simp
+
+/-- **The `A = 0` open-loop trajectory characterisation, unconditionally.**
+With the zero state map the isolated spectral obligation is discharged by
+`hspectral_zero_operator`, so the `B = 0` characterisation holds without extra
+hypotheses: a state is open-loop output-stabilizable exactly when its readout
+vanishes. -/
+theorem isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_zero_operator
+    (H : X →ₗ[ℝ] Z) (x : X) :
+    IsOutputStabilizable (⟨0, 0, H, 0⟩ : LinearSystem ℝ X U Z) H x ↔
+      x ∈ outputStabilizableSubspace (0 : X →ₗ[ℝ] X) (0 : U →ₗ[ℝ] X) H :=
+  isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero
+    (⟨0, 0, H, 0⟩ : LinearSystem ℝ X U Z) H
+    (hspectral_zero_operator H) rfl x
+
 end WgSubspace
 
 /-! ### The dual conditioned-invariant/detectable condition
@@ -5228,3 +5469,36 @@ the intended ingredients. Until that step is available the stable-nonzero
 necessity direction of Corollary 6.22 is not claimed, and the exact-zero
 necessity `externalStabilizationConditions_of_externalStability` remains the only
 certified forward direction. -/
+
+/-! ### The `B = 0` reduction added by the spectral-decomposition task
+
+The `B = 0` case of the `W_g(ker H)` necessity is now reduced to a single explicit
+spectral obligation. The algebraic collapses are
+`controlledInvariantSubspace_zero_eq_unobservableSubspace` and
+`outputStabilizableSubspace_zero_eq_sup_unobservableSubspace`; the stable and
+unobservable readout facts are `tendsto_readout_exp_of_mem_hurwitzSubspace` and
+`readout_exp_eq_zero_of_mem_unobservableSubspace`; the reduction is
+`mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` and its trajectory form
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`, both
+taking as hypothesis the *only* missing analytic statement:
+
+`∀ x : X, x ∈ X_b(A) → Tendsto (fun t ↦ H (e^{t A} x)) atTop (nhds 0) →
+  x ∈ ⟨ker H | A⟩`.
+
+That statement is not proved here; it is the precise remaining blocker. The
+accepted stable/antistable direct sum `hurwitzSubspace_sup_unstableSubspace_eq_top`
+and the accepted trajectory bridge
+`mem_unobservableSubspace_of_forall_continuousC_expFlow_eq_zero` /
+`continuousC_expFlow_eq_zero_of_mem_unobservableSubspace` are the tools a future
+attempt needs; the source's Bohl/spectral function decomposition is still not
+formalised, which is why the hypothesis stays explicit rather than being hidden
+as an unsupported assumption.
+
+The `B = 0` characterisation is now two-sided. The unconditional converse is
+`isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero`, packaged
+with the forward reduction as
+`isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero`. The
+zero-operator non-vacuity witness is `hspectral_zero_operator`, giving the
+hypothesis-free instance `isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_zero_operator`.
+The general-`B` necessity `mem_outputStabilizableSubspace_of_isOutputStabilizable`
+remains the single open obligation. -/
