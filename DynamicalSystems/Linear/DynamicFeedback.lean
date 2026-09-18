@@ -5498,6 +5498,83 @@ theorem exists_feedback_tendsto_readout_iff_mem_outputStabilizableSubspace
   ⟨fun ⟨F, hF⟩ => mem_outputStabilizableSubspace_of_feedback_decay A B H F hF,
     fun hx => exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace A B H hx⟩
 
+/-! ### The reachable-quotient cancellation lemma
+
+The hard inclusion of Theorem 4.37 is an input-cancellation statement: an
+arbitrary locally integrable open-loop input can cancel the antistable autonomous
+readout only through the reachable subspace `R = ⟨A | im B⟩`. The first
+structural fact is that the class of the forced trajectory modulo `R` is the
+autonomous class. The forcing `exp (-s A) (B u(s))` is reachable and `R` is
+`A`-invariant and closed, so the input term lies entirely in `R`; equivalently,
+the reachable quotient `X ⧸ ⟨A | im B⟩` carries only the autonomous dynamics. -/
+
+set_option linter.style.haveILetI false
+
+/-- **Reachable-quotient cancellation.** For a locally integrable open-loop input
+the variation-of-constants trajectory differs from the autonomous exponential
+orbit by a state of the reachable subspace:
+`x_u(t) - exp (t A) x ∈ ⟨A | im B⟩`.
+
+This is proved by pushing both sides into the quotient `X ⧸ ⟨A | im B⟩`: the
+forcing integrand dies there because `B` lands in the reachable subspace, so the
+forced trajectory and the free trajectory have the same quotient class. -/
+theorem variationOfConstants_sub_expFlow_mem_reachableSubspace
+    (sys : LinearSystem ℝ X U Z) (x : X) {u : ℝ → U}
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume) (t : ℝ) :
+    sys.variationOfConstants 0 x u t - sys.expFlow t x ∈
+      LinearMap.reachableSubspace sys.A sys.B := by
+  let R := LinearMap.reachableSubspace sys.A sys.B
+  have hR : R ≤ R.comap sys.A := fun y hy =>
+    LinearMap.map_reachableSubspace_le sys.A sys.B ⟨y, hy, rfl⟩
+  haveI : IsClosed (R : Set X) := R.closed_of_finiteDimensional
+  letI : IsTopologicalRing (X ⧸ R →L[ℝ] X ⧸ R) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  let q : X →L[ℝ] X ⧸ R := R.mkQ.toContinuousLinearMap
+  let Aq : X ⧸ R →ₗ[ℝ] X ⧸ R := R.mapQ R sys.A hR
+  have hqA : q.comp sys.A.toContinuousLinearMap = Aq.toContinuousLinearMap.comp q := by
+    ext y
+    change R.mkQ (sys.A y) = Aq (R.mkQ y)
+    exact (congrFun (congrArg DFunLike.coe
+      (Submodule.mapQ_mkQ R R sys.A (h := hR))) y).symm
+  have hqB : ∀ y : X, y ∈ R → q y = 0 := by
+    intro y hy
+    change R.mkQ y = 0
+    rw [Submodule.mkQ_apply]
+    exact (Submodule.Quotient.mk_eq_zero R).mpr hy
+  have hq_exp : ∀ y : X, q (sys.expFlow t y) =
+      NormedSpace.exp (t • Aq.toContinuousLinearMap) (q y) := by
+    intro y
+    simpa only [LinearSystem.expFlow, LinearSystem.continuousA] using
+      clm_map_exp_smul q sys.A.toContinuousLinearMap Aq.toContinuousLinearMap hqA t y
+  have hqforcing : ∀ s : ℝ, q (sys.forcing 0 u s) = 0 := by
+    intro s
+    have hB := hqB (sys.continuousB (u s))
+      (LinearMap.range_le_reachableSubspace sys.A sys.B ⟨u s, rfl⟩)
+    have hstep : q (sys.forcing 0 u s) =
+        NormedSpace.exp ((-(s - 0)) • Aq.toContinuousLinearMap)
+          (q (sys.continuousB (u s))) := by
+      simpa only [LinearSystem.forcing, LinearSystem.expFlow, LinearSystem.continuousA] using
+        clm_map_exp_smul q sys.A.toContinuousLinearMap Aq.toContinuousLinearMap
+          hqA (-(s - 0)) (sys.continuousB (u s))
+    rw [hstep, hB, map_zero]
+  have hq_int : q (∫ s in (0 : ℝ)..t, sys.forcing 0 u s) = 0 := by
+    rw [← ContinuousLinearMap.intervalIntegral_comp_comm q
+      (LinearSystem.intervalIntegrable_forcing sys 0 hu 0 t)]
+    simp [hqforcing]
+  have hvar : sys.variationOfConstants 0 x u t =
+      sys.expFlow t (x + ∫ s in (0 : ℝ)..t, sys.forcing 0 u s) := by
+    simp [LinearSystem.variationOfConstants, sub_zero]
+  have hq_var : q (sys.variationOfConstants 0 x u t) = q (sys.expFlow t x) := by
+    rw [hvar, hq_exp]
+    rw [map_add, hq_int, add_zero]
+    exact (hq_exp x).symm
+  have hzero : q (sys.variationOfConstants 0 x u t - sys.expFlow t x) = 0 := by
+    rw [map_sub, hq_var, sub_self]
+  change R.mkQ (sys.variationOfConstants 0 x u t - sys.expFlow t x) = 0 at hzero
+  exact (Submodule.Quotient.mk_eq_zero R).mp hzero
+
 end WgSubspace
 
 /-! ### The dual conditioned-invariant/detectable condition
@@ -5737,4 +5814,29 @@ precisely the Bohl/spectral projection argument recorded in the two preceding
 handoff notes. The accepted ingredients are the PBH converse criteria of
 `Stabilization.lean`, the duality APIs of `Duality.lean`, the stable/antistable
 direct sum, and the Gramian reachability characterization
-`mem_reachableSubspace_orthogonal_of_forall_adjoint_expFlow_eq_zero`. -/
+`mem_reachableSubspace_orthogonal_of_forall_adjoint_expFlow_eq_zero`.
+
+#### The reachable-quotient cancellation added by this task
+
+The structural half of the input-cancellation obstruction is now formalised as
+`LinearSystem.variationOfConstants_sub_expFlow_mem_reachableSubspace`: for every
+locally integrable open-loop input the forced trajectory differs from the
+autonomous orbit by a reachable state,
+`x_u(t) - e^{tA} x ∈ R = ⟨A | im B⟩`, because the forcing
+`e^{-(s - t₀)A} (B u(s))` is reachable and `R` is `A`-invariant and closed.
+Equivalently, the reachable quotient `X ⧸ R` carries only the autonomous
+dynamics: the input term is invisible there. The proof pushes both sides through
+the quotient `R.mkQ`, uses `clm_map_exp_smul` to commute the exponential with the
+quotient map, and uses `ContinuousLinearMap.intervalIntegral_comp_comm` to kill
+the forcing integral because `q (forcing s) = 0` for every `s`.
+
+This isolates the residual gap precisely. Writing `x_u(t) = e^{tA} x + r_t` with
+`r_t ∈ R`, the open-loop necessity reduces to the statement that the readout on
+the reachable part cannot cancel the autonomous antistable readout unless the
+antistable state already lies in `V*(ker H) ⊔ R`. The quotient-autonomy lemma
+removes the input from the quotient dynamics; what remains is the *spectral*
+statement on the quotient `X ⧸ R`, equivalently on the observable `V*`-free
+quotient `X ⧸ (V*(ker H) + R)` discussed above. No proof of that spectral
+statement is claimed here; the accepted
+`LinearMap.antistable_readout_forces_unobservable` disposes of the *feedback*
+case but does not see the forced reachable readout. -/
