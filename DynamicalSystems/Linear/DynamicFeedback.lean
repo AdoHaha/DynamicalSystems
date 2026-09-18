@@ -5390,6 +5390,114 @@ theorem isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero'
   isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero sys H
     (hspectral_holds sys.A H) hB x
 
+/-! ### State-feedback necessity for `W_g(ker H)`
+
+The unconditional `B = 0` characterisation is now lifted to an arbitrary state
+feedback. With `A_F = A + B F`, a decaying *closed-loop* readout
+`t ↦ H (e^{t A_F} x) → 0` forces `x ∈ W_g(ker H) = V*(ker H) ⊔ Xstab(A, B)`.
+
+The proof uses the accepted stable/antistable direct sum `X = X_g(A_F) ⊔ X_b(A_F)`.
+The stable part already lies in `Xstab(A, B)`, and the antistable part is handled
+by the unconditional antistable readout theorem
+`LinearMap.antistable_readout_forces_unobservable`: a state in `X_b(A_F)` whose
+readout decays is `A_F`-unobservable, hence `A_F`-invariant and contained in
+`ker H`, hence `(A, B)`-controlled invariant because `A = A_F - B F`. -/
+
+omit [FiniteDimensional ℝ U] in
+/-- **State feedback does not change the stabilizable subspace.** Replacing the
+state map `A` by `A + B F` leaves `Xstab(A, B)` invariant, because state feedback
+only shifts the stabilizing gain. This is the reverse of the accepted
+`stabilizableSubspace_le_add_feedback`, applied to `-F`. -/
+theorem stabilizableSubspace_add_feedback_eq (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (F : X →ₗ[ℝ] U) :
+    LinearMap.stabilizableSubspace (A + B.comp F) B = LinearMap.stabilizableSubspace A B := by
+  apply le_antisymm
+  · have h := stabilizableSubspace_le_add_feedback (A + B.comp F) B (-F)
+    have hmap : (A + B.comp F) + B.comp (-F) = A := by
+      ext x
+      simp only [LinearMap.add_apply, LinearMap.comp_apply, LinearMap.neg_apply, map_neg]
+      abel
+    rwa [hmap] at h
+  · exact stabilizableSubspace_le_add_feedback A B F
+
+omit [FiniteDimensional ℝ U] in
+/-- **The state-feedback `W_g(ker H)` necessity.** If some state feedback
+`u = F x` makes the closed-loop controlled output decay,
+`t ↦ H (e^{t (A + B F)} x) → 0`, then `x` already lies in the algebraic
+`W_g(ker H) = V*(ker H) ⊔ Xstab(A, B)`. This is the state-feedback form of the
+hard inclusion of Trentelman–Stoorvogel–Hautus Theorem 4.37, obtained from the
+unconditional antistable readout theorem. The open-loop version quantifies over
+an arbitrary locally integrable input and is a separate, strictly stronger
+obligation. -/
+theorem mem_outputStabilizableSubspace_of_feedback_decay
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) {x : X}
+    (hdec : Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp
+      (t • (A + B.comp F).toContinuousLinearMap) x)) Filter.atTop (nhds 0)) :
+    x ∈ outputStabilizableSubspace A B H := by
+  let AF : X →ₗ[ℝ] X := A + B.comp F
+  have hxmem : x ∈ LinearMap.hurwitzSubspace AF ⊔ LinearMap.unstableSubspace AF := by
+    rw [LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top]
+    trivial
+  obtain ⟨xg, hxg, xb, hxb, hxeq⟩ := Submodule.mem_sup.mp hxmem
+  have hgdec : Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp
+      (t • AF.toContinuousLinearMap) xg)) Filter.atTop (nhds 0) :=
+    tendsto_readout_exp_of_mem_hurwitzSubspace AF H hxg
+  have hxb_dec : Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp
+      (t • AF.toContinuousLinearMap) xb)) Filter.atTop (nhds 0) := by
+    have hsplit : (fun t : ℝ => H (NormedSpace.exp (t • AF.toContinuousLinearMap) x)) =
+        fun t => H (NormedSpace.exp (t • AF.toContinuousLinearMap) xg) +
+          H (NormedSpace.exp (t • AF.toContinuousLinearMap) xb) := by
+      funext t
+      rw [← hxeq, map_add, map_add]
+    have h' := hdec
+    rw [hsplit] at h'
+    simpa using h'.sub hgdec
+  have hxb_unobs : xb ∈ LinearMap.unobservableSubspace H AF :=
+    LinearMap.antistable_readout_forces_unobservable AF H hxb hxb_dec
+  have hUle : LinearMap.unobservableSubspace H AF ≤ LinearMap.ker H :=
+    LinearMap.unobservableSubspace_le_ker H AF
+  have hUctrl : LinearMap.IsControlledInvariant A B (LinearMap.unobservableSubspace H AF) := by
+    rw [LinearMap.IsControlledInvariant]
+    intro y hy
+    rw [Submodule.mem_map] at hy
+    obtain ⟨z, hz, rfl⟩ := hy
+    have hAz : A z = AF z - B (F z) := by
+      change A z = (A + B.comp F) z - B (F z)
+      simp only [LinearMap.add_apply, LinearMap.comp_apply]
+      abel
+    rw [hAz]
+    exact Submodule.sub_mem_sup
+      (LinearMap.map_unobservableSubspace_le H AF ⟨z, hz, rfl⟩) ⟨F z, rfl⟩
+  have hxb_ctrl : xb ∈ LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) :=
+    LinearMap.le_controlledInvariantSubspace hUle hUctrl hxb_unobs
+  have hxg_stab : xg ∈ LinearMap.stabilizableSubspace A B := by
+    have h1 : xg ∈ LinearMap.stabilizableSubspace (A + B.comp F) B :=
+      LinearMap.hurwitzSubspace_le_stabilizableSubspace (A + B.comp F) B hxg
+    rwa [stabilizableSubspace_add_feedback_eq A B F] at h1
+  rw [outputStabilizableSubspace, ← hxeq, add_comm xg xb]
+  exact Submodule.add_mem_sup hxb_ctrl hxg_stab
+
+omit [FiniteDimensional ℝ U] in
+/-- **The state-feedback `W_g(ker H)` characterisation, two-sided.** For the
+general controlled pair `(A, B)` a state admits a state feedback `F` whose
+closed-loop readout decays, `t ↦ H (e^{t(A + B F)} x) → 0`, if and only if
+`x ∈ W_g(ker H) = V*(ker H) ⊔ Xstab(A, B)`. The forward direction is the new
+state-feedback necessity `mem_outputStabilizableSubspace_of_feedback_decay`,
+the converse is the accepted geometric construction
+`exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`. This is the
+feedback form of the `B = 0` characterisation
+`isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero'` lifted
+to an arbitrary input map; the open-loop predicate `IsOutputStabilizable`
+quantifies over an arbitrary locally integrable input and its necessity remains
+the strictly stronger obligation. -/
+theorem exists_feedback_tendsto_readout_iff_mem_outputStabilizableSubspace
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (x : X) :
+    (∃ F : X →ₗ[ℝ] U, Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) x)) Filter.atTop (nhds 0)) ↔
+      x ∈ outputStabilizableSubspace A B H :=
+  ⟨fun ⟨F, hF⟩ => mem_outputStabilizableSubspace_of_feedback_decay A B H F hF,
+    fun hx => exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace A B H hx⟩
+
 end WgSubspace
 
 /-! ### The dual conditioned-invariant/detectable condition
@@ -5564,3 +5672,69 @@ None of these three steps is claimed here. In particular, the `hspectral`
 hypothesis of `mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` is still an
 explicit hypothesis, not a proved theorem, and the general-`B` necessity is not
 claimed. -/
+
+/-! ### The state-feedback lift added by the general-`B` task
+
+The general-`B` necessity is now proved in its **state-feedback** form, and the
+`hspectral` obligation is discharged (`hspectral_holds`, via the accepted
+antistable readout theorem `LinearMap.antistable_readout_forces_unobservable`):
+
+* `LinearSystem.stabilizableSubspace_add_feedback_eq` — the stabilizable
+  subspace is unchanged by state feedback, `Xstab(A + B F, B) = Xstab(A, B)`;
+* `LinearSystem.mem_outputStabilizableSubspace_of_feedback_decay` — if
+  `t ↦ H (e^{t (A + B F)} x) → 0` for some `F`, then
+  `x ∈ W_g(ker H) = V*(ker H) ⊔ Xstab(A, B)`;
+* `LinearSystem.exists_feedback_tendsto_readout_iff_mem_outputStabilizableSubspace`
+  — the resulting two-sided state-feedback characterisation, whose converse is
+  the accepted `exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`.
+
+Proof route of the necessity: split `x = x_g + x_b` along the accepted
+stable/antistable direct sum for `A_F = A + B F`. The stable part is in
+`Xstab(A, B)` by `hurwitzSubspace_le_stabilizableSubspace` and the feedback
+invariance above. From the decay of `H (e^{t A_F} x)` and of `H (e^{t A_F} x_g)`
+the antistable part inherits `H (e^{t A_F} x_b) → 0`, so the accepted
+`LinearMap.antistable_readout_forces_unobservable` makes `x_b` `A_F`-unobservable,
+hence `A_F`-invariant and contained in `ker H`, hence `(A, B)`-controlled
+invariant because `A = A_F - B F`; finally
+`LinearMap.le_controlledInvariantSubspace` puts `x_b ∈ V*(ker H)`.
+
+#### Exact remaining obligation
+
+The **open-loop** predicate `IsOutputStabilizable` quantifies over an arbitrary
+locally integrable input rather than a state feedback, so the chain
+`feedback-decay ⟹ open-loop-decay` is the easy direction and the converse is the
+strictly stronger obligation:
+
+```lean
+theorem LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x : X)
+    (h : IsOutputStabilizable sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H
+```
+
+It is **not** claimed here. The obstruction is genuinely the input-cancellation
+term: writing `x_u(t) = e^{tA} x + r_t` with `r_t ∈ reachableSubspace A B`, one
+has `H x_u(t) = H (e^{tA} x) + H r_t`, and the driven reachable readout `H r_t`
+can cancel the autonomous antistable readout `H (e^{tA} x_b)` whenever the input
+channel reaches the corresponding unstable mode. In the two-dimensional model
+`A = diag(-1, 1)`, `B = e₁`, `H = a e₁* + b e₂*` (`a, b ≠ 0`) an unbounded input
+`u(s) = -2 (b/a) e^{s}` makes `H x_u(t) = b e^{-t} → 0`; the cancellation succeeds
+exactly because `H` detects the reachable direction, which in turn makes `ker H`
+controlled invariant and pushes `x_b` into `V*(ker H)`. The general statement is
+therefore a spectral statement: a state outside `V*(ker H) + Xstab` carries an
+*uncontrollable* unstable generalized eigendirection whose readout cannot be
+cancelled through `im B`.
+
+A first attempt at a dual/PBH proof — pick a functional `L` with `L ∘ A = μ L`,
+`L ∘ B = 0`, `L|ker H = 0`, `μ.re ≥ 0`, `L x ≠ 0`, write `L = λ ∘ H`, and read
+off the contradiction `e^{μ t} L x = L x_u(t) = λ (H x_u(t)) → 0` — is
+**insufficient as stated**: it cannot see a state `x ∈ ker H \ W` (where
+`L x = 0` for every `L` vanishing on `ker H`), although such states are correctly
+excluded, e.g. `A = [[0,1],[0,0]]`, `B = 0`, `H = e₁*`, `x = e₂`. The readout
+functional must be taken from the whole observability chain, `L = λ ∘ H ∘ A ^ k`
+(and the input-annihilation condition `L ∘ B = 0` then constrains it), which is
+precisely the Bohl/spectral projection argument recorded in the two preceding
+handoff notes. The accepted ingredients are the PBH converse criteria of
+`Stabilization.lean`, the duality APIs of `Duality.lean`, the stable/antistable
+direct sum, and the Gramian reachability characterization
+`mem_reachableSubspace_orthogonal_of_forall_adjoint_expFlow_eq_zero`. -/
