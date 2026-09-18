@@ -328,6 +328,9 @@ documented future roadmap.
 * `LinearSystem.externalStability_iff_geometricCertificate`
 * `LinearSystem.externalStability_iff_geometricCertificate_and_conditions`
 * `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`
+* `LinearSystem.readout_functional_variationOfConstants_eq_expFlow`
+* `LinearSystem.not_isOutputStabilizable_of_antistable_readout_functional`
+* `LinearSystem.readout_functional_eq_zero_on_unstable_of_isOutputStabilizable`
 
 ## References
 
@@ -5575,6 +5578,156 @@ theorem variationOfConstants_sub_expFlow_mem_reachableSubspace
   change R.mkQ (sys.variationOfConstants 0 x u t - sys.expFlow t x) = 0 at hzero
   exact (Submodule.Quotient.mk_eq_zero R).mp hzero
 
+/-! ### Quotient spectral non-cancellation of the reachable readout
+
+The reachable-quotient cancellation above replaces the forced trajectory
+`x_u(t)` by the autonomous orbit `e^{tA} x` modulo the reachable subspace
+`R = ⟨A | im B⟩`. The spectral content of Theorem 4.37 is the *non-cancellation*
+statement that this replacement is harmless for a readout functional that
+already annihilates `R`: such a functional cannot see the input channel at all,
+so the open-loop decay of its readout is exactly the autonomous decay, and the
+antistable readout theorem applies.
+
+Concretely, let `ρ : Z →L[ℝ] ℝ` be a continuous readout functional and let
+`L = ρ ∘ H` be the induced state functional. If `L` vanishes on the reachable
+subspace `R = ⟨A | im B⟩`, then for every locally integrable input `u`
+`L x_u(t) = L (e^{tA} x)`. Hence a decaying readout forces the autonomous
+functional trajectory `t ↦ L (e^{tA} x)` to decay, and the accepted antistable
+readout theorem `LinearMap.antistable_readout_forces_unobservable` gives
+`L x = 0` for every antistable `x`.
+
+This is the correct replacement of the invalid single-functional PBH shortcut:
+the functional must annihilate the whole reachable subspace (equivalently, all
+Markov parameters `ρ H A^k B`), which is the *observability-chain* condition
+needed to separate an uncontrollable mode from the forcing. The remaining
+open-loop obligation is the PBH separation stating that every antistable state
+outside `V*(ker H) + R` is detected by such a functional; that separation is
+*not* proved here and is recorded in the handoff at the end of the file. -/
+
+/-- **Readout functionals are blind to the reachable input channel.** If the
+continuous readout functional `ρ` satisfies `ρ (sys.C ·) = 0` on the reachable
+subspace `⟨sys.A | im sys.B⟩`, then the readout of the forced variation-of-
+constants trajectory equals the readout of the autonomous orbit:
+`ρ (sys.C x_u(t)) = ρ (sys.C (e^{tA} x))`.
+
+This is `variationOfConstants_sub_expFlow_mem_reachableSubspace` combined with
+the annihilation hypothesis: the forcing contribution is reachable, so `ρ`
+forgets it. -/
+theorem readout_functional_variationOfConstants_eq_expFlow
+    (sys : LinearSystem ℝ X U Z) (ρ : Z →L[ℝ] ℝ)
+    (hR : LinearMap.reachableSubspace sys.A sys.B ≤
+      LinearMap.ker (ρ.toLinearMap.comp sys.C))
+    (x : X) {u : ℝ → U} (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (t : ℝ) :
+    ρ (sys.C (sys.variationOfConstants 0 x u t)) =
+      ρ (sys.C (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x)) := by
+  have hmem := variationOfConstants_sub_expFlow_mem_reachableSubspace sys x hu t
+  set r : X := sys.variationOfConstants 0 x u t - sys.expFlow t x with hr
+  have hrmem : r ∈ LinearMap.reachableSubspace sys.A sys.B := hmem
+  have hker : ρ (sys.C r) = 0 := by
+    have := hR hrmem
+    simpa [LinearMap.mem_ker, LinearMap.comp_apply] using this
+  have hvar : sys.variationOfConstants 0 x u t = sys.expFlow t x + r := by
+    rw [hr]; abel
+  rw [hvar, map_add, map_add, hker, add_zero]
+  rfl
+
+/-- **Reachable-quotient readout non-cancellation.** Let `ρ : Z →L[ℝ] ℝ` be a
+continuous readout functional whose induced state functional `ρ ∘ H` annihilates
+the reachable subspace `R = ⟨A | im B⟩`. If `x` is antistable and its readout is
+not annihilated by `ρ`, then no locally integrable open-loop input can make the
+controlled output decay.
+
+Proof: the reachable-quotient cancellation writes the forced trajectory as
+`x_u(t) = e^{tA} x + r_t` with `r_t ∈ R`; since `ρ H` vanishes on `R`,
+`ρ (H x_u(t)) = ρ (H (e^{tA} x))`. Continuity of `ρ` transports the decay of
+`H x_u(t)` to the scalar trajectory `t ↦ ρ (H (e^{tA} x))`, and the accepted
+antistable readout theorem `LinearMap.antistable_readout_forces_unobservable`
+forces `ρ (H x) = 0`, contradicting the detection hypothesis. -/
+theorem not_isOutputStabilizable_of_antistable_readout_functional
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (ρ : Z →L[ℝ] ℝ)
+    (hR : LinearMap.reachableSubspace A B ≤ LinearMap.ker (ρ.toLinearMap.comp H))
+    {x : X} (hx : x ∈ LinearMap.unstableSubspace A) (hxρ : ρ (H x) ≠ 0) :
+    ¬ IsOutputStabilizable (⟨A, B, H, 0⟩ : LinearSystem ℝ X U Z) H x := by
+  rintro ⟨u, hu, htend⟩
+  let sys : LinearSystem ℝ X U Z := ⟨A, B, H, 0⟩
+  have hR' : LinearMap.reachableSubspace sys.A sys.B ≤
+      LinearMap.ker (ρ.toLinearMap.comp sys.C) := hR
+  have hρtend : Filter.Tendsto (fun t : ℝ => ρ (H (sys.variationOfConstants 0 x u t)))
+      Filter.atTop (nhds 0) := by
+    have h1 := (ρ.continuous.tendsto 0).comp htend
+    simpa [Function.comp_def, sys] using h1
+  have hsame : ∀ t : ℝ, ρ (H (sys.variationOfConstants 0 x u t)) =
+      ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) x)) :=
+    fun t => readout_functional_variationOfConstants_eq_expFlow sys ρ hR' x hu t
+  have hdecA : Filter.Tendsto
+      (fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) x)))
+      Filter.atTop (nhds 0) :=
+    hρtend.congr' (Filter.Eventually.of_forall fun t => hsame t)
+  have hunobs := LinearMap.antistable_readout_forces_unobservable A
+    (ρ.toLinearMap.comp H) hx hdecA
+  have hxker : x ∈ LinearMap.ker (ρ.toLinearMap.comp H) :=
+    LinearMap.unobservableSubspace_le_ker (ρ.toLinearMap.comp H) A hunobs
+  exact hxρ (LinearMap.mem_ker.mp hxker)
+
+/-- **Quotient spectral non-cancellation for a general state.** This is the
+stable/antistable form of
+`not_isOutputStabilizable_of_antistable_readout_functional` that isolates the
+"antistable observable component". Let `x = x_g + x_b` with `x_g` in the stable
+subspace `X_g(A)` and `x_b` in the antistable subspace `X_b(A)`. If `x` is
+open-loop output-stabilizable and the readout functional `ρ ∘ H` annihilates the
+reachable subspace, then the antistable part `x_b` is invisible to `ρ`:
+`ρ (H x_b) = 0`.
+
+Proof: the stable component has decaying readout
+(`tendsto_readout_exp_of_mem_hurwitzSubspace`) and the reachable part is killed
+by `ρ ∘ H`, so the decay of `H x_u(·)` transports to
+`t ↦ ρ (H (e^{tA} x_b))`; the antistable readout theorem then gives
+`ρ (H x_b) = 0`. -/
+theorem readout_functional_eq_zero_on_unstable_of_isOutputStabilizable
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (ρ : Z →L[ℝ] ℝ)
+    (hR : LinearMap.reachableSubspace A B ≤ LinearMap.ker (ρ.toLinearMap.comp H))
+    {x xg xb : X} (hx : x = xg + xb)
+    (hg : xg ∈ LinearMap.hurwitzSubspace A) (hb : xb ∈ LinearMap.unstableSubspace A)
+    (h : IsOutputStabilizable (⟨A, B, H, 0⟩ : LinearSystem ℝ X U Z) H x) :
+    ρ (H xb) = 0 := by
+  rcases h with ⟨u, hu, htend⟩
+  let sys : LinearSystem ℝ X U Z := ⟨A, B, H, 0⟩
+  have hR' : LinearMap.reachableSubspace sys.A sys.B ≤
+      LinearMap.ker (ρ.toLinearMap.comp sys.C) := hR
+  have hρtend : Filter.Tendsto (fun t : ℝ => ρ (H (sys.variationOfConstants 0 x u t)))
+      Filter.atTop (nhds 0) := by
+    have h1 := (ρ.continuous.tendsto 0).comp htend
+    simpa [Function.comp_def, sys] using h1
+  have hLvar : ∀ t : ℝ, ρ (H (sys.variationOfConstants 0 x u t)) =
+      ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) x)) :=
+    fun t => readout_functional_variationOfConstants_eq_expFlow sys ρ hR' x hu t
+  have hdecA : Filter.Tendsto
+      (fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) x)))
+      Filter.atTop (nhds 0) :=
+    hρtend.congr' (Filter.Eventually.of_forall fun t => hLvar t)
+  have hgdec : Filter.Tendsto
+      (fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) xg)))
+      Filter.atTop (nhds 0) := by
+    have hflow := tendsto_readout_exp_of_mem_hurwitzSubspace A (ρ.toLinearMap.comp H) hg
+    simpa [LinearMap.comp_apply] using hflow
+  have hxsplit : (fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) x))) =
+      fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) xg)) +
+        ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) xb)) := by
+    funext t
+    rw [hx, map_add, map_add, map_add]
+  have hbdec : Filter.Tendsto
+      (fun t : ℝ => ρ (H (NormedSpace.exp (t • A.toContinuousLinearMap) xb)))
+      Filter.atTop (nhds 0) := by
+    have h' := hdecA
+    rw [hxsplit] at h'
+    simpa using h'.sub hgdec
+  have hunobs := LinearMap.antistable_readout_forces_unobservable A
+    (ρ.toLinearMap.comp H) hb hbdec
+  have hxker : xb ∈ LinearMap.ker (ρ.toLinearMap.comp H) :=
+    LinearMap.unobservableSubspace_le_ker (ρ.toLinearMap.comp H) A hunobs
+  exact LinearMap.mem_ker.mp hxker
+
 end WgSubspace
 
 /-! ### The dual conditioned-invariant/detectable condition
@@ -5839,4 +5992,58 @@ statement on the quotient `X ⧸ R`, equivalently on the observable `V*`-free
 quotient `X ⧸ (V*(ker H) + R)` discussed above. No proof of that spectral
 statement is claimed here; the accepted
 `LinearMap.antistable_readout_forces_unobservable` disposes of the *feedback*
-case but does not see the forced reachable readout. -/
+case but does not see the forced reachable readout.
+
+#### The quotient spectral non-cancellation added by this task
+
+The reachable-quotient cancellation is complemented by the readout-functional
+non-cancellation, which is the correct replacement of the invalid
+single-functional PBH shortcut:
+
+* `LinearSystem.readout_functional_variationOfConstants_eq_expFlow` — if the
+  continuous readout functional `ρ` annihilates the reachable subspace
+  `R = ⟨A | im B⟩` in the sense that `R ≤ ker (ρ ∘ H)`, then for every locally
+  integrable input `u` the readout of the forced variation-of-constants
+  trajectory is exactly the autonomous readout,
+  `ρ (H x_u(t)) = ρ (H (e^{tA} x))`;
+* `LinearSystem.not_isOutputStabilizable_of_antistable_readout_functional` —
+  an antistable state detected by such a functional (`ρ (H x) ≠ 0`) is not
+  open-loop output-stabilizable, because the forced readout equals the
+  autonomous readout and `LinearMap.antistable_readout_forces_unobservable`
+  would force `ρ (H x) = 0`;
+* `LinearSystem.readout_functional_eq_zero_on_unstable_of_isOutputStabilizable`
+  — the "no antistable observable component" form: for any stable/antistable
+  decomposition `x = x_g + x_b` (`x_g ∈ X_g(A)`, `x_b ∈ X_b(A)`), output
+  stabilizability forces the antistable part to lie in the kernel,
+  `ρ (H x_b) = 0`.
+
+The functional must annihilate the *whole* reachable subspace (equivalently all
+Markov parameters `ρ H A^k B`), which is the observability-chain condition that
+separates an uncontrollable mode from the forcing. A single genuine
+eigenfunctional is insufficient: the example `A = [[0,1],[0,0]]`, `B = 0`,
+`H = e₁*`, `x = e₂` has an observable `x ∉ ker H` on which every functional
+vanishing on `ker H` is zero.
+
+#### Exact remaining obligation (PBH separation)
+
+With the analytic half complete, the open-loop necessity reduces to a single
+*separation* statement. Let `V = V*(ker H)` and `R = ⟨A | im B⟩`. The missing
+lemma is: every antistable state `x_b ∈ X_b(A)` outside `V + R` is detected by a
+continuous readout functional `ρ` with `R ≤ ker (ρ ∘ H)` and `ρ (H x_b) ≠ 0`.
+Combined with `readout_functional_eq_zero_on_unstable_of_isOutputStabilizable`,
+this gives `x_b ∈ V + R`, hence `x ∈ V + Xstab = outputStabilizableSubspace A B H`,
+and with it the full open-loop theorem
+`LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable`.
+
+The separation is a finite-dimensional PBH/duality statement on the quotient
+`X ⧸ (V + R)`: an antistable class of `X ⧸ (V + R)` must be visible to some
+readout functional `ρ ∘ H` whose reachable part is annihilated. The accepted
+ingredients are the PBH converse criteria
+(`LinearMap.isStabilizable_converse_of_uncontrollableEigenvalue`,
+`LinearMap.isDetectable_converse_of_unobservableEigenvalue`), the reachable/
+unobservable duality `LinearMap.reachableSubspace_dualMap`, the stable/antistable
+direct sum, and the maximality
+`LinearMap.isGreatest_controlledInvariantSubspace`. This statement is **not**
+proved here, and the full open-loop theorem
+`LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable` is
+consequently **not** claimed. -/
