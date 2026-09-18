@@ -5368,6 +5368,28 @@ theorem isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_zero_operator
     (⟨0, 0, H, 0⟩ : LinearSystem ℝ X U Z) H
     (hspectral_zero_operator H) rfl x
 
+/-- **The `hspectral` obligation is discharged.** The accepted antistable
+readout theorem `LinearMap.antistable_readout_forces_unobservable` supplies
+exactly the hypothesis isolated in
+`mem_outputStabilizableSubspace_of_decay_of_B_eq_zero`: an antistable state whose
+readout decays at `+∞` is unobservable. No spectral statement is assumed here. -/
+theorem hspectral_holds (A : X →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    ∀ x : X, x ∈ LinearMap.unstableSubspace A →
+      Filter.Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) x))
+        Filter.atTop (nhds 0) → x ∈ LinearMap.unobservableSubspace H A :=
+  fun _ hx hdec => LinearMap.antistable_readout_forces_unobservable A H hx hdec
+
+/-- **The `B = 0` open-loop trajectory characterisation, unconditionally.**
+With the antistable readout theorem supplying `hspectral`, the source's
+output-stabilizable set equals the algebraic `W_g(ker H)` in the no-input case
+without any extra hypothesis: a state is open-loop output-stabilizable exactly
+when it lies in `V*(ker H) ⊔ Xstab(A, 0)`. -/
+theorem isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero'
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (hB : sys.B = 0) (x : X) :
+    IsOutputStabilizable sys H x ↔ x ∈ outputStabilizableSubspace sys.A sys.B H :=
+  isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero sys H
+    (hspectral_holds sys.A H) hB x
+
 end WgSubspace
 
 /-! ### The dual conditioned-invariant/detectable condition
