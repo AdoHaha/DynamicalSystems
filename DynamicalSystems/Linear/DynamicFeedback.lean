@@ -2882,6 +2882,168 @@ theorem externalStability_iff_geometricCertificate_and_conditions
   · rintro ⟨hgc, _⟩
     exact (externalStability_iff_geometricCertificate sys hD E H).mpr hgc
 
+/-! ### Stable nonzero external response versus exact zero response
+
+The two external-behaviour notions are kept apart:
+
+* `ExternalStability` asks for a controller making the forced external response
+  *identically zero* (external disturbance decoupling);
+* `StableNonzeroExternalResponse` asks only that the forced external response
+  *decay to zero*, the state-space counterpart of stability of the closed-loop
+  transfer function `G_Κ(s) = H_e (s I - A_e)⁻¹ B_e`
+  (Trentelman–Stoorvogel–Hautus, Definition 6.19).
+
+The second is strictly weaker: a nonzero but exponentially decaying impulse
+response satisfies it and not the first. The exact-zero predicate implies the
+stable-nonzero one (`externalStability_imp_stableNonzeroExternalResponse`); the
+converse is not claimed, and the exact-zero geometric certificate
+`GeometricCertificate` is correspondingly stronger than the Corollary 6.22
+conditions. -/
+
+/-- **Stable nonzero external response.** There is a finite-dimensional dynamic
+measurement-feedback controller (state space `X`, strictly proper
+`cabPairInterconnection`) whose forced external response decays to zero in every
+disturbance direction: `t ↦ H_e e^{t A_e} B_e d → 0` as `t → +∞`.
+
+This is the state-space form of stability of the closed-loop transfer function
+`G_Κ(s)` (Trentelman–Stoorvogel–Hautus, Definition 6.19). It is the *stable
+nonzero* reading and is explicitly not identified with the identically-zero
+response `ExternalStability`; the latter implies it, while a decaying nonzero
+impulse response witnesses the strict difference. -/
+noncomputable def StableNonzeroExternalResponse (sys : LinearSystem ℝ X U Y)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) : Prop :=
+  ∃ ctrl : DynamicController ℝ X Y U,
+    ∀ d : D, Filter.Tendsto
+      (fun t : ℝ => (cabPairInterconnection sys ctrl E H).externalResponse
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD) t d)
+      Filter.atTop (nhds 0)
+
+omit [FiniteDimensional ℝ D] in
+/-- **Exact zero response implies stable nonzero response.** If a controller
+makes the forced external response identically zero then a fortiori it decays to
+zero, so `ExternalStability` entails `StableNonzeroExternalResponse`.
+
+The converse is false in general: a nonzero exponentially decaying impulse
+response is stable but not identically zero, which is why the two predicates are
+kept distinct (and why the exact-zero geometric certificate `GeometricCertificate`
+is strictly stronger than the Corollary 6.22 conditions). -/
+theorem externalStability_imp_stableNonzeroExternalResponse
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ExternalStability sys hD E H) :
+    StableNonzeroExternalResponse sys hD E H := by
+  obtain ⟨ctrl, hz⟩ := h
+  refine ⟨ctrl, fun d => ?_⟩
+  have hfun : (fun t : ℝ => (cabPairInterconnection sys ctrl E H).externalResponse
+      ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD) t d) =
+      fun _ : ℝ => (0 : Z) := by
+    funext t
+    exact hz t d
+  rw [hfun]
+  exact tendsto_const_nhds
+
+omit [FiniteDimensional ℝ D] in
+/-- **Stable nonzero response from Hurwitz cabPair gains.** If the
+state-feedback block `A + B F` and the observer-error block `A + G C` of the
+controller (6.7) are both Hurwitz then its forced external response decays, so
+the strictly proper plant admits a stable (nonzero) external response.
+
+This reuses the accepted separation-principle factorization
+`isHurwitz_closedLoopMap_cabPairController` and the real Hurwitz decay theorem
+`LinearMap.tendsto_exp_of_isHurwitz`; no decay is assumed. -/
+theorem stableNonzeroExternalResponse_of_isHurwitz_cabPair
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X) (N : Y →ₗ[ℝ] U)
+    (hF : LinearMap.IsHurwitz (sys.A + sys.B.comp F))
+    (hG : LinearMap.IsHurwitz (sys.A + G.comp sys.C)) :
+    StableNonzeroExternalResponse sys hD E H := by
+  refine ⟨cabPairController sys F G N, fun d => ?_⟩
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G N) E H
+  have hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  change Filter.Tendsto (fun t : ℝ => ic.externalResponse hwp t d) Filter.atTop (nhds 0)
+  have hH : LinearMap.IsHurwitz (ic.closedLoopMap hwp) :=
+    isHurwitz_closedLoopMap_cabPairController sys hD E H F G N hwp hF hG
+  have hflow : (fun t : ℝ => ic.externalResponse hwp t d) =
+      fun t : ℝ => ic.outputMap (NormedSpace.exp
+        (t • (ic.closedLoopMap hwp).toContinuousLinearMap)
+        (ic.disturbanceMapWithF hwp d)) := by
+    funext t
+    rw [ic.externalResponse_apply, ic.closedLoopSystem_expFlow_eq hwp t]
+  rw [hflow]
+  have htend : Filter.Tendsto (fun t : ℝ => NormedSpace.exp
+      (t • (ic.closedLoopMap hwp).toContinuousLinearMap)
+      (ic.disturbanceMapWithF hwp d)) Filter.atTop (nhds 0) :=
+    LinearMap.tendsto_exp_of_isHurwitz (ic.closedLoopMap hwp) hH _
+  have hcont := (ic.outputMap.toContinuousLinearMap.continuous.tendsto 0).comp htend
+  rw [map_zero] at hcont
+  exact hcont
+
+section StableNonzeroExistence
+
+variable [FiniteDimensional ℝ Y]
+
+omit [FiniteDimensional ℝ D] in
+/-- **Existence of a stable-nonzero external response.** A controllable and
+observable strictly proper plant admits a dynamic measurement-feedback
+controller whose forced external response decays. The gains are those of
+`exists_hurwitz_cabPair_gains`, so the predicate is not vacuous. -/
+theorem exists_stableNonzeroExternalResponse_cabPair_gains
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hcont : LinearMap.IsControllable sys.A sys.B)
+    (hobs : LinearMap.IsObservable sys.C sys.A) :
+    StableNonzeroExternalResponse sys hD E H := by
+  obtain ⟨F, G, hF, hG⟩ := exists_hurwitz_cabPair_gains sys hcont hobs
+  exact stableNonzeroExternalResponse_of_isHurwitz_cabPair sys hD E H F G 0 hF hG
+
+end StableNonzeroExistence
+
+/-! ### Handoff: the exact remaining blocker for the full stable-nonzero iff
+
+The Corollary 6.22 stable-nonzero criterion would read
+
+`StableNonzeroExternalResponse sys hD E H ↔ ExternalStabilizationConditions sys E H`.
+
+Its two directions split as follows.
+
+* **Sufficiency** (`ExternalStabilizationConditions → StableNonzeroExternalResponse`).
+  The state-feedback half is `exists_feedback_tendsto_readout_of_corollary622`
+  (`H e^{t(A+BF)} (E d) → 0`) and the observer half is
+  `exists_observerError_readout_tendsto_of_externalStabilizationConditions`
+  (`H e^{t(A-LC)} (E d) → 0`). What is *not* yet packaged is the passage from
+  these two block decays to the decay of the forced external response of the
+  dynamic controller (6.39). In the observer-error coordinates `(x, e) = (x, x - w)`
+  the closed loop is block upper triangular with blocks `A + B F` and `A + G C`,
+  and
+  `H x(t) = H e^{t(A+BF)}(E d) - ∫_0^t H e^{(t-s)(A+BF)} B F e^{s(A+GC)}(E d) ds`.
+  The missing analytic statement is a **forced/convolution quotient-decay lemma**
+  generalising the accepted initial-state bridge
+  `tendsto_readout_exp_of_isHurwitz_quotient_on`: for a feedback `F` preserving a
+  controlled-invariant witness `V ≤ ker H` with `(A + B F)|_{W/V}` Hurwitz on a
+  closed-loop-invariant `W ⊇ im E`, the convolution of `s ↦ H e^{s(A+BF)} B F`
+  with any exponentially decaying internal signal `e(s) = e^{s(A+GC)} y` tends to
+  `0`. Equivalently, a direct proof that the extended closed loop of (6.39) is
+  `DynamicInterconnection.IsExternallyStable` from the two quotient spectra
+  (Trentelman–Stoorvogel–Hautus Theorem 6.18 and its convolution decoding).
+
+* **Necessity** (`StableNonzeroExternalResponse → ExternalStabilizationConditions`).
+  The source derives `im E ⊂ V*(ker H) + Xstab` from the definition of `W_g(ker H)`
+  as the set of states from which an open-loop control can make the controlled
+  output decay, together with Theorem 4.37 (`W_g(ker H) = V*(ker H) + Xstab`),
+  and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The missing
+  reusable statement is exactly that open-loop characterisation: for every
+  admissible (locally integrable) input `v` and every initial state `x`, if
+  `t ↦ H x_v(t, x) → 0` then `x ∈ V*(ker H) + Xstab(A, B)`, plus its dual
+  `im Hᵀ ⊂ V*(Eᵀ, Aᵀ, Cᵀ) + Xstab(Aᵀ, Cᵀ)` from which the second inclusion
+  follows. The exact-zero case already has both halves
+  (`externalStabilizationConditions_of_externalStability`), but it rests on the
+  stronger zero-response premise and does not cover the merely stable response.
+
+Until these two statements are available the genuine iff is not claimed; only the
+strictly weaker exact-zero criterion (`externalStability_iff_geometricCertificate_and_conditions`)
+and the stable-nonzero synthesis under the additional Hurwitz hypothesis
+(`stableNonzeroExternalResponse_of_isHurwitz_cabPair`,
+`exists_stableNonzeroExternalResponse_cabPair_gains`) are asserted. -/
+
 /-- **BIBO stability and external zero response from a stabilising certificate.**
 Suppose the geometric certificate `(S, V)` is equipped with gains `F`, `G`, `N`
 that preserve the pair (`(A + B F) V ≤ V`, `(A + G C) S ≤ S`,
