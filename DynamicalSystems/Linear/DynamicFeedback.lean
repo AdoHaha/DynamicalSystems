@@ -5730,6 +5730,270 @@ theorem readout_functional_eq_zero_on_unstable_of_isOutputStabilizable
 
 end WgSubspace
 
+/-! ### PBH/annihilator separation of the reachable sum
+
+The functional route to the `W_g(ker H)` necessity replaces the forced open-loop
+trajectory by the autonomous orbit modulo the reachable subspace: for every
+locally integrable input `u`, `x_u(t) - e^{tA} x ∈ R = ⟨A | im B⟩`
+(`variationOfConstants_sub_expFlow_mem_reachableSubspace`). Consequently a
+continuous readout functional `ρ` with `R ≤ ker (ρ ∘ H)` sees only the
+autonomous orbit (`readout_functional_variationOfConstants_eq_expFlow`), and a
+decaying readout forces `ρ (H (e^{tA} x)) → 0`.
+
+The separation question is therefore: *which states are detected by some such
+`ρ`?* A single functional `ρ ∘ H` is not enough — the example
+`A = [[0,1],[0,0]]`, `B = 0`, `H = e₁*` has `e₂ ∉ V*(ker H) + R` but
+`H e₂ = 0`, so no readout functional can see it. The correct family is the
+**observability chain** `ρ ∘ H ∘ Aᵏ`. Its common kernel is exactly
+`V*(ker H ⊔ ⟨A | im B⟩)`:
+
+* `mem_controlledInvariantSubspace_sup_reachableSubspace_iff` — the orbit
+description `x ∈ V*(ker H ⊔ R) ↔ ∀ k, Aᵏ x ∈ ker H + R`;
+* `exists_readout_functional_chain_of_notMem_controlledInvariantSubspace_sup_reachable`
+— the PBH/annihilator separation: every `x ∉ V*(ker H ⊔ R)` is detected by
+some `k` and `ρ` with `R ≤ ker (ρ ∘ H)` and `ρ (H (Aᵏ x)) ≠ 0`;
+* `forall_readout_functional_chain_eq_zero_iff_mem` — the sharp annihilator
+duality packaging the two directions.
+
+The threshold is `V*(ker H ⊔ R)`, which can be strictly larger than
+`V*(ker H) + R`; the separation is *false* for the weaker hypothesis
+`x ∉ V*(ker H) + R` whenever `H` maps `R` onto the whole readout space (then
+`R ≤ ker (ρ ∘ H)` forces `ρ = 0`). This is the exact obstruction recorded in the
+handoff at the end of the file: the functional method alone cannot finish the
+open-loop necessity, because the interesting states lie in
+`V*(ker H ⊔ R) \ (V*(ker H) + R)`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 4.37 (the identity
+`W_g(ker H) = V*(ker H) + Xstab`) and its duality proof; the annihilator
+separation is the finite-dimensional PBH statement on the quotient
+`X ⧸ V*(ker H ⊔ R)`. -/
+
+section ReachableSeparation
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- **Orbit description of `V*(ker H ⊔ ⟨A | im B⟩)`.** A state lies in the
+largest controlled invariant subspace contained in `ker H ⊔ ⟨A | im B⟩` if and
+only if its whole `A`-orbit stays in `ker H ⊔ ⟨A | im B⟩`.
+
+The forward direction uses that `V := V*(ker H ⊔ R)` contains the reachable
+subspace `R = ⟨A | im B⟩` (which is controlled invariant) and is therefore
+`A`-invariant, since `A V ⊆ V + im B ⊆ V + R = V`. The backward direction exhibits
+the orbit set itself as a controlled invariant subspace contained in
+`ker H ⊔ R`, and applies maximality of `V*(·)`. -/
+theorem mem_controlledInvariantSubspace_sup_reachableSubspace_iff
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (x : X) :
+    x ∈ LinearMap.controlledInvariantSubspace A B
+        (LinearMap.ker H ⊔ LinearMap.reachableSubspace A B) ↔
+      ∀ k : ℕ, (A ^ k) x ∈ LinearMap.ker H ⊔ LinearMap.reachableSubspace A B := by
+  set K : Submodule ℝ X := LinearMap.ker H
+  set R : Submodule ℝ X := LinearMap.reachableSubspace A B
+  constructor
+  · intro hx k
+    set V : Submodule ℝ X := LinearMap.controlledInvariantSubspace A B (K ⊔ R)
+    have hR_ci : LinearMap.IsControlledInvariant A B R := by
+      intro y hy
+      rw [Submodule.mem_map] at hy
+      obtain ⟨z, hz, rfl⟩ := hy
+      exact Submodule.mem_sup.mpr ⟨A z, LinearMap.map_reachableSubspace_le A B ⟨z, hz, rfl⟩,
+        0, (LinearMap.range B).zero_mem, by simp⟩
+    have hR_le_V : R ≤ V :=
+      LinearMap.le_controlledInvariantSubspace le_sup_right hR_ci
+    have hV_ci : LinearMap.IsControlledInvariant A B V :=
+      LinearMap.isControlledInvariant_controlledInvariantSubspace A B (K ⊔ R)
+    have hAV : Submodule.map A V ≤ V := by
+      refine le_trans hV_ci ?_
+      rw [sup_le_iff]
+      exact ⟨le_rfl, le_trans (LinearMap.range_le_reachableSubspace A B) hR_le_V⟩
+    exact LinearMap.controlledInvariantSubspace_le_K A B (K ⊔ R)
+      (Submodule.map_pow_le hAV k ⟨x, hx, rfl⟩)
+  · intro hx
+    let W : Submodule ℝ X :=
+      { carrier := {y | ∀ k : ℕ, (A ^ k) y ∈ K ⊔ R}
+        zero_mem' := fun k => by rw [map_zero]; exact (K ⊔ R).zero_mem
+        add_mem' := fun {y z} hy hz k => by
+          rw [map_add]
+          exact (K ⊔ R).add_mem (hy k) (hz k)
+        smul_mem' := fun c {y} hy k => by
+          rw [map_smul]
+          exact (K ⊔ R).smul_mem c (hy k) }
+    have hW_le : W ≤ K ⊔ R := fun y hy => hy 0
+    have hW_ci : LinearMap.IsControlledInvariant A B W := by
+      intro y hy
+      rw [Submodule.mem_map] at hy
+      obtain ⟨z, hz, rfl⟩ := hy
+      refine Submodule.mem_sup.mpr ⟨A z, ?_, 0, (LinearMap.range B).zero_mem, by simp⟩
+      intro k
+      have h := hz (k + 1)
+      rw [pow_succ] at h
+      exact h
+    exact LinearMap.le_controlledInvariantSubspace hW_le hW_ci hx
+
+/-- **`V*(ker H) + ⟨A | im B⟩` lies in `V*(ker H ⊔ ⟨A | im B⟩)`.** The largest
+controlled invariant subspace contained in `ker H` and the reachable subspace
+are both contained in the largest controlled invariant subspace contained in
+their sum.
+
+This containment is what makes the PBH/annihilator separation a statement about
+a *strictly larger* threshold than the task's request: the chain functionals have
+common kernel `V*(ker H ⊔ R)`, so they cannot separate the intermediate states in
+`V*(ker H ⊔ R) \ (V*(ker H) + R)`. -/
+theorem sup_controlledInvariantSubspace_reachableSubspace_le
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) ⊔
+        LinearMap.reachableSubspace A B ≤
+      LinearMap.controlledInvariantSubspace A B
+        (LinearMap.ker H ⊔ LinearMap.reachableSubspace A B) := by
+  refine sup_le ?_ ?_
+  · exact LinearMap.le_controlledInvariantSubspace
+      (le_trans (LinearMap.controlledInvariantSubspace_le_K A B (LinearMap.ker H)) le_sup_left)
+      (LinearMap.isControlledInvariant_controlledInvariantSubspace A B (LinearMap.ker H))
+  · refine LinearMap.le_controlledInvariantSubspace le_sup_right ?_
+    intro y hy
+    rw [Submodule.mem_map] at hy
+    obtain ⟨z, hz, rfl⟩ := hy
+    exact Submodule.mem_sup.mpr ⟨A z, LinearMap.map_reachableSubspace_le A B ⟨z, hz, rfl⟩,
+      0, (LinearMap.range B).zero_mem, by simp⟩
+
+end ReachableSeparation
+
+section ReadoutSeparation
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
+
+/-- **PBH/annihilator separation.** Every state outside the largest controlled
+invariant subspace contained in `ker H ⊔ ⟨A | im B⟩` is detected by some
+functional in the observability chain: there are `k : ℕ` and `ρ : Z →L[ℝ] ℝ`
+with `⟨A | im B⟩ ≤ ker (ρ ∘ H)` and `ρ (H (Aᵏ x)) ≠ 0`.
+
+The proof is pure linear algebra once the orbit description
+`mem_controlledInvariantSubspace_sup_reachableSubspace_iff` is available: if the
+class of `H (Aᵏ x)` lay in `H ⟨A | im B⟩`, then `Aᵏ x` would lie in
+`ker H + ⟨A | im B⟩`, contradicting the orbit description. The dual annihilator
+`Subspace.forall_mem_dualAnnihilator_apply_eq_zero_iff` then produces an
+algebraic functional vanishing on `H ⟨A | im B⟩` and nonzero at `H (Aᵏ x)`;
+finite-dimensionality of the readout space makes it continuous.
+
+No spectral (stable/antistable) hypothesis is needed: the separation holds for
+every such state, in particular for the antistable states appearing in the
+open-loop necessity. -/
+theorem exists_readout_functional_chain_of_notMem_controlledInvariantSubspace_sup_reachable
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) {x : X}
+    (hx : x ∉ LinearMap.controlledInvariantSubspace A B
+        (LinearMap.ker H ⊔ LinearMap.reachableSubspace A B)) :
+    ∃ (k : ℕ) (ρ : Z →L[ℝ] ℝ),
+      LinearMap.reachableSubspace A B ≤ LinearMap.ker (ρ.toLinearMap.comp H) ∧
+      ρ (H ((A ^ k) x)) ≠ 0 := by
+  have hnot := (mem_controlledInvariantSubspace_sup_reachableSubspace_iff A B H x).not.mp hx
+  push Not at hnot
+  obtain ⟨k, hk⟩ := hnot
+  have hv : H ((A ^ k) x) ∉ Submodule.map H (LinearMap.reachableSubspace A B) := by
+    intro hv'
+    rw [Submodule.mem_map] at hv'
+    obtain ⟨r, hr, hHr⟩ := hv'
+    apply hk
+    refine Submodule.mem_sup.mpr ⟨(A ^ k) x - r, ?_, r, hr, by abel⟩
+    rw [LinearMap.mem_ker, map_sub, hHr, sub_self]
+  have hex : ∃ φ : Module.Dual ℝ Z,
+      φ ∈ (Submodule.map H (LinearMap.reachableSubspace A B)).dualAnnihilator ∧
+        φ (H ((A ^ k) x)) ≠ 0 := by
+    by_contra h
+    apply hv
+    rw [← Subspace.forall_mem_dualAnnihilator_apply_eq_zero_iff]
+    intro φ hφ
+    by_contra hφv
+    exact h ⟨φ, hφ, hφv⟩
+  obtain ⟨φ, hφmem, hφv⟩ := hex
+  refine ⟨k, LinearMap.toContinuousLinearMap φ, ?_, ?_⟩
+  · intro r hr
+    have h0 : φ (H r) = 0 :=
+      (Submodule.mem_dualAnnihilator φ).mp hφmem (H r) ⟨r, hr, rfl⟩
+    rw [LinearMap.mem_ker, LinearMap.comp_apply]
+    simpa using h0
+  · simpa using hφv
+
+omit [FiniteDimensional ℝ X] in
+/-- **Degree-zero separation.** If `x` is not already in `ker H ⊔ ⟨A | im B⟩`,
+then a single continuous readout functional separates it: there is
+`ρ : Z →L[ℝ] ℝ` with `⟨A | im B⟩ ≤ ker (ρ ∘ H)` and `ρ (H x) ≠ 0`.
+
+This is the `k = 0` case of the chain separation, and the exact range of the
+"readout functional" mechanism of the open-loop necessity. It shows why the
+task's requested threshold `V*(ker H) + R` is not the right one for this
+mechanism: states in `ker H \ V*(ker H)` (an example being
+`A = [[0,1],[0,0]]`, `B = 0`, `H = e₁*`, `x = e₂`) satisfy the membership
+hypothesis but are invisible to every such functional. -/
+theorem exists_readout_functional_of_notMem_ker_sup_reachable
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) {x : X}
+    (hx : x ∉ LinearMap.ker H ⊔ LinearMap.reachableSubspace A B) :
+    ∃ ρ : Z →L[ℝ] ℝ,
+      LinearMap.reachableSubspace A B ≤ LinearMap.ker (ρ.toLinearMap.comp H) ∧
+      ρ (H x) ≠ 0 := by
+  have hv : H x ∉ Submodule.map H (LinearMap.reachableSubspace A B) := by
+    intro hv'
+    rw [Submodule.mem_map] at hv'
+    obtain ⟨r, hr, hHr⟩ := hv'
+    apply hx
+    refine Submodule.mem_sup.mpr ⟨x - r, ?_, r, hr, by abel⟩
+    rw [LinearMap.mem_ker, map_sub, hHr, sub_self]
+  have hex : ∃ φ : Module.Dual ℝ Z,
+      φ ∈ (Submodule.map H (LinearMap.reachableSubspace A B)).dualAnnihilator ∧
+        φ (H x) ≠ 0 := by
+    by_contra h
+    apply hv
+    rw [← Subspace.forall_mem_dualAnnihilator_apply_eq_zero_iff]
+    intro φ hφ
+    by_contra hφv
+    exact h ⟨φ, hφ, hφv⟩
+  obtain ⟨φ, hφmem, hφv⟩ := hex
+  refine ⟨LinearMap.toContinuousLinearMap φ, ?_, ?_⟩
+  · intro r hr
+    have h0 : φ (H r) = 0 :=
+      (Submodule.mem_dualAnnihilator φ).mp hφmem (H r) ⟨r, hr, rfl⟩
+    rw [LinearMap.mem_ker, LinearMap.comp_apply]
+    simpa using h0
+  · simpa using hφv
+
+/-- **Sharp annihilator duality.** The functionals `ρ ∘ H ∘ Aᵏ` with
+`⟨A | im B⟩ ≤ ker (ρ ∘ H)` have common kernel exactly
+`V*(ker H ⊔ ⟨A | im B⟩)`.
+
+This packages the two directions of the PBH/annihilator separation: membership
+in `V*(ker H ⊔ R)` is equivalent to the vanishing of every observability-chain
+readout whose first factor annihilates the reachable subspace. -/
+theorem forall_readout_functional_chain_eq_zero_iff_mem
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (x : X) :
+    (∀ (k : ℕ) (ρ : Z →L[ℝ] ℝ),
+        LinearMap.reachableSubspace A B ≤ LinearMap.ker (ρ.toLinearMap.comp H) →
+        ρ (H ((A ^ k) x)) = 0) ↔
+      x ∈ LinearMap.controlledInvariantSubspace A B
+        (LinearMap.ker H ⊔ LinearMap.reachableSubspace A B) := by
+  constructor
+  · intro h
+    by_contra hx
+    obtain ⟨k, ρ, hR, hρ⟩ :=
+      exists_readout_functional_chain_of_notMem_controlledInvariantSubspace_sup_reachable
+        A B H hx
+    exact hρ (h k ρ hR)
+  · intro hx k ρ hR
+    have hmem := (mem_controlledInvariantSubspace_sup_reachableSubspace_iff A B H x).mp hx k
+    rw [Submodule.mem_sup] at hmem
+    obtain ⟨a, ha, r, hr, har⟩ := hmem
+    have hker : H ((A ^ k) x) = H r := by
+      rw [← har, map_add, LinearMap.mem_ker.mp ha, zero_add]
+    rw [hker]
+    have h0 := hR hr
+    rw [LinearMap.mem_ker, LinearMap.comp_apply] at h0
+    exact h0
+
+end ReadoutSeparation
+
 /-! ### The dual conditioned-invariant/detectable condition
 
 The second half of the Corollary 6.22 pair is the output-injection condition
@@ -6047,3 +6311,66 @@ direct sum, and the maximality
 proved here, and the full open-loop theorem
 `LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable` is
 consequently **not** claimed. -/
+
+/-! ### PBH/annihilator separation added by this task
+
+This attempt isolated and proved the sharp algebraic separation behind the
+open-loop necessity. The new declarations are:
+
+* `LinearSystem.mem_controlledInvariantSubspace_sup_reachableSubspace_iff` — the
+  orbit description `x ∈ V*(ker H ⊔ ⟨A | im B⟩) ↔ ∀ k, Aᵏ x ∈ ker H + ⟨A | im B⟩`,
+  proved from the extremal characterisations (`isGreatest_controlledInvariantSubspace`)
+  and the fact that `V*(ker H ⊔ R)` is `A`-invariant;
+* `LinearSystem.exists_readout_functional_chain_of_notMem_controlledInvariantSubspace_sup_reachable`
+  — every `x ∉ V*(ker H ⊔ R)` is detected by some `k : ℕ` and continuous
+  `ρ : Z →L[ℝ] ℝ` with `R ≤ ker (ρ ∘ H)` and `ρ (H (Aᵏ x)) ≠ 0`;
+* `LinearSystem.forall_readout_functional_chain_eq_zero_iff_mem` — the sharp
+  annihilator duality packaging the two directions;
+* `LinearSystem.sup_controlledInvariantSubspace_reachableSubspace_le` — the
+  containment `V*(ker H) + R ≤ V*(ker H ⊔ R)` showing that the chain threshold
+  is strictly larger than the task's requested one;
+* `LinearSystem.exists_readout_functional_of_notMem_ker_sup_reachable` — the
+  degree-zero separation: if `x ∉ ker H + R` then a single `ρ` with
+  `R ≤ ker (ρ ∘ H)` detects `x`, which is the exact reach of the readout
+  functional when `k = 0`.
+
+#### Why the requested statement is false as stated
+
+The task's separation asks for `x_b ∉ V*(ker H) + R → ∃ ρ, R ≤ ker (ρ∘H) ∧
+ρ (H x_b) ≠ 0`. This fails for two independent reasons:
+
+1. *The single functional `ρ ∘ H` is blind to `ker H`.* The example
+   `A = [[0,1],[0,0]]`, `B = 0`, `H = e₁*`, `x_b = e₂` has `V*(ker H) = R = 0`,
+   so `x_b ∉ V*(ker H) + R`, but `H x_b = 0`, hence `ρ (H x_b) = 0` for every
+   `ρ`. The observability chain `ρ ∘ H ∘ Aᵏ` is essential: here `k = 1` and
+   `H (A x_b) = 1`.
+2. *Even the chain cannot separate the weaker threshold `V*(ker H) + R`.* The
+   common kernel of the chain functionals is exactly `V*(ker H ⊔ R)`, which can
+   be strictly larger than `V*(ker H) + R`. The two agree only when the
+   `im B`-channel adds nothing to `V*`; in general the largest controlled
+   invariant subspace contained in `ker H + R` properly contains the sum of the
+   largest controlled invariant subspace in `ker H` and `R`. A concrete
+   obstruction: when `H` maps `R` onto the whole readout space `Z`, the condition
+   `R ≤ ker (ρ ∘ H)` forces `ρ = 0`, so *no* readout functional separates any
+   state, although such states may well lie outside `V*(ker H) + R`.
+
+#### Exact remaining obligation
+
+The accepted `readout_functional_eq_zero_on_unstable_of_isOutputStabilizable`
+only gives, for the antistable part `x_b`, `ρ (H x_b) = 0` for all `ρ` with
+`R ≤ ker (ρ ∘ H)`, i.e. `x_b ∈ ker H + R`. The chain separation would need the
+decay of the *chain* readouts `t ↦ ρ (H (Aᵏ x_u(t)))`, which does **not** follow
+from `H x_u(t) → 0` because the unobservability-chain operator `Aᵏ` is
+unbounded. The states in `V*(ker H ⊔ R) \ (V*(ker H) + R)` are precisely those
+the functional method cannot reach; deciding them is the genuine Bohl/spectral
+input-cancellation obligation recorded above. The corresponding spectral
+obstruction is the transfer-function pole structure of `H (sI - A)⁻¹ B`: an
+unstable uncontrollable eigenvalue has no pole in `(sI - A)⁻¹ B`, so its
+autonomous readout cannot be cancelled by the input, and the state is not
+output-stabilizable. This is the PBH/spectral content, not a readout-functional
+separation.
+
+The full open-loop theorem
+`LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable` is
+therefore still **not** claimed, and no placeholder or unsupported assumption is
+introduced. -/
