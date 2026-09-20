@@ -7508,3 +7508,276 @@ partial case and does not imply the general theorem. The new declarations above
 are non-vacuous: the transfer identity holds for any real right inverse of
 `s • 1 - A` (in particular the resolvent), and the uniqueness lemma applies to
 every decaying antistable exponential polynomial. -/
+
+/-! ## Finite exponential-polynomial (Bohl) input signals
+
+This section begins the missing Bohl/input-spectral formalisation with a
+mathematically explicit finite-dimensional foundation. A **Bohl signal** is a
+finite sum of *Bohl modes* `t ↦ e^{t μ} • (t ^ k • v)` with complex frequency
+`μ`, polynomial order `k` and vector coefficient `v`; equivalently it is the
+finite-support spectral representation
+
+`t ↦ ∑_{μ ∈ s} e^{t μ} • (∑_{k < D+1} t ^ k • a μ k)`.
+
+The class is closed under the linear operations (zero, addition, negation,
+scalar multiplication), so it is a genuine ambient function space, and antistable
+members that vanish at `+∞` are identically zero
+(`tendsto_zero_of_isAntistableBohlSignal`) — the accepted polynomial-exponential
+vanishing theorem `LinearMap.tendsto_zero_of_sum_exp_polynomial` transported to
+the class. Complex conjugation transports the class to itself, carrying the
+frequencies to their conjugates (`IsExponentialPolynomial.conj`), which is what
+makes the complex-conjugate pairing of real Bohl signals available.
+
+The unrestricted **locally integrable** input predicate remains separate: nothing
+here asserts that every locally integrable input is a finite exponential
+polynomial, and no closure claim about that predicate is made.
+
+The remaining variation-of-constants milestone is the residue/antiderivative
+identity: for a single mode `u s = e^{s μ} • p(s)` the response
+`∫_{t₀}^{t} exp ((t-s)A) B (u s) ds` should be an exponential polynomial plus the
+autonomous term `exp ((t-t₀)A) x₀`. Its analytic content is that the antiderivative
+of `s ↦ e^{s μ} p(s)` is again an exponential polynomial (a polynomial times
+`e^{s μ}` when `μ` is not an eigenvalue, with one extra power of `s` in the
+resonant/generalized-eigenmode case); this is not asserted here. -/
+
+namespace LinearSystem
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℂ X]
+
+/-- The elementary **Bohl mode** `t ↦ e^{t μ} • (t ^ k • v)`. -/
+noncomputable def BohlModeEval (t : ℝ) (p : ℂ × ℕ × X) : X :=
+  Complex.exp ((t : ℂ) * p.1) • ((t : ℂ) ^ p.2.1 • p.2.2)
+
+@[simp]
+theorem BohlModeEval_apply (t : ℝ) (p : ℂ × ℕ × X) :
+    BohlModeEval t p = Complex.exp ((t : ℂ) * p.1) • ((t : ℂ) ^ p.2.1 • p.2.2) := rfl
+
+/-- A single **Bohl mode** as a predicate. -/
+def IsBohlMode (f : ℝ → X) : Prop :=
+  ∃ (μ : ℂ) (k : ℕ) (v : X), ∀ t, f t = BohlModeEval t (μ, k, v)
+
+/-- The **finite exponential-polynomial (Bohl) class**: a function `f : ℝ → X` is a
+finite sum of Bohl modes, written in the finite-support spectral form
+`t ↦ ∑_{μ ∈ s} e^{t μ} • (∑_{k < D+1} t ^ k • a μ k)`.
+
+The frequency set is a genuine `Finset ℂ`, so the frequencies are distinct by
+construction; the unrestricted locally integrable predicate is deliberately *not*
+identified with this class. -/
+def IsExponentialPolynomial (f : ℝ → X) : Prop :=
+  ∃ (s : Finset ℂ) (D : ℕ) (a : ℂ → ℕ → X),
+    ∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+
+theorem isExponentialPolynomial_iff {f : ℝ → X} :
+    IsExponentialPolynomial f ↔
+      ∃ (s : Finset ℂ) (D : ℕ) (a : ℂ → ℕ → X),
+        ∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) := Iff.rfl
+
+/-- Every Bohl mode is an exponential polynomial. -/
+theorem IsBohlMode.isExponentialPolynomial {f : ℝ → X} (hf : IsBohlMode f) :
+    IsExponentialPolynomial f := by
+  obtain ⟨μ, k, v, hf⟩ := hf
+  refine ⟨{μ}, k, fun ν j => if ν = μ then (if j = k then v else 0) else 0, fun t => ?_⟩
+  rw [hf t, Finset.sum_singleton]
+  rw [Finset.sum_eq_single k]
+  · simp
+  · intro j hj hjk
+    simp [hjk]
+  · intro hk
+    exact absurd (Finset.mem_range.mpr (Nat.lt_succ_self k)) hk
+
+theorem IsExponentialPolynomial.zero : IsExponentialPolynomial (0 : ℝ → X) :=
+  ⟨∅, 0, fun _ _ => 0, fun t => by simp⟩
+
+@[simp]
+theorem isExponentialPolynomial_zero : IsExponentialPolynomial (0 : ℝ → X) :=
+  IsExponentialPolynomial.zero
+
+/-- Auxiliary range comparison: a polynomial of degree `≤ D` padded to degree
+`≤ max D E` agrees with the original finite sum. -/
+theorem sum_range_smul_ite (D E : ℕ) (c : ℂ) (a : ℕ → X) :
+    (∑ k ∈ Finset.range (max D E + 1), c ^ k • (if k ≤ D then a k else 0)) =
+      ∑ k ∈ Finset.range (D + 1), c ^ k • a k := by
+  symm
+  have h : (∑ k ∈ Finset.range (D + 1), c ^ k • a k) =
+      ∑ k ∈ Finset.range (D + 1), c ^ k • (if k ≤ D then a k else 0) := by
+    apply Finset.sum_congr rfl
+    intro k hk
+    rw [ite_eq_left (Nat.lt_succ_iff.mp (Finset.mem_range.mp hk))]
+  rw [h]
+  apply Finset.sum_subset
+  · intro k hk
+    rw [Finset.mem_range] at hk ⊢
+    omega
+  · intro k hk hknot
+    rw [Finset.mem_range, not_lt] at hknot
+    rw [ite_eq_right (by omega), smul_zero]
+
+theorem sum_range_smul_ite' (D E : ℕ) (c : ℂ) (a : ℕ → X) :
+    (∑ k ∈ Finset.range (max D E + 1), c ^ k • (if k ≤ E then a k else 0)) =
+      ∑ k ∈ Finset.range (E + 1), c ^ k • a k := by
+  rw [max_comm D E]
+  exact sum_range_smul_ite E D c a
+
+theorem IsExponentialPolynomial.add {f g : ℝ → X}
+    (hf : IsExponentialPolynomial f) (hg : IsExponentialPolynomial g) :
+    IsExponentialPolynomial (f + g) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  obtain ⟨s', E, b, hg⟩ := hg
+  refine ⟨s ∪ s', max D E, fun μ k =>
+    (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0) +
+      (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0), fun t => ?_⟩
+  rw [Pi.add_apply, hf t, hg t]
+  have hsplit :
+      (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            ((if μ ∈ s then (if k ≤ D then a μ k else 0) else 0) +
+              (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0)))) =
+      (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0))) +
+      (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0))) := by
+    simp only [smul_add, Finset.sum_add_distrib]
+  rw [hsplit]
+  congr 1
+  · -- the `s` part
+    have h1 : (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+        ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0)) := by
+      apply Finset.sum_congr rfl
+      intro μ hμ
+      congr 1
+      simp only [ite_eq_left hμ]
+      exact (sum_range_smul_ite D E ((t : ℂ)) (a μ)).symm
+    rw [h1]
+    exact Finset.sum_subset Finset.subset_union_left
+      (fun μ _ hμnot => by simp [hμnot])
+  · -- the `s'` part
+    have h1 : (∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (E + 1), (t : ℂ) ^ k • b μ k)) =
+        ∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0)) := by
+      apply Finset.sum_congr rfl
+      intro μ hμ
+      congr 1
+      simp only [ite_eq_left hμ]
+      exact (sum_range_smul_ite' D E ((t : ℂ)) (b μ)).symm
+    rw [h1]
+    exact Finset.sum_subset Finset.subset_union_right
+      (fun μ _ hμnot => by simp [hμnot])
+
+theorem IsExponentialPolynomial.smul (c : ℂ) {f : ℝ → X}
+    (hf : IsExponentialPolynomial f) : IsExponentialPolynomial (c • f) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s, D, fun μ k => c • a μ k, fun t => ?_⟩
+  rw [Pi.smul_apply, hf t, Finset.smul_sum]
+  apply Finset.sum_congr rfl
+  intro μ hμ
+  rw [smul_comm c (Complex.exp ((t : ℂ) * μ))]
+  congr 1
+  rw [Finset.smul_sum]
+  apply Finset.sum_congr rfl
+  intro k hk
+  rw [smul_comm]
+
+theorem IsExponentialPolynomial.neg {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (-f) := by
+  have h := hf.smul (-1)
+  have hfun : ((-1 : ℂ) • f) = -f := by funext t; simp
+  rwa [hfun] at h
+
+theorem IsExponentialPolynomial.sub {f g : ℝ → X}
+    (hf : IsExponentialPolynomial f) (hg : IsExponentialPolynomial g) :
+    IsExponentialPolynomial (f - g) := by
+  have h := hf.add hg.neg
+  simpa [sub_eq_add_neg] using h
+
+/-- The **antistable** finite-support spectral class: an exponential polynomial
+all of whose frequencies lie in the closed right half-plane. This is the vector
+counterpart of the scalar `LinearSystem.IsAntistableExponentialPolynomial`. -/
+def IsAntistableBohlSignal (f : ℝ → X) : Prop :=
+  ∃ (s : Finset ℂ) (D : ℕ) (a : ℂ → ℕ → X),
+    (∀ μ ∈ s, 0 ≤ μ.re) ∧
+      ∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+
+theorem IsAntistableBohlSignal.isExponentialPolynomial {f : ℝ → X}
+    (hf : IsAntistableBohlSignal f) : IsExponentialPolynomial f := by
+  obtain ⟨s, D, a, -, hf⟩ := hf
+  exact ⟨s, D, a, hf⟩
+
+/-- **Polynomial-exponential vanishing for the class.** A finite sum of
+vector-valued polynomial terms times exponential characters with nonnegative
+real parts that tends to `0` at `+∞` is identically zero: all polynomial
+coefficients at every (antistable) frequency vanish. This transports the accepted
+`LinearMap.tendsto_zero_of_sum_exp_polynomial` to the named finite-support
+finite-dimensional class. -/
+theorem tendsto_zero_of_isAntistableBohlSignal {f : ℝ → X}
+    (hf : IsAntistableBohlSignal f) (h : Filter.Tendsto f Filter.atTop (nhds 0)) : f = 0 := by
+  obtain ⟨s, D, a, hμs, hf⟩ := hf
+  classical
+  have hinj : ∀ i : {μ // μ ∈ s}, ∀ j : {μ // μ ∈ s}, (i : ℂ) = (j : ℂ) → i = j :=
+    fun i j hij => Subtype.ext hij
+  have hsum : (fun t : ℝ => f t) = fun t : ℝ =>
+      ∑ μ : {μ // μ ∈ s}, Complex.exp ((t : ℂ) * (μ : ℂ)) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a (μ : ℂ) k) := by
+    funext t
+    rw [hf t]
+    exact Finset.sum_subtype s (fun x => Iff.rfl) (fun μ =>
+      Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k))
+  have h' : Filter.Tendsto (fun t : ℝ =>
+      ∑ μ : {μ // μ ∈ s}, Complex.exp ((t : ℂ) * (μ : ℂ)) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a (μ : ℂ) k)) Filter.atTop (nhds 0) := by
+    rw [← hsum]; exact h
+  have hzall : ∀ i ∈ (Finset.univ : Finset {μ // μ ∈ s}), ∀ k ≤ D, a (i : ℂ) k = 0 :=
+    LinearMap.tendsto_zero_of_sum_exp_polynomial (Finset.univ : Finset {μ // μ ∈ s})
+      (fun μ => (μ : ℂ)) (fun μ _ => hμs μ μ.2)
+      (fun i _ j _ hij => hinj i j hij) D (fun μ k => a (μ : ℂ) k) h'
+  have hz : ∀ μ : {μ // μ ∈ s}, ∀ k ≤ D, a (μ : ℂ) k = 0 :=
+    fun μ k hk => hzall μ (Finset.mem_univ μ) k hk
+  funext t
+  rw [hf t]
+  apply Finset.sum_eq_zero
+  intro μ hμ
+  have hinner : (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) = 0 := by
+    apply Finset.sum_eq_zero
+    intro k hk
+    rw [hz ⟨μ, hμ⟩ k (Nat.lt_succ_iff.mp (Finset.mem_range.mp hk)), smul_zero]
+  rw [hinner, smul_zero]
+
+/-- **Complex-conjugate transport.** Complex conjugation sends the finite-support
+spectral class to itself: the conjugate function has the conjugate frequencies and
+conjugate coefficients. For a real-valued Bohl signal this is the operation that
+pairs the generalized eigenmodes at `μ` and `star μ`. -/
+theorem IsExponentialPolynomial.conj {f : ℝ → ℂ} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t => star (f t)) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s.image star, D, fun ν k => star (a (star ν) k), fun t => ?_⟩
+  rw [show (fun t => star (f t)) t = star (f t) from rfl, hf t, star_sum]
+  rw [Finset.sum_image]
+  · apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [star_smul, star_sum]
+    congr 1
+    · simp only [Complex.star_def]
+      rw [← Complex.exp_conj]
+      congr 1
+      simp
+    · apply Finset.sum_congr rfl
+      intro k hk
+      rw [star_smul]
+      congr 1
+      · simp only [Complex.star_def, map_pow, Complex.conj_ofReal]
+      · simp only [star_star]
+  · intro μ _ ν _ hμν
+    exact star_injective hμν
+
+end LinearSystem
+
