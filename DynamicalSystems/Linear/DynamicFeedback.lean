@@ -8,6 +8,7 @@ module
 public import DynamicalSystems.Linear.DisturbanceDecoupling
 public import DynamicalSystems.Linear.Stabilization
 public import DynamicalSystems.Linear.Trajectory
+public import DynamicalSystems.Linear.Trajectories
 public import Mathlib.MeasureTheory.Integral.ExpDecay
 
 /-! # Dynamic measurement-feedback: algebraic foundations
@@ -8419,28 +8420,134 @@ theorem exists_isExponentialPolynomial_hasDerivAt_ode_init [FiniteDimensional �
       rfl
     rwa [hg_t] at h
 
-/-! ### The variation-of-constants bridge
+/-! ### The variation-of-constants bridge via the vector-valued FTC
 
 The declarations above are stated for a complex generator, because the Bohl
 spectral class `IsExponentialPolynomial` is complex by construction. The pinned
 `variationOfConstants` API is real: it is built from the real operator exponential
 `LinearSystem.expFlow` and the real forcing `LinearSystem.forcing`.
 
-What is available without any new analysis is the *algebraic* form of the bridge:
-the variation-of-constants integrand `s ↦ exp ((t₀ - s) • A) (g s)` is a finite
-Bohl signal for every finite Bohl `g` (apply the `-A` flow to `g` and then the
-fixed operator `exp (t₀ • A)`), so it has a finite Bohl primitive and the
-particular solution above is the exact antiderivative form of the convolution
-`∫ exp ((t - s) A) g(s) ds`. What is *not* in the pinned Mathlib is the
-vector-valued fundamental theorem of calculus that would identify that primitive
-with the Bochner integral `∫_{t₀}^{t} exp ((t - s) A) g(s) ds` for a merely
-locally-integrable forcing; the scalar-valued case is
-`integral_deriv_eq_sub`/`AbsolutelyContinuousOnInterval.const_of_ae_hasDerivAt_zero`.
-The exact next bridge is therefore: a vector-valued
-`HasDerivAt (fun t ↦ ∫ s in t₀..t, exp ((t - s) • A) (g s))` identity (or its
-absolutely-continuous form), after which the finite Bohl and the locally
-integrable variation-of-constants correspondences can be identified. This is
-stated here rather than assumed, and no locally-integrable closure is claimed. -/
+This section closes the analytic half of the bridge. The reusable vector-valued
+fundamental theorem of calculus lives in `DynamicalSystems.Linear.Trajectories`:
+`intervalIntegral.integral_eq_sub_of_ae_hasDerivAt` (the absolutely-continuous form,
+the vector-valued analogue of `AbsolutelyContinuousOnInterval.integral_deriv_eq_sub`)
+and `intervalIntegral.sub_eq_integral_of_hasDerivAt` (the continuous-derivative form).
+The specialization to the shifted exponential flow `s ↦ exp ((t - s) • A) (g s)` is
+proved for real scalar generators in `Trajectories` and for the complex generators
+used by the Bohl class here.
+
+Consequently the finite Bohl primitive produced by
+`IsExponentialPolynomial.hasPrimitive` is identified with the Bochner interval
+integral: `isExponentialPolynomial_primitive_eq_integral` below. This is exactly the
+identification that lets the explicit finite Bohl particular solution
+`exists_isExponentialPolynomial_hasDerivAt_ode` be read as the Bochner
+variation-of-constants convolution. No unrestricted locally-integrable closure and no
+Bohl input spectral theorem is claimed. -/
+
+/-- **Finite Bohl signals are continuous.** A finite exponential polynomial is a finite sum of
+continuous modes, so it is continuous; this is the regularity input to the vector-valued FTC. -/
+theorem IsExponentialPolynomial.continuous {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    Continuous f := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  rw [show f = fun t : ℝ => ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) from funext hf]
+  fun_prop
+
+/-- **Product rule for the shifted complex exponential flow.** For a complex generator `A` and a
+curve `g` with `HasDerivAt g g' s`, the curve `r ↦ exp ((t - r) • A) (g r)` has derivative
+`exp ((t - s) • A) (-(A (g s)) + g')` at `s`.
+
+The real-time/complex-generator scalar mismatch is bridged by the continuous linear isometry
+`ContinuousLinearMap.restrictScalarsIsometry`, exactly as for the unshifted product rule
+`hasDerivAt_exp_smul_clm_apply`. -/
+theorem hasDerivAt_exp_sub_smul_clm_apply [CompleteSpace X] (A : X →L[ℂ] X) {g : ℝ → X}
+    {g' : X} (t s : ℝ) (hg : HasDerivAt g g' s) :
+    HasDerivAt (fun r : ℝ ↦ NormedSpace.exp ((t - r) • A) (g r))
+      (NormedSpace.exp ((t - s) • A) (-(A (g s)) + g')) s := by
+  have hc : HasDerivAt (fun r : ℝ ↦ NormedSpace.exp ((t - r) • A))
+      (NormedSpace.exp ((t - s) • A) * (-A)) s := by
+    have h1 : HasDerivAt (fun u : ℝ ↦ NormedSpace.exp (u • A))
+        (NormedSpace.exp ((t - s) • A) * A) (t - s) :=
+      hasDerivAt_exp_smul_const (𝕂 := ℝ) A (t - s)
+    have h2 : HasDerivAt (fun r : ℝ ↦ t - r) (-1 : ℝ) s :=
+      (hasDerivAt_id s).const_sub t
+    have h3 := h1.scomp s h2
+    have heq : (-1 : ℝ) • (NormedSpace.exp ((t - s) • A) * A) =
+        NormedSpace.exp ((t - s) • A) * (-A) := by rw [neg_one_smul, mul_neg]
+    simpa [Function.comp_def, heq] using h3
+  have hφ : HasFDerivAt (fun f : X →L[ℂ] X ↦ f.restrictScalars ℝ)
+      (ContinuousLinearMap.restrictScalarsIsometry ℂ X X ℝ ℝ).toContinuousLinearMap
+      (NormedSpace.exp ((t - s) • A)) :=
+    (ContinuousLinearMap.restrictScalarsIsometry ℂ X X ℝ ℝ).toContinuousLinearMap.hasFDerivAt
+  have hc' : HasDerivAt (fun r : ℝ ↦ (NormedSpace.exp ((t - r) • A)).restrictScalars ℝ)
+      ((NormedSpace.exp ((t - s) • A) * (-A)).restrictScalars ℝ) s :=
+    hφ.comp_hasDerivAt (f := fun r : ℝ ↦ NormedSpace.exp ((t - r) • A)) (x := s) hc
+  have h := hc'.clm_apply hg
+  have hderiv : ((NormedSpace.exp ((t - s) • A) * (-A)).restrictScalars ℝ) (g s) +
+      (NormedSpace.exp ((t - s) • A)).restrictScalars ℝ g' =
+      NormedSpace.exp ((t - s) • A) (-(A (g s)) + g') := by
+    change (NormedSpace.exp ((t - s) • A) * (-A)) (g s) +
+      NormedSpace.exp ((t - s) • A) g' = _
+    rw [mul_apply_eq_comp, neg_apply, map_add]
+  rwa [hderiv] at h
+
+/-- **Vector-valued FTC on the shifted complex exponential flow.** If `g` has derivative `g'`
+everywhere and `g'` is continuous, then the interval integral of the derivative of
+`r ↦ exp ((t - r) • A) (g r)` is the endpoint difference. This is the complex companion of
+`integral_exp_sub_smul_apply_deriv` in `DynamicalSystems.Linear.Trajectories`. -/
+theorem integral_exp_sub_smul_clm_apply_deriv [CompleteSpace X] (A : X →L[ℂ] X)
+    {g g' : ℝ → X} (hg : ∀ r, HasDerivAt g (g' r) r) (hg' : Continuous g') (t t₀ : ℝ) :
+    ∫ r in t₀..t, NormedSpace.exp ((t - r) • A) (-(A (g r)) + g' r) =
+      g t - NormedSpace.exp ((t - t₀) • A) (g t₀) := by
+  have hg_cont : Continuous g := continuous_iff_continuousAt.mpr fun r ↦ (hg r).continuousAt
+  have hderiv : ∀ r, HasDerivAt (fun r : ℝ ↦ NormedSpace.exp ((t - r) • A) (g r))
+      (NormedSpace.exp ((t - r) • A) (-(A (g r)) + g' r)) r :=
+    fun r ↦ hasDerivAt_exp_sub_smul_clm_apply A t r (hg r)
+  have hflow : Continuous (fun r : ℝ ↦ NormedSpace.exp ((t - r) • A)) :=
+    ((differentiable_exp_smul_const (𝕂 := ℝ) A).comp (by fun_prop)).continuous
+  have hcont : Continuous
+      (fun r : ℝ ↦ NormedSpace.exp ((t - r) • A) (-(A (g r)) + g' r)) :=
+    hflow.clm_apply (((A.continuous.comp hg_cont).neg).add hg')
+  have h := intervalIntegral.sub_eq_integral_of_hasDerivAt hderiv hcont t₀ t
+  have ht : NormedSpace.exp ((t - t) • A) (g t) = g t := by simp
+  rw [ht] at h
+  exact h.symm
+
+/-- **The finite Bohl primitive is the Bochner interval integral.** Let `g` be a finite Bohl
+forcing and let `P` be any curve whose pointwise derivative is the reversed-flow forcing
+`s ↦ exp (s • (-A)) (g s)` (in particular the explicit primitive produced by
+`IsExponentialPolynomial.hasPrimitive`). Then `P` is the Bochner primitive of that forcing:
+`P t - P t₀ = ∫ s in t₀..t, exp (s • (-A)) (g s) ds`.
+
+This identifies the explicit finite Bohl antiderivative with the Bochner integral appearing in
+the variation-of-constants formula, making the two correspondences composable. -/
+theorem isExponentialPolynomial_primitive_eq_integral [FiniteDimensional ℂ X] (A : X →ₗ[ℂ] X)
+    {g P : ℝ → X} (hg : IsExponentialPolynomial g)
+    (hP : ∀ t, HasDerivAt P (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t)
+    (t₀ t : ℝ) :
+    P t - P t₀ =
+      ∫ s in t₀..t, NormedSpace.exp (s • ((-A).toContinuousLinearMap)) (g s) := by
+  have hf : IsExponentialPolynomial
+      (fun s : ℝ ↦ NormedSpace.exp (s • ((-A).toContinuousLinearMap)) (g s)) :=
+    flow_mul_isExponentialPolynomial (-A) hg
+  exact intervalIntegral.sub_eq_integral_of_hasDerivAt hP hf.continuous t₀ t
+
+/-- **Bochner primitive of the variation-of-constants integrand.** This is the
+`forcing` normalization of `isExponentialPolynomial_primitive_eq_integral`: for a finite Bohl
+`g`, any curve `P` with pointwise derivative `s ↦ exp ((t₀ - s) • A) (g s)` satisfies
+`P t - P t₀ = ∫ s in t₀..t, exp ((t₀ - s) • A) (g s) ds`.
+
+The integrand `s ↦ exp ((t₀ - s) • A) (g s)` is the complex counterpart of the pinned real
+`LinearSystem.forcing` `s ↦ exp (-(s - t₀) • A) (B u s)`; the two agree on real generators via
+the scalar transport used in `hasDerivAt_exp_sub_smul_clm_apply`. -/
+theorem isExponentialPolynomial_forcing_primitive_eq_integral [FiniteDimensional ℂ X]
+    (A : X →L[ℂ] X) (t₀ : ℝ) {g P : ℝ → X} (hg : IsExponentialPolynomial g)
+    (hP : ∀ t, HasDerivAt P (NormedSpace.exp ((t₀ - t) • A) (g t)) t) (t : ℝ) :
+    P t - P t₀ = ∫ s in t₀..t, NormedSpace.exp ((t₀ - s) • A) (g s) := by
+  have hf : IsExponentialPolynomial
+      (fun s : ℝ ↦ NormedSpace.exp ((t₀ - s) • A) (g s)) :=
+    IsExponentialPolynomial.forcing A t₀ hg
+  exact intervalIntegral.sub_eq_integral_of_hasDerivAt hP hf.continuous t₀ t
 
 end LinearSystem
 
