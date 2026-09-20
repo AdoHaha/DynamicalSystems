@@ -6618,7 +6618,7 @@ theorem chain_eigenfunctional_exp_apply [CompleteSpace X]
     | zero => simpa using hzero
     | succ d ih =>
       ext y
-      show ρ (m + (d + 1)) y = 0
+      change ρ (m + (d + 1)) y = 0
       have hst : ρ (m + (d + 1)) y = ρ (m + d) (N y) := by
         rw [show m + (d + 1) = m + d + 1 by omega, ← hchain' (m + d) y]
       rw [hst, ih]
@@ -7778,6 +7778,385 @@ theorem IsExponentialPolynomial.conj {f : ℝ → ℂ} (hf : IsExponentialPolyno
       · simp only [star_star]
   · intro μ _ ν _ hμν
     exact star_injective hμν
+
+/-! ### Polynomial-exponential primitives: the scalar antiderivative recursion
+
+The variation-of-constants closure of the Bohl class rests on the scalar
+observation that `t ↦ e^{t μ} t ^ k` has an antiderivative which is again a
+polynomial times `e^{t μ}` when `μ ≠ 0`, and a polynomial of one degree higher
+when `μ = 0` (the resonant secular term `t ^ (k+1)`). The polynomial family
+`primPoly μ k` below satisfies the recursion
+
+`(primPoly μ k).derivative + C μ * primPoly μ k = X ^ k`,
+
+so `t ↦ e^{t μ} (primPoly μ k).eval t` is a primitive of `t ↦ e^{t μ} t ^ k`.
+The construction is the standard descending coefficient recurrence
+`q_{k+1} = μ⁻¹ (X^{k+1} - (k+1) q_k)` for `μ ≠ 0`, and the plain monomial
+antiderivative for `μ = 0`.
+
+Source: Trentelman–Stoorvogel–Hautus, Chapter 2 (Bohl functions and their
+antiderivatives); the recursive formula is the scalar case of the
+resolvent/Jordan-chain antiderivative used in Section 2.6. -/
+
+open Polynomial
+
+/-- The scalar polynomial `q` with `q' + μ q = X ^ k` for `μ ≠ 0`, defined by the
+recursion `q₀ = C μ⁻¹`, `q_{k+1} = C μ⁻¹ * (X^(k+1) - C (k+1) * q_k)`. -/
+noncomputable def monoPrim (μ : ℂ) : ℕ → ℂ[X]
+  | 0 => Polynomial.C μ⁻¹
+  | (k+1) => Polynomial.C μ⁻¹ *
+      (Polynomial.X ^ (k+1) - Polynomial.C ((k+1 : ℕ) : ℂ) * monoPrim μ k)
+
+/-- **Scalar antiderivative recursion (non-resonant case).** For `μ ≠ 0` the
+polynomial `monoPrim μ k` satisfies `q' + μ q = X ^ k`, so `e^{t μ} q(t)` is a
+primitive of `e^{t μ} t ^ k`. -/
+theorem derivative_monoPrim (μ : ℂ) (hμ : μ ≠ 0) (k : ℕ) :
+    (monoPrim μ k).derivative + Polynomial.C μ * monoPrim μ k = Polynomial.X ^ k := by
+  have hμC : Polynomial.C μ * Polynomial.C μ⁻¹ = (1 : ℂ[X]) := by
+    rw [← Polynomial.C_mul, mul_inv_cancel₀ hμ, Polynomial.C_1]
+  induction k with
+  | zero =>
+    rw [monoPrim, Polynomial.derivative_C, zero_add]
+    exact hμC
+  | succ k ih =>
+    have hd : (monoPrim μ k).derivative =
+        Polynomial.X ^ k - Polynomial.C μ * monoPrim μ k := by
+      rw [← ih]; abel
+    rw [monoPrim, Polynomial.derivative_mul, Polynomial.derivative_C, zero_mul, zero_add]
+    rw [Polynomial.derivative_sub, Polynomial.derivative_C_mul, hd]
+    rw [Polynomial.derivative_pow, Polynomial.derivative_X, mul_one]
+    rw [show k + 1 - 1 = k by omega]
+    ring_nf
+    rw [show Polynomial.C μ⁻¹ * X * X ^ k * Polynomial.C μ =
+        (Polynomial.C μ⁻¹ * Polynomial.C μ) * (X * X^k) by ring]
+    rw [← Polynomial.C_mul, inv_mul_cancel₀ hμ, Polynomial.C_1, one_mul]
+
+/-- The scalar recursion does not increase the degree beyond `k`. -/
+theorem natDegree_monoPrim (μ : ℂ) (k : ℕ) : (monoPrim μ k).natDegree ≤ k := by
+  induction k with
+  | zero => simp [monoPrim]
+  | succ k ih =>
+    rw [monoPrim]
+    calc (Polynomial.C μ⁻¹ *
+          (Polynomial.X ^ (k + 1) - Polynomial.C ((k + 1 : ℕ) : ℂ) * monoPrim μ k)).natDegree
+        ≤ (Polynomial.X ^ (k + 1) - Polynomial.C ((k + 1 : ℕ) : ℂ) * monoPrim μ k).natDegree :=
+          Polynomial.natDegree_C_mul_le _ _
+      _ ≤ max (Polynomial.X ^ (k + 1) : ℂ[X]).natDegree
+            (Polynomial.C ((k + 1 : ℕ) : ℂ) * monoPrim μ k).natDegree :=
+          Polynomial.natDegree_sub_le _ _
+      _ ≤ max (k + 1) k := by
+          apply max_le_max
+          · rw [Polynomial.natDegree_X_pow (k+1)]
+          · calc (Polynomial.C ((k + 1 : ℕ) : ℂ) * monoPrim μ k).natDegree
+                ≤ (monoPrim μ k).natDegree := Polynomial.natDegree_C_mul_le _ _
+              _ ≤ k := ih
+      _ = k + 1 := max_eq_left (Nat.le_succ k)
+
+/-- The unified scalar primitive: the non-resonant `monoPrim` for `μ ≠ 0` and the
+secular monomial antiderivative `X ^ (k+1) / (k+1)` for the resonant frequency
+`μ = 0`. It satisfies `q' + μ q = X ^ k` for **every** `μ`. -/
+noncomputable def primPoly (μ : ℂ) (k : ℕ) : ℂ[X] :=
+  if μ = 0 then Polynomial.C (((k + 1 : ℕ) : ℂ))⁻¹ * Polynomial.X ^ (k + 1)
+  else monoPrim μ k
+
+/-- **Scalar antiderivative recursion, resonant and non-resonant.** For every
+complex frequency `μ`, `(primPoly μ k).derivative + C μ * primPoly μ k = X ^ k`.
+The `μ = 0` case is exactly the secular degree increase of the antiderivative of
+`t ^ k`. -/
+theorem derivative_primPoly (μ : ℂ) (k : ℕ) :
+    (primPoly μ k).derivative + Polynomial.C μ * primPoly μ k = Polynomial.X ^ k := by
+  by_cases hμ : μ = 0
+  · subst hμ
+    rw [primPoly, ite_eq_left rfl, Polynomial.derivative_C_mul, Polynomial.derivative_pow,
+      Polynomial.derivative_X, mul_one]
+    rw [show k + 1 - 1 = k by omega, Polynomial.C_0, zero_mul, add_zero]
+    rw [← mul_assoc, ← Polynomial.C_mul,
+      inv_mul_cancel₀ (Nat.cast_ne_zero.mpr (by omega : k + 1 ≠ 0)), Polynomial.C_1, one_mul]
+  · rw [primPoly, ite_eq_right hμ]
+    exact derivative_monoPrim μ hμ k
+
+/-- Degree bound for the unified scalar primitive: at most `k+1` (one secular
+degree more than `X ^ k`). -/
+theorem natDegree_primPoly (μ : ℂ) (k : ℕ) : (primPoly μ k).natDegree ≤ k + 1 := by
+  by_cases hμ : μ = 0
+  · subst hμ
+    rw [primPoly, ite_eq_left rfl]
+    calc (Polynomial.C (((k + 1 : ℕ) : ℂ))⁻¹ * Polynomial.X ^ (k + 1)).natDegree
+        ≤ (Polynomial.X ^ (k + 1) : ℂ[X]).natDegree := Polynomial.natDegree_C_mul_le _ _
+      _ = k + 1 := Polynomial.natDegree_X_pow (k+1)
+  · rw [primPoly, ite_eq_right hμ]
+    exact le_trans (natDegree_monoPrim μ k) (Nat.le_succ k)
+
+/-- **Analytic scalar antiderivative.** The function
+`t ↦ e^{t μ} (primPoly μ k).eval t` has derivative `t ↦ e^{t μ} t ^ k`, uniformly
+in the resonant and non-resonant cases. -/
+theorem hasDerivAt_exp_mul_primPoly (μ : ℂ) (k : ℕ) (t : ℝ) :
+    HasDerivAt (fun s : ℝ => Complex.exp ((s : ℂ) * μ) * (primPoly μ k).eval (s : ℂ))
+      (Complex.exp ((t : ℂ) * μ) * (t : ℂ) ^ k) t := by
+  have h2 : HasDerivAt (fun s : ℝ => (s : ℂ)) (1 : ℂ) t := Complex.ofRealCLM.hasDerivAt
+  have hexp : HasDerivAt (fun s : ℝ => Complex.exp ((s : ℂ) * μ))
+      (Complex.exp ((t : ℂ) * μ) * μ) t := by
+    have h1 : HasDerivAt (fun z : ℂ => z * μ) μ (t : ℂ) := by
+      simpa using (hasDerivAt_id (t : ℂ)).mul_const μ
+    have h3 := (Complex.hasDerivAt_exp ((t : ℂ) * μ)).comp t (h1.comp t h2)
+    simpa [Function.comp_def] using h3
+  have hq : HasDerivAt (fun s : ℝ => (primPoly μ k).eval (s : ℂ))
+      ((primPoly μ k).derivative.eval (t : ℂ)) t := by
+    have h3 := ((primPoly μ k).hasDerivAt (t : ℂ)).comp t h2
+    simpa [Function.comp_def] using h3
+  refine (hexp.mul hq).congr_deriv ?_
+  have hp : (primPoly μ k).derivative.eval (t : ℂ) + μ * (primPoly μ k).eval (t : ℂ) =
+      (t : ℂ) ^ k := by
+    have hh := congrArg (fun p : ℂ[X] => p.eval (t : ℂ)) (derivative_primPoly μ k)
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_X,
+      Polynomial.eval_pow] at hh
+    linear_combination hh
+  linear_combination Complex.exp ((t : ℂ) * μ) * hp
+
+/-- Coefficient shift that turns `t ^ k • a k` into `t ^ (k+1) • a k`. -/
+def shiftCoeff (a : ℂ → ℕ → X) (μ : ℂ) : ℕ → X
+  | 0 => 0
+  | (j + 1) => a μ j
+
+/-- The finite-support exponential-polynomial class is closed under multiplication by `t`. -/
+theorem IsExponentialPolynomial.mul_t {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t => (t : ℂ) • f t) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s, D + 1, fun μ k => shiftCoeff a μ k, fun t => ?_⟩
+  change (t : ℂ) • f t = _
+  rw [hf t, Finset.smul_sum]
+  apply Finset.sum_congr rfl
+  intro μ hμ
+  rw [smul_comm]
+  congr 1
+  rw [Finset.smul_sum]
+  conv_rhs => rw [Finset.sum_range_succ']
+  simp only [shiftCoeff, pow_zero, one_smul, add_zero]
+  apply Finset.sum_congr rfl
+  intro k hk
+  rw [smul_smul, pow_succ, mul_comm]
+
+/-- The class is closed under multiplication by a single exponential character. -/
+theorem IsExponentialPolynomial.mul_exp (ν : ℂ) {f : ℝ → X}
+    (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t => Complex.exp ((t : ℂ) * ν) • f t) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s.image (fun μ => μ + ν), D, fun δ k => a (δ - ν) k, fun t => ?_⟩
+  change Complex.exp ((t : ℂ) * ν) • f t = _
+  rw [hf t, Finset.smul_sum]
+  rw [Finset.sum_image]
+  · apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [smul_smul]
+    congr 1
+    · rw [← Complex.exp_add]
+      congr 1
+      ring
+    · simp only [add_sub_cancel_right]
+  · intro μ _ δ _ h
+    exact add_right_cancel h
+
+/-- **Analytic antiderivative of a single Bohl mode.** The derivative of
+`t ↦ e^{t μ} Σ_k (primPoly μ k).eval t • a k` is `t ↦ e^{t μ} Σ_k t ^ k • a k`:
+the scalar recursion is applied coefficientwise to the vector coefficients. -/
+lemma hasDerivAt_exp_mul_primMode (a : ℂ → ℕ → X) (D : ℕ) (μ : ℂ) (t : ℝ) :
+    HasDerivAt (fun r : ℝ => Complex.exp ((r : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (r : ℂ) • a μ k))
+      (Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) t := by
+  have hF : HasDerivAt (fun r : ℝ => Complex.exp ((r : ℂ) * μ))
+      (Complex.exp ((t : ℂ) * μ) * μ) t := by
+    have h2 : HasDerivAt (fun r : ℝ => (r : ℂ)) (1 : ℂ) t := Complex.ofRealCLM.hasDerivAt
+    have h1 : HasDerivAt (fun z : ℂ => z * μ) μ (t : ℂ) := by
+      simpa using (hasDerivAt_id (t : ℂ)).mul_const μ
+    have h3 := (Complex.hasDerivAt_exp ((t : ℂ) * μ)).comp t (h1.comp t h2)
+    simpa [Function.comp_def] using h3
+  have hQ : HasDerivAt (fun r : ℝ =>
+        ∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (r : ℂ) • a μ k)
+      (∑ k ∈ Finset.range (D + 1), (primPoly μ k).derivative.eval (t : ℂ) • a μ k) t := by
+    have h := HasDerivAt.sum (u := Finset.range (D + 1))
+      (A := fun k (r : ℝ) => (primPoly μ k).eval (r : ℂ) • a μ k)
+      (A' := fun k => (primPoly μ k).derivative.eval (t : ℂ) • a μ k)
+      (fun k hk => by
+        have h2 : HasDerivAt (fun r : ℝ => (r : ℂ)) (1 : ℂ) t := Complex.ofRealCLM.hasDerivAt
+        have h3 := ((primPoly μ k).hasDerivAt (t : ℂ)).comp t h2
+        have h4 : HasDerivAt (fun r : ℝ => (primPoly μ k).eval (r : ℂ))
+            ((primPoly μ k).derivative.eval (t : ℂ)) t := by
+          simpa [Function.comp_def] using h3
+        exact h4.smul_const (a μ k))
+    convert h using 1
+    ext r
+    rw [Finset.sum_apply]
+  refine (hF.smul hQ).congr_deriv ?_
+  have hpq : (∑ k ∈ Finset.range (D + 1), (primPoly μ k).derivative.eval (t : ℂ) • a μ k) +
+        μ • (∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (t : ℂ) • a μ k) =
+      ∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k := by
+    rw [Finset.smul_sum, ← Finset.sum_add_distrib]
+    apply Finset.sum_congr rfl
+    intro k hk
+    rw [smul_smul, ← add_smul]
+    congr 1
+    have hh := congrArg (fun p : ℂ[X] => p.eval (t : ℂ)) (derivative_primPoly μ k)
+    simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_X,
+      Polynomial.eval_pow] at hh
+    linear_combination hh
+  rw [← smul_smul, ← smul_add, hpq]
+
+/-- **Antiderivative closure of the finite-support exponential-polynomial class.**
+Every finite Bohl signal has a primitive that is again a finite Bohl signal, with
+explicit coefficients: the primitive of `t ↦ e^{t μ} Σ_k t ^ k • a μ k` is
+`t ↦ e^{t μ} Σ_k (primPoly μ k).eval t • a μ k`, and the resonant frequency
+`μ = 0` raises the polynomial degree bound from `D` to `D+1` (the secular term).
+This is the scalar recursion of `derivative_primPoly` applied coefficientwise and
+summed over the finite frequency set. -/
+theorem IsExponentialPolynomial.hasPrimitive {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    ∃ g : ℝ → X, IsExponentialPolynomial g ∧ ∀ t, HasDerivAt g (f t) t := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨fun t => ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (t : ℂ) • a μ k), ?_, ?_⟩
+  · refine ⟨s, D + 1, fun μ j => ∑ k ∈ Finset.range (D + 1),
+        (primPoly μ k).coeff j • a μ k, fun t => ?_⟩
+    apply Finset.sum_congr rfl
+    intro μ hμ
+    congr 1
+    simp only [Finset.smul_sum]
+    rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl
+    intro k hk
+    simp only [smul_smul]
+    rw [← Finset.sum_smul]
+    congr 1
+    rw [Polynomial.eval_eq_sum_range' (n := D + 2) (by
+      have hk' := Finset.mem_range.mp hk
+      have := natDegree_primPoly μ k
+      omega)]
+    apply Finset.sum_congr rfl
+    intro j hj
+    ring
+  · intro t
+    have hsum : HasDerivAt (fun r : ℝ => ∑ μ ∈ s,
+        Complex.exp ((r : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (r : ℂ) • a μ k))
+        (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) t := by
+      have h := HasDerivAt.sum (u := s)
+        (A := fun μ (r : ℝ) => Complex.exp ((r : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (primPoly μ k).eval (r : ℂ) • a μ k))
+        (A' := fun μ => Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k))
+        (fun μ hμ => hasDerivAt_exp_mul_primMode a D μ t)
+      convert h using 1
+      ext r
+      rw [Finset.sum_apply]
+    rw [hf t]
+    exact hsum
+
+/-- **Finite sums of Bohl signals are Bohl signals.** The finite-support spectral
+class is closed under finite sums; this packages the binary closure `add` for the
+finite sums that arise when an exponential-polynomial signal is expanded in a
+basis of generalized eigenmodes. -/
+theorem IsExponentialPolynomial.finset_sum {ι : Type*} (s : Finset ι) {f : ι → ℝ → X}
+    (hf : ∀ i ∈ s, IsExponentialPolynomial (f i)) :
+    IsExponentialPolynomial (fun t => ∑ i ∈ s, f i t) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+    have hzero : (fun t : ℝ => ∑ i ∈ (∅ : Finset ι), f i t) = (0 : ℝ → X) := by
+      funext t; simp
+    rw [hzero]
+    exact isExponentialPolynomial_zero
+  | insert a s ha ih =>
+    have hsplit : (fun t => ∑ i ∈ insert a s, f i t) =
+        fun t => f a t + ∑ i ∈ s, f i t := by
+      funext t
+      rw [Finset.sum_insert ha]
+    rw [hsplit]
+    exact (hf a (Finset.mem_insert_self a s)).add
+      (ih (fun i hi => hf i (Finset.mem_insert_of_mem hi)))
+
+/-- The class is closed under multiplication by a natural power of `t`. -/
+theorem IsExponentialPolynomial.mul_pow_t {f : ℝ → X} (hf : IsExponentialPolynomial f)
+    (k : ℕ) : IsExponentialPolynomial (fun t => (t : ℂ) ^ k • f t) := by
+  induction k with
+  | zero => simpa using hf
+  | succ k ih =>
+    have h := ih.mul_t
+    convert h using 1
+    ext t
+    rw [smul_smul, mul_comm, ← pow_succ]
+
+/-- **The autonomous flow of a finite-dimensional operator is an exponential
+polynomial.** For every `y`, the orbit `t ↦ exp (t • A) y` is a finite sum of
+Bohl modes: the primary (generalized-eigenspace) decomposition writes `y` as a
+finite sum of generalized eigenvectors, and the Jordan-chain identity
+`LinearMap.exp_apply_eq_exp_mul_sum` expands each orbit as `e^{t μ}` times a
+vector polynomial. This is the finite-dimensional "generalized-eigenmode secular
+term" input to the variation-of-constants closure. -/
+theorem expFlow_isExponentialPolynomial [FiniteDimensional ℂ X] (f : X →ₗ[ℂ] X) (y : X) :
+    IsExponentialPolynomial (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) y) := by
+  classical
+  have hy : y ∈ ⨆ μ : ℂ, Module.End.maxGenEigenspace f μ := by
+    rw [Module.End.iSup_maxGenEigenspace_eq_top]; trivial
+  obtain ⟨s, hs⟩ := (Submodule.mem_iSup_iff_exists_finset
+    (p := fun μ : ℂ => Module.End.maxGenEigenspace f μ)).mp hy
+  obtain ⟨z, hz⟩ := (Submodule.mem_iSup_finset_iff_exists_sum
+    (fun μ : ℂ => Module.End.maxGenEigenspace f μ) y).mp hs
+  have hkf_exists : ∀ μ : ℂ, ∃ k, ((f - μ • (1 : X →ₗ[ℂ] X)) ^ k) ((z μ : X)) = 0 :=
+    fun μ => (Module.End.mem_maxGenEigenspace f μ (z μ)).mp (z μ).2
+  choose kf hkf using hkf_exists
+  refine ⟨s, s.sup kf, fun μ j => ((j.factorial : ℂ)⁻¹) •
+      (((f - μ • (1 : X →ₗ[ℂ] X)) ^ j) ((z μ : X))), fun t => ?_⟩
+  change NormedSpace.exp (t • f.toContinuousLinearMap) y = _
+  rw [← hz, map_sum]
+  apply Finset.sum_congr rfl
+  intro μ hμ
+  rw [LinearMap.exp_apply_eq_exp_mul_sum f μ (hkf μ) t]
+  congr 1
+  rw [Finset.sum_subset (s₁ := Finset.range (kf μ)) (s₂ := Finset.range (s.sup kf + 1))
+      (Finset.range_subset_range.mpr (by have := Finset.le_sup (f := kf) hμ; omega)) ?_]
+  · apply Finset.sum_congr rfl
+    intro j hj
+    rw [smul_smul, smul_smul, mul_comm]
+  · intro j hj hjnot
+    rw [Finset.mem_range, not_lt] at hjnot
+    have hNj0 : (((f - μ • (1 : X →ₗ[ℂ] X)) ^ j) ((z μ : X))) = 0 := by
+      obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_le hjnot
+      rw [hd, show kf μ + d = d + kf μ by omega, pow_add, Module.End.mul_apply, hkf μ, map_zero]
+    simp [hNj0]
+
+/-- **The autonomous flow acts on the Bohl class.** If `G` is a finite Bohl
+signal then so is `t ↦ exp (t • A) (G t)`. The proof expands `G` in its
+spectral modes, uses `map_sum`/`map_smul` to move the flow onto each polynomial
+coefficient, and reassembles the result from `expFlow_isExponentialPolynomial`,
+`mul_pow_t` and `mul_exp`. This is the operator half of the resonant
+variation-of-constants closure: applying the flow to a forcing mode produces the
+secular generalized-eigenmode terms. -/
+theorem flow_mul_isExponentialPolynomial [FiniteDimensional ℂ X] (f : X →ₗ[ℂ] X)
+    {G : ℝ → X} (hG : IsExponentialPolynomial G) :
+    IsExponentialPolynomial (fun t : ℝ =>
+      NormedSpace.exp (t • f.toContinuousLinearMap) (G t)) := by
+  obtain ⟨s, D, b, hG⟩ := hG
+  have hfun : (fun t : ℝ => NormedSpace.exp (t • f.toContinuousLinearMap) (G t)) =
+      fun t : ℝ => ∑ μ ∈ s, Complex.exp ((t:ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t:ℂ)^k •
+          NormedSpace.exp (t • f.toContinuousLinearMap) (b μ k)) := by
+    funext t
+    rw [hG t, map_sum]
+    apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [map_smul]
+    congr 1
+    rw [map_sum]
+    apply Finset.sum_congr rfl
+    intro k hk
+    rw [map_smul]
+  rw [hfun]
+  apply IsExponentialPolynomial.finset_sum
+  intro μ hμ
+  apply IsExponentialPolynomial.mul_exp
+  apply IsExponentialPolynomial.finset_sum
+  intro k hk
+  exact (expFlow_isExponentialPolynomial f (b μ k)).mul_pow_t k
 
 end LinearSystem
 
