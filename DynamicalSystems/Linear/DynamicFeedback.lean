@@ -8292,12 +8292,13 @@ theorem exists_isExponentialPolynomial_hasDerivAt_ode [FiniteDimensional ℂ X]
     rfl
   rwa [hg_t] at h
 
-/-- **Applying a fixed continuous linear map preserves the Bohl class.** If `f`
-is a finite exponential polynomial and `T` is a fixed continuous linear map, then
-`t ↦ T (f t)` is again a finite exponential polynomial: the map acts
-coefficientwise on the finite spectral expansion. -/
-theorem IsExponentialPolynomial.clm {f : ℝ → X} (T : X →L[ℂ] X)
-    (hf : IsExponentialPolynomial f) :
+/-- **Applying a fixed complex continuous linear map preserves the Bohl class.** If `f`
+is a finite exponential polynomial and `T` is a fixed complex continuous linear map, then
+`t ↦ T (f t)` is again a finite exponential polynomial: the map acts coefficientwise on the
+finite spectral expansion. The codomain `Y` is arbitrary, so this transports readouts as well
+as endomorphisms; `IsExponentialPolynomial.clm` is the endomorphism special case. -/
+theorem IsExponentialPolynomial.map {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℂ Y]
+    {f : ℝ → X} (T : X →L[ℂ] Y) (hf : IsExponentialPolynomial f) :
     IsExponentialPolynomial (fun t ↦ T (f t)) := by
   obtain ⟨s, D, a, hf⟩ := hf
   refine ⟨s, D, fun μ k ↦ T (a μ k), fun t ↦ ?_⟩
@@ -8311,6 +8312,15 @@ theorem IsExponentialPolynomial.clm {f : ℝ → X} (T : X →L[ℂ] X)
   apply Finset.sum_congr rfl
   intro k hk
   rw [map_smul]
+
+/-- **Applying a fixed continuous linear map preserves the Bohl class.** If `f`
+is a finite exponential polynomial and `T` is a fixed continuous linear map, then
+`t ↦ T (f t)` is again a finite exponential polynomial: the map acts
+coefficientwise on the finite spectral expansion. -/
+theorem IsExponentialPolynomial.clm {f : ℝ → X} (T : X →L[ℂ] X)
+    (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ T (f t)) :=
+  hf.map T
 
 /-- Constant curves are finite Bohl signals (the zero-frequency, degree-zero
 mode). -/
@@ -8693,6 +8703,127 @@ theorem exists_isExponentialPolynomial_variationOfConstants_response [FiniteDime
       _ = NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ +
             ∫ s in t₀..t, NormedSpace.exp ((t - s) • A.toContinuousLinearMap) (g s) := by
           rw [add_comm]
+
+/-! ### Real/complex transport of the finite-Bohl response
+
+The finite-Bohl response `exists_isExponentialPolynomial_variationOfConstants_response` is
+stated for a complex generator on a complex normed space, while the accepted trajectory API
+`LinearSystem.variationOfConstants` lives on a *real* `LinearSystem ℝ X U Y`. The bridge here
+transports the complex response to the real trajectory under an explicit
+*complexification/coordinate-embedding hypothesis*: the real state space carries a complex
+normed-space structure, and the system maps are the `restrictScalars ℝ` shadows of complex-linear
+maps `Aℂ`, `Bℂ`, `Cℂ`,
+
+`Aℂ.restrictScalars ℝ = sys.A`, `Bℂ.restrictScalars ℝ = sys.B`,
+`Cℂ.restrictScalars ℝ = sys.C`,
+
+so the complexification preserves the state map, the input map and the readout. The input is
+admissible when its `Bℂ`-image is a finite Bohl signal (the *finite-Bohl input image*
+condition). Under these hypotheses the real variation-of-constants trajectory is again a finite
+exponential polynomial, its readout is a finite exponential polynomial, it is differentiable
+at every time with the real state equation, and it is the real restriction of the complex
+response identity
+`x(t) = exp ((t - t₀) Aℂ) x₀ + ∫_{t₀}^{t} exp ((t - s) Aℂ) (Bℂ u(s)) ds`.
+
+Because the conclusion is the named Bohl class, the accepted non-cancellation theorem
+`tendsto_zero_of_isAntistableBohlSignal` (an antistable polynomial-exponential readout that
+tends to zero is identically zero) now applies directly to real trajectories. No claim is made
+for arbitrary locally-integrable inputs: the finite-Bohl input-image hypothesis is essential,
+and the full open-loop `W_g` necessity is not asserted here. -/
+
+section RealTransport
+
+variable {U Y : Type*}
+variable [NormedAddCommGroup U] [NormedSpace ℂ U]
+variable [NormedAddCommGroup Y] [NormedSpace ℂ Y]
+
+/-- **Real/complex transport of the finite-Bohl variation-of-constants response.** Let
+`sys : LinearSystem ℝ X U Y` be a real system whose state map, input map and readout are the
+real restrictions of complex-linear maps `Aℂ`, `Bℂ`, `Cℂ`:
+`Aℂ.restrictScalars ℝ = sys.A`, `Bℂ.restrictScalars ℝ = sys.B`,
+`Cℂ.restrictScalars ℝ = sys.C`. If the input `u` is locally integrable and its `Bℂ`-image is
+a finite Bohl signal, then the real variation-of-constants trajectory `sys.variationOfConstants
+ t₀ x₀ u`
+
+* is a finite exponential polynomial (the finite-Bohl response transported to the real system);
+* has a finite-exponential-polynomial readout `t ↦ sys.C (x(t))`, so the accepted
+  non-cancellation theorem applies to real trajectories;
+* is differentiable at every time with the real state equation
+  `x'(t) = sys.A x(t) + sys.B u(t)`;
+* satisfies the transported complex response identity
+  `x(t) = exp ((t - t₀) Aℂ) x₀ + ∫_{t₀}^{t} exp ((t - s) Aℂ) (Bℂ u(s)) ds`.
+
+The proof consumes `exists_isExponentialPolynomial_variationOfConstants_response`, identifies
+the complex response with the real `variationOfConstants` curve through the unconditional
+uniqueness theorem `integralSolution_unique` (the local-integrability hypothesis on `u` supplies
+the real integral identity `variationOfConstants_integral`), and transports the readout with
+`IsExponentialPolynomial.map`. No arbitrary locally-integrable coverage and no open-loop `W_g`
+theorem are claimed. -/
+theorem variationOfConstants_transport_of_complexification
+    [FiniteDimensional ℂ X] [FiniteDimensional ℂ U]
+    (sys : LinearSystem ℝ X U Y) (Aℂ : X →ₗ[ℂ] X) (Bℂ : U →ₗ[ℂ] X) (Cℂ : X →ₗ[ℂ] Y)
+    (hA : Aℂ.restrictScalars ℝ = sys.A) (hB : Bℂ.restrictScalars ℝ = sys.B)
+    (hC : Cℂ.restrictScalars ℝ = sys.C)
+    (t₀ : ℝ) (x₀ : X) (u : ℝ → U) (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBohl : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t))) :
+    IsExponentialPolynomial (sys.variationOfConstants t₀ x₀ u) ∧
+    IsExponentialPolynomial (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) ∧
+    (∀ t : ℝ, HasDerivAt (sys.variationOfConstants t₀ x₀ u)
+        (sys.dynamics (sys.variationOfConstants t₀ x₀ u t) (u t)) t) ∧
+    (∀ t : ℝ, sys.variationOfConstants t₀ x₀ u t =
+        NormedSpace.exp ((t - t₀) • Aℂ.toContinuousLinearMap) x₀ +
+        ∫ s in t₀..t, NormedSpace.exp ((t - s) • Aℂ.toContinuousLinearMap) (Bℂ (u s))) := by
+  obtain ⟨x, hxb, hx0, hxderiv, hxint⟩ :=
+    exists_isExponentialPolynomial_variationOfConstants_response Aℂ t₀ x₀ hBohl
+  have hxc : Continuous x := hxb.continuous
+  have hdyn : ∀ t : ℝ, sys.dynamics (x t) (u t) =
+      Aℂ.toContinuousLinearMap (x t) + Bℂ (u t) := by
+    intro t
+    rw [LinearSystem.dynamics_apply, ← hA, ← hB, LinearMap.restrictScalars_apply,
+      LinearMap.restrictScalars_apply]
+    rfl
+  have hdx : ∀ t : ℝ, HasDerivAt x (sys.dynamics (x t) (u t)) t := by
+    intro t
+    rw [hdyn t]
+    exact hxderiv t
+  have hcont : Continuous (fun s : ℝ => sys.dynamics (x s) (u s)) := by
+    have h1 : Continuous (fun s : ℝ => Aℂ.toContinuousLinearMap (x s)) :=
+      Aℂ.toContinuousLinearMap.continuous.comp hxc
+    have h2 : Continuous (fun s : ℝ => Bℂ (u s)) := hBohl.continuous
+    have hfun : (fun s : ℝ => sys.dynamics (x s) (u s)) =
+        fun s : ℝ => Aℂ.toContinuousLinearMap (x s) + Bℂ (u s) := by
+      funext s
+      exact hdyn s
+    rw [hfun]
+    exact h1.add h2
+  have hxint' : ∀ t : ℝ, x t = x₀ + ∫ s in t₀..t, sys.dynamics (x s) (u s) := by
+    intro t
+    have hF : x t - x t₀ = ∫ s in t₀..t, sys.dynamics (x s) (u s) :=
+      intervalIntegral.sub_eq_integral_of_hasDerivAt (fun s => hdx s) hcont t₀ t
+    rw [hx0] at hF
+    rw [← hF]
+    abel
+  have hEq : x = sys.variationOfConstants t₀ x₀ u :=
+    integralSolution_unique sys t₀ x₀ u hu hxc hx0 hxint'
+      (continuous_variationOfConstants sys t₀ x₀ u hu)
+      (variationOfConstants_self sys t₀ x₀ u)
+      (fun t => variationOfConstants_integral sys t₀ x₀ u hu t)
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [← hEq]; exact hxb
+  · rw [← hEq]
+    have hfun : (fun t : ℝ => sys.C (x t)) = fun t : ℝ => Cℂ (x t) := by
+      funext t
+      rw [← hC, LinearMap.restrictScalars_apply]
+    rw [hfun]
+    exact hxb.map Cℂ.toContinuousLinearMap
+  · intro t
+    rw [← hEq]
+    exact hdx t
+  · intro t
+    rw [← hEq]
+    exact hxint t
+
+end RealTransport
 
 end LinearSystem
 
