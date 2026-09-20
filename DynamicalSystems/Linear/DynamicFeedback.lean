@@ -8158,5 +8158,289 @@ theorem flow_mul_isExponentialPolynomial [FiniteDimensional ℂ X] (f : X →ₗ
   intro k hk
   exact (expFlow_isExponentialPolynomial f (b μ k)).mul_pow_t k
 
+/-! ### The Bohl ODE response: product rule and particular solution
+
+This section completes the next Bohl foundation step. The forcing curve of the
+variation-of-constants formula is `s ↦ exp (-(s - t₀) A) (B u(s))`; the analytic
+core of the closure argument is the product rule for the operator exponential
+against a differentiable vector curve,
+
+`d/dt [exp (t A) H(t)] = exp (t A) (A H(t) + H'(t))`,
+
+followed by the scalar/vector antiderivative recursion already packaged as
+`IsExponentialPolynomial.hasPrimitive`. Because `A` is complex-linear while the
+time `t` is real, the operator exponential is differentiated over `ℝ`: the
+`ContinuousLinearMap.restrictScalars` `LinearIsometry` bridges the complex
+continuous-linear-map algebra `X →L[ℂ] X` to the real one `X →L[ℝ] X`, which is
+exactly the scalar bridge used by `HasDerivAt.clm_apply`.
+
+With the product rule and `flow_mul_isExponentialPolynomial`, every finite Bohl
+forcing admits a finite Bohl particular solution of `x' = A x + g`: take a Bohl
+primitive `P` of `s ↦ exp (-s A) (g s)` (the `-A` flow applied to the forcing)
+and set `x(t) = exp (t A) (P t)`. The resonant/generalized-eigenmode secular terms
+are handled automatically by `hasPrimitive`, so no eigenvalue hypothesis is
+needed.
+
+The unrestricted locally-integrable forcing stays out of scope: the bridge that
+would connect this finite Bohl response to the real `variationOfConstants` API is
+recorded at the end of the section.
+
+The product rule has already been proved in `DynamicalSystems.Linear.Trajectory`
+for the shifted real flow `exp ((t - t₀) • A)` against a *constant* vector
+(`hasDerivAt_expFlow_apply`) and, through the integral form, for the full
+variation-of-constants curve. What is added here is the operator-times-curve
+product rule that differentiates the exponential factor together with a general
+differentiable vector curve. -/
+
+/-- **Product rule for the operator exponential against a differentiable vector
+curve.** For a complex continuous-linear-map generator `A` and a curve `H` with
+`HasDerivAt H H' t`, the curve `s ↦ exp (s • A) (H s)` has derivative
+`exp (t • A) (A (H t) + H')` at `t`.
+
+The real-time/complex-generator scalar mismatch is bridged by restricting the
+complex continuous-linear-map algebra `X →L[ℂ] X` to `ℝ` through the continuous
+linear isometry `ContinuousLinearMap.restrictScalarsIsometry`, so that
+`HasDerivAt.clm_apply` applies. This is the analytic core of the Bohl
+variation-of-constants closure. -/
+theorem hasDerivAt_exp_smul_clm_apply [CompleteSpace X] (A : X →L[ℂ] X) {H : ℝ → X}
+    {H' : X} (t : ℝ) (hH : HasDerivAt H H' t) :
+    HasDerivAt (fun s : ℝ ↦ NormedSpace.exp (s • A) (H s))
+      (NormedSpace.exp (t • A) (A (H t) + H')) t := by
+  have hc : HasDerivAt (fun s : ℝ ↦ NormedSpace.exp (s • A))
+      (NormedSpace.exp (t • A) * A) t := by
+    simpa using hasDerivAt_exp_smul_const (𝕂 := ℝ) A t
+  have hφ : HasFDerivAt (fun f : X →L[ℂ] X ↦ f.restrictScalars ℝ)
+      (ContinuousLinearMap.restrictScalarsIsometry ℂ X X ℝ ℝ).toContinuousLinearMap
+      (NormedSpace.exp (t • A)) :=
+    (ContinuousLinearMap.restrictScalarsIsometry ℂ X X ℝ ℝ).toContinuousLinearMap.hasFDerivAt
+  have hc' : HasDerivAt (fun s : ℝ ↦ (NormedSpace.exp (s • A)).restrictScalars ℝ)
+      ((NormedSpace.exp (t • A) * A).restrictScalars ℝ) t :=
+    hφ.comp_hasDerivAt (f := fun s : ℝ ↦ NormedSpace.exp (s • A)) (x := t) hc
+  have h := hc'.clm_apply hH
+  have hderiv : ((NormedSpace.exp (t • A) * A).restrictScalars ℝ) (H t) +
+      (NormedSpace.exp (t • A)).restrictScalars ℝ H' =
+      NormedSpace.exp (t • A) (A (H t) + H') := by
+    change (NormedSpace.exp (t • A) * A) (H t) + NormedSpace.exp (t • A) H' =
+      NormedSpace.exp (t • A) (A (H t) + H')
+    rw [mul_apply_eq_comp, map_add]
+  rwa [hderiv] at h
+
+/-- The operator exponential commutes with its generator. -/
+theorem commute_exp_smul_clm (A : X →L[ℂ] X) (t : ℝ) :
+    Commute (NormedSpace.exp (t • A)) A :=
+  ((Commute.refl A).smul_left t).exp_left
+
+/-- **Product rule in `A`-on-the-left form.** The derivative of
+`s ↦ exp (s • A) (H s)` can also be written `A (exp (t • A) (H t)) + exp (t • A) H'`,
+which is the form matching the state equation `x' = A x + g`. -/
+theorem hasDerivAt_exp_smul_clm_apply' [CompleteSpace X] (A : X →L[ℂ] X) {H : ℝ → X}
+    {H' : X} (t : ℝ) (hH : HasDerivAt H H' t) :
+    HasDerivAt (fun s : ℝ ↦ NormedSpace.exp (s • A) (H s))
+      (A (NormedSpace.exp (t • A) (H t)) + NormedSpace.exp (t • A) H') t := by
+  have h := hasDerivAt_exp_smul_clm_apply A t hH
+  have hc := (commute_exp_smul_clm A t).eq
+  have happ : NormedSpace.exp (t • A) (A (H t)) =
+      A (NormedSpace.exp (t • A) (H t)) := by
+    rw [← mul_apply_eq_comp, hc, mul_apply_eq_comp]
+  simpa [map_add, happ] using h
+
+/-- **Finite Bohl particular solution of the linear ODE.** For a finite-dimensional
+complex generator `A` and a finite exponential-polynomial (Bohl) forcing `g`
+there is a finite exponential-polynomial curve `x` with `x' = A x + g` pointwise.
+
+The construction takes a Bohl primitive `P` of the reversed forcing
+`s ↦ exp (s • (-A)) (g s)` and sets `x(t) = exp (t • A) (P t)`. The reversed flow
+cancels exactly at the derivative, and `hasPrimitive` supplies the secular terms
+for any resonance, so no eigenvalue hypothesis is required. -/
+theorem exists_isExponentialPolynomial_hasDerivAt_ode [FiniteDimensional ℂ X]
+    (A : X →ₗ[ℂ] X) {g : ℝ → X} (hg : IsExponentialPolynomial g) :
+    ∃ x : ℝ → X, IsExponentialPolynomial x ∧
+      ∀ t, HasDerivAt x (A.toContinuousLinearMap (x t) + g t) t := by
+  have hG : IsExponentialPolynomial
+      (fun t : ℝ ↦ NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) :=
+    flow_mul_isExponentialPolynomial (-A) hg
+  obtain ⟨P, hP, hPderiv⟩ := hG.hasPrimitive
+  refine ⟨fun t : ℝ ↦ NormedSpace.exp (t • A.toContinuousLinearMap) (P t),
+    flow_mul_isExponentialPolynomial A hP, fun t ↦ ?_⟩
+  have h := hasDerivAt_exp_smul_clm_apply' A.toContinuousLinearMap
+    (H := P) (H' := NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t
+    (hPderiv t)
+  have hneg : (t • ((-A).toContinuousLinearMap) : X →L[ℂ] X) =
+      (-t) • A.toContinuousLinearMap := by
+    rw [show ((-A).toContinuousLinearMap : X →L[ℂ] X) = -A.toContinuousLinearMap by simp]
+    simp only [smul_neg, neg_smul]
+  have hcomm : Commute (t • A.toContinuousLinearMap) (t • ((-A).toContinuousLinearMap)) := by
+    rw [hneg]
+    exact ((Commute.refl A.toContinuousLinearMap).smul_left t).smul_right (-t)
+  have hsum : t • A.toContinuousLinearMap + t • ((-A).toContinuousLinearMap) = 0 := by
+    rw [hneg, ← add_smul]
+    simp
+  have hmem1 : (t • A.toContinuousLinearMap) ∈
+      Metric.eball (0 : X →L[ℂ] X) (NormedSpace.expSeries ℝ (X →L[ℂ] X)).radius :=
+    (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _
+  have hmem2 : (t • ((-A).toContinuousLinearMap)) ∈
+      Metric.eball (0 : X →L[ℂ] X) (NormedSpace.expSeries ℝ (X →L[ℂ] X)).radius :=
+    (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _
+  have hcancel : NormedSpace.exp (t • A.toContinuousLinearMap) *
+      NormedSpace.exp (t • ((-A).toContinuousLinearMap)) = 1 := by
+    rw [← NormedSpace.exp_add_of_commute_of_mem_ball hcomm hmem1 hmem2, hsum,
+      NormedSpace.exp_zero]
+  have hg_t : NormedSpace.exp (t • A.toContinuousLinearMap)
+      (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) = g t := by
+    rw [← mul_apply_eq_comp, hcancel]
+    rfl
+  rwa [hg_t] at h
+
+/-- **Applying a fixed continuous linear map preserves the Bohl class.** If `f`
+is a finite exponential polynomial and `T` is a fixed continuous linear map, then
+`t ↦ T (f t)` is again a finite exponential polynomial: the map acts
+coefficientwise on the finite spectral expansion. -/
+theorem IsExponentialPolynomial.clm {f : ℝ → X} (T : X →L[ℂ] X)
+    (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ T (f t)) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s, D, fun μ k ↦ T (a μ k), fun t ↦ ?_⟩
+  change T (f t) = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+    ∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • T (a μ k)
+  rw [hf t, map_sum]
+  apply Finset.sum_congr rfl
+  intro μ hμ
+  rw [map_smul, map_sum]
+  congr 1
+  apply Finset.sum_congr rfl
+  intro k hk
+  rw [map_smul]
+
+/-- Constant curves are finite Bohl signals (the zero-frequency, degree-zero
+mode). -/
+theorem isExponentialPolynomial_const (c : X) :
+    IsExponentialPolynomial (fun _ : ℝ ↦ c) := by
+  refine ⟨{0}, 0, fun _ k ↦ if k = 0 then c else 0, fun t ↦ ?_⟩
+  rw [Finset.sum_singleton]
+  simp
+
+/-- **The variation-of-constants integrand is a finite Bohl signal.** For finite
+Bohl `g` the reversed-flow forcing `s ↦ exp ((t₀ - s) • A) (g s)` is a finite
+exponential polynomial. It is the `-A` flow applied to `g`, followed by the fixed
+operator `exp (t₀ • A)`; both operations preserve the Bohl class. This is the
+algebraic form of the bridge from the finite Bohl response to the real
+`variationOfConstants` forcing `s ↦ exp (-(s - t₀) • A) (B u(s))`; the remaining
+analytic bridge is recorded below. -/
+theorem IsExponentialPolynomial.forcing [FiniteDimensional ℂ X] (A : X →L[ℂ] X)
+    (t₀ : ℝ) {g : ℝ → X} (hg : IsExponentialPolynomial g) :
+    IsExponentialPolynomial
+      (fun s : ℝ ↦ NormedSpace.exp ((t₀ - s) • A) (g s)) := by
+  have h1 : IsExponentialPolynomial
+      (fun s : ℝ ↦ NormedSpace.exp (s • (-A)) (g s)) :=
+    flow_mul_isExponentialPolynomial (-A) hg
+  have hshift : (fun s : ℝ ↦ NormedSpace.exp ((t₀ - s) • A) (g s)) =
+      fun s : ℝ ↦ NormedSpace.exp (t₀ • A)
+        (NormedSpace.exp (s • (-A)) (g s)) := by
+    funext s
+    have hmem1 : (t₀ • A) ∈
+        Metric.eball (0 : X →L[ℂ] X) (NormedSpace.expSeries ℝ (X →L[ℂ] X)).radius :=
+      (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _
+    have hmem2 : (s • (-A)) ∈
+        Metric.eball (0 : X →L[ℂ] X) (NormedSpace.expSeries ℝ (X →L[ℂ] X)).radius :=
+      (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _
+    have hcomm : Commute (t₀ • A) (s • (-A)) := by
+      rw [show s • (-A) = -(s • A) by rw [smul_neg]]
+      exact (((Commute.refl A).smul_left t₀).smul_right s).neg_right
+    rw [← mul_apply_eq_comp, ← NormedSpace.exp_add_of_commute_of_mem_ball hcomm hmem1 hmem2]
+    congr 1
+    rw [sub_smul, smul_neg, sub_eq_add_neg]
+  rw [hshift]
+  exact IsExponentialPolynomial.clm _ h1
+
+/-- **Bohl solution with prescribed initial value.** For every initial time `t₀`
+and initial state `x₀` the linear ODE `x' = A x + g` with finite Bohl forcing `g`
+admits a finite Bohl solution taking the value `x₀` at `t₀`.
+
+The construction shifts the finite Bohl primitive `P` of `s ↦ exp (s • (-A)) (g s)`
+by the constant needed to make `x(t₀) = x₀`, then multiplies by `exp (t • A)`.
+This is the finite-dimensional Bohl counterpart of the variation-of-constants
+formula `x(t) = exp ((t - t₀) A) (x₀ + ∫ exp ((t₀ - s) A) g(s) ds)`, with the
+Bochner integral replaced by the explicit finite Bohl primitive. -/
+theorem exists_isExponentialPolynomial_hasDerivAt_ode_init [FiniteDimensional ℂ X]
+    (A : X →ₗ[ℂ] X) (t₀ : ℝ) (x₀ : X) {g : ℝ → X}
+    (hg : IsExponentialPolynomial g) :
+    ∃ x : ℝ → X, IsExponentialPolynomial x ∧ x t₀ = x₀ ∧
+      ∀ t, HasDerivAt x (A.toContinuousLinearMap (x t) + g t) t := by
+  have hG : IsExponentialPolynomial
+      (fun t : ℝ ↦ NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) :=
+    flow_mul_isExponentialPolynomial (-A) hg
+  obtain ⟨P, hP, hPderiv⟩ := hG.hasPrimitive
+  let Q : ℝ → X := fun t ↦ P t +
+    (NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ - P t₀)
+  have hQ : IsExponentialPolynomial Q :=
+    hP.add (isExponentialPolynomial_const _)
+  refine ⟨fun t : ℝ ↦ NormedSpace.exp (t • A.toContinuousLinearMap) (Q t),
+    flow_mul_isExponentialPolynomial A hQ, ?_, fun t ↦ ?_⟩
+  · change NormedSpace.exp (t₀ • A.toContinuousLinearMap) (Q t₀) = x₀
+    have hQt₀ : Q t₀ = NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ := by
+      simp [Q]
+    rw [hQt₀]
+    have hcomm : Commute (t₀ • A.toContinuousLinearMap)
+        ((-t₀) • A.toContinuousLinearMap) :=
+      ((Commute.refl A.toContinuousLinearMap).smul_left t₀).smul_right (-t₀)
+    have hsum : t₀ • A.toContinuousLinearMap + (-t₀) • A.toContinuousLinearMap = 0 := by
+      rw [← add_smul]; simp
+    rw [← mul_apply_eq_comp, ← NormedSpace.exp_add_of_commute_of_mem_ball hcomm
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _),
+      hsum, NormedSpace.exp_zero]
+    rfl
+  · have hQderiv : HasDerivAt Q
+        (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t := by
+      have := (hPderiv t).add_const
+        (NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ - P t₀)
+      simpa [Q] using this
+    have h := hasDerivAt_exp_smul_clm_apply' A.toContinuousLinearMap
+      (H := Q) (H' := NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t hQderiv
+    have hneg : (t • ((-A).toContinuousLinearMap) : X →L[ℂ] X) =
+        (-t) • A.toContinuousLinearMap := by
+      rw [show ((-A).toContinuousLinearMap : X →L[ℂ] X) = -A.toContinuousLinearMap by simp]
+      simp only [smul_neg, neg_smul]
+    have hcomm : Commute (t • A.toContinuousLinearMap) (t • ((-A).toContinuousLinearMap)) := by
+      rw [hneg]
+      exact ((Commute.refl A.toContinuousLinearMap).smul_left t).smul_right (-t)
+    have hsum : t • A.toContinuousLinearMap + t • ((-A).toContinuousLinearMap) = 0 := by
+      rw [hneg, ← add_smul]
+      simp
+    have hcancel : NormedSpace.exp (t • A.toContinuousLinearMap) *
+        NormedSpace.exp (t • ((-A).toContinuousLinearMap)) = 1 := by
+      rw [← NormedSpace.exp_add_of_commute_of_mem_ball hcomm
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _),
+        hsum, NormedSpace.exp_zero]
+    have hg_t : NormedSpace.exp (t • A.toContinuousLinearMap)
+        (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) = g t := by
+      rw [← mul_apply_eq_comp, hcancel]
+      rfl
+    rwa [hg_t] at h
+
+/-! ### The variation-of-constants bridge
+
+The declarations above are stated for a complex generator, because the Bohl
+spectral class `IsExponentialPolynomial` is complex by construction. The pinned
+`variationOfConstants` API is real: it is built from the real operator exponential
+`LinearSystem.expFlow` and the real forcing `LinearSystem.forcing`.
+
+What is available without any new analysis is the *algebraic* form of the bridge:
+the variation-of-constants integrand `s ↦ exp ((t₀ - s) • A) (g s)` is a finite
+Bohl signal for every finite Bohl `g` (apply the `-A` flow to `g` and then the
+fixed operator `exp (t₀ • A)`), so it has a finite Bohl primitive and the
+particular solution above is the exact antiderivative form of the convolution
+`∫ exp ((t - s) A) g(s) ds`. What is *not* in the pinned Mathlib is the
+vector-valued fundamental theorem of calculus that would identify that primitive
+with the Bochner integral `∫_{t₀}^{t} exp ((t - s) A) g(s) ds` for a merely
+locally-integrable forcing; the scalar-valued case is
+`integral_deriv_eq_sub`/`AbsolutelyContinuousOnInterval.const_of_ae_hasDerivAt_zero`.
+The exact next bridge is therefore: a vector-valued
+`HasDerivAt (fun t ↦ ∫ s in t₀..t, exp ((t - s) • A) (g s))` identity (or its
+absolutely-continuous form), after which the finite Bohl and the locally
+integrable variation-of-constants correspondences can be identified. This is
+stated here rather than assumed, and no locally-integrable closure is claimed. -/
+
 end LinearSystem
 
