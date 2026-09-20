@@ -6513,6 +6513,116 @@ theorem eigenfunctional_exp_apply_complex [CompleteSpace X] (A : X →L[ℝ] X) 
   rw [exp_smul_apply_eq_tsum A t y, ContinuousLinearMap.map_tsum ρ hsum, tsum_congr hterm]
   rw [tsum_mul_right, htsum]
 
+/-! ### Jordan-chain (generalized eigenmode) spectral projection
+
+The single eigenfunctional residue lemmas above cover a *left eigenvector* of
+`A`: a functional `ρ` with `ρ (A y) = λ ρ y`. A general antistable spectral
+projection needs a **left Jordan chain** instead, a finite family
+`ρ 0, …, ρ (m-1)` with
+
+`ρ j ((A - λ) y) = ρ (j+1) y`,   `ρ m = 0`.
+
+Writing `N = A - λ • 1`, the chain condition is `ρ j ∘ N = ρ (j+1)`, so the
+orbit of `ρ 0` under the powers of `N` is exactly the chain:
+`ρ 0 (N^k y) = ρ k y`. Splitting `t • A = (t λ) • 1 + t • N` (the two summands
+commute) gives the **chain residue identity**
+
+`ρ 0 (exp (t A) y) = e^{t λ} ∑_{j<m} (t^j / j!) ρ j y`,
+
+a polynomial-exponential residue whose coefficients are the chain values. This
+extends the single-eigenfunctional residue to genuine generalized eigenmodes and
+is the finite-mode spectral projection behind the open-loop necessity for states
+in `V*(ker H ⊔ reachableSubspace)`. -/
+
+/-- **The exponential of a real multiple of the identity.** For a real scalar
+`c`, `exp (c • 1) x = e^c • x`. This generalises the accepted negative-exponent
+form `exp_smul_one_apply` to an arbitrary real exponent, which is exactly the
+prefactor `e^{t λ}` appearing in the Jordan-chain residue identity. -/
+theorem exp_smul_one_apply_real (c : ℝ) (x : X) :
+    NormedSpace.exp (c • (1 : X →L[ℝ] X)) x = Real.exp c • x := by
+  rw [← Algebra.algebraMap_eq_smul_one]
+  rw [← NormedSpace.algebraMap_exp_comm (𝕂 := ℝ) (𝔸 := X →L[ℝ] X) c]
+  rw [← Real.exp_eq_exp_ℝ, Algebra.algebraMap_eq_smul_one]
+  rfl
+
+/-- **Jordan-chain residue identity.** Let `ρ : ℕ → X →L[ℝ] ℝ` be a real left
+Jordan chain at the mode `λ`, i.e. `ρ j ((A - λ • 1) y) = ρ (j+1) y`, with
+`ρ m = 0` (so no functional beyond the `m`-th is used). Then for every starting
+index `i`
+
+`ρ i (exp (t A) y) = e^{t λ} ∑_{j<m} (t^j / j!) ρ (i+j) y`.
+
+The proof sets `N = A - λ • 1`, shows `ρ i (N^k y) = ρ (i+k) y` by induction,
+splits `t • A = (t λ) • 1 + t • N` with the commuting-exponential law, expands
+`exp (t • N)` by its factorial series, and truncates the resulting `tsum` at the
+first vanishing chain index. -/
+theorem chain_eigenfunctional_exp_apply [CompleteSpace X]
+    (A : X →L[ℝ] X) (ρ : ℕ → X →L[ℝ] ℝ) (lam : ℝ) (m : ℕ)
+    (hchain : ∀ j y, ρ j ((A - lam • (1 : X →L[ℝ] X)) y) = ρ (j + 1) y)
+    (hzero : ρ m = 0) (i : ℕ) (t : ℝ) (y : X) :
+    ρ i (NormedSpace.exp (t • A) y) =
+      Real.exp (lam * t) * ∑ j ∈ Finset.range m, (t ^ j / (j.factorial : ℝ)) * ρ (i + j) y := by
+  set N : X →L[ℝ] X := A - lam • (1 : X →L[ℝ] X) with hN
+  have hchain' : ∀ j y, ρ j (N y) = ρ (j + 1) y := by
+    intro j y; rw [hN]; exact hchain j y
+  have hpow : ∀ i k : ℕ, ∀ y : X, ρ i ((N ^ k) y) = ρ (i + k) y := by
+    intro i k
+    induction k generalizing i with
+    | zero => intro y; simp
+    | succ k ih =>
+      intro y
+      rw [pow_succ', mul_apply_eq_comp, hchain', ih]
+      rw [show i + 1 + k = i + (k + 1) by omega]
+  have hkm : ∀ d, ρ (m + d) = 0 := by
+    intro d
+    induction d with
+    | zero => simpa using hzero
+    | succ d ih =>
+      ext y
+      show ρ (m + (d + 1)) y = 0
+      have hst : ρ (m + (d + 1)) y = ρ (m + d) (N y) := by
+        rw [show m + (d + 1) = m + d + 1 by omega, ← hchain' (m + d) y]
+      rw [hst, ih]
+      rfl
+  have hk0 : ∀ k, m ≤ k → ρ k = 0 := by
+    intro k hk
+    obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hk
+    exact hkm d
+  have hsplit : t • A = (t * lam) • (1 : X →L[ℝ] X) + t • N := by
+    rw [hN]; module
+  have hcomm : Commute ((t * lam) • (1 : X →L[ℝ] X)) (t • N) :=
+    Algebra.commute_algebraMap_left (t * lam) (t • N)
+  have hexp : NormedSpace.exp (t • A) =
+      NormedSpace.exp ((t * lam) • (1 : X →L[ℝ] X)) * NormedSpace.exp (t • N) := by
+    rw [hsplit]
+    exact NormedSpace.exp_add_of_commute_of_mem_ball (𝕂 := ℝ) hcomm
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+  have hstep : ∀ k : ℕ, ρ i (((k.factorial : ℝ)⁻¹) • (((t • N) ^ k) y)) =
+      (k.factorial : ℝ)⁻¹ * (t ^ k * ρ (i + k) y) := by
+    intro k
+    rw [map_smul, smul_pow, _root_.smul_apply, map_smul, hpow i k y]
+    simp only [smul_eq_mul]
+  have hsum : Summable (fun k : ℕ => ((k.factorial : ℝ)⁻¹) • (((t • N) ^ k) y)) := by
+    have hop : Summable (fun k : ℕ => ((k.factorial : ℝ)⁻¹) • (t • N) ^ k) :=
+      NormedSpace.expSeries_summable_of_mem_ball' (t • N)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have := hop.mapL (ContinuousLinearMap.apply ℝ X y)
+    simpa using this
+  rw [hexp, mul_apply_eq_comp, exp_smul_one_apply_real, map_smul]
+  rw [exp_smul_apply_eq_tsum N t y, ContinuousLinearMap.map_tsum (ρ i) hsum]
+  rw [smul_eq_mul, ← tsum_mul_left]
+  rw [tsum_congr (fun k => by rw [hstep])]
+  rw [tsum_eq_sum (s := Finset.range m)]
+  · rw [Finset.mul_sum, mul_comm lam t]
+    apply Finset.sum_congr rfl
+    intro k hk
+    ring
+  · intro k hk
+    rw [Finset.mem_range, not_lt] at hk
+    rw [hk0 (i + k) (by omega)]
+    simp
+
 end LinearMap
 
 namespace LinearSystem
@@ -6657,5 +6767,165 @@ theorem not_isOutputStabilizable_of_eigenfunctional_readout_complex
     rw [hre]
     exact le_mul_of_one_le_left (norm_nonneg (ρ x)) (Real.one_le_exp (mul_nonneg hlam ht))
   exact hx (norm_eq_zero.mp (le_antisymm hb (norm_nonneg _)))
+
+/-! ### Jordan-chain non-cancellation of an uncontrollable antistable mode
+
+The single-eigenfunctional non-cancellation theorems above handle a genuine left
+eigenvector `ρ` of `A` with `ρ ∘ B = 0`. A state in
+`V*(ker H ⊔ reachableSubspace)` but outside `V*(ker H) + reachableSubspace` need
+not be detected by a single eigenfunctional: the relevant readout is a finite
+**observability/Jordan chain**, whose residue is the polynomial-exponential
+`e^{t λ} ∑_j (t^j / j!) ρ j x` produced by
+`LinearMap.chain_eigenfunctional_exp_apply`.
+
+If every functional of the chain annihilates the input channel,
+`ρ j (B v) = 0`, then the forcing is invisible to the whole chain and the forced
+trajectory readout equals the autonomous polynomial-exponential residue. When
+`0 ≤ λ` this residue cannot tend to zero unless every chain functional vanishes
+at `x`, so a state detected by some member of the chain is not open-loop output
+stabilizable. The final step reuses the accepted multi-mode vanishing theorem
+`LinearMap.tendsto_zero_of_sum_exp_polynomial`, so a sum of polynomial-exponential
+antistable residues that decays must have all coefficients zero.
+
+This is the finite-mode spectral projection whose explicit generalized-eigenspace
+and readout-chain hypotheses are the content of the remaining open-loop necessity;
+it does not assert the full Bohl/spectral input-cancellation theorem. -/
+
+/-- **The forcing is annihilated by every functional of an uncontrollable
+Jordan chain.** If `ρ` is a left Jordan chain of `A` at `λ` with `ρ m = 0` and
+`ρ j (B v) = 0` for all `j`, then each chain functional kills the
+variation-of-constants forcing integrand `exp (-(s - t₀) • A) (B u(s))`. -/
+theorem forcing_chain_eq_zero (sys : LinearSystem ℝ X U Z) (ρ : ℕ → X →L[ℝ] ℝ)
+    (lam : ℝ) (m : ℕ)
+    (hchain : ∀ j y, ρ j (sys.A y) = lam * ρ j y + ρ (j + 1) y)
+    (hzero : ρ m = 0) (hB : ∀ j v, ρ j (sys.B v) = 0)
+    (t₀ : ℝ) (u : ℝ → U) (s : ℝ) (j : ℕ) :
+    ρ j (sys.forcing t₀ u s) = 0 := by
+  have hAc : ∀ k y, ρ k (sys.continuousA y) = lam * ρ k y + ρ (k + 1) y :=
+    fun k y => by simpa using hchain k y
+  have hN : ∀ k y, ρ k ((sys.continuousA - lam • (1 : X →L[ℝ] X)) y) = ρ (k + 1) y := by
+    intro k y
+    rw [_root_.sub_apply, map_sub, _root_.smul_apply, map_smul,
+      smul_eq_mul, one_apply_eq_self, hAc k y]
+    ring
+  have h := LinearMap.chain_eigenfunctional_exp_apply sys.continuousA ρ lam m hN hzero j
+    (-(s - t₀)) (sys.continuousB (u s))
+  rw [LinearSystem.forcing, LinearSystem.expFlow, h]
+  rw [Finset.sum_eq_zero]
+  · simp
+  · intro k hk
+    rw [show ρ (j + k) (sys.continuousB (u s)) = 0 from by simpa using hB (j + k) (u s)]
+    ring
+
+/-- **Jordan-chain transfer-function residue.** For every locally integrable
+input the forced trajectory readout of the first chain functional is the
+autonomous polynomial-exponential residue
+`ρ 0 (x_u(t)) = e^{t λ} ∑_j (t^j / j!) ρ j x`: because every chain functional
+annihilates `im B`, the forcing contributes nothing to any member of the chain,
+so the variation-of-constants integral stays in the common kernel. -/
+theorem variationOfConstants_chain (sys : LinearSystem ℝ X U Z) (ρ : ℕ → X →L[ℝ] ℝ)
+    (lam : ℝ) (m : ℕ)
+    (hchain : ∀ j y, ρ j (sys.A y) = lam * ρ j y + ρ (j + 1) y)
+    (hzero : ρ m = 0) (hB : ∀ j v, ρ j (sys.B v) = 0)
+    (x : X) {u : ℝ → U} (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (t : ℝ) :
+    ρ 0 (sys.variationOfConstants 0 x u t) =
+      Real.exp (lam * t) * ∑ j ∈ Finset.range m, (t ^ j / (j.factorial : ℝ)) * ρ j x := by
+  have hAc : ∀ k y, ρ k (sys.continuousA y) = lam * ρ k y + ρ (k + 1) y :=
+    fun k y => by simpa using hchain k y
+  have hN : ∀ k y, ρ k ((sys.continuousA - lam • (1 : X →L[ℝ] X)) y) = ρ (k + 1) y := by
+    intro k y
+    rw [_root_.sub_apply, map_sub, _root_.smul_apply, map_smul,
+      smul_eq_mul, one_apply_eq_self, hAc k y]
+    ring
+  have hforcing : ∀ j s, ρ j (sys.forcing 0 u s) = 0 :=
+    fun j s => forcing_chain_eq_zero sys ρ lam m hchain hzero hB 0 u s j
+  have hInt : ∀ j : ℕ, ρ j (∫ s in (0:ℝ)..t, sys.forcing 0 u s) = 0 := by
+    intro j
+    rw [← ContinuousLinearMap.intervalIntegral_comp_comm (ρ j)
+      (LinearSystem.intervalIntegrable_forcing sys 0 hu 0 t)]
+    simp only [hforcing j, intervalIntegral.integral_zero]
+  have harg : ∀ j : ℕ, ρ j (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s) = ρ j x := by
+    intro j; rw [map_add, hInt j, add_zero]
+  have houter := LinearMap.chain_eigenfunctional_exp_apply sys.continuousA ρ lam m hN hzero 0
+    (t - 0) (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s)
+  rw [LinearSystem.variationOfConstants, LinearSystem.expFlow, houter]
+  congr 1
+  · simp
+  · apply Finset.sum_congr rfl
+    intro j hj
+    rw [zero_add, harg j]
+    simp
+
+/-- **Non-cancellation of an uncontrollable antistable Jordan chain.** If the
+readout `ψ ∘ H` factors the first functional `ρ 0` of a real left Jordan chain
+at a mode `lam ≥ 0`, every functional of the chain annihilates `im B`, and some
+functional of the chain detects `x`, then no locally integrable open-loop input
+makes the controlled output decay. The polynomial-exponential residue
+`e^{lam t} ∑_j (t^j / j!) ρ j x` survives the forcing, and the accepted
+multi-mode vanishing theorem forces all its coefficients to vanish. -/
+theorem not_isOutputStabilizable_of_chain_readout
+    (sys : LinearSystem ℝ X U Z) (ρ : ℕ → X →L[ℝ] ℝ) (ψ : Z →L[ℝ] ℝ)
+    (lam : ℝ) (m : ℕ) (hlam : 0 ≤ lam)
+    (hchain : ∀ j y, ρ j (sys.A y) = lam * ρ j y + ρ (j + 1) y)
+    (hzero : ρ m = 0) (hB : ∀ j v, ρ j (sys.B v) = 0)
+    (hρ : ∀ y, ρ 0 y = ψ (sys.C y))
+    {x : X} (hx : ∃ j, j < m ∧ ρ j x ≠ 0) :
+    ¬ IsOutputStabilizable sys sys.C x := by
+  rintro ⟨u, hu, htend⟩
+  have hψ : Filter.Tendsto
+      (fun t : ℝ => ψ (sys.C (sys.variationOfConstants 0 x u t)))
+      Filter.atTop (nhds 0) := by
+    have h1 := (ψ.continuous.tendsto 0).comp htend
+    simpa [Function.comp_def] using h1
+  have hid : ∀ t : ℝ, ψ (sys.C (sys.variationOfConstants 0 x u t)) =
+      Real.exp (lam * t) * ∑ j ∈ Finset.range m,
+        (t ^ j / (j.factorial : ℝ)) * ρ j x := by
+    intro t
+    rw [← hρ (sys.variationOfConstants 0 x u t),
+      variationOfConstants_chain sys ρ lam m hchain hzero hB x hu t]
+  have hp : Filter.Tendsto
+      (fun t : ℝ => Real.exp (lam * t) *
+        ∑ j ∈ Finset.range m, (t ^ j / (j.factorial : ℝ)) * ρ j x)
+      Filter.atTop (nhds 0) :=
+    hψ.congr' (Filter.Eventually.of_forall fun t => hid t)
+  obtain ⟨j0, hj0, hρj0⟩ := hx
+  have hmpos : 0 < m := lt_of_le_of_lt (Nat.zero_le j0) hj0
+  set D : ℕ := m - 1 with hDdef
+  have hD1 : D + 1 = m := Nat.succ_pred_eq_of_pos hmpos
+  let a : Unit → ℕ → ℂ := fun _ k => ((k.factorial : ℝ)⁻¹ * ρ k x : ℂ)
+  have hcomplex : Filter.Tendsto
+      (fun t : ℝ => ∑ _i ∈ ({()} : Finset Unit),
+        Complex.exp (t * (lam : ℂ)) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a () k))
+      Filter.atTop (nhds 0) := by
+    have hcoe : Filter.Tendsto
+        (fun t : ℝ => ((Real.exp (lam * t) *
+          ∑ j ∈ Finset.range m, (t ^ j / (j.factorial : ℝ)) * ρ j x : ℝ) : ℂ))
+        Filter.atTop (nhds 0) :=
+      (Complex.continuous_ofReal.tendsto 0).comp hp
+    refine hcoe.congr' (Filter.Eventually.of_forall fun t => ?_)
+    beta_reduce
+    rw [hD1, Finset.sum_singleton]
+    simp only [a]
+    rw [Complex.ofReal_mul, Complex.ofReal_sum]
+    congr 1
+    · rw [Complex.ofReal_exp]
+      congr 1
+      push_cast; ring
+    · apply Finset.sum_congr rfl
+      intro k hk
+      push_cast
+      ring
+  have hres := LinearMap.tendsto_zero_of_sum_exp_polynomial
+    ({()} : Finset Unit) (fun _ : Unit => (lam : ℂ))
+    (fun i _ => by simpa using hlam)
+    (fun i _ j _ hij => by simp) D a hcomplex
+  have hz := hres () (Finset.mem_singleton_self ()) j0 (by omega)
+  have hz' : (j0.factorial : ℝ)⁻¹ * ρ j0 x = 0 := by
+    have : ((j0.factorial : ℝ)⁻¹ * ρ j0 x : ℂ) = 0 := hz
+    exact_mod_cast this
+  exact hρj0 ((mul_eq_zero.mp hz').resolve_left
+    (inv_ne_zero (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero j0))))
 
 end LinearSystem
