@@ -6374,3 +6374,288 @@ The full open-loop theorem
 `LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable` is
 therefore still **not** claimed, and no placeholder or unsupported assumption is
 introduced. -/
+
+/-! ### The Bohl/transfer-function input projection: nonzero autonomous residue
+
+This task isolated the *pole/residue* content of the open-loop necessity. Let
+`ρ : X →L[ℝ] ℝ` be a continuous linear readout functional that is a **left
+eigenfunctional** of the state map,
+
+`ρ (A y) = lam * ρ y`   with   `0 ≤ lam`,
+
+and that **annihilates the input channel**, `ρ (B v) = 0` — equivalently `ρ`
+vanishes on the reachable subspace `⟨A | im B⟩` (an *uncontrollable* mode).
+Then `ρ` cannot see the forcing at all: the forced readout is exactly the
+autonomous residue `ρ (x_u(t)) = e^{lam t} ρ x`. When `ρ x ≠ 0` this residue is
+bounded away from zero because `e^{lam t} ≥ 1` for `t ≥ 0`. If in addition `ρ`
+is the readout `ψ ∘ H`, then a decaying controlled output `H x_u(t) → 0` forces
+`ρ x = 0`: the pole of the readout transfer expression at `lam` has nonzero
+autonomous residue `ρ x`, while the input transfer `ρ (sI - A)⁻¹ B` has **no**
+pole there because `ρ B = 0`, so the input channel cannot cancel the mode.
+
+The declarations are:
+
+* `LinearMap.eigenfunctional_exp_apply` — the residue identity
+  `ρ (exp (t • A) y) = e^{lam t} ρ y` for a left eigenfunctional, proved by
+  expanding the exponential series and using `ρ (Aⁿ y) = lamⁿ ρ y`;
+* `LinearSystem.forcing_eigenfunctional_eq_zero` — the forcing integrand is
+  annihilated, `ρ (exp (-(s - t₀) • A) (B u(s))) = 0`;
+* `LinearSystem.variationOfConstants_eigenfunctional` — the transfer-function
+  residue `ρ (x_u(t)) = e^{lam t} ρ x` for every locally integrable input;
+* `LinearSystem.not_isOutputStabilizable_of_eigenfunctional_readout` — an
+  uncontrollable antistable eigenfunctional that factors through the readout
+  (`ρ = ψ ∘ H`) and detects `x` certifies that `x` is not open-loop
+  output-stabilizable;
+* the `_complex` companions `LinearMap.eigenfunctional_exp_apply_complex`,
+  `LinearSystem.forcing_eigenfunctional_eq_zero_complex`,
+  `LinearSystem.variationOfConstants_eigenfunctional_complex` and
+  `LinearSystem.not_isOutputStabilizable_of_eigenfunctional_readout_complex`
+  cover the non-real conjugate pole pairs of a real rotation, using only
+  `|e^{t lam}| = e^{t lam.re} ≥ 1` for `t ≥ 0`.
+
+Source: Trentelman–Stoorvogel–Hautus, Theorem 4.37 and Section 4.8 (external
+stabilization); the pole/residue reading of the uncontrollable/observable
+splitting. The full Bohl spectral-projection argument that would separate every
+`x_b ∈ X_b(A) \ (V*(ker H) + Xstab)` — in particular the observability-chain
+functionals `ψ ∘ H ∘ Aᵏ`, where the unbounded operator `Aᵏ` prevents the
+chain readout from inheriting the decay of `H x_u(t)` — remains the exact
+documented obligation; this task lands the rigorous finite-mode (pole/residue)
+core, including the rotation/complex case. -/
+
+namespace LinearMap
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
+
+/-- **Left eigenfunctionals commute with the exponential flow.** If `ρ` is a
+continuous linear functional with `ρ (A y) = lam * ρ y`, then
+`ρ (exp (t • A) y) = e^{lam t} ρ y`. This is the residue identity: the functional
+reads off the single exponential character `e^{lam t}` from the flow. -/
+theorem eigenfunctional_exp_apply [CompleteSpace X] (A : X →L[ℝ] X) (ρ : X →L[ℝ] ℝ)
+    (lam : ℝ) (hA : ∀ y : X, ρ (A y) = lam * ρ y) (t : ℝ) (y : X) :
+    ρ (NormedSpace.exp (t • A) y) = Real.exp (lam * t) * ρ y := by
+  have hpow : ∀ n : ℕ, ∀ z : X, ρ ((A ^ n) z) = lam ^ n * ρ z := by
+    intro n
+    induction n with
+    | zero => intro z; simp
+    | succ n ih =>
+      intro z
+      rw [pow_succ', mul_apply_eq_comp, hA, ih]
+      ring
+  have hterm : ∀ n : ℕ, ρ (((n.factorial : ℝ)⁻¹) • (((t • A) ^ n) y)) =
+      ((n.factorial : ℝ)⁻¹) * (t ^ n * lam ^ n) * ρ y := by
+    intro n
+    simp only [map_smul, smul_pow, _root_.smul_apply, hpow n y, smul_eq_mul]
+    ring
+  have hsum : Summable (fun n : ℕ => ((n.factorial : ℝ)⁻¹) • (((t • A) ^ n) y)) := by
+    have hop : Summable (fun n : ℕ => ((n.factorial : ℝ)⁻¹) • (t • A) ^ n) :=
+      NormedSpace.expSeries_summable_of_mem_ball' (t • A)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have := hop.mapL (ContinuousLinearMap.apply ℝ X y)
+    simpa using this
+  have htsum_aux : (∑' n : ℕ, ((n.factorial : ℝ)⁻¹) • (lam * t) ^ n) =
+      NormedSpace.exp (lam * t) := by
+    rw [← congrFun (NormedSpace.exp_eq_tsum ℝ) (lam * t)]
+  have htsum : (∑' n : ℕ, ((n.factorial : ℝ)⁻¹) * (t * lam) ^ n) = Real.exp (lam * t) := by
+    rw [Real.exp_eq_exp_ℝ, ← htsum_aux]
+    apply tsum_congr
+    intro n
+    rw [smul_eq_mul, mul_comm t lam]
+  rw [exp_smul_apply_eq_tsum A t y, ContinuousLinearMap.map_tsum ρ hsum, tsum_congr hterm]
+  rw [show (∑' n : ℕ, ((n.factorial : ℝ)⁻¹) * (t ^ n * lam ^ n) * ρ y) =
+      (∑' n : ℕ, ((n.factorial : ℝ)⁻¹) * (t * lam) ^ n) * ρ y from by
+    rw [← tsum_mul_right]
+    apply tsum_congr
+    intro n
+    rw [mul_pow]]
+  rw [htsum]
+
+/-- **Complex left eigenfunctionals commute with the exponential flow.** The
+complex-valued residue identity `ρ (exp (t • A) y) = e^{t lam} ρ y` for
+`ρ : X →L[ℝ] ℂ` and `lam : ℂ`. This covers the non-real conjugate pole pairs of a
+real rotation, where no real eigenfunctional exists. -/
+theorem eigenfunctional_exp_apply_complex [CompleteSpace X] (A : X →L[ℝ] X) (ρ : X →L[ℝ] ℂ)
+    (lam : ℂ) (hA : ∀ y : X, ρ (A y) = lam * ρ y) (t : ℝ) (y : X) :
+    ρ (NormedSpace.exp (t • A) y) = Complex.exp (t * lam) * ρ y := by
+  have hpow : ∀ n : ℕ, ∀ z : X, ρ ((A ^ n) z) = lam ^ n * ρ z := by
+    intro n
+    induction n with
+    | zero => intro z; simp
+    | succ n ih =>
+      intro z
+      rw [pow_succ', mul_apply_eq_comp, hA, ih]
+      ring
+  have hterm : ∀ n : ℕ, ρ (((n.factorial : ℝ)⁻¹) • (((t • A) ^ n) y)) =
+      (((n.factorial : ℝ)⁻¹ : ℂ) * (t * lam) ^ n) * ρ y := by
+    intro n
+    simp only [map_smul, smul_pow, _root_.smul_apply]
+    rw [hpow n y]
+    rw [RCLike.real_smul_eq_coe_smul (K := ℂ), RCLike.real_smul_eq_coe_smul (K := ℂ)]
+    simp only [smul_eq_mul]
+    push_cast
+    rw [mul_pow]
+    ac_rfl
+  have hsum : Summable (fun n : ℕ => ((n.factorial : ℝ)⁻¹) • (((t • A) ^ n) y)) := by
+    have hop : Summable (fun n : ℕ => ((n.factorial : ℝ)⁻¹) • (t • A) ^ n) :=
+      NormedSpace.expSeries_summable_of_mem_ball' (t • A)
+        ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have := hop.mapL (ContinuousLinearMap.apply ℝ X y)
+    simpa using this
+  have htsum_aux : (∑' n : ℕ, ((n.factorial : ℂ)⁻¹) • (t * lam) ^ n) =
+      NormedSpace.exp (t * lam) := by
+    rw [← congrFun (NormedSpace.exp_eq_tsum ℂ) (t * lam)]
+  have htsum : (∑' n : ℕ, (((n.factorial : ℝ)⁻¹ : ℂ) * (t * lam) ^ n)) =
+      Complex.exp (t * lam) := by
+    rw [Complex.exp_eq_exp_ℂ, ← htsum_aux]
+    apply tsum_congr
+    intro n
+    rw [smul_eq_mul]
+    simp
+  rw [exp_smul_apply_eq_tsum A t y, ContinuousLinearMap.map_tsum ρ hsum, tsum_congr hterm]
+  rw [tsum_mul_right, htsum]
+
+end LinearMap
+
+namespace LinearSystem
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- **The forcing is annihilated by a left eigenfunctional of an uncontrollable
+mode.** If `ρ (A y) = lam * ρ y` and `ρ (B v) = 0`, then the variation-of-
+constants forcing integrand `forcing t₀ u s = exp (-(s - t₀) • A) (B u(s))` is
+in the kernel of `ρ`: the input channel produces no residue at `lam`. -/
+theorem forcing_eigenfunctional_eq_zero (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℝ)
+    (lam : ℝ) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (t₀ : ℝ) (u : ℝ → U) (s : ℝ) :
+    ρ (sys.forcing t₀ u s) = 0 := by
+  have hAc : ∀ y, ρ (sys.continuousA y) = lam * ρ y := fun y => by simpa using hA y
+  have h := LinearMap.eigenfunctional_exp_apply sys.continuousA ρ lam hAc (-(s - t₀))
+    (sys.continuousB (u s))
+  rw [LinearSystem.forcing, LinearSystem.expFlow, h,
+    show ρ (sys.continuousB (u s)) = 0 from by simpa using hB (u s), mul_zero]
+
+/-- **Transfer-function residue at an uncontrollable eigenmode.** For every
+locally integrable input the forced readout is the autonomous residue
+`ρ (x_u(t)) = e^{lam t} ρ x`: the forcing contributes nothing because `ρ`
+annihilates `im B`, and the two exponentials commute with `ρ` by
+`eigenfunctional_exp_apply`. -/
+theorem variationOfConstants_eigenfunctional (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℝ)
+    (lam : ℝ) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (x : X) {u : ℝ → U} (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (t : ℝ) :
+    ρ (sys.variationOfConstants 0 x u t) = Real.exp (lam * t) * ρ x := by
+  have hAc : ∀ y, ρ (sys.continuousA y) = lam * ρ y := fun y => by simpa using hA y
+  have hforcing : ∀ s, ρ (sys.forcing 0 u s) = 0 :=
+    fun s => forcing_eigenfunctional_eq_zero sys ρ lam hA hB 0 u s
+  have hInt : ρ (∫ s in (0:ℝ)..t, sys.forcing 0 u s) = 0 := by
+    rw [← ContinuousLinearMap.intervalIntegral_comp_comm ρ
+      (LinearSystem.intervalIntegrable_forcing sys 0 hu 0 t)]
+    simp only [hforcing, intervalIntegral.integral_zero]
+  have houter := LinearMap.eigenfunctional_exp_apply sys.continuousA ρ lam hAc (t - 0)
+    (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s)
+  have harg : ρ (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s) = ρ x := by
+    rw [map_add, hInt, add_zero]
+  rw [LinearSystem.variationOfConstants, LinearSystem.expFlow, houter, harg]
+  simp
+
+/-- **Non-cancellation of an uncontrollable antistable eigenmode.** If the
+continuous readout functional `ρ` is a left eigenfunctional of `A` with
+`0 ≤ lam`, annihilates the input channel (`ρ ∘ B = 0`), factors through the
+readout (`ρ = ψ ∘ H`), and detects the state `x` (`ρ x ≠ 0`), then no locally
+integrable open-loop input makes the controlled output `H x_u(t)` decay: the
+residue `ρ x` at the pole `lam` survives the input. -/
+theorem not_isOutputStabilizable_of_eigenfunctional_readout
+    (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℝ) (ψ : Z →L[ℝ] ℝ) (lam : ℝ)
+    (hlam : 0 ≤ lam) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (hρ : ∀ y, ρ y = ψ (sys.C y)) {x : X} (hx : ρ x ≠ 0) :
+    ¬ IsOutputStabilizable sys sys.C x := by
+  rintro ⟨u, hu, htend⟩
+  have hψ : Filter.Tendsto (fun t : ℝ => ψ (sys.C (sys.variationOfConstants 0 x u t)))
+      Filter.atTop (nhds 0) := by
+    have h1 := (ψ.continuous.tendsto 0).comp htend
+    simpa [Function.comp_def] using h1
+  have hlim : Filter.Tendsto (fun t : ℝ => Real.exp (lam * t) * ρ x) Filter.atTop (nhds 0) := by
+    refine hψ.congr' (Filter.Eventually.of_forall fun t => ?_)
+    rw [← hρ (sys.variationOfConstants 0 x u t),
+      variationOfConstants_eigenfunctional sys ρ lam hA hB x hu t]
+  have hnormlim : Filter.Tendsto (fun t : ℝ => ‖Real.exp (lam * t) * ρ x‖)
+      Filter.atTop (nhds 0) := by
+    simpa using hlim.norm
+  have hb : ‖ρ x‖ ≤ 0 := by
+    refine ge_of_tendsto hnormlim ?_
+    filter_upwards [Filter.eventually_ge_atTop (0:ℝ)] with t ht
+    rw [Real.norm_eq_abs, Real.norm_eq_abs, abs_mul, abs_of_pos (Real.exp_pos (lam * t))]
+    exact le_mul_of_one_le_left (abs_nonneg (ρ x)) (Real.one_le_exp (mul_nonneg hlam ht))
+  exact hx (norm_eq_zero.mp (le_antisymm hb (norm_nonneg _)))
+
+/-- **Complex forcing annihilation.** The complex-valued analogue of
+`forcing_eigenfunctional_eq_zero`: a complex left eigenfunctional of an
+uncontrollable mode annihilates the forcing integrand. -/
+theorem forcing_eigenfunctional_eq_zero_complex (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℂ)
+    (lam : ℂ) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (t₀ : ℝ) (u : ℝ → U) (s : ℝ) :
+    ρ (sys.forcing t₀ u s) = 0 := by
+  have hAc : ∀ y, ρ (sys.continuousA y) = lam * ρ y := fun y => by simpa using hA y
+  have h := LinearMap.eigenfunctional_exp_apply_complex sys.continuousA ρ lam hAc (-(s - t₀))
+    (sys.continuousB (u s))
+  rw [LinearSystem.forcing, LinearSystem.expFlow, h,
+    show ρ (sys.continuousB (u s)) = 0 from by simpa using hB (u s), mul_zero]
+
+/-- **Complex transfer-function residue at an uncontrollable eigenmode.** For
+every locally integrable input `ρ (x_u(t)) = e^{t lam} ρ x`, the complex
+residue identity covering non-real poles. -/
+theorem variationOfConstants_eigenfunctional_complex (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℂ)
+    (lam : ℂ) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (x : X) {u : ℝ → U} (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (t : ℝ) :
+    ρ (sys.variationOfConstants 0 x u t) = Complex.exp (t * lam) * ρ x := by
+  have hAc : ∀ y, ρ (sys.continuousA y) = lam * ρ y := fun y => by simpa using hA y
+  have hforcing : ∀ s, ρ (sys.forcing 0 u s) = 0 :=
+    fun s => forcing_eigenfunctional_eq_zero_complex sys ρ lam hA hB 0 u s
+  have hInt : ρ (∫ s in (0:ℝ)..t, sys.forcing 0 u s) = 0 := by
+    rw [← ContinuousLinearMap.intervalIntegral_comp_comm ρ
+      (LinearSystem.intervalIntegrable_forcing sys 0 hu 0 t)]
+    simp only [hforcing, intervalIntegral.integral_zero]
+  have houter := LinearMap.eigenfunctional_exp_apply_complex sys.continuousA ρ lam hAc (t - 0)
+    (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s)
+  have harg : ρ (x + ∫ s in (0:ℝ)..t, sys.forcing 0 u s) = ρ x := by
+    rw [map_add, hInt, add_zero]
+  rw [LinearSystem.variationOfConstants, LinearSystem.expFlow, houter, harg]
+  simp
+
+/-- **Complex non-cancellation of an uncontrollable antistable eigenmode.** If
+the complex readout functional `ρ` is a left eigenfunctional of `A` with
+`0 ≤ lam.re`, annihilates the input channel, factors through the readout
+(`ρ = ψ ∘ H`), and detects `x`, then `x` is not open-loop output-stabilizable.
+The real part condition is exactly `|e^{t lam}| = e^{t lam.re} ≥ 1` for `t ≥ 0`,
+so a non-real conjugate pole pair (a rotation) is covered as well. -/
+theorem not_isOutputStabilizable_of_eigenfunctional_readout_complex
+    (sys : LinearSystem ℝ X U Z) (ρ : X →L[ℝ] ℂ) (ψ : Z →L[ℝ] ℂ) (lam : ℂ)
+    (hlam : 0 ≤ lam.re) (hA : ∀ y, ρ (sys.A y) = lam * ρ y) (hB : ∀ v, ρ (sys.B v) = 0)
+    (hρ : ∀ y, ρ y = ψ (sys.C y)) {x : X} (hx : ρ x ≠ 0) :
+    ¬ IsOutputStabilizable sys sys.C x := by
+  rintro ⟨u, hu, htend⟩
+  have hψ : Filter.Tendsto (fun t : ℝ => ψ (sys.C (sys.variationOfConstants 0 x u t)))
+      Filter.atTop (nhds 0) := by
+    have h1 := (ψ.continuous.tendsto 0).comp htend
+    simpa [Function.comp_def] using h1
+  have hlim : Filter.Tendsto (fun t : ℝ => Complex.exp (t * lam) * ρ x)
+      Filter.atTop (nhds 0) := by
+    refine hψ.congr' (Filter.Eventually.of_forall fun t => ?_)
+    rw [← hρ (sys.variationOfConstants 0 x u t),
+      variationOfConstants_eigenfunctional_complex sys ρ lam hA hB x hu t]
+  have hnormlim : Filter.Tendsto (fun t : ℝ => ‖Complex.exp (t * lam) * ρ x‖)
+      Filter.atTop (nhds 0) := by
+    simpa using hlim.norm
+  have hb : ‖ρ x‖ ≤ 0 := by
+    refine ge_of_tendsto hnormlim ?_
+    filter_upwards [Filter.eventually_ge_atTop (0:ℝ)] with t ht
+    rw [norm_mul, Complex.norm_exp]
+    have hre : (t * lam).re = lam.re * t := by simp [Complex.mul_re, mul_comm]
+    rw [hre]
+    exact le_mul_of_one_le_left (norm_nonneg (ρ x)) (Real.one_le_exp (mul_nonneg hlam ht))
+  exact hx (norm_eq_zero.mp (le_antisymm hb (norm_nonneg _)))
+
+end LinearSystem
