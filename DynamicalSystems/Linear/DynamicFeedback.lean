@@ -8549,5 +8549,150 @@ theorem isExponentialPolynomial_forcing_primitive_eq_integral [FiniteDimensional
     IsExponentialPolynomial.forcing A t₀ hg
   exact intervalIntegral.sub_eq_integral_of_hasDerivAt hP hf.continuous t₀ t
 
+/-! ### The finite-Bohl variation-of-constants response
+
+This is the assembly step: the explicit finite Bohl particular solution of
+`exists_isExponentialPolynomial_hasDerivAt_ode_init`, whose primitive was identified with
+the Bochner integral by `isExponentialPolynomial_primitive_eq_integral`, is shown to be
+exactly the variation-of-constants response
+
+`x(t) = exp ((t - t₀) • A) x₀ + ∫_{t₀}^{t} exp ((t - s) • A) g(s) ds`.
+
+The two analytic ingredients are the accepted finite Bohl primitive/ODE construction
+(the antiderivative recursion `hasPrimitive` and the product rule
+`hasDerivAt_exp_sub_smul_clm_apply`) and the Bochner-integral identification of the
+primitive. The convolution reindexing `exp (tA) ∘ exp (s (-A)) = exp ((t - s) A)` is the
+exponential addition theorem `NormedSpace.exp_add_of_commute`, and the flow is moved
+inside the interval integral by `ContinuousLinearMap.intervalIntegral_comp_comm`.
+
+The theorem is stated for a complex generator, because the Bohl class
+`IsExponentialPolynomial` is complex by construction. To read it for a real
+`LinearSystem ℝ X U Y` one needs the explicit *real-transport representation hypothesis*:
+a complex vector-space structure on `X` together with complex-linear maps
+`Aℂ : X →ₗ[ℂ] X`, `Bℂ : U →ₗ[ℂ] X` whose real restrictions are `sys.A` and `sys.B`, and an
+input whose `Bℂ`-image is a finite Bohl signal. Under that hypothesis the real
+`variationOfConstants` curve is the real restriction of the response below, since
+the real and complex exponential series agree on the restricted algebra. No claim is
+made for arbitrary locally integrable inputs. -/
+
+/-- **Finite-Bohl variation-of-constants response.** For a finite-dimensional complex
+generator `A`, an initial time `t₀`, an initial state `x₀` and a finite Bohl forcing `g`,
+there is a finite Bohl curve `x` with `x(t₀) = x₀`, pointwise derivative `A x + g`, and the
+variation-of-constants integral representation
+`x(t) = exp ((t - t₀) • A) x₀ + ∫_{t₀}^{t} exp ((t - s) • A) g(s) ds`.
+
+All three components — Bohl membership, the ODE, and the Bochner-integral representation —
+are produced together; the construction is the explicit Bohl solution of
+`exists_isExponentialPolynomial_hasDerivAt_ode_init`. -/
+theorem exists_isExponentialPolynomial_variationOfConstants_response [FiniteDimensional ℂ X]
+    (A : X →ₗ[ℂ] X) (t₀ : ℝ) (x₀ : X) {g : ℝ → X} (hg : IsExponentialPolynomial g) :
+    ∃ x : ℝ → X, IsExponentialPolynomial x ∧ x t₀ = x₀ ∧
+      (∀ t, HasDerivAt x (A.toContinuousLinearMap (x t) + g t) t) ∧
+      ∀ t, x t = NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ +
+        ∫ s in t₀..t, NormedSpace.exp ((t - s) • A.toContinuousLinearMap) (g s) := by
+  have hG : IsExponentialPolynomial
+      (fun t : ℝ ↦ NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) :=
+    flow_mul_isExponentialPolynomial (-A) hg
+  obtain ⟨P, hP, hPderiv⟩ := hG.hasPrimitive
+  let c : X := NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ - P t₀
+  let Q : ℝ → X := fun t ↦ P t + c
+  have hmem : ∀ x : X →L[ℂ] X,
+      x ∈ Metric.eball (0 : X →L[ℂ] X) (NormedSpace.expSeries ℝ (X →L[ℂ] X)).radius :=
+    fun x => (NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℂ] X)).symm ▸ edist_lt_top _ _
+  have hQ : IsExponentialPolynomial Q := by
+    have h := hP.add (isExponentialPolynomial_const c)
+    have hfun : (P + fun _ : ℝ => c) = Q := by funext t; simp [Q]
+    rwa [hfun] at h
+  refine ⟨fun t : ℝ ↦ NormedSpace.exp (t • A.toContinuousLinearMap) (Q t),
+    flow_mul_isExponentialPolynomial A hQ, ?_, ?_, ?_⟩
+  · change NormedSpace.exp (t₀ • A.toContinuousLinearMap) (Q t₀) = x₀
+    have hQt₀ : Q t₀ = NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ := by
+      simp [Q, c]
+    have hcomm : Commute (t₀ • A.toContinuousLinearMap)
+        ((-t₀) • A.toContinuousLinearMap) :=
+      ((Commute.refl A.toContinuousLinearMap).smul_left t₀).smul_right (-t₀)
+    rw [hQt₀, ← mul_apply_eq_comp,
+      ← NormedSpace.exp_add_of_commute_of_mem_ball hcomm (hmem _) (hmem _)]
+    rw [show t₀ • A.toContinuousLinearMap + (-t₀) • A.toContinuousLinearMap = 0 by
+      rw [← add_smul]; simp]
+    simp
+  · intro t
+    have hQderiv : HasDerivAt Q
+        (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t := by
+      have h := (hPderiv t).add_const c
+      simpa [Q] using h
+    have h := hasDerivAt_exp_smul_clm_apply' A.toContinuousLinearMap
+      (H := Q) (H' := NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) t hQderiv
+    have hneg : (t • ((-A).toContinuousLinearMap) : X →L[ℂ] X) =
+        (-t) • A.toContinuousLinearMap := by
+      rw [show ((-A).toContinuousLinearMap : X →L[ℂ] X) = -A.toContinuousLinearMap by simp]
+      simp only [smul_neg, neg_smul]
+    have hcomm : Commute (t • A.toContinuousLinearMap) (t • ((-A).toContinuousLinearMap)) := by
+      rw [hneg]
+      exact ((Commute.refl A.toContinuousLinearMap).smul_left t).smul_right (-t)
+    have hsum : t • A.toContinuousLinearMap + t • ((-A).toContinuousLinearMap) = 0 := by
+      rw [hneg, ← add_smul]; simp
+    have hcancel : NormedSpace.exp (t • A.toContinuousLinearMap) *
+        NormedSpace.exp (t • ((-A).toContinuousLinearMap)) = 1 := by
+      rw [← NormedSpace.exp_add_of_commute_of_mem_ball hcomm (hmem _) (hmem _), hsum,
+        NormedSpace.exp_zero]
+    have hg_t : NormedSpace.exp (t • A.toContinuousLinearMap)
+        (NormedSpace.exp (t • ((-A).toContinuousLinearMap)) (g t)) = g t := by
+      rw [← mul_apply_eq_comp, hcancel]
+      rfl
+    rwa [hg_t] at h
+  · intro t
+    have hPint : P t - P t₀ =
+        ∫ s in t₀..t, NormedSpace.exp (s • ((-A).toContinuousLinearMap)) (g s) :=
+      isExponentialPolynomial_primitive_eq_integral A hg hPderiv t₀ t
+    have hGint : IntervalIntegrable
+        (fun s : ℝ ↦ NormedSpace.exp (s • ((-A).toContinuousLinearMap)) (g s))
+        MeasureTheory.volume t₀ t :=
+      (flow_mul_isExponentialPolynomial (-A) hg).continuous.intervalIntegrable t₀ t
+    have hxc : NormedSpace.exp (t • A.toContinuousLinearMap) (Q t) =
+        NormedSpace.exp (t • A.toContinuousLinearMap) (P t - P t₀) +
+          NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ := by
+      have hQsplit : Q t = P t - P t₀ +
+          NormedSpace.exp ((-t₀) • A.toContinuousLinearMap) x₀ := by
+        simp only [Q, c]; abel
+      rw [hQsplit, map_add]
+      congr 1
+      rw [← mul_apply_eq_comp,
+        ← NormedSpace.exp_add_of_commute_of_mem_ball
+          (((Commute.refl A.toContinuousLinearMap).smul_left t).smul_right (-t₀))
+          (hmem _) (hmem _)]
+      congr 1
+      rw [sub_smul, neg_smul]
+      abel
+    calc NormedSpace.exp (t • A.toContinuousLinearMap) (Q t)
+        = NormedSpace.exp (t • A.toContinuousLinearMap) (P t - P t₀) +
+            NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ := hxc
+      _ = NormedSpace.exp (t • A.toContinuousLinearMap)
+            (∫ s in t₀..t, NormedSpace.exp (s • ((-A).toContinuousLinearMap)) (g s)) +
+            NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ := by rw [hPint]
+      _ = (∫ s in t₀..t, NormedSpace.exp ((t - s) • A.toContinuousLinearMap) (g s)) +
+            NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ := by
+          rw [add_right_cancel_iff]
+          rw [← ContinuousLinearMap.intervalIntegral_comp_comm
+            (NormedSpace.exp (t • A.toContinuousLinearMap)) hGint]
+          apply intervalIntegral.integral_congr
+          intro s _
+          dsimp only
+          rw [show (s • ((-A).toContinuousLinearMap) : X →L[ℂ] X) =
+              (-s) • A.toContinuousLinearMap by
+            rw [show ((-A).toContinuousLinearMap : X →L[ℂ] X) =
+                -A.toContinuousLinearMap by simp]
+            simp only [smul_neg, neg_smul]]
+          rw [← mul_apply_eq_comp,
+            ← NormedSpace.exp_add_of_commute_of_mem_ball
+              (((Commute.refl A.toContinuousLinearMap).smul_left t).smul_right (-s))
+              (hmem _) (hmem _)]
+          congr 1
+          rw [sub_smul, neg_smul]
+          abel
+      _ = NormedSpace.exp ((t - t₀) • A.toContinuousLinearMap) x₀ +
+            ∫ s in t₀..t, NormedSpace.exp ((t - s) • A.toContinuousLinearMap) (g s) := by
+          rw [add_comm]
+
 end LinearSystem
 

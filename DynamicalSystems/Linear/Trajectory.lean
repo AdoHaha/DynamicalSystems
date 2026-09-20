@@ -645,6 +645,33 @@ theorem variationOfConstants_integral (sys : LinearSystem ℝ X U Y) (t₀ : ℝ
   rw [sub_eq_iff_eq_add, add_comm] at hsub
   simpa [x, F] using hsub
 
+/-- **Variation of constants: autonomous term plus Bochner forcing integral.** The response of
+the LTI system from `x(t₀) = x₀` under a locally integrable input equals the autonomous term
+plus the Bochner interval integral of the forcing:
+`x(t) = exp ((t - t₀) • A) x₀ + ∫_{t₀}^{t} exp ((t - s) • A) (B (u s)) ds`.
+
+This is the convolution reindexing of the `forcing` normalization: the flow factor
+`exp ((t - t₀) • A)` is moved inside the interval integral by
+`ContinuousLinearMap.intervalIntegral_comp_comm`, and the product
+`exp ((t - t₀) • A) ∘ exp (-(s - t₀) • A) = exp ((t - s) • A)` is the exponential semigroup
+`expFlow_add`. It is the finite-dimensional LTI form of the source equation (2.19). -/
+theorem variationOfConstants_eq_expFlow_add_integral (sys : LinearSystem ℝ X U Y) (t₀ : ℝ)
+    (x₀ : X) (u : ℝ → U) (hu : LocallyIntegrable u volume) (t : ℝ) :
+    sys.variationOfConstants t₀ x₀ u t =
+      sys.expFlow (t - t₀) x₀ +
+        ∫ s in t₀..t, sys.expFlow (t - s) (sys.continuousB (u s)) := by
+  have hInt : IntervalIntegrable (sys.forcing t₀ u) volume t₀ t :=
+    intervalIntegrable_forcing sys t₀ hu t₀ t
+  rw [variationOfConstants, map_add]
+  congr 1
+  rw [← ContinuousLinearMap.intervalIntegral_comp_comm (sys.expFlow (t - t₀)) hInt]
+  apply intervalIntegral.integral_congr
+  intro s _
+  simp only [forcing]
+  conv_lhs => rw [← mul_apply_eq_comp, ← expFlow_add]
+  congr 1
+  ring_nf
+
 /-- The variation-of-constants curve is a Carathéodory integral solution of the LTI state
 equation with a locally integrable input. -/
 theorem variationOfConstants_isCaratheodorySolutionOn (sys : LinearSystem ℝ X U Y) (t₀ : ℝ)
