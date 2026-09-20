@@ -6967,4 +6967,207 @@ theorem not_isOutputStabilizable_of_chain_readout
   exact hρj0 ((mul_eq_zero.mp hz').resolve_left
     (inv_ne_zero (Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero j0))))
 
+/-! ## Restricted-input open-loop necessity: eventually-zero inputs
+
+The full open-loop necessity of Trentelman–Stoorvogel–Hautus Theorem 4.37 is
+
+`IsOutputStabilizable sys H x → x ∈ W_g(ker H) = V*(ker H) + Xstab(A, B)`
+
+for an *arbitrary* locally integrable input. Its source proof splits the Bohl
+input and the forced trajectory into stable and antistable spectral parts and
+then reads the two resulting state equations. For a merely locally integrable
+input this splitting is unavailable. Writing the forced trajectory as
+`x_u(t) = e^{tA} x + r_t` with `r_t ∈ R = ⟨A | im B⟩`, the missing analytic step
+is that the reachable readout `H r_t` — the convolution of the Markov kernel
+`H e^{tA} B` with `u` — cannot cancel the autonomous antistable readout
+`H (e^{tA} x_b)`. This is a Titchmarsh/Laplace convolution-cancellation statement
+(equivalently: the transfer function `H (sI - A)⁻¹ B` has no pole at an
+uncontrollable mode), and the pinned library contains no Laplace-transform or
+Bohl-function decomposition support for it.
+
+This section lands the weakest *honest* admissibility condition under which the
+autonomous-limit argument closes with the accepted spectral tools: inputs that
+vanish for all sufficiently large times. For such an input the reachable part of
+the trajectory is constant past a finite horizon and the forced trajectory
+becomes the autonomous orbit of a single state, so the accepted antistable
+readout theorem applies with no extra spectral input. The resulting theorem is a
+genuine strict subclass of the general statement and therefore does **not**
+imply the original Corollary 6.22 necessity; the exact remaining obligation is
+the unrestricted locally-integrable statement recorded above. -/
+
+section EventuallyZeroInput
+
+open Filter MeasureTheory
+
+/-- **Eventually-zero inputs.** An input `u` vanishes for all sufficiently large
+times. This is the restricted admissibility class of
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_eventuallyZero`: it is
+strictly contained in the locally integrable inputs (so the restricted theorem
+does not imply the full open-loop necessity) but contains every compactly
+supported input and every input switched off after a finite horizon. -/
+def HasEventuallyZeroInput (u : ℝ → U) : Prop := ∃ T, ∀ t ≥ T, u t = 0
+
+/-- **The forcing vanishes when the input does.** With `u s = 0` the variation-of-
+constants forcing integrand `exp (-(s - t₀) • A) (B (u s))` is zero. -/
+theorem forcing_eq_zero_of_input_eq_zero (sys : LinearSystem ℝ X U Z) (t₀ : ℝ)
+    {u : ℝ → U} {s : ℝ} (hs : u s = 0) : sys.forcing t₀ u s = 0 := by
+  simp [LinearSystem.forcing, hs]
+
+omit [FiniteDimensional ℝ U] in
+/-- **The exponential flow preserves an invariant submodule.** If `W` is
+`A`-invariant (`Submodule.map A W ≤ W`), then `e^{tA} y ∈ W` for every `y ∈ W`
+and every real `t`. This is the finite-dimensional closedness argument for the
+exponential series: every partial sum `∑_{n<N} (n!)⁻¹ (tA)^n y` lies in `W`
+because `A^n y ∈ W`, and `W` is closed. It is the reusable invariance ingredient
+for carrying the algebraic `W_g(ker H)` along the flow. -/
+theorem expFlow_mem_of_mem_of_map_le (sys : LinearSystem ℝ X U Z) (W : Submodule ℝ X)
+    (hW : Submodule.map sys.A W ≤ W) (t : ℝ) {y : X} (hy : y ∈ W) :
+    sys.expFlow t y ∈ W := by
+  have hclosed : IsClosed (W : Set X) := W.closed_of_finiteDimensional
+  have hpow : ∀ n : ℕ, (sys.A ^ n) y ∈ W := by
+    intro n
+    induction n with
+    | zero => simpa using hy
+    | succ n ih =>
+      have hA : sys.A ((sys.A ^ n) y) ∈ W := hW ⟨(sys.A ^ n) y, ih, rfl⟩
+      rwa [show (sys.A ^ (n + 1)) y = sys.A ((sys.A ^ n) y) by
+        rw [pow_succ', Module.End.mul_apply]]
+  have hterm : ∀ n : ℕ, ((n.factorial : ℝ)⁻¹ • (t • sys.continuousA) ^ n) y ∈ W := by
+    intro n
+    rw [smul_apply, smul_pow_continuousA_apply]
+    exact W.smul_mem _ (W.smul_mem _ (hpow n))
+  have hsum := (LinearSystem.expFlow_hasSum sys t).mapL (ContinuousLinearMap.apply ℝ X y)
+  have htend := hsum.tendsto_sum_nat
+  exact hclosed.mem_of_tendsto htend (Eventually.of_forall fun N =>
+    W.sum_mem fun n _ => hterm n)
+
+/-- **Finite-horizon forcing integral.** If `u` vanishes on `[T, ∞)` and `T ≤ t`,
+then the forcing integral over `[0, t]` equals the one over `[0, T]`: the extra
+piece over `[T, t]` integrates a function that is pointwise zero there. -/
+theorem intervalIntegral_forcing_eq_of_eventuallyZero (sys : LinearSystem ℝ X U Z)
+    {u : ℝ → U} (hu : LocallyIntegrable u volume) {T t : ℝ} (ht : T ≤ t)
+    (hevent : ∀ s ≥ T, u s = 0) :
+    ∫ s in (0 : ℝ)..t, sys.forcing 0 u s = ∫ s in (0 : ℝ)..T, sys.forcing 0 u s := by
+  rw [← intervalIntegral.integral_add_adjacent_intervals
+    (intervalIntegrable_forcing sys 0 hu 0 T) (intervalIntegrable_forcing sys 0 hu T t)]
+  have hz : ∫ s in T..t, sys.forcing 0 u s = 0 := by
+    apply intervalIntegral.integral_zero_ae
+    filter_upwards with s hs
+    rw [Set.uIoc_of_le ht] at hs
+    exact forcing_eq_zero_of_input_eq_zero sys 0 (hevent s (le_of_lt hs.1))
+  rw [hz, add_zero]
+
+/-- **Restricted open-loop output-stabilizability.** The open-loop predicate of
+Trentelman–Stoorvogel–Hautus (4.28) with the input restricted to the
+eventually-zero class `HasEventuallyZeroInput`. This is the clearly named
+restricted-input variant: it is the source's finite-horizon control. -/
+def IsOutputStabilizableWithEventuallyZeroInput (sys : LinearSystem ℝ X U Z)
+    (H : X →ₗ[ℝ] Z) (x : X) : Prop :=
+  ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧
+    HasEventuallyZeroInput u ∧
+    Filter.Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t))
+      Filter.atTop (nhds 0)
+
+/-- **Restricted open-loop necessity.** If a locally integrable input that
+vanishes eventually drives the readout `t ↦ H (x_u(t, x))` to zero, then
+`x ∈ W_g(ker H) = V*(ker H) + Xstab(A, B)`.
+
+Proof: let `T` be a time after which `u` vanishes and put `y = x_u(T)`. Since the
+forcing integral is constant past `T`, the trajectory is the autonomous orbit
+`x_u(t) = e^{(t-T)A} y` for `t ≥ T`, so `H (e^{sA} y) → 0`. Decompose
+`y = y_g + y_b` along the accepted direct-sum identity `X = X_g(A) + X_b(A)`. The
+stable component has decaying readout and the antistable component then inherits
+it, so the accepted antistable readout theorem
+`LinearMap.antistable_readout_forces_unobservable` makes `y_b` unobservable, hence
+a member of `V*(ker H)`; the stable component lies in `Xstab(A, B)`. Thus
+`y ∈ W_g(ker H)`. Finally, `y - e^{TA} x ∈ R = ⟨A | im B⟩ ⊆ W_g(ker H)`, so
+`e^{TA} x ∈ W_g(ker H)`, and `expFlow_mem_of_mem_of_map_le` for the invariant
+subspace `W_g(ker H)` at time `-T` recovers `x = e^{-TA} (e^{TA} x) ∈ W_g(ker H)`.
+
+This is a strict subclass of the general locally integrable statement: it says
+that no finite-horizon open-loop control can stabilize a state outside
+`W_g(ker H)`, and it does not cover inputs with a persistent tail. The
+unrestricted Corollary 6.22 necessity remains open. -/
+theorem mem_outputStabilizableSubspace_of_isOutputStabilizable_of_eventuallyZero
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) {x : X} {u : ℝ → U}
+    (hu : LocallyIntegrable u volume) (hevent : HasEventuallyZeroInput u)
+    (htend : Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t)) atTop (nhds 0)) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H := by
+  classical
+  obtain ⟨T, hT⟩ := hevent
+  set y : X := sys.variationOfConstants 0 x u T with hy
+  have hstab : ∀ t : ℝ, T ≤ t →
+      sys.variationOfConstants 0 x u t = sys.expFlow (t - T) y := by
+    intro t ht
+    rw [hy, variationOfConstants_eq, variationOfConstants_eq,
+      intervalIntegral_forcing_eq_of_eventuallyZero sys hu ht hT]
+    rw [show sys.expFlow t = sys.expFlow (t - T) * sys.expFlow T by
+      rw [← expFlow_add, show t - T + T = t by ring]]
+    rfl
+  have hshift : Tendsto (fun t : ℝ => H (sys.expFlow (t - T) y)) atTop (nhds 0) := by
+    refine htend.congr' ?_
+    filter_upwards [eventually_ge_atTop T] with t ht
+    rw [hstab t ht]
+  have hauto : Tendsto (fun s : ℝ => H (sys.expFlow s y)) atTop (nhds 0) := by
+    have h2 : Tendsto (fun s : ℝ => H (sys.expFlow ((s + T) - T) y)) atTop (nhds 0) :=
+      hshift.comp (tendsto_atTop_add_const_right _ T tendsto_id)
+    simpa using h2
+  have hy_mem : y ∈ LinearMap.hurwitzSubspace sys.A ⊔ LinearMap.unstableSubspace sys.A := by
+    rw [LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top]; trivial
+  obtain ⟨yg, hyg, yb, hyb, hyeq⟩ := Submodule.mem_sup.mp hy_mem
+  have hgdec : Tendsto (fun s : ℝ => H (sys.expFlow s yg)) atTop (nhds 0) := by
+    have hh := tendsto_readout_exp_of_mem_hurwitzSubspace sys.A H hyg
+    simpa [LinearSystem.expFlow, LinearSystem.continuousA] using hh
+  have hbdec : Tendsto (fun s : ℝ => H (sys.expFlow s yb)) atTop (nhds 0) := by
+    have hsplit : (fun s : ℝ => H (sys.expFlow s y)) =
+        fun s => H (sys.expFlow s yg) + H (sys.expFlow s yb) := by
+      funext s
+      rw [← hyeq, map_add, map_add]
+    have h' := hauto
+    rw [hsplit] at h'
+    simpa using h'.sub hgdec
+  have hyb_unobs : yb ∈ LinearMap.unobservableSubspace H sys.A :=
+    LinearMap.antistable_readout_forces_unobservable sys.A H hyb hbdec
+  have hylabel : y ∈ outputStabilizableSubspace sys.A sys.B H := by
+    have hb_ctrl : yb ∈ LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H) := by
+      apply LinearMap.le_controlledInvariantSubspace
+        (LinearMap.unobservableSubspace_le_ker H sys.A)
+      · rw [LinearMap.IsControlledInvariant]
+        exact le_trans (LinearMap.map_unobservableSubspace_le H sys.A) le_sup_left
+      · exact hyb_unobs
+    have hg_stab : yg ∈ LinearMap.stabilizableSubspace sys.A sys.B :=
+      LinearMap.hurwitzSubspace_le_stabilizableSubspace sys.A sys.B hyg
+    rw [outputStabilizableSubspace, ← hyeq, add_comm yg yb]
+    exact Submodule.add_mem_sup hb_ctrl hg_stab
+  have hexpT : sys.expFlow T x ∈ outputStabilizableSubspace sys.A sys.B H := by
+    have hdiff := variationOfConstants_sub_expFlow_mem_reachableSubspace sys x hu T
+    have hmemW : sys.variationOfConstants 0 x u T - sys.expFlow T x ∈
+        outputStabilizableSubspace sys.A sys.B H :=
+      stabilizableSubspace_le_outputStabilizableSubspace sys.A sys.B H
+        (LinearMap.reachableSubspace_le_stabilizableSubspace sys.A sys.B hdiff)
+    have hsub := sub_mem hylabel hmemW
+    rwa [sub_sub_cancel] at hsub
+  have hx : x = sys.expFlow (-T) (sys.expFlow T x) := by
+    rw [← mul_apply_eq_comp,
+      show sys.expFlow (-T) * sys.expFlow T = 1 by
+        rw [← expFlow_add, neg_add_cancel, expFlow_zero],
+      one_apply_eq_self]
+  rw [hx]
+  exact expFlow_mem_of_mem_of_map_le sys _
+    (map_outputStabilizableSubspace_le sys.A sys.B H) (-T) hexpT
+
+/-- **Restricted open-loop necessity, predicate form.** The eventually-zero
+restricted open-loop predicate implies membership in `W_g(ker H)`. This is the
+clearly scoped restricted-input consequence; it does not imply the unrestricted
+Corollary 6.22 necessity. -/
+theorem mem_outputStabilizableSubspace_of_eventuallyZeroInput
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) {x : X}
+    (h : IsOutputStabilizableWithEventuallyZeroInput sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H := by
+  obtain ⟨u, hu, hevent, htend⟩ := h
+  exact mem_outputStabilizableSubspace_of_isOutputStabilizable_of_eventuallyZero
+    sys H hu hevent htend
+
+end EventuallyZeroInput
+
 end LinearSystem
