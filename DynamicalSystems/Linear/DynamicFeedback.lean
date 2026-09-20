@@ -7170,6 +7170,129 @@ theorem mem_outputStabilizableSubspace_of_eventuallyZeroInput
 
 end EventuallyZeroInput
 
+/-! ### Repository/API audit for the state-level Bohl/spectral projection
+
+Before this attempt the following searches were run against the pinned tree
+(Lean `4.34.0-rc2`, Mathlib `4.34.0-rc2`, DynamicalSystems `8db9c3c`); the
+results are the search evidence for the remaining gap.
+
+* `grep -rli bohl Mathlib` — **0 files**. There is no Bohl-function,
+  spectrum-of-a-function, or exponential-polynomial API beyond the finite-sum
+  lemmas already in `DynamicalSystems.Linear.Stabilization`.
+* `grep -rli laplace Mathlib` — 4 files
+  (`LinearAlgebra/Matrix/Determinant/Bird/Correctness.lean` and
+  `LinearAlgebra/Matrix/SemiringInverse.lean` — Laplace *determinant expansions*;
+  `Analysis/Distribution/DerivNotation.lean` — the Laplace *operator* notation;
+  `Analysis/Calculus/AbsolutelyMonotone.lean` — a citation). No transform of a
+  signal.
+* `grep -rli titchmarsh Mathlib` — **0 files**.
+* One-parameter continuous semigroups: **0 files** (only
+  `RepresentationTheory/Continuous/Basic.lean` for group representations). The
+  `DynamicalSystems` semigroup API (`Basic/Autonomous.lean`,
+  `Basic/NonAutonomous.lean`, `Stability/Floquet.lean`) is combinatorial and
+  carries no spectral theory.
+* Spectral/Riesz projection for operators: **0 files**.
+* `Mathlib/MeasureTheory/Measure/ResolventTransform.lean` provides the
+  Stieltjes/Cauchy transform of a *measure*, not the Laplace transform of a
+  trajectory; `resolvent`/`resolventSet` exist and are already used by the
+  accepted `LinearMap.eigenfunctional_resolvent_eq_zero` in this file.
+* ODE layer: `DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear`
+  supplies global existence for a *globally Lipschitz / linear-growth field*
+  (`exists_solution_Icc_of_linear_growth`, `global_existence`), not for merely
+  locally integrable forcing; `...ODE.FundamentalSolution` supplies only the
+  `IsFundamentalSolution` derivative lemmas, not a preconstructed LTI
+  exponential flow. The accepted LTI flow is `LinearSystem.expFlow`.
+* `Module.End.maxGenEigenspace` and the finite-dimensional generalized
+  eigenspace decomposition (`Mathlib/LinearAlgebra/Eigenspace/*`) *are* present
+  and are already used by `Stabilization.lean` for the autonomous antistable
+  readout theorem `LinearMap.antistable_readout_forces_unobservable`.
+
+Prior branches/commits: `linear-control-ralph`, `barbalat-ralph`, `pr67-ralph`
+and `feat/input-output-graphs` were inspected. The only declarations absent from
+this worktree concern unrelated files and are already merged
+(`linear_fundamental_solution` in `GlobalExistence.lean`, `isCompleteVectorField`
+in `Dynamics/Basic.lean`, `isGraph_inputOutput`/`isGraph_inputState` in
+`InputOutput/ClosedLoop.lean`). No unmerged declaration supplies the Bohl/Laplace
+input decomposition.
+
+The one focused assembly attempt using the discovered APIs is the
+reachable-invisible readout theorem below: it closes the unrestricted locally
+integrable input quantifier in the case that the readout annihilates the whole
+reachable subspace `⟨A | im B⟩` (so no input can affect the output at all). It
+genuinely connects `variationOfConstants_sub_expFlow_mem_reachableSubspace` (the
+reachable quotient-autonomy lemma) with
+`LinearMap.antistable_readout_forces_unobservable` (the autonomous spectral
+extraction). The general case is not reached because the input can add a
+reachable readout `H r_t` that is not separated from the autonomous antistable
+readout without a spectral projection of the *input*; this is the exact
+remaining gap recorded at the end of the file. -/
+
+/-- **Unrestricted open-loop necessity when the readout annihilates the
+reachable subspace.** If `⟨A | im B⟩ ≤ ker H`, then the forced trajectory and the
+autonomous orbit have the same readout (`variationOfConstants_sub_expFlow_mem_reachableSubspace`
+kills the input contribution), so the input quantifier is vacuous and the
+accepted spectral decomposition argument applies verbatim. Hence every
+open-loop output-stabilizable state lies in `W_g(ker H) = V*(ker H) + Xstab`.
+
+This is a genuine partial case of `mem_outputStabilizableSubspace_of_isOutputStabilizable`:
+it covers, for example, every strictly proper system whose controlled output
+does not see the reachable directions (and all of `B = 0`), while the general
+case still needs the Bohl/spectral projection of the input recorded below. -/
+theorem mem_outputStabilizableSubspace_of_isOutputStabilizable_of_reachable_le_ker
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
+    (hR : LinearMap.reachableSubspace sys.A sys.B ≤ LinearMap.ker H)
+    {x : X} (h : IsOutputStabilizable sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H := by
+  obtain ⟨u, hu, htend⟩ := h
+  have hsame : (fun t : ℝ => H (sys.variationOfConstants 0 x u t)) =
+      fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x) := by
+    funext t
+    have hmem := variationOfConstants_sub_expFlow_mem_reachableSubspace sys x hu t
+    have hzero : H (sys.variationOfConstants 0 x u t - sys.expFlow t x) = 0 :=
+      LinearMap.mem_ker.mp (hR hmem)
+    have hsplit : sys.variationOfConstants 0 x u t =
+        sys.expFlow t x + (sys.variationOfConstants 0 x u t - sys.expFlow t x) := by
+      abel
+    rw [hsplit, map_add, hzero, add_zero]
+    rfl
+  have hdec : Filter.Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x))
+      Filter.atTop (nhds 0) := by
+    rw [← hsame]
+    exact htend
+  have hxmem : x ∈ LinearMap.hurwitzSubspace sys.A ⊔ LinearMap.unstableSubspace sys.A := by
+    rw [LinearMap.hurwitzSubspace_sup_unstableSubspace_eq_top]
+    trivial
+  obtain ⟨xg, hxg, xb, hxb, hxeq⟩ := Submodule.mem_sup.mp hxmem
+  have hgdec : Filter.Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xg))
+      Filter.atTop (nhds 0) :=
+    tendsto_readout_exp_of_mem_hurwitzSubspace sys.A H hxg
+  have hbdec : Filter.Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xb))
+      Filter.atTop (nhds 0) := by
+    have hsplit : (fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) x)) =
+        fun t : ℝ => H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xg) +
+          H (NormedSpace.exp (t • sys.A.toContinuousLinearMap) xb) := by
+      funext t
+      rw [← hxeq, map_add, map_add]
+    have h' := hdec
+    rw [hsplit] at h'
+    simpa using h'.sub hgdec
+  have hxb_unobs : xb ∈ LinearMap.unobservableSubspace H sys.A :=
+    LinearMap.antistable_readout_forces_unobservable sys.A H hxb hbdec
+  have hxb_ctrl : xb ∈ LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H) :=
+    LinearMap.le_controlledInvariantSubspace
+      (LinearMap.unobservableSubspace_le_ker H sys.A)
+      (by
+        rw [LinearMap.IsControlledInvariant]
+        exact le_trans (LinearMap.map_unobservableSubspace_le H sys.A) le_sup_left)
+      hxb_unobs
+  have hxg_stab : xg ∈ LinearMap.stabilizableSubspace sys.A sys.B :=
+    LinearMap.hurwitzSubspace_le_stabilizableSubspace sys.A sys.B hxg
+  rw [outputStabilizableSubspace, ← hxeq, add_comm xg xb]
+  exact Submodule.add_mem_sup hxb_ctrl hxg_stab
+
 /-! ## Exponential-polynomial inputs: Laplace-transform uniqueness
 
 The unrestricted open-loop necessity is obstructed at the ``reachable readout''
@@ -7375,8 +7498,13 @@ projection of a finite-dimensional trajectory (the stable/antistable direct sum
 but not the spectral projection of the *input* or the reachable readout), the
 observability-chain readout on the reachable subspace, and the PBH separation at
 the threshold `V*(ker H ⊔ ⟨A | im B⟩)`. The pinned library has no Laplace
-transform, Bohl-function, or spectrum-of-a-function API for the first of these,
-which is why the theorem is still not claimed. The new declarations above are
-non-vacuous: the transfer identity holds for any real right inverse of
+transform, Bohl-function, or spectrum-of-a-function API for the first of these
+(the repository/API search evidence is recorded in the audit section above), which
+is why the theorem is still not claimed. The closest unrestricted-input result
+proved here is
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_reachable_le_ker`,
+which handles every readout annihilating the reachable subspace; it is a strict
+partial case and does not imply the general theorem. The new declarations above
+are non-vacuous: the transfer identity holds for any real right inverse of
 `s • 1 - A` (in particular the resolvent), and the uniqueness lemma applies to
 every decaying antistable exponential polynomial. -/
