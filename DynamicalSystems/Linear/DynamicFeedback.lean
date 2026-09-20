@@ -7170,4 +7170,213 @@ theorem mem_outputStabilizableSubspace_of_eventuallyZeroInput
 
 end EventuallyZeroInput
 
+/-! ## Exponential-polynomial inputs: Laplace-transform uniqueness
+
+The unrestricted open-loop necessity is obstructed at the ``reachable readout''
+term `H r_t`, where `x_u(t) = e^{tA} x + r_t` with `r_t ∈ R = ⟨A | im B⟩`. This
+section prepares the *Laplace-transform / exponential-polynomial* scoping of that
+obstruction. The class of signals with a finite expansion in exponential
+characters times polynomials is the natural one for which the Laplace transform
+is a rational function and the representation is unique, so that a decaying
+combination of antistable characters must vanish identically. That uniqueness is
+`tendsto_zero_of_isAntistableExponentialPolynomial`, a direct consequence of the
+accepted polynomial-exponential reduction
+`LinearMap.tendsto_zero_of_sum_exp_polynomial`.
+
+The frequency-domain companion of the time-domain autonomous-residue identity
+`LinearMap.eigenfunctional_exp_apply` is proved separately in the `LinearMap`
+namespace at the end of the file: the input transfer `ρ (s I - A)⁻¹ B` has **no**
+value at an uncontrollable eigenmode, `ρ (resolvent A s (B v)) = 0` for
+`s ≠ lam`. It is the Laplace-domain statement that the input channel has no pole
+at `lam` because `ρ ∘ B = 0`. -/
+
+/-- **Antistable exponential-polynomial functions.** A complex-valued function on
+`ℝ` that is a finite sum of polynomial terms against complex exponential
+characters whose frequencies have nonnegative real part:
+
+`f t = ∑ i : Fin n, e^{t * μ i} * (∑ k < D + 1, t ^ k * a i k)`
+
+with distinct `μ i` and `0 ≤ (μ i).re`. These are the finite-dimensional
+``exponential-order'' signals whose Laplace transform is a rational function with
+all poles in the closed right half-plane: a decaying such signal must vanish
+identically (`tendsto_zero_of_isAntistableExponentialPolynomial`). -/
+def IsAntistableExponentialPolynomial (f : ℝ → ℂ) : Prop :=
+  ∃ (n D : ℕ) (μ : Fin n → ℂ) (a : Fin n → ℕ → ℂ),
+    (∀ i, 0 ≤ (μ i).re) ∧ Function.Injective μ ∧
+      ∀ t, f t = ∑ i : Fin n, Complex.exp ((t : ℂ) * μ i) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)
+
+/-- **Laplace-transform uniqueness for antistable exponential polynomials.** A
+finite sum of polynomial terms times exponential characters with nonnegative
+real parts that tends to `0` at `+∞` is identically zero: all polynomial
+coefficients at every (antistable) frequency vanish. This is the elementary
+uniqueness behind the convolution non-cancellation reading, and it is exactly the
+accepted `LinearMap.tendsto_zero_of_sum_exp_polynomial` packaged for the named
+exponential-polynomial class. -/
+theorem tendsto_zero_of_isAntistableExponentialPolynomial {f : ℝ → ℂ}
+    (hf : IsAntistableExponentialPolynomial f)
+    (h : Filter.Tendsto f Filter.atTop (nhds 0)) : f = 0 := by
+  obtain ⟨n, D, μ, a, hμ, hinj, hrepr⟩ := hf
+  have hz : ∀ i : Fin n, ∀ k ≤ D, a i k = 0 := by
+    have hz' : ∀ i ∈ (Finset.univ : Finset (Fin n)), ∀ k ≤ D, a i k = 0 :=
+      LinearMap.tendsto_zero_of_sum_exp_polynomial (Finset.univ : Finset (Fin n))
+        μ (fun i _ => hμ i) (fun i _ j _ hij => hinj hij) D a (by
+          have hfun : (fun t : ℝ => ∑ i : Fin n, Complex.exp ((t : ℂ) * μ i) •
+              (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k)) = f := by
+            funext t
+            exact (hrepr t).symm
+          rw [hfun]
+          exact h)
+    intro i k hk
+    exact hz' i (Finset.mem_univ i) k hk
+  funext t
+  rw [hrepr t]
+  refine Finset.sum_eq_zero fun i _ => ?_
+  have hinner : (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a i k) = 0 := by
+    refine Finset.sum_eq_zero fun k hk => ?_
+    rw [Finset.mem_range] at hk
+    rw [hz i k (Nat.lt_succ_iff.mp hk), smul_zero]
+  rw [hinner, smul_zero]
+
 end LinearSystem
+
+namespace LinearMap
+
+variable {X U : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+
+/-- **Laplace/transfer non-cancellation at an uncontrollable eigenmode.** Let
+`ρ : X →L[ℝ] ℂ` be a complex left eigenfunctional of `A` at the mode `lam`,
+`ρ (A y) = lam * ρ y`, and suppose `ρ` annihilates the input channel,
+`ρ (B v) = 0`. If `R` is any right inverse of `s • 1 - A`
+(`(s • 1 - A) * R = 1`), then the transfer value `ρ (R (B v))` vanishes unless
+`s = lam`:
+
+`(s - lam) * ρ (R (B v)) = ρ (B v) = 0`.
+
+This is the frequency-domain counterpart of the time-domain autonomous-residue
+identity `eigenfunctional_exp_apply`: the Laplace transform `ρ (s I - A)⁻¹ B` of
+the input-to-readout channel has no pole at the uncontrollable mode `lam`. -/
+theorem eigenfunctional_resolvent_apply_eq_zero
+    (A : X →L[ℝ] X) (ρ : X →L[ℝ] ℂ) (lam : ℂ)
+    (hA : ∀ y : X, ρ (A y) = lam * ρ y)
+    (B : U →L[ℝ] X) (hB : ∀ v : U, ρ (B v) = 0)
+    {s : ℝ} (R : X →L[ℝ] X) (hR : (s • (1 : X →L[ℝ] X) - A) * R = 1)
+    (hs : (s : ℂ) ≠ lam) (v : U) :
+    ρ (R (B v)) = 0 := by
+  have hcomp : ρ (B v) = ((s : ℂ) - lam) * ρ (R (B v)) := by
+    have h1 : (s • (1 : X →L[ℝ] X) - A) (R (B v)) = B v := by
+      have := congrArg (fun g : X →L[ℝ] X => g (B v)) hR
+      simpa using this
+    calc ρ (B v) = ρ ((s • (1 : X →L[ℝ] X) - A) (R (B v))) := by rw [h1]
+      _ = ρ (s • (R (B v)) - A (R (B v))) := by
+            rw [_root_.sub_apply, _root_.smul_apply, one_apply_eq_self]
+      _ = s • ρ (R (B v)) - ρ (A (R (B v))) := by rw [map_sub, map_smul]
+      _ = s • ρ (R (B v)) - lam * ρ (R (B v)) := by rw [hA]
+      _ = ((s : ℂ) - lam) * ρ (R (B v)) := by
+            rw [RCLike.real_smul_eq_coe_smul (K := ℂ), smul_eq_mul, sub_mul]
+            rfl
+  have h0 : ((s : ℂ) - lam) * ρ (R (B v)) = 0 := by rw [← hcomp, hB v]
+  rcases mul_eq_zero.mp h0 with h' | h'
+  · exact absurd (sub_eq_zero.mp h') hs
+  · exact h'
+
+/-- **Resolvent form of the Laplace non-cancellation.** Specialising the right
+inverse to the resolvent `R = resolvent A s`, for `s` in the resolvent set the
+input transfer `ρ (resolvent A s (B v))` vanishes at every mode `lam ≠ s`. Hence
+the transfer function of the input channel, evaluated through an uncontrollable
+eigenfunctional, is zero wherever it is defined. -/
+theorem eigenfunctional_resolvent_eq_zero
+    (A : X →L[ℝ] X) (ρ : X →L[ℝ] ℂ) (lam : ℂ)
+    (hA : ∀ y : X, ρ (A y) = lam * ρ y)
+    (B : U →L[ℝ] X) (hB : ∀ v : U, ρ (B v) = 0)
+    {s : ℝ} (hs : s ∈ resolventSet ℝ A) (hsl : (s : ℂ) ≠ lam) (v : U) :
+    ρ (resolvent A s (B v)) = 0 := by
+  have hR : (s • (1 : X →L[ℝ] X) - A) * resolvent A s = 1 := by
+    rw [_root_.sub_mul, smul_mul_assoc, one_mul]
+    exact sub_eq_iff_eq_add.mpr (smul_resolvent_eq_one_add A hs)
+  exact eigenfunctional_resolvent_apply_eq_zero A ρ lam hA B hB
+    (resolvent A s) hR hsl v
+
+end LinearMap
+
+/-! ## Assessment: the exponential-polynomial scoping and the bridge to
+`IsOutputStabilizable`
+
+This task formalised the *frequency-domain* and *finite-expansion* content of the
+convolution non-cancellation statement:
+
+* `LinearMap.eigenfunctional_resolvent_apply_eq_zero` and its resolvent
+  specialisation `LinearMap.eigenfunctional_resolvent_eq_zero` — the input
+  transfer `ρ (s I - A)⁻¹ B` of an uncontrollable eigenfunctional is zero
+  wherever it is defined, `(s - lam) * ρ (R (B v)) = ρ (B v) = 0`;
+* `LinearSystem.IsAntistableExponentialPolynomial` and
+  `LinearSystem.tendsto_zero_of_isAntistableExponentialPolynomial` — Laplace /
+  exponential-polynomial uniqueness: a decaying finite sum of antistable
+  polynomial-exponential characters vanishes identically.
+
+The two together give the exact frequency-domain reading of the obstruction: at
+an uncontrollable antistable mode `lam`, the autonomous readout carries the
+residue `e^{lam t} ρ x` and the input transfer has no pole, so no locally
+integrable input can cancel the residue. This is precisely
+`LinearSystem.variationOfConstants_eigenfunctional` (and its complex and
+Jordan-chain companions), which already holds for **every** locally integrable
+input.
+
+### Why the restriction does not bridge to `IsOutputStabilizable`
+
+Restricting the input to the exponential-polynomial class therefore adds **no**
+strength on the residue side: the accepted eigenfunctional/Jordan-chain
+non-cancellation theorems are unconditional in the input. The genuine remaining
+gap is not a property of a single readout functional but a *separation* of the
+autonomous antistable part of the **state** from the reachable subspace:
+
+```lean
+theorem LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x : X)
+    (h : IsOutputStabilizable sys H x) :
+    x ∈ outputStabilizableSubspace sys.A sys.B H
+```
+
+Writing `x_u(t) = e^{tA} x + r_t` with `r_t ∈ R = ⟨A | im B⟩`
+(`variationOfConstants_sub_expFlow_mem_reachableSubspace`), the total readout is
+`H x_u(t) = H (e^{tA} x) + H r_t`. The missing step is the *spectral* statement
+that the reachable readout `H r_t` — the convolution of the Markov kernel
+`H e^{tA} B` with `u` — cannot cancel the antistable autonomous residue of the
+state. The single-functional form of this statement is false
+(`exists_readout_functional_of_notMem_ker_sup_reachable` and the
+`V*(ker H ⊔ R)` threshold discussion above); the observability-chain functionals
+`ρ ∘ H ∘ Aᵏ` separate only `V*(ker H ⊔ ⟨A | im B⟩)`, which can strictly exceed
+`V*(ker H) + Xstab`. This is the documented Titchmarsh/Laplace
+convolution-cancellation obligation; it is a statement about the *whole
+trajectory* and is independent of whether the input is locally integrable or
+exponential-polynomial.
+
+The frequency-domain identity above shows why the exponential-polynomial
+hypothesis cannot close that gap: an input may have a frequency `μ` that is an
+eigenvalue of `A`, in which case the forcing integrand
+`e^{-(s-t₀)A} (B u(s))` produces an `e^{lam t}` term in the reachable readout
+exactly when the mode `lam` is *reachable* (some `ρ` with `ρ ∘ B ≠ 0`). When it
+does, `H` detects the reachable unstable direction; the cancellation succeeds and
+the state lies in `V*(ker H) + Xstab` after all (the two-dimensional examples in
+the handoff notes above). When it does not, the accepted eigenfunctional residues
+already give non-cancellation for all inputs. The finite-expansion class thus
+splits cleanly into cases already covered, and does not add a proof of the
+separation.
+
+### Exact remaining obligation
+
+The single open obligation remains
+`LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable`; the tools
+it needs are the ones recorded in the handoff notes: the complex Bohl/spectral
+projection of a finite-dimensional trajectory (the stable/antistable direct sum
+`hurwitzSubspace_sup_unstableSubspace_eq_top` gives the splitting of the *space*,
+but not the spectral projection of the *input* or the reachable readout), the
+observability-chain readout on the reachable subspace, and the PBH separation at
+the threshold `V*(ker H ⊔ ⟨A | im B⟩)`. The pinned library has no Laplace
+transform, Bohl-function, or spectrum-of-a-function API for the first of these,
+which is why the theorem is still not claimed. The new declarations above are
+non-vacuous: the transfer identity holds for any real right inverse of
+`s • 1 - A` (in particular the resolvent), and the uniqueness lemma applies to
+every decaying antistable exponential polynomial. -/
