@@ -8825,5 +8825,251 @@ theorem variationOfConstants_transport_of_complexification
 
 end RealTransport
 
+/-! ## Finite-Bohl quotient non-cancellation
+
+The real/complex transport of the previous section shows that, for a real system
+whose input image is a finite Bohl signal, the readout of the forced trajectory is
+again a finite exponential polynomial. This section turns that class membership
+into the *spectral projection* step that the unrestricted locally-integrable
+`W_g` necessity has been missing.
+
+For an unrestricted locally integrable input the pinned library supplies no
+spectrum-of-a-function (Laplace/Bohl) API, so the stable/antistable spectral
+projection of the forced trajectory cannot be formed. The finite Bohl class,
+however, carries its frequency set as an explicit `Finset ℂ`, so the projection is
+elementary: collecting the frequencies with `μ.re < 0` and with `0 ≤ μ.re` splits
+any finite exponential polynomial into a *stable* part, which decays at `+∞` by
+the accepted scalar engine `LinearMap.tendsto_exp_mul_pow`, and an *antistable*
+part. If the whole signal tends to `0`, the antistable part inherits the limit, and
+the accepted polynomial-exponential vanishing theorem
+`tendsto_zero_of_isAntistableBohlSignal` forces it to vanish identically.
+
+The reachable-subspace quotient enters through the transport hypothesis
+`IsExponentialPolynomial (fun t ↦ Bℂ (u t))`: the whole reachable forcing is finite
+Bohl, so the readout of the forced trajectory — not merely its autonomous orbit — is
+covered by the projection. The resulting statement is the strongest honest quotient
+result available for the finite-Bohl class. It is a strict specialisation of the
+open-loop `W_g` necessity `mem_outputStabilizableSubspace_of_isOutputStabilizable`:
+an arbitrary locally integrable input has no finite frequency set, so the
+projection below cannot be formed, and the Laplace/Titchmarsh convolution
+non-cancellation at the threshold `V*(ker H ⊔ ⟨A | im B⟩)` remains the documented
+extension problem. Nothing here asserts that unrestricted statement. -/
+
+section FiniteBohlProjection
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℂ X]
+
+/-- A **stable finite exponential polynomial**: a finite-support spectral sum all
+of whose frequencies lie in the open left half-plane. This is the decaying
+counterpart of `IsAntistableBohlSignal`. -/
+def IsStableExponentialPolynomial (f : ℝ → X) : Prop :=
+  ∃ (s : Finset ℂ) (D : ℕ) (a : ℂ → ℕ → X),
+    (∀ μ ∈ s, μ.re < 0) ∧
+      ∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+
+/-- Every stable finite exponential polynomial is a finite exponential polynomial. -/
+theorem IsStableExponentialPolynomial.isExponentialPolynomial {f : ℝ → X}
+    (hf : IsStableExponentialPolynomial f) : IsExponentialPolynomial f := by
+  obtain ⟨s, D, a, -, hrepr⟩ := hf
+  exact ⟨s, D, a, hrepr⟩
+
+/-- **Stable finite exponential polynomials decay.** A finite sum of polynomial
+terms times exponential characters with strictly negative real part tends to `0`
+at `+∞`. Each mode decays by the accepted scalar engine
+`LinearMap.tendsto_exp_mul_pow`, and the finite sum follows from
+`tendsto_finsetSum`. -/
+theorem IsStableExponentialPolynomial.tendsto_zero {f : ℝ → X}
+    (hf : IsStableExponentialPolynomial f) :
+    Filter.Tendsto f Filter.atTop (nhds 0) := by
+  obtain ⟨s, D, a, hμs, hrepr⟩ := hf
+  rw [show f = (fun t : ℝ => ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) from funext hrepr]
+  have hterm : ∀ μ ∈ s, Filter.Tendsto
+      (fun t : ℝ => Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) Filter.atTop (nhds 0) := by
+    intro μ hμ
+    have hinner : Filter.Tendsto
+        (fun t : ℝ => ∑ k ∈ Finset.range (D + 1), Complex.exp ((t : ℂ) * μ) •
+          ((t : ℂ) ^ k • a μ k)) Filter.atTop (nhds 0) := by
+      have h2 := tendsto_finsetSum (Finset.range (D + 1))
+        (f := fun (k : ℕ) (t : ℝ) =>
+          Complex.exp ((t : ℂ) * μ) • ((t : ℂ) ^ k • a μ k))
+        (a := fun _ => (0 : X)) (by
+          intro k _
+          have hscalar : Filter.Tendsto
+              (fun t : ℝ => Complex.exp ((t : ℂ) * μ) * (t : ℂ) ^ k)
+              Filter.atTop (nhds 0) :=
+            LinearMap.tendsto_exp_mul_pow μ (hμs μ hμ) k
+          have hfun2 : (fun t : ℝ => Complex.exp ((t : ℂ) * μ) • ((t : ℂ) ^ k • a μ k)) =
+              fun t : ℝ => (Complex.exp ((t : ℂ) * μ) * (t : ℂ) ^ k) • a μ k := by
+            funext t; rw [smul_smul]
+          rw [hfun2]
+          simpa using hscalar.smul_const (a μ k))
+      simpa using h2
+    rwa [show (fun t : ℝ => Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+        fun t : ℝ => ∑ k ∈ Finset.range (D + 1), Complex.exp ((t : ℂ) * μ) •
+          ((t : ℂ) ^ k • a μ k) from by funext t; rw [Finset.smul_sum]]
+  simpa using tendsto_finsetSum s hterm
+
+/-- **Stable/antistable splitting of a finite exponential polynomial.** Every
+finite-support spectral sum decomposes as a stable part (frequencies in the open
+left half-plane) plus an antistable part (frequencies in the closed right
+half-plane). The split keeps the same frequency set, degree bound and coefficient
+family; it is the explicit spectral projection that the unrestricted
+locally-integrable input class cannot supply. -/
+theorem IsExponentialPolynomial.exists_stable_add_antistable {f : ℝ → X}
+    (hf : IsExponentialPolynomial f) :
+    ∃ g b : ℝ → X, f = g + b ∧ IsStableExponentialPolynomial g ∧
+      IsAntistableBohlSignal b := by
+  obtain ⟨s, D, a, hrepr⟩ := hf
+  classical
+  refine ⟨fun t : ℝ => ∑ μ ∈ s.filter (fun μ => μ.re < 0),
+      Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k),
+    fun t : ℝ => ∑ μ ∈ s.filter (fun μ => ¬ μ.re < 0),
+      Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k), ?_, ?_, ?_⟩
+  · funext t
+    rw [Pi.add_apply, hrepr t]
+    exact (Finset.sum_filter_add_sum_filter_not s (fun μ => μ.re < 0)
+      (fun μ => Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k))).symm
+  · exact ⟨s.filter (fun μ => μ.re < 0), D, a,
+      fun μ hμ => (Finset.mem_filter.mp hμ).2, fun t => rfl⟩
+  · exact ⟨s.filter (fun μ => ¬ μ.re < 0), D, a,
+      fun μ hμ => not_lt.mp (Finset.mem_filter.mp hμ).2, fun t => rfl⟩
+
+/-- **Forward-projection non-cancellation.** If a finite exponential polynomial
+tends to `0` at `+∞`, then in *any* stable/antistable decomposition its
+antistable part vanishes identically. The stable part decays by
+`IsStableExponentialPolynomial.tendsto_zero`, so the antistable part inherits the
+limit; the accepted polynomial-exponential vanishing theorem then kills it. This
+is the abstract frequency-projection core of the finite-Bohl quotient result. -/
+theorem eq_zero_of_eq_stable_add_antistable_of_tendsto_zero {f g b : ℝ → X}
+    (hgb : f = g + b) (hg : IsStableExponentialPolynomial g)
+    (hb : IsAntistableBohlSignal b) (hf : Filter.Tendsto f Filter.atTop (nhds 0)) :
+    b = 0 := by
+  have hg0 : Filter.Tendsto g Filter.atTop (nhds 0) := hg.tendsto_zero
+  have hb0 : Filter.Tendsto b Filter.atTop (nhds 0) := by
+    have hsub : Filter.Tendsto (fun t : ℝ => f t - g t) Filter.atTop (nhds 0) := by
+      simpa using hf.sub hg0
+    refine hsub.congr' (Filter.Eventually.of_forall fun t => ?_)
+    rw [hgb]
+    simp only [Pi.add_apply]
+    abel
+  exact tendsto_zero_of_isAntistableBohlSignal hb hb0
+
+/-- **A decaying finite exponential polynomial is stable.** If a finite
+exponential polynomial tends to `0` at `+∞`, then it admits a representation all
+of whose frequencies lie in the open left half-plane; equivalently, its antistable
+spectral projection vanishes. This is the transparent form of the
+frequency-projection non-cancellation: decay cannot leave an antistable character
+un cancelled. -/
+theorem IsExponentialPolynomial.of_tendsto_zero {f : ℝ → X}
+    (hf : IsExponentialPolynomial f) (h : Filter.Tendsto f Filter.atTop (nhds 0)) :
+    IsStableExponentialPolynomial f := by
+  obtain ⟨g, b, hgb, hg, hb⟩ := hf.exists_stable_add_antistable
+  have hb0 : b = 0 := eq_zero_of_eq_stable_add_antistable_of_tendsto_zero hgb hg hb h
+  have hf_eq_g : f = g := by rw [hgb, hb0, add_zero]
+  rw [hf_eq_g]
+  exact hg
+
+end FiniteBohlProjection
+
+section FiniteBohlReadout
+
+variable {U Y : Type*}
+variable [NormedAddCommGroup U] [NormedSpace ℂ U]
+variable [NormedAddCommGroup Y] [NormedSpace ℂ Y]
+
+/-- **Finite-Bohl stable/antistable decomposition of the forced readout.** Under
+the explicit complexification hypotheses of `variationOfConstants_transport_of_
+complexification` (finite-dimensional complex state and input spaces, complex-linear
+`Aℂ`, `Bℂ`, `Cℂ` whose real restrictions are `sys.A`, `sys.B`, `sys.C`), a locally
+integrable input whose `Bℂ`-image is a finite Bohl signal produces a forced readout
+that splits into a stable part and an antistable part.
+
+This is the transported real finite-Bohl trajectory theorem fed into the spectral
+projection `IsExponentialPolynomial.exists_stable_add_antistable`: the readout is a
+finite exponential polynomial by the transport theorem, and its frequency set is
+split by the sign of the real part. -/
+theorem finiteBohl_readout_stable_antistable_decomposition
+    [FiniteDimensional ℂ X] [FiniteDimensional ℂ U]
+    (sys : LinearSystem ℝ X U Y) (Aℂ : X →ₗ[ℂ] X) (Bℂ : U →ₗ[ℂ] X) (Cℂ : X →ₗ[ℂ] Y)
+    (hA : Aℂ.restrictScalars ℝ = sys.A) (hB : Bℂ.restrictScalars ℝ = sys.B)
+    (hC : Cℂ.restrictScalars ℝ = sys.C)
+    (t₀ : ℝ) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBohl : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t))) :
+    ∃ g b : ℝ → Y,
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) = g + b ∧
+      IsStableExponentialPolynomial g ∧ IsAntistableBohlSignal b := by
+  have hreadout : IsExponentialPolynomial
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) :=
+    (variationOfConstants_transport_of_complexification sys Aℂ Bℂ Cℂ hA hB hC
+      t₀ x₀ u hu hBohl).2.1
+  exact hreadout.exists_stable_add_antistable
+
+/-- **Finite-Bohl quotient non-cancellation.** Let `sys : LinearSystem ℝ X U Y` be a
+real system whose state map, input map and readout are the real restrictions of
+complex-linear maps `Aℂ`, `Bℂ`, `Cℂ`, with `[FiniteDimensional ℂ X]` and
+`[FiniteDimensional ℂ U]`. If the input `u` is locally integrable and its
+`Bℂ`-image is a finite Bohl signal, then the forced readout is a finite exponential
+polynomial, and whenever it tends to `0` at `+∞` its antistable quotient component
+vanishes: there is a stable part `g` and an antistable part `b` with
+`C x_u = g + b`, `g` stable, `b` antistable, and `b = 0`.
+
+The reachable-subspace quotient is carried by the finite-Bohl input-image hypothesis:
+the whole reachable forcing `t ↦ exp((t-t₀)Aℂ)(Bℂ u(t))` is a finite exponential
+polynomial, so the projection sees the forced trajectory and not only its autonomous
+orbit. This is the strongest statement for the finite-Bohl class; the unrestricted
+locally-integrable `W_g` necessity is deliberately not claimed. -/
+theorem finiteBohl_readout_antistable_eq_zero_of_tendsto_zero
+    [FiniteDimensional ℂ X] [FiniteDimensional ℂ U]
+    (sys : LinearSystem ℝ X U Y) (Aℂ : X →ₗ[ℂ] X) (Bℂ : U →ₗ[ℂ] X) (Cℂ : X →ₗ[ℂ] Y)
+    (hA : Aℂ.restrictScalars ℝ = sys.A) (hB : Bℂ.restrictScalars ℝ = sys.B)
+    (hC : Cℂ.restrictScalars ℝ = sys.C)
+    (t₀ : ℝ) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBohl : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)))
+    (hdec : Filter.Tendsto
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) Filter.atTop (nhds 0)) :
+    ∃ g b : ℝ → Y,
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) = g + b ∧
+      IsStableExponentialPolynomial g ∧ IsAntistableBohlSignal b ∧ b = 0 := by
+  obtain ⟨g, b, hgb, hg, hb⟩ :=
+    finiteBohl_readout_stable_antistable_decomposition sys Aℂ Bℂ Cℂ hA hB hC
+      t₀ x₀ u hu hBohl
+  exact ⟨g, b, hgb, hg, hb,
+    eq_zero_of_eq_stable_add_antistable_of_tendsto_zero hgb hg hb hdec⟩
+
+/-- **The decaying finite-Bohl readout is stable.** The stable reformulation of
+`finiteBohl_readout_antistable_eq_zero_of_tendsto_zero`: under the same
+transport, finite-Bohl and finite-dimensional hypotheses, a decaying forced
+readout admits a representation with all frequencies in the open left half-plane.
+This is the compact form in which the finite-Bohl non-cancellation composes with
+the accepted quotient/readout APIs. -/
+theorem finiteBohl_readout_isStable_of_tendsto_zero
+    [FiniteDimensional ℂ X] [FiniteDimensional ℂ U]
+    (sys : LinearSystem ℝ X U Y) (Aℂ : X →ₗ[ℂ] X) (Bℂ : U →ₗ[ℂ] X) (Cℂ : X →ₗ[ℂ] Y)
+    (hA : Aℂ.restrictScalars ℝ = sys.A) (hB : Bℂ.restrictScalars ℝ = sys.B)
+    (hC : Cℂ.restrictScalars ℝ = sys.C)
+    (t₀ : ℝ) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBohl : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)))
+    (hdec : Filter.Tendsto
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) Filter.atTop (nhds 0)) :
+    IsStableExponentialPolynomial
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) := by
+  have hreadout : IsExponentialPolynomial
+      (fun t : ℝ => sys.C (sys.variationOfConstants t₀ x₀ u t)) :=
+    (variationOfConstants_transport_of_complexification sys Aℂ Bℂ Cℂ hA hB hC
+      t₀ x₀ u hu hBohl).2.1
+  exact hreadout.of_tendsto_zero hdec
+
+end FiniteBohlReadout
+
 end LinearSystem
 
