@@ -5100,6 +5100,45 @@ def IsOutputStabilizable (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
     Filter.Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t))
       Filter.atTop (nhds 0)
 
+/-- **The open-loop output-stabilizable set is closed under addition.** If `u`
+stabilizes `x` and `v` stabilizes `y`, then `u + v` stabilizes `x + y`, since
+the variation-of-constants trajectory is additive in the pair `(x, u)`:
+`x_{u+v}(t, x + y) = x_u(t, x) + x_v(t, y)`. This is the structural fact that
+the source's `W_g(ker H)` is a subspace, and it is used whenever the
+output-stabilizable set is manipulated as a submodule rather than as a raw
+trajectory predicate. -/
+theorem isOutputStabilizable_add (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
+    {x y : X} (hx : IsOutputStabilizable sys H x) (hy : IsOutputStabilizable sys H y) :
+    IsOutputStabilizable sys H (x + y) := by
+  obtain ⟨u, hu, hux⟩ := hx
+  obtain ⟨v, hv, hvy⟩ := hy
+  refine ⟨u + v, hu.add hv, ?_⟩
+  have htraj : ∀ t : ℝ, sys.variationOfConstants 0 (x + y) (u + v) t =
+      sys.variationOfConstants 0 x u t + sys.variationOfConstants 0 y v t := by
+    intro t
+    rw [variationOfConstants_eq, variationOfConstants_eq, variationOfConstants_eq]
+    have hfor : (∫ s in (0 : ℝ)..t, sys.forcing 0 (u + v) s) =
+        (∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+          (∫ s in (0 : ℝ)..t, sys.forcing 0 v s) := by
+      rw [show sys.forcing 0 (u + v) = sys.forcing 0 u + sys.forcing 0 v from
+        forcing_add sys u v]
+      exact intervalIntegral.integral_add
+        (intervalIntegrable_forcing sys 0 hu 0 t)
+        (intervalIntegrable_forcing sys 0 hv 0 t)
+    rw [hfor]
+    have harg : x + y + ((∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+        (∫ s in (0 : ℝ)..t, sys.forcing 0 v s)) =
+        (x + ∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+          (y + ∫ s in (0 : ℝ)..t, sys.forcing 0 v s) := by abel
+    rw [harg, map_add]
+  have hfun : (fun t : ℝ => H (sys.variationOfConstants 0 (x + y) (u + v) t)) =
+      fun t : ℝ => H (sys.variationOfConstants 0 x u t) +
+        H (sys.variationOfConstants 0 y v t) := by
+    funext t
+    rw [htraj t, map_add]
+  rw [hfun]
+  simpa using hux.add hvy
+
 omit [FiniteDimensional ℝ U] in
 /-- **State-feedback sufficiency for `W_g(ker H)`.** Every state in
 `W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a static state feedback `F` whose
