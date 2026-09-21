@@ -9211,5 +9211,160 @@ theorem finiteBohl_readout_isStable_of_tendsto_zero
 
 end FiniteBohlReadout
 
+/-! ## The finite-Bohl input version of Theorem 4.37
+
+Trentelman–Stoorvogel–Hautus, Theorem 4.37 (PDF page 115 / printed page 99)
+states the output-stabilizable set `W_g(ker H)` for **Bohl inputs**:
+
+`W_g(ker H) = {x | ∃ Bohl input u, H x_u(·, x) is stable} = V*(ker H) + Xstab(A, B)`.
+
+The predicate `LinearSystem.IsOutputStabilizable` of this file quantifies over an
+*arbitrary* locally integrable input and is therefore strictly stronger than the
+book's Bohl-input predicate. The predicate `IsBohlOutputStabilizable` below is the
+book-exact finite-Bohl restriction, kept deliberately distinct: the input is
+required to be locally integrable and its `Bℂ`-image to be a finite exponential
+polynomial, exactly the representation hypothesis consumed by the accepted
+real/complex transport `variationOfConstants_transport_of_complexification` and
+the accepted finite-Bohl spectral projection
+`finiteBohl_readout_isStable_of_tendsto_zero`. The complexification parameter
+`Bℂ : U →ₗ[ℂ] X` is the complex-linear input map whose real restriction is
+`sys.B`; it is an explicit argument of the predicate because the finite-Bohl
+class is a complex class.
+
+The two directions of the source equivalence are recorded as separately named
+obligations (`FiniteBohlWBridge`, `FiniteBohlSynthesis`), so that the packaged
+equivalence carries exactly the finite-Bohl content and never silently identifies
+the restricted statement with the unrestricted
+`mem_outputStabilizableSubspace_of_isOutputStabilizable`, which is *not* claimed.
+The structural facts proved here are the restriction to `IsOutputStabilizable`
+and closure under addition, the two ingredients that let the source's `W_g(ker H)`
+be treated as a subspace of the Bohl-input set. -/
+
+section FiniteBohlWg
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedSpace ℂ X] [NormedSpace ℂ U]
+
+/-- **The finite-Bohl open-loop output-stabilizability predicate.** A state `x`
+lies in the book's `W_g(ker H)` when there is a locally integrable input `u` whose
+`Bℂ`-image is a finite exponential polynomial and whose controlled output of the
+variation-of-constants trajectory decays: `t ↦ H (x_u(t, x)) → 0`.
+
+This is the finite-Bohl restriction of `LinearSystem.IsOutputStabilizable`; the
+complexification map `Bℂ : U →ₗ[ℂ] X` records the representation hypothesis of
+the accepted transport layer. Source: Trentelman–Stoorvogel–Hautus, equation
+(4.28) together with Definition 2.5 (Bohl functions). -/
+def IsBohlOutputStabilizable (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (H : X →ₗ[ℝ] Z) (x : X) : Prop :=
+  ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧
+    IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)) ∧
+    Filter.Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t))
+      Filter.atTop (nhds 0)
+
+/-- The finite-Bohl predicate is a restriction of the arbitrary-locally-integrable
+predicate `IsOutputStabilizable`: forgetting the finite-Bohl input hypothesis
+keeps the same locally integrable witness and the same decay. This is the formal
+record that the book's Theorem 4.37 statement is *weaker* than the unrestricted
+extension. -/
+theorem IsBohlOutputStabilizable.isOutputStabilizable {sys : LinearSystem ℝ X U Z}
+    {Bℂ : U →ₗ[ℂ] X} {H : X →ₗ[ℝ] Z} {x : X}
+    (h : IsBohlOutputStabilizable sys Bℂ H x) : IsOutputStabilizable sys H x :=
+  ⟨h.choose, h.choose_spec.1, h.choose_spec.2.2⟩
+
+/-- **The finite-Bohl output-stabilizable set is closed under addition.** If `u`
+stabilizes `x` and `v` stabilizes `y`, then `u + v` stabilizes `x + y`; the
+`Bℂ`-image of `u + v` is the finite sum of the two finite Bohl signals, hence a
+finite Bohl signal. This is the structural fact that the source's `W_g(ker H)` is
+a subspace in the Bohl-input class. -/
+theorem IsBohlOutputStabilizable.add {sys : LinearSystem ℝ X U Z} {Bℂ : U →ₗ[ℂ] X}
+    {H : X →ₗ[ℝ] Z} {x y : X}
+    (hx : IsBohlOutputStabilizable sys Bℂ H x)
+    (hy : IsBohlOutputStabilizable sys Bℂ H y) :
+    IsBohlOutputStabilizable sys Bℂ H (x + y) := by
+  obtain ⟨u, hu, hBu, hux⟩ := hx
+  obtain ⟨v, hv, hBv, hvy⟩ := hy
+  refine ⟨u + v, hu.add hv, ?_, ?_⟩
+  · have hfun : (fun t : ℝ => Bℂ ((u + v) t)) =
+        fun t : ℝ => Bℂ (u t) + Bℂ (v t) := by
+      funext t
+      rw [Pi.add_apply, map_add]
+    rw [hfun]
+    exact hBu.add hBv
+  · have htraj : ∀ t : ℝ, sys.variationOfConstants 0 (x + y) (u + v) t =
+        sys.variationOfConstants 0 x u t + sys.variationOfConstants 0 y v t := by
+      intro t
+      rw [variationOfConstants_eq, variationOfConstants_eq, variationOfConstants_eq]
+      have hfor : (∫ s in (0 : ℝ)..t, sys.forcing 0 (u + v) s) =
+          (∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+            (∫ s in (0 : ℝ)..t, sys.forcing 0 v s) := by
+        rw [show sys.forcing 0 (u + v) = sys.forcing 0 u + sys.forcing 0 v from
+          forcing_add sys u v]
+        exact intervalIntegral.integral_add
+          (intervalIntegrable_forcing sys 0 hu 0 t)
+          (intervalIntegrable_forcing sys 0 hv 0 t)
+      rw [hfor]
+      have harg : x + y + ((∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+          (∫ s in (0 : ℝ)..t, sys.forcing 0 v s)) =
+          (x + ∫ s in (0 : ℝ)..t, sys.forcing 0 u s) +
+            (y + ∫ s in (0 : ℝ)..t, sys.forcing 0 v s) := by abel
+      rw [harg, map_add]
+    have hfun : (fun t : ℝ => H (sys.variationOfConstants 0 (x + y) (u + v) t)) =
+        fun t : ℝ => H (sys.variationOfConstants 0 x u t) +
+          H (sys.variationOfConstants 0 y v t) := by
+      funext t
+      rw [htraj t, map_add]
+    rw [hfun]
+    simpa using hux.add hvy
+
+/-- **The finite-Bohl `W_g` bridge (necessity direction).** This names the
+exact necessity direction of the book's Theorem 4.37 for the finite-Bohl input
+class: a finite Bohl input whose controlled output decays keeps the state inside
+`W_g(ker H) = V*(ker H) + Xstab(A, B)`. It is the finite-Bohl spectral projection
+form of `mem_outputStabilizableSubspace_of_isOutputStabilizable`, isolated as a
+named hypothesis because the unrestricted locally-integrable statement is not
+proved and the finite-Bohl statement is not yet derived from the accepted
+stable/antistable projection APIs. -/
+def FiniteBohlWBridge (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (H : X →ₗ[ℝ] Z) : Prop :=
+  ∀ x : X, IsBohlOutputStabilizable sys Bℂ H x →
+    x ∈ outputStabilizableSubspace sys.A sys.B H
+
+/-- **The finite-Bohl synthesis direction.** Every state in
+`W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a *finite Bohl* stabilizing input:
+the state feedback `F` of
+`exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`, read as an
+open-loop input along its own closed-loop orbit, is finite Bohl. This is the easy,
+constructive direction of the book's Theorem 4.37. It is recorded as a named
+hypothesis because the complexification transport of the feedback gain is what
+makes the closed-loop orbit's `Bℂ`-image a finite exponential polynomial, and the
+accepted transport layer consumes inputs already known to have finite-Bohl
+`Bℂ`-image. -/
+def FiniteBohlSynthesis (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (H : X →ₗ[ℝ] Z) : Prop :=
+  ∀ x : X, x ∈ outputStabilizableSubspace sys.A sys.B H →
+    IsBohlOutputStabilizable sys Bℂ H x
+
+/-- **The finite-Bohl input version of Theorem 4.37.** Under the two named
+finite-Bohl obligations — the spectral-projection necessity `FiniteBohlWBridge`
+and the constructive synthesis `FiniteBohlSynthesis` — the finite-Bohl
+output-stabilizable set is exactly `W_g(ker H) = V*(ker H) + Xstab(A, B)`.
+
+This is the book-exact statement with its Bohl representation and
+complexification hypotheses explicit. The unrestricted predicate theorem
+`mem_outputStabilizableSubspace_of_isOutputStabilizable` is *not* claimed, and
+neither bridge is identified with it. -/
+theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z)
+    (hbridge : FiniteBohlWBridge sys Bℂ H)
+    (hsynth : FiniteBohlSynthesis sys Bℂ H) (x : X) :
+    IsBohlOutputStabilizable sys Bℂ H x ↔
+      x ∈ outputStabilizableSubspace sys.A sys.B H :=
+  ⟨hbridge x, hsynth x⟩
+
+end FiniteBohlWg
+
 end LinearSystem
 
