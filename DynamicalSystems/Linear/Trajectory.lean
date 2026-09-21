@@ -7,6 +7,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Linear.Basic
+public import DynamicalSystems.Linear.Stabilization
 public import DynamicalSystems.InputOutput.StateSpace
 public import Mathlib.Analysis.SpecialFunctions.Exponential
 public import Mathlib.Analysis.Calculus.Deriv.Mul
@@ -888,5 +889,234 @@ theorem ltiInputOutputRel_existsUnique (sys : LinearSystem ℝ X U Y) (t₀ : �
     (ltiStateTrajectoryRel_existsUnique sys t₀ x₀)
 
 end Bridges
+
+/-! ### Exponentially weighted `L¹` inputs and weighted convolution decay
+
+The finite-Bohl non-cancellation of `DynamicFeedback.lean` restricts the input
+image `B u` to a finite exponential polynomial. A natural broader class is the
+**exponentially weighted `L¹`** inputs: those `u` for which
+`∫_0^t e^{ω s} ‖u s‖ ds` is bounded on `[0, ∞)` for some weight `ω > 0` (for a
+locally integrable `u` this is exactly `∫_0^∞ e^{ω s} ‖u s‖ ds < ∞`, because the
+integrand is nonnegative and the partial integrals are monotone).
+
+The weighted hypothesis *implies* local integrability on `[0, ∞)` (dominated by
+the weight) but says nothing about `u` on `(-∞, 0)`, so on the whole line it is
+neither implied by nor implies the unrestricted `LocallyIntegrable u volume`
+predicate used by `LinearSystem.IsOutputStabilizable`; it is a genuinely
+incomparable input class. It is also incomparable with the finite-Bohl class:
+growing Bohl modes `e^{c t}` (`c > 0`) are finite exponential polynomials but not
+exponentially weighted `L¹`, while `t ↦ e^{-t}`-type weights are weighted `L¹`
+without being Bohl.
+
+The main result here is the **weighted convolution decay** for a Hurwitz state
+map: if `A` is Hurwitz and `u` has finite exponential weight, then the
+variation-of-constants state and readout decay at `+∞`. The proof uses the
+quantitative operator-norm bound `LinearMap.exists_exponential_norm_bound_of_isHurwitz`
+together with the variation-of-constants integral representation; the weight lets
+the convolution be dominated uniformly in the horizon while the Hurwitz rate
+supplies the decay.
+
+#### Limitation
+
+This does **not** advance the unrestricted open-loop `W_g` necessity
+`LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable`. The
+antistable *reachable* readout can genuinely be cancelled by a weighted `L¹`
+input whenever the corresponding unstable mode is reachable. The scalar model
+`A = 1`, `B = 1`, `C = 1`, `x₀ = 1` with `u(s) = -2 e^{-s}` gives the exact
+trajectory `x_u(t) = e^{-t}`, so an exponentially decaying (hence weighted `L¹`)
+input cancels the antistable mode. What is true is that an *uncontrollable*
+antistable mode cannot be cancelled, but that is already proved for every locally
+integrable input by `LinearSystem.not_isOutputStabilizable_of_eigenfunctional_readout`
+and needs no weighted hypothesis. The weighted class therefore gives the
+convolution decay theorem below and a precise account of the obstruction, but it
+does not close the open-loop necessity; the finite-Bohl spectral projection
+remains the strongest non-cancellation statement landed. -/
+
+section ExpWeightedL1
+
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+
+/-- **Exponentially weighted `L¹` inputs.** An input `u : ℝ → U` has finite
+exponential weight `ω` when its weighted partial integrals are bounded on
+`[0, ∞)`: there is `W` with `∫_0^t e^{ω s} ‖u s‖ ds ≤ W` for every `t ≥ 0`.
+For locally integrable `u` the integrand is nonnegative and the partial
+integrals are monotone, so this is equivalent to
+`∫_0^∞ e^{ω s} ‖u s‖ ds < ∞`. -/
+def IsExpWeightedL1 (ω : ℝ) (u : ℝ → U) : Prop :=
+  ∃ W : ℝ, ∀ t : ℝ, 0 ≤ t → ∫ s in (0 : ℝ)..t, Real.exp (ω * s) * ‖u s‖ ≤ W
+
+/-- **Weighted convolution bound.** Let the operator exponential decay at rate
+`γ` with constant `C`: `‖exp (t A)‖ ≤ C e^{-γ t}` for `t ≥ 0`. If the input `u`
+has finite exponential weight `ω` with bound `W`, then the variation-of-constants
+trajectory from `x₀` obeys
+
+`‖x_u(t)‖ ≤ C e^{-(min γ ω) t} (‖x₀‖ + ‖B‖ W)`.
+
+The exponential factor is the worse of the two rates: the operator bound decays
+at `γ`, while the weight controls the convolution at `ω`. -/
+theorem norm_variationOfConstants_le_of_expFlow_bound
+    (sys : LinearSystem ℝ X U Y) {C γ : ℝ} (hC : 0 ≤ C)
+    (hbound : ∀ t : ℝ, 0 ≤ t → ‖sys.expFlow t‖ ≤ C * Real.exp (-γ * t))
+    (x₀ : X) {u : ℝ → U} (hu : LocallyIntegrable u volume)
+    {ω W : ℝ}
+    (hW : ∀ t : ℝ, 0 ≤ t → ∫ s in (0 : ℝ)..t, Real.exp (ω * s) * ‖u s‖ ≤ W)
+    {t : ℝ} (ht : 0 ≤ t) :
+    ‖sys.variationOfConstants 0 x₀ u t‖ ≤
+      C * Real.exp (-(min γ ω) * t) * (‖x₀‖ + ‖sys.continuousB‖ * W) := by
+  rw [variationOfConstants_eq_expFlow_add_integral sys 0 x₀ u hu t, sub_zero]
+  have hInt : ‖∫ s in (0 : ℝ)..t,
+        sys.expFlow (t - s) (sys.continuousB (u s))‖ ≤
+      C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) * W := by
+    have hbase : IntervalIntegrable (fun s : ℝ ↦ ‖u s‖ * Real.exp (ω * s))
+        volume 0 t := by
+      rw [intervalIntegrable_iff]
+      exact (IntegrableOn.mul_continuousOn
+        ((hu.integrableOn_isCompact isCompact_uIcc).norm)
+        ((Real.continuous_exp.comp (continuous_const.mul continuous_id)).continuousOn)
+        isCompact_uIcc).mono_set uIoc_subset_uIcc
+    have hg_int : IntervalIntegrable
+        (fun s : ℝ ↦ C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) *
+          (‖u s‖ * Real.exp (ω * s))) volume 0 t :=
+      hbase.const_mul _
+    calc ‖∫ s in (0 : ℝ)..t,
+          sys.expFlow (t - s) (sys.continuousB (u s))‖
+        ≤ ∫ s in (0 : ℝ)..t,
+            C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) *
+              (‖u s‖ * Real.exp (ω * s)) :=
+          intervalIntegral.norm_integral_le_of_norm_le ht
+            (Filter.Eventually.of_forall (fun s hs ↦ by
+              have hs0 : 0 ≤ s := le_of_lt hs.1
+              have hts : 0 ≤ t - s := by linarith [hs.2]
+              have hexp_le : Real.exp (-γ * (t - s)) ≤
+                  Real.exp (-(min γ ω) * t) * Real.exp (ω * s) := by
+                have h1 : Real.exp (-γ * (t - s)) ≤
+                    Real.exp (-(min γ ω) * (t - s)) := by
+                  apply Real.exp_le_exp.mpr
+                  have hmul := mul_le_mul_of_nonneg_right (min_le_left γ ω) hts
+                  linarith
+                have h2 : Real.exp (-(min γ ω) * (t - s)) =
+                    Real.exp (-(min γ ω) * t) * Real.exp ((min γ ω) * s) := by
+                  rw [show -(min γ ω) * (t - s) =
+                      -(min γ ω) * t + (min γ ω) * s by ring, Real.exp_add]
+                have h3 : Real.exp ((min γ ω) * s) ≤ Real.exp (ω * s) :=
+                  Real.exp_le_exp.mpr
+                    (mul_le_mul_of_nonneg_right (min_le_right γ ω) hs0)
+                rw [h2] at h1
+                exact h1.trans (mul_le_mul_of_nonneg_left h3 (Real.exp_pos _).le)
+              calc ‖sys.expFlow (t - s) (sys.continuousB (u s))‖
+                  ≤ ‖sys.expFlow (t - s)‖ * ‖sys.continuousB (u s)‖ :=
+                    (sys.expFlow (t - s)).le_opNorm _
+                _ ≤ (C * Real.exp (-γ * (t - s))) *
+                      (‖sys.continuousB‖ * ‖u s‖) := by
+                    gcongr
+                    · exact hbound (t - s) hts
+                    · exact sys.continuousB.le_opNorm (u s)
+                _ = (C * Real.exp (-γ * (t - s))) *
+                      (‖sys.continuousB‖ * ‖u s‖) := rfl
+                _ ≤ (C * (Real.exp (-(min γ ω) * t) * Real.exp (ω * s))) *
+                      (‖sys.continuousB‖ * ‖u s‖) := by
+                    exact mul_le_mul_of_nonneg_right
+                      (mul_le_mul_of_nonneg_left hexp_le hC) (by positivity)
+                _ = C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) *
+                      (‖u s‖ * Real.exp (ω * s)) := by ring))
+            hg_int
+      _ = C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) *
+            (∫ s in (0 : ℝ)..t, Real.exp (ω * s) * ‖u s‖) := by
+          rw [intervalIntegral.integral_const_mul]
+          congr 1
+          apply intervalIntegral.integral_congr
+          intro s _
+          ring
+      _ ≤ C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) * W := by
+          apply mul_le_mul_of_nonneg_left (hW t ht)
+          positivity
+  have hx₀ : ‖sys.expFlow t x₀‖ ≤ C * Real.exp (-γ * t) * ‖x₀‖ := by
+    calc ‖sys.expFlow t x₀‖ ≤ ‖sys.expFlow t‖ * ‖x₀‖ :=
+          (sys.expFlow t).le_opNorm x₀
+      _ ≤ (C * Real.exp (-γ * t)) * ‖x₀‖ :=
+          mul_le_mul_of_nonneg_right (hbound t ht) (norm_nonneg x₀)
+      _ = C * Real.exp (-γ * t) * ‖x₀‖ := by ring
+  have hexpγm : Real.exp (-γ * t) ≤ Real.exp (-(min γ ω) * t) := by
+    apply Real.exp_le_exp.mpr
+    have := mul_le_mul_of_nonneg_right (min_le_left γ ω) ht
+    linarith
+  calc ‖sys.expFlow t x₀ +
+        ∫ s in (0 : ℝ)..t, sys.expFlow (t - s) (sys.continuousB (u s))‖
+      ≤ ‖sys.expFlow t x₀‖ +
+          ‖∫ s in (0 : ℝ)..t, sys.expFlow (t - s) (sys.continuousB (u s))‖ :=
+        norm_add_le _ _
+    _ ≤ C * Real.exp (-γ * t) * ‖x₀‖ +
+          C * ‖sys.continuousB‖ * Real.exp (-(min γ ω) * t) * W := by
+        gcongr
+    _ ≤ C * Real.exp (-(min γ ω) * t) * ‖x₀‖ +
+          C * Real.exp (-(min γ ω) * t) * (‖sys.continuousB‖ * W) := by
+        apply add_le_add
+        · exact mul_le_mul_of_nonneg_right
+            (mul_le_mul_of_nonneg_left hexpγm hC) (norm_nonneg x₀)
+        · exact le_of_eq (by ring)
+    _ = C * Real.exp (-(min γ ω) * t) * (‖x₀‖ + ‖sys.continuousB‖ * W) := by ring
+
+/-- **Weighted `L¹` input-to-state decay for a Hurwitz state map.** If `A` is
+Hurwitz and the locally integrable input `u` has finite exponential weight
+`ω > 0`, then every variation-of-constants trajectory from a fixed initial state
+tends to `0` at `+∞`. This is the weighted-convolution companion of the finite-Bohl
+quotient non-cancellation: it is the statement that the *stable* part of the
+reachable readout always decays under a weighted `L¹` hypothesis. -/
+theorem tendsto_variationOfConstants_of_isHurwitz_of_expWeighted
+    (sys : LinearSystem ℝ X U Y) (hA : LinearMap.IsHurwitz sys.A)
+    (x₀ : X) {u : ℝ → U} (hu : LocallyIntegrable u volume)
+    {ω : ℝ} (hω : 0 < ω) (hW : IsExpWeightedL1 ω u) :
+    Filter.Tendsto (fun t : ℝ ↦ sys.variationOfConstants 0 x₀ u t)
+      Filter.atTop (nhds 0) := by
+  obtain ⟨C, hC, γ, hγ, hbound⟩ :=
+    LinearMap.exists_exponential_norm_bound_of_isHurwitz sys.A hA
+  obtain ⟨W, hW⟩ := hW
+  set K : ℝ := ‖x₀‖ + ‖sys.continuousB‖ * W with hK
+  have hdecay : ∀ t : ℝ, 0 ≤ t →
+      ‖sys.variationOfConstants 0 x₀ u t‖ ≤
+        C * Real.exp (-(min γ ω) * t) * K := by
+    intro t ht
+    have h := norm_variationOfConstants_le_of_expFlow_bound sys (le_of_lt hC)
+      (fun s hs ↦ by
+        simpa [expFlow, continuousA] using hbound s hs) x₀ hu hW ht
+    simpa [hK] using h
+  have hmin : 0 < min γ ω := lt_min hγ hω
+  have hlim : Filter.Tendsto (fun t : ℝ ↦ C * Real.exp (-(min γ ω) * t) * K)
+      Filter.atTop (nhds 0) := by
+    have hmul : Filter.Tendsto (fun t : ℝ ↦ -(min γ ω) * t) Filter.atTop Filter.atBot :=
+      (tendsto_const_mul_atBot_of_neg (by linarith)).mpr tendsto_id
+    have hexp : Filter.Tendsto (fun t : ℝ ↦ Real.exp (-(min γ ω) * t))
+        Filter.atTop (nhds 0) := Real.tendsto_exp_atBot.comp hmul
+    have h := hexp.const_mul (C * K)
+    simpa [mul_assoc, mul_comm, mul_left_comm] using h
+  refine tendsto_iff_norm_sub_tendsto_zero.mpr ?_
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le' tendsto_const_nhds hlim
+    (Filter.Eventually.of_forall (fun t ↦ norm_nonneg _)) ?_
+  filter_upwards [Filter.eventually_ge_atTop (0 : ℝ)] with t ht
+  simpa using hdecay t ht
+
+/-- **Weighted convolution decay of the controlled readout.** Under the same
+weighted `L¹` and Hurwitz hypotheses, the controlled output `t ↦ C x_u(t)` tends
+to `0` at `+∞`. This is the readout form of the convolution decay, obtained from
+the state decay by continuity of the readout map. -/
+theorem tendsto_readout_of_isHurwitz_of_expWeighted
+    (sys : LinearSystem ℝ X U Y) (hA : LinearMap.IsHurwitz sys.A)
+    (x₀ : X) {u : ℝ → U} (hu : LocallyIntegrable u volume)
+    {ω : ℝ} (hω : 0 < ω) (hW : IsExpWeightedL1 ω u) :
+    Filter.Tendsto (fun t : ℝ ↦ sys.C (sys.variationOfConstants 0 x₀ u t))
+      Filter.atTop (nhds 0) := by
+  have hstate := tendsto_variationOfConstants_of_isHurwitz_of_expWeighted sys hA x₀ hu hω hW
+  have hcont : Filter.Tendsto
+      (fun t : ℝ ↦ sys.continuousC (sys.variationOfConstants 0 x₀ u t))
+      Filter.atTop (nhds 0) :=
+    by
+      have h1 := (sys.continuousC.continuous.tendsto 0).comp hstate
+      rw [show sys.continuousC (0 : X) = 0 from map_zero _] at h1
+      simpa [Function.comp_def] using h1
+  simpa [continuousC_apply] using hcont
+
+end ExpWeightedL1
 
 end LinearSystem
