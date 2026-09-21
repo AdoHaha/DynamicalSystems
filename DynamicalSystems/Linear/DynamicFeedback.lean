@@ -7920,6 +7920,38 @@ theorem IsExponentialPolynomial.conj {f : ℝ → ℂ} (hf : IsExponentialPolyno
   · intro μ _ ν _ hμν
     exact star_injective hμν
 
+/-- **Antilinear transport of the finite Bohl class.** A real-linear endomorphism
+`M` that is anti-complex-linear, `M (c • x) = star c • M x`, sends a finite
+exponential polynomial to a finite exponential polynomial: it conjugates the
+frequencies and maps the coefficients. This is the anti-linear half of the
+real-linear closure of the Bohl class; together with `IsExponentialPolynomial.map`
+it reduces the preservation of the class under an arbitrary real-linear map to the
+complex-linear/anti-linear decomposition of that map. -/
+theorem IsExponentialPolynomial.map_antilinear (M : X →ₗ[ℝ] X)
+    (hM : ∀ (c : ℂ) (x : X), M (c • x) = (star c) • M x)
+    {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ M (f t)) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s.image star, D, fun ν k => M (a (star ν) k), fun t => ?_⟩
+  rw [show (fun t => M (f t)) t = M (f t) from rfl, hf t, map_sum]
+  rw [Finset.sum_image]
+  · apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [hM, map_sum]
+    congr 1
+    · simp only [Complex.star_def]
+      rw [← Complex.exp_conj]
+      congr 1
+      simp
+    · apply Finset.sum_congr rfl
+      intro k hk
+      rw [hM]
+      congr 1
+      · simp only [Complex.star_def, map_pow, Complex.conj_ofReal]
+      · simp only [star_star]
+  · intro μ _ ν _ hμν
+    exact star_injective hμν
+
 /-! ### Polynomial-exponential primitives: the scalar antiderivative recursion
 
 The variation-of-constants closure of the Bohl class rests on the scalar
