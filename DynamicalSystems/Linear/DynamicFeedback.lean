@@ -7171,6 +7171,146 @@ theorem mem_outputStabilizableSubspace_of_eventuallyZeroInput
 
 end EventuallyZeroInput
 
+/-! ### Continuity of the trajectory in the input (`L¹` on a compact horizon)
+
+The finite-Bohl quotient non-cancellation of the preceding sections applies to
+inputs whose `B`-image is a finite exponential polynomial. The lemma below is the
+elementary continuity estimate that a *truncation / step-function approximation*
+argument from that class to a general locally integrable input would have to
+consume: on a fixed compact horizon `[t₀, t]` the variation-of-constants
+trajectory depends on the input only through its `L¹` distance, with a constant
+that is uniform in the input and independent of the initial state.
+
+Concretely, for locally integrable `u`, `v`, if `M` bounds
+`‖exp (-(s - t₀) A)‖ · ‖B‖` for `s ∈ [t₀, t]`, then
+
+`‖x_u(t) - x_v(t)‖ ≤ ‖exp ((t - t₀) A)‖ · M · ∫_{t₀}^{t} ‖u s - v s‖ ds`.
+
+The initial state cancels in the difference of the two variation-of-constants
+formulae, leaving the `exp ((t - t₀) A)`-image of the difference of the two
+forcing integrals; the estimate then only uses the operator-norm inequality for
+the bounded operators `exp (-(s - t₀) A)` and `B`. This is the
+"reachable quotient is continuous in `L¹_loc`" half of the approximation
+question, and it immediately yields `L¹`-continuity of the trajectory at each
+fixed time (`tendsto_variationOfConstants_of_tendsto_integral_norm`).
+
+It is deliberately *only* a compact-horizon estimate: the constant
+`‖exp ((t - t₀) A)‖` grows with the horizon `t`, so an `L¹`-close sequence of
+inputs does not inherit the decay of the readout `t ↦ C x(t)` at `+∞`. The lemma
+therefore does **not** imply the unrestricted `W_g` necessity
+`mem_outputStabilizableSubspace_of_isOutputStabilizable`: compact-time `L¹`
+convergence of inputs controls the trajectory only on bounded time sets, while
+decay at `+∞` is a global, spectral property of the *whole* forcing
+(equivalently, of the transfer function `C (sI - A)⁻¹ B`). The finite-Bohl
+non-cancellation cannot be transferred by this continuity alone, and no such
+transfer is asserted. -/
+
+section InputContinuity
+
+/-- **`L¹` continuity of the LTI trajectory in its input on a compact horizon.**
+If `M` bounds `‖exp (-(s - t₀) A)‖ · ‖B‖` for every `s ∈ [t₀, t]`, then the
+difference of the two variation-of-constants trajectories from the same initial
+state is controlled by the `L¹` distance of the inputs:
+`‖x_u(t) - x_v(t)‖ ≤ ‖exp ((t - t₀) A)‖ · M · ∫_{t₀}^{t} ‖u s - v s‖`. -/
+theorem norm_variationOfConstants_sub_le
+    (sys : LinearSystem ℝ X U Z) (t₀ : ℝ) (x₀ : X) {u v : ℝ → U}
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hv : MeasureTheory.LocallyIntegrable v MeasureTheory.volume)
+    {t M : ℝ} (ht : t₀ ≤ t)
+    (hM : ∀ s ∈ Set.uIcc t₀ t, ‖sys.expFlow (-(s - t₀))‖ * ‖sys.continuousB‖ ≤ M) :
+    ‖sys.variationOfConstants t₀ x₀ u t - sys.variationOfConstants t₀ x₀ v t‖ ≤
+      ‖sys.expFlow (t - t₀)‖ * M * ∫ s in t₀..t, ‖u s - v s‖ := by
+  have hforcing_sub : ∀ s : ℝ, sys.forcing t₀ u s - sys.forcing t₀ v s =
+      sys.forcing t₀ (u - v) s := by
+    intro s
+    simp only [LinearSystem.forcing, Pi.sub_apply, map_sub]
+  have hdiff : sys.variationOfConstants t₀ x₀ u t - sys.variationOfConstants t₀ x₀ v t =
+      sys.expFlow (t - t₀) (∫ s in t₀..t, sys.forcing t₀ u s - sys.forcing t₀ v s) := by
+    rw [LinearSystem.variationOfConstants, LinearSystem.variationOfConstants, ← map_sub]
+    congr 1
+    have h1 : (x₀ + ∫ s in t₀..t, sys.forcing t₀ u s) -
+        (x₀ + ∫ s in t₀..t, sys.forcing t₀ v s) =
+        (∫ s in t₀..t, sys.forcing t₀ u s) -
+          (∫ s in t₀..t, sys.forcing t₀ v s) := by abel
+    rw [h1, ← intervalIntegral.integral_sub
+      (intervalIntegrable_forcing sys t₀ hu t₀ t)
+      (intervalIntegrable_forcing sys t₀ hv t₀ t)]
+  have hNormInt : IntervalIntegrable (fun s : ℝ => ‖(u - v) s‖) MeasureTheory.volume t₀ t :=
+    intervalIntegrable_iff.mpr <|
+      MeasureTheory.Integrable.norm
+        (((hu.sub hv).integrableOn_isCompact isCompact_uIcc).mono_set Set.uIoc_subset_uIcc)
+  have hBound : ‖∫ s in t₀..t, sys.forcing t₀ u s - sys.forcing t₀ v s‖ ≤
+      M * ∫ s in t₀..t, ‖u s - v s‖ := by
+    have hmono : (∫ s in t₀..t, ‖sys.forcing t₀ (u - v) s‖) ≤
+        M * ∫ s in t₀..t, ‖(u - v) s‖ := by
+      have h := intervalIntegral.integral_mono_on ht
+        ((intervalIntegrable_forcing sys t₀ (hu.sub hv) t₀ t).norm)
+        (hNormInt.const_mul M) (fun s hs => by
+          have hs' : s ∈ Set.uIcc t₀ t := by
+            rw [Set.uIcc_of_le ht]
+            exact hs
+          calc ‖sys.forcing t₀ (u - v) s‖
+              = ‖sys.expFlow (-(s - t₀)) (sys.continuousB ((u - v) s))‖ := rfl
+            _ ≤ ‖sys.expFlow (-(s - t₀))‖ * ‖sys.continuousB ((u - v) s)‖ :=
+                (sys.expFlow (-(s - t₀))).le_opNorm _
+            _ ≤ ‖sys.expFlow (-(s - t₀))‖ * (‖sys.continuousB‖ * ‖(u - v) s‖) :=
+                mul_le_mul_of_nonneg_left (sys.continuousB.le_opNorm _) (norm_nonneg _)
+            _ = (‖sys.expFlow (-(s - t₀))‖ * ‖sys.continuousB‖) * ‖(u - v) s‖ := by ring
+            _ ≤ M * ‖(u - v) s‖ :=
+                mul_le_mul_of_nonneg_right (hM s hs') (norm_nonneg _))
+      rwa [intervalIntegral.integral_const_mul] at h
+    have hIntEq : (∫ s in t₀..t, sys.forcing t₀ u s - sys.forcing t₀ v s) =
+        ∫ s in t₀..t, sys.forcing t₀ (u - v) s :=
+      intervalIntegral.integral_congr (fun s _ => hforcing_sub s)
+    rw [hIntEq]
+    calc ‖∫ s in t₀..t, sys.forcing t₀ (u - v) s‖
+        ≤ ∫ s in t₀..t, ‖sys.forcing t₀ (u - v) s‖ :=
+          intervalIntegral.norm_integral_le_integral_norm ht
+      _ ≤ M * ∫ s in t₀..t, ‖(u - v) s‖ := hmono
+      _ = M * ∫ s in t₀..t, ‖u s - v s‖ := rfl
+  rw [hdiff]
+  calc ‖sys.expFlow (t - t₀) (∫ s in t₀..t, sys.forcing t₀ u s - sys.forcing t₀ v s)‖
+      ≤ ‖sys.expFlow (t - t₀)‖ * ‖∫ s in t₀..t,
+          sys.forcing t₀ u s - sys.forcing t₀ v s‖ :=
+        (sys.expFlow (t - t₀)).le_opNorm _
+    _ ≤ ‖sys.expFlow (t - t₀)‖ * (M * ∫ s in t₀..t, ‖u s - v s‖) :=
+        mul_le_mul_of_nonneg_left hBound (norm_nonneg _)
+    _ = ‖sys.expFlow (t - t₀)‖ * M * ∫ s in t₀..t, ‖u s - v s‖ := by ring
+
+/-- **Continuity of the trajectory in the input at a fixed time (`L¹`).** If a
+sequence of locally integrable inputs `us n` converges to `u` in the `L¹`
+interval norm, `∫_{t₀}^{t} ‖us n s - u s‖ → 0`, then the corresponding
+trajectories converge at the fixed time `t`. This is the direct continuity
+transport of `norm_variationOfConstants_sub_le`; the bound constant
+`‖exp ((t - t₀) A)‖ · M` is uniform in the inputs. -/
+theorem tendsto_variationOfConstants_of_tendsto_integral_norm
+    (sys : LinearSystem ℝ X U Z) (t₀ : ℝ) (x₀ : X) {u : ℝ → U}
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume) {us : ℕ → ℝ → U}
+    (hus : ∀ n, MeasureTheory.LocallyIntegrable (us n) MeasureTheory.volume)
+    {t : ℝ} (ht : t₀ ≤ t)
+    (hconv : Filter.Tendsto (fun n => ∫ s in t₀..t, ‖us n s - u s‖)
+      Filter.atTop (nhds 0)) :
+    Filter.Tendsto (fun n => sys.variationOfConstants t₀ x₀ (us n) t)
+      Filter.atTop (nhds (sys.variationOfConstants t₀ x₀ u t)) := by
+  obtain ⟨M, hM⟩ := isCompact_uIcc.exists_bound_of_continuousOn
+    ((continuous_forcing_operator sys t₀).norm.continuousOn)
+  have hbound : ∀ n, ‖sys.variationOfConstants t₀ x₀ (us n) t -
+      sys.variationOfConstants t₀ x₀ u t‖ ≤
+      (‖sys.expFlow (t - t₀)‖ * (M * ‖sys.continuousB‖)) *
+        ∫ s in t₀..t, ‖us n s - u s‖ :=
+    fun n => norm_variationOfConstants_sub_le sys t₀ x₀ (hus n) hu ht
+      (fun s hs => mul_le_mul_of_nonneg_right (by simpa using hM s hs) (norm_nonneg _))
+  have hC : Filter.Tendsto (fun n =>
+      (‖sys.expFlow (t - t₀)‖ * (M * ‖sys.continuousB‖)) *
+        ∫ s in t₀..t, ‖us n s - u s‖) Filter.atTop (nhds 0) := by
+    have h := hconv.const_mul (‖sys.expFlow (t - t₀)‖ * (M * ‖sys.continuousB‖))
+    simpa using h
+  exact tendsto_iff_norm_sub_tendsto_zero.mpr
+    (tendsto_of_tendsto_of_tendsto_of_le_of_le tendsto_const_nhds hC
+      (fun _ => norm_nonneg _) hbound)
+
+end InputContinuity
+
 /-! ### Repository/API audit for the state-level Bohl/spectral projection
 
 Before this attempt the following searches were run against the pinned tree
