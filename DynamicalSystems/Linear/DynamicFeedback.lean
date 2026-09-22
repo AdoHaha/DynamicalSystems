@@ -9643,5 +9643,222 @@ theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace
 
 end FiniteBohlWg
 
+/-! ## Discharging the finite-Bohl synthesis obligation
+
+The book-exact finite-Bohl `W_g` package of the previous section names the
+constructive direction of Trentelman–Stoorvogel–Hautus Theorem 4.37 as the
+obligation `FiniteBohlSynthesis`: every state of the algebraic
+`W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a locally integrable input whose
+`Bℂ`-image is a finite Bohl signal and whose controlled readout decays.
+
+This section discharges that obligation. The accepted real state-feedback
+characterization produces, for `x ∈ W_g(ker H)`, a real gain `F` with
+`t ↦ H (exp (t (A + B F)) x) → 0`. The input `u t = F (exp (t (A + B F)) x)`
+then produces the same decay after the open-loop/closed-loop identification
+`variationOfConstants_feedback_eq_expFlow`, and its `Bℂ`-image is finite Bohl
+because `Bℂ ∘ F` is an arbitrary real-linear map and real-linear maps preserve
+the finite Bohl class (`IsExponentialPolynomial.map_realLinear`), applied to the
+closed-loop exponential orbit. The orbit itself is finite Bohl for an
+*arbitrary* real-linear generator by
+`isExponentialPolynomial_expFlow_of_realLinear`, which complexifies the real
+orbit through a real basis and the coordinatewise inclusion `ofRealPi` and then
+projects back with the real-linear real-part map. This is the missing real-orbit
+step; it does not use any spectral hypothesis on `A`. -/
+
+section FiniteBohlSynthesisAssembly
+
+open scoped Matrix
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℂ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℂ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+set_option maxHeartbeats 800000 in
+-- Heavy basis/complexification argument; the default heartbeat budget is insufficient.
+/-- **The orbit of an arbitrary real-linear generator is finite Bohl.** For a
+real-linear endomorphism `A` of a finite-dimensional complex normed space `X`
+and any `x : X`, the exponential orbit `t ↦ exp (t A) x` is a finite sum of
+polynomial-times-exponential modes.
+
+The proof chooses a real basis `b` of `X`, writes the orbit in the real
+coordinates `Fin n → ℝ`, complexifies the coordinate matrix to a complex-linear
+map `h` on `Fin n → ℂ`, and observes that the coordinatewise inclusion
+`ofRealPi` intertwines the real exponential with the complex one
+(`LinearMap.ofRealPi_exp`). The complex orbit is finite Bohl by
+`expFlow_isExponentialPolynomial`, and the real orbit is recovered by the
+*real-linear* real-part projection `Fin n → ℂ → X`, so the real-linear closure
+`IsExponentialPolynomial.map_realLinear` transports the class back. -/
+theorem isExponentialPolynomial_expFlow_of_realLinear
+    (A : X →ₗ[ℝ] X) (x : X) :
+    IsExponentialPolynomial (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x) := by
+  let n : ℕ := Module.finrank ℝ X
+  let b : Module.Basis (Fin n) ℝ X := Module.finBasis ℝ X
+  let L : X ≃L[ℝ] (Fin n → ℝ) := b.equivFun.toContinuousLinearEquiv
+  let M : Matrix (Fin n) (Fin n) ℝ := LinearMap.toMatrix b b A
+  let g : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) := (Matrix.toLin' M).toContinuousLinearMap
+  let h : (Fin n → ℂ) →ₗ[ℂ] (Fin n → ℂ) := Matrix.toLin' (M.map (algebraMap ℝ ℂ))
+  have hg : g = L.conjContinuousAlgEquiv A.toContinuousLinearMap := by
+    apply ContinuousLinearMap.ext
+    intro y
+    have hrepr : M *ᵥ b.repr (L.symm y) = b.repr (A (L.symm y)) :=
+      LinearMap.toMatrix_mulVec_repr b b A (L.symm y)
+    have hLy : b.repr (L.symm y) = y := by
+      rw [← Module.Basis.equivFun_apply b (L.symm y)]
+      exact b.equivFun.apply_symm_apply y
+    rw [hLy] at hrepr
+    change M *ᵥ y = L (A.toContinuousLinearMap (L.symm y))
+    rw [hrepr]
+    rw [← Module.Basis.equivFun_apply b (A (L.symm y))]
+    rfl
+  have hLexp : ∀ t : ℝ, L (NormedSpace.exp (t • A.toContinuousLinearMap) x)
+      = NormedSpace.exp (t • g) (L x) := by
+    intro t
+    have key := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (L.conjContinuousAlgEquiv)
+      (L.conjContinuousAlgEquiv).continuous (t • A.toContinuousLinearMap)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have hcongr : (L.conjContinuousAlgEquiv) (t • A.toContinuousLinearMap) = t • g := by
+      rw [map_smul, hg.symm]
+    have := congrArg (fun f : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) => f (L x)) key
+    rw [hcongr] at this
+    simpa [ContinuousLinearEquiv.conjContinuousAlgEquiv_apply_apply, g] using this
+  have hz : IsExponentialPolynomial
+      (fun t : ℝ =>
+        LinearMap.ofRealPi (L (NormedSpace.exp (t • A.toContinuousLinearMap) x))) := by
+    have h1 : (fun t : ℝ =>
+          LinearMap.ofRealPi (L (NormedSpace.exp (t • A.toContinuousLinearMap) x)))
+        = fun t : ℝ =>
+          NormedSpace.exp (t • h.toContinuousLinearMap) (LinearMap.ofRealPi (L x)) := by
+      funext t
+      rw [hLexp t, LinearMap.ofRealPi_exp M t (L x)]
+    rw [h1]
+    exact expFlow_isExponentialPolynomial h (LinearMap.ofRealPi (L x))
+  let rePi : (Fin n → ℂ) →ₗ[ℝ] (Fin n → ℝ) :=
+    { toFun := fun z i => (z i).re
+      map_add' := by intro z w; ext i; simp
+      map_smul' := by intro r z; ext i; simp }
+  let R : (Fin n → ℂ) →ₗ[ℝ] X := L.symm.toLinearMap.comp rePi
+  have hR : (fun t : ℝ =>
+        R (LinearMap.ofRealPi (L (NormedSpace.exp (t • A.toContinuousLinearMap) x))))
+      = fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x := by
+    funext t
+    simp [R, rePi, LinearMap.ofRealPi]
+  rw [← hR]
+  exact hz.map_realLinear R.toContinuousLinearMap
+
+set_option maxHeartbeats 800000 in
+-- The FTC and uniqueness assembly exceeds the default heartbeat budget.
+/-- **The feedback input drives the closed-loop orbit.** For a real gain `F`, the
+open-loop variation-of-constants trajectory with input
+`u t = F (exp (t (A + B F)) x)` is exactly the closed-loop exponential orbit
+`t ↦ exp (t (A + B F)) x`. Both curves are continuous solutions of the same
+integral equation `y t = x + ∫₀ᵗ (A y s + B (F (y s))) ds`, so
+`integralSolution_unique` identifies them; the integral identity is the ordinary
+fundamental theorem of calculus applied to the closed-loop exponential. -/
+theorem variationOfConstants_feedback_eq_expFlow
+    (sys : LinearSystem ℝ X U Z) (F : X →ₗ[ℝ] U) (x : X) :
+    sys.variationOfConstants 0 x
+        (fun t : ℝ =>
+          F (NormedSpace.exp (t • (sys.A + sys.B.comp F).toContinuousLinearMap) x)) =
+      fun t : ℝ =>
+        NormedSpace.exp (t • (sys.A + sys.B.comp F).toContinuousLinearMap) x := by
+  let sys' : LinearSystem ℝ X U Z := ⟨sys.A + sys.B.comp F, 0, sys.C, 0⟩
+  let y : ℝ → X := fun t => sys'.expFlow t x
+  let u : ℝ → U := fun t => F (y t)
+  have hy_deriv : ∀ t : ℝ, HasDerivAt y (sys'.A (y t)) t :=
+    fun t => hasDerivAt_expFlow_apply_state sys' t x
+  have hy0 : y 0 = x := by simp [y, sys', LinearSystem.expFlow_zero]
+  have hy_cont : Continuous y := by
+    rw [continuous_iff_continuousAt]
+    intro t
+    exact (hy_deriv t).continuousAt
+  have hdyn : ∀ s : ℝ, sys.dynamics (y s) (u s) = sys'.A (y s) := by
+    intro s
+    simp [LinearSystem.dynamics_apply, sys', u]
+  have hcont_dyn : Continuous (fun s : ℝ => sys.dynamics (y s) (u s)) := by
+    have h : (fun s : ℝ => sys.dynamics (y s) (u s)) = fun s => sys'.A (y s) := by
+      funext s; exact hdyn s
+    rw [h]
+    exact sys'.A.toContinuousLinearMap.continuous.comp hy_cont
+  have hint : ∀ t : ℝ, y t = x + ∫ s in (0:ℝ)..t, sys.dynamics (y s) (u s) := by
+    intro t
+    have hderiv' : ∀ s : ℝ, HasDerivAt y (sys.dynamics (y s) (u s)) s := by
+      intro s; rw [hdyn s]; exact hy_deriv s
+    have hFTC := intervalIntegral.sub_eq_integral_of_hasDerivAt hderiv' hcont_dyn 0 t
+    rw [hy0] at hFTC
+    rw [← hFTC]; abel
+  have hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume := by
+    have hFu : Continuous u := F.continuous_of_finiteDimensional.comp hy_cont
+    exact hFu.locallyIntegrable
+  exact integralSolution_unique sys 0 x u hu
+    (continuous_variationOfConstants sys 0 x u hu)
+    (variationOfConstants_self sys 0 x u)
+    (fun t => variationOfConstants_integral sys 0 x u hu t)
+    hy_cont hy0 hint
+
+set_option maxHeartbeats 800000 in
+-- Instantiating the real-linear Bohl closure at the state space exceeds the default budget.
+/-- **The finite-Bohl synthesis obligation is discharged.** Under the explicit
+finite-dimensionality `[FiniteDimensional ℂ X]` of the complexified state space,
+every real system `sys` and every complex-linear input map
+`Bℂ : U →ₗ[ℂ] X` satisfy `FiniteBohlSynthesis sys Bℂ H`: each state of the
+algebraic `W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a finite-Bohl input with
+decaying controlled readout.
+
+The state-feedback characterization supplies a real gain `F` with
+`t ↦ H (exp (t (A + B F)) x) → 0`. The orbit is finite Bohl by
+`isExponentialPolynomial_expFlow_of_realLinear`, so its image under the
+real-linear map `Bℂ ∘ F` is finite Bohl by
+`IsExponentialPolynomial.map_realLinear`, and the trajectory identity
+`variationOfConstants_feedback_eq_expFlow` turns the closed-loop decay into the
+open-loop decay. No complexification of the gain and no spectral hypothesis on
+`A` is assumed. -/
+theorem finiteBohlSynthesis [FiniteDimensional ℂ X]
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z) :
+    FiniteBohlSynthesis sys Bℂ H := by
+  intro x hx
+  obtain ⟨F, hdec⟩ :=
+    exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace sys.A sys.B H hx
+  let orb : ℝ → X :=
+    fun t => NormedSpace.exp (t • (sys.A + sys.B.comp F).toContinuousLinearMap) x
+  let u : ℝ → U := fun t => F (orb t)
+  refine ⟨u, ?_, ?_, ?_⟩
+  · have horb_cont : Continuous orb := by
+      rw [continuous_iff_continuousAt]
+      intro t
+      exact (hasDerivAt_expFlow_apply_state
+        (⟨sys.A + sys.B.comp F, 0, sys.C, 0⟩ : LinearSystem ℝ X U Z) t x).continuousAt
+    exact (F.continuous_of_finiteDimensional.comp horb_cont).locallyIntegrable
+  · have hmap := (isExponentialPolynomial_expFlow_of_realLinear
+        (sys.A + sys.B.comp F) x).map_realLinear
+      (((Bℂ.restrictScalars ℝ).comp F).toContinuousLinearMap)
+    simpa [u, orb, LinearMap.comp_apply, LinearMap.restrictScalars_apply] using hmap
+  · have hv : sys.variationOfConstants 0 x u = orb := by
+      change sys.variationOfConstants 0 x (fun t => F (orb t)) = orb
+      exact variationOfConstants_feedback_eq_expFlow sys F x
+    rw [hv]
+    simpa [orb] using hdec
+
+set_option maxHeartbeats 800000 in
+-- Packaging the conditional iff against the discharged synthesis exceeds the default budget.
+/-- **The finite-Bohl `W_g` identity, with the synthesis hypothesis discharged.**
+The book-exact finite-Bohl characterization of
+`isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace` follows with only
+the necessity direction `FiniteBohlWBridge` still named as a hypothesis: the
+constructive direction `FiniteBohlSynthesis` is supplied by
+`finiteBohlSynthesis`. This is the packaged statement of Theorem 4.37 in the
+finite-Bohl class, without redundant definitions and without claiming the
+unrestricted locally-integrable necessity. -/
+theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace'
+    [FiniteDimensional ℂ X]
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z)
+    (hbridge : FiniteBohlWBridge sys Bℂ H) (x : X) :
+    IsBohlOutputStabilizable sys Bℂ H x ↔
+      x ∈ outputStabilizableSubspace sys.A sys.B H :=
+  isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace sys Bℂ H hbridge
+    (finiteBohlSynthesis sys Bℂ H) x
+
+end FiniteBohlSynthesisAssembly
+
 end LinearSystem
 
