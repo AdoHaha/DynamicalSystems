@@ -8494,6 +8494,251 @@ theorem IsExponentialPolynomial.clm {f : ℝ → X} (T : X →L[ℂ] X)
     IsExponentialPolynomial (fun t ↦ T (f t)) :=
   hf.map T
 
+/-! ### Real-linear closure of the finite Bohl class
+
+The finite-support spectral class `IsExponentialPolynomial` is a *complex* class,
+but the finite-Bohl synthesis layer frequently applies an arbitrary
+real-linear map to a Bohl signal: a real state-feedback gain `F`, the
+real restriction `A.restrictScalars ℝ` of a complex generator, or the
+real shadow of a coordinate change. The closure under complex-linear maps is
+`IsExponentialPolynomial.map` and the closure under an *anti*-complex-linear
+endomorphism is `IsExponentialPolynomial.map_antilinear`. This section supplies
+the missing general real-linear closure.
+
+Every real-linear map `T : X →ₗ[ℝ] Y` between complex vector spaces decomposes
+as
+
+`T = T_cl + T_al`, with `T_cl x = ½ (T x - I (T (I x)))` complex-linear and
+`T_al x = ½ (T x + I (T (I x)))` anti-complex-linear. The construction is
+explicit and uses only the complex module structure: the complex-linear part is
+upgraded from real-linearity to complex-linearity by the two identities
+`T_cl (I x) = I (T_cl x)` and `T_cl (c x) = c (T_cl x)`, the latter reducing an
+arbitrary complex scalar to its real and imaginary parts
+(`Complex.re_add_im`; the pinned Mathlib 4.34.0-rc2 does not export a
+`Complex.induction_on` principle, so the explicit real/imaginary decomposition is
+used in its place). The anti-linear part is handled by the general anti-linear
+closure `IsExponentialPolynomial.map_antilinear'`, of which the accepted
+endomorphism lemma `IsExponentialPolynomial.map_antilinear` is the special case
+`Y = X`.
+
+Continuity enters only through the conversion of the complex-linear part to a
+continuous linear map via `LinearMap.toContinuousLinearMap`, which needs the
+finite-dimensionality of the domain `X`; the codomain is not required to be
+finite-dimensional by the proof. The endomorphism specialization
+`IsExponentialPolynomial.map_realLinear_self` reuses the accepted
+`IsExponentialPolynomial.map` and `IsExponentialPolynomial.map_antilinear`
+directly. -/
+
+section RealLinearClosure
+
+variable {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℂ Y]
+
+/-- Multiplication by `I`, viewed as a real-linear endomorphism of a complex
+vector space. -/
+noncomputable def complexIMul (M : Type*) [AddCommGroup M] [Module ℂ M] : M →ₗ[ℝ] M where
+  toFun x := Complex.I • x
+  map_add' x y := smul_add Complex.I x y
+  map_smul' r x := (smul_comm r Complex.I x).symm
+
+@[simp] lemma complexIMul_apply {M : Type*} [AddCommGroup M] [Module ℂ M] (x : M) :
+    complexIMul M x = Complex.I • x := rfl
+
+/-- `I • (I • z) = -z`, the real-linear endomorphism `x ↦ I • x` squares to the
+negative identity. -/
+lemma I_smul_I_smul {M : Type*} [AddCommGroup M] [Module ℂ M] (z : M) :
+    Complex.I • (Complex.I • z) = -z := by
+  rw [← mul_smul, Complex.I_mul_I, neg_one_smul]
+
+/-- Real scalars of a complex module are extracted out of a real-linear map. -/
+lemma realLinearMap_coe_smul (T : X →ₗ[ℝ] Y) (r : ℝ) (z : X) :
+    T ((r : ℂ) • z) = (r : ℂ) • T z := by
+  rw [Complex.coe_smul, T.map_smul, Complex.coe_smul]
+
+/-- Decomposition of an arbitrary complex scalar as `a + b I` with `a, b : ℝ`. -/
+lemma complex_smul_decomp (c : ℂ) (x : X) :
+    c • x = (c.re : ℂ) • x + (c.im : ℂ) • (Complex.I • x) := by
+  conv_lhs => rw [← Complex.re_add_im c]
+  rw [add_smul, mul_smul]
+
+/-- The conjugate scalar decomposition `\bar c • y = a • y + b • (-I • y)`. -/
+lemma star_smul_decomp (c : ℂ) (y : Y) :
+    (star c) • y = (c.re : ℂ) • y + (c.im : ℂ) • (-Complex.I • y) := by
+  conv_lhs => rw [← Complex.re_add_im (star c)]
+  rw [add_smul, mul_smul]
+  rw [show (star c).re = c.re by simp]
+  rw [show (star c).im = -c.im by simp]
+  module
+
+/-- Upgrade an ℝ-linear map `f` commuting with multiplication by `I`,
+`f (I • x) = I • f x`, to a ℂ-linear map with the same underlying function. -/
+noncomputable def complexLinearMapOfReal (f : X →ₗ[ℝ] Y)
+    (hI : ∀ x, f (Complex.I • x) = Complex.I • f x) : X →ₗ[ℂ] Y where
+  toFun := f
+  map_add' := f.map_add
+  map_smul' c x := by
+    rw [complex_smul_decomp c x, f.map_add, realLinearMap_coe_smul, realLinearMap_coe_smul, hI]
+    exact (complex_smul_decomp c (f x)).symm
+
+/-- An ℝ-linear map `f` with `f (I • x) = - I • f x` is anti-complex-linear:
+`f (c • x) = \bar c • f x`. This is the scalar decomposition transported through
+the anti-linear `I`-rule. -/
+lemma antilinear_of_real (f : X →ₗ[ℝ] Y)
+    (hI : ∀ x, f (Complex.I • x) = -Complex.I • f x) (c : ℂ) (x : X) :
+    f (c • x) = (star c) • f x := by
+  rw [complex_smul_decomp c x, f.map_add, realLinearMap_coe_smul, realLinearMap_coe_smul, hI]
+  exact (star_smul_decomp c (f x)).symm
+
+/-- The **complex-linear part** `x ↦ ½ (T x - I (T (I x)))` of a real-linear map,
+as a real-linear map. -/
+noncomputable def realLinearComplexPart (T : X →ₗ[ℝ] Y) : X →ₗ[ℝ] Y :=
+  (2 : ℝ)⁻¹ • (T - (complexIMul Y).comp (T.comp (complexIMul X)))
+
+@[simp] theorem realLinearComplexPart_apply (T : X →ₗ[ℝ] Y) (x : X) :
+    realLinearComplexPart T x = (2 : ℂ)⁻¹ • (T x - Complex.I • T (Complex.I • x)) := by
+  rw [realLinearComplexPart]
+  simp only [LinearMap.smul_apply, LinearMap.sub_apply, LinearMap.comp_apply, complexIMul_apply]
+  rw [← Complex.coe_smul, Complex.ofReal_inv]
+  norm_num
+
+/-- The complex-linear part commutes with multiplication by `I`. -/
+theorem realLinearComplexPart_I (T : X →ₗ[ℝ] Y) (x : X) :
+    realLinearComplexPart T (Complex.I • x) = Complex.I • realLinearComplexPart T x := by
+  rw [realLinearComplexPart_apply, realLinearComplexPart_apply]
+  simp only [I_smul_I_smul]
+  rw [map_neg]
+  rw [smul_comm Complex.I (2 : ℂ)⁻¹ (T x - Complex.I • T (Complex.I • x))]
+  simp only [smul_sub, I_smul_I_smul]
+  module
+
+/-- The **complex-linear part** of a real-linear map, upgraded to a
+complex-linear map by `complexLinearMapOfReal`. -/
+noncomputable def complexLinearPart (T : X →ₗ[ℝ] Y) : X →ₗ[ℂ] Y :=
+  complexLinearMapOfReal (realLinearComplexPart T) (realLinearComplexPart_I T)
+
+@[simp] theorem complexLinearPart_apply (T : X →ₗ[ℝ] Y) (x : X) :
+    complexLinearPart T x = realLinearComplexPart T x := rfl
+
+/-- The **anti-complex-linear part** `x ↦ ½ (T x + I (T (I x)))` of a real-linear
+map, as a real-linear map. -/
+noncomputable def realLinearAntilinearPart (T : X →ₗ[ℝ] Y) : X →ₗ[ℝ] Y :=
+  (2 : ℝ)⁻¹ • (T + (complexIMul Y).comp (T.comp (complexIMul X)))
+
+@[simp] theorem realLinearAntilinearPart_apply (T : X →ₗ[ℝ] Y) (x : X) :
+    realLinearAntilinearPart T x = (2 : ℂ)⁻¹ • (T x + Complex.I • T (Complex.I • x)) := by
+  rw [realLinearAntilinearPart]
+  simp only [LinearMap.smul_apply, LinearMap.add_apply, LinearMap.comp_apply, complexIMul_apply]
+  rw [← Complex.coe_smul, Complex.ofReal_inv]
+  norm_num
+
+/-- The anti-linear part satisfies the anti-linear `I`-rule. -/
+theorem realLinearAntilinearPart_I (T : X →ₗ[ℝ] Y) (x : X) :
+    realLinearAntilinearPart T (Complex.I • x) =
+      -Complex.I • realLinearAntilinearPart T x := by
+  rw [realLinearAntilinearPart_apply, realLinearAntilinearPart_apply]
+  simp only [I_smul_I_smul]
+  rw [map_neg]
+  rw [neg_smul]
+  rw [smul_comm Complex.I (2 : ℂ)⁻¹ (T x + Complex.I • T (Complex.I • x))]
+  simp only [smul_add, I_smul_I_smul, smul_neg]
+  module
+
+/-- The anti-complex-linear part is anti-linear: `T_al (c • x) = \bar c • T_al x`. -/
+theorem realLinearAntilinearPart_antilinear (T : X →ₗ[ℝ] Y) (c : ℂ) (x : X) :
+    realLinearAntilinearPart T (c • x) = (star c) • realLinearAntilinearPart T x :=
+  antilinear_of_real (realLinearAntilinearPart T) (realLinearAntilinearPart_I T) c x
+
+/-- **The complex-linear/anti-linear decomposition** of a real-linear map:
+`T x = T_cl x + T_al x` for every `x`. -/
+theorem complexLinearPart_add_antilinearPart (T : X →ₗ[ℝ] Y) (x : X) :
+    complexLinearPart T x + realLinearAntilinearPart T x = T x := by
+  rw [complexLinearPart_apply, realLinearComplexPart_apply, realLinearAntilinearPart_apply]
+  module
+
+/-- **Antilinear transport of the finite Bohl class, arbitrary codomain.** This is
+the general-codomain form of the accepted endomorphism lemma
+`IsExponentialPolynomial.map_antilinear`: a real-linear map `M : X →ₗ[ℝ] Y` with
+`M (c • x) = \bar c • M x` conjugates the frequencies and maps the coefficients,
+so it sends finite exponential polynomials to finite exponential polynomials. -/
+theorem IsExponentialPolynomial.map_antilinear' {M : X →ₗ[ℝ] Y}
+    (hM : ∀ (c : ℂ) (x : X), M (c • x) = (star c) • M x)
+    {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ M (f t)) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  refine ⟨s.image star, D, fun ν k => M (a (star ν) k), fun t => ?_⟩
+  rw [show (fun t => M (f t)) t = M (f t) from rfl, hf t, map_sum]
+  rw [Finset.sum_image]
+  · apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [hM, map_sum]
+    congr 1
+    · simp only [Complex.star_def]
+      rw [← Complex.exp_conj]
+      congr 1
+      simp
+    · apply Finset.sum_congr rfl
+      intro k hk
+      rw [hM]
+      congr 1
+      · simp only [Complex.star_def, map_pow, Complex.conj_ofReal]
+      · simp only [star_star]
+  · intro μ _ ν _ hμν
+    exact star_injective hμν
+
+/-- **Real-linear closure of the finite Bohl class.** A continuous real-linear map
+`T : X →L[ℝ] Y` between complex normed spaces sends a finite exponential
+polynomial to a finite exponential polynomial, provided the domain is
+finite-dimensional so that the complex-linear part can be read as a continuous
+complex-linear map.
+
+The real-linear map is decomposed as `T = T_cl + T_al`
+(`complexLinearPart_add_antilinearPart`); the complex-linear part is transported by
+`IsExponentialPolynomial.map` and the anti-linear part by
+`IsExponentialPolynomial.map_antilinear'`. No complex-linearity is assumed of `T`;
+the scalar field and the continuity are explicit in the statement, and the
+finite-dimensionality is imposed on the domain `X`, which is exactly what is
+needed to read the complex-linear part as a continuous complex-linear map. The
+codomain `Y` is an arbitrary complex normed space, so no hypothesis is spent on
+it.
+
+See also `IsExponentialPolynomial.map_realLinear_self`, the specialization to
+`Y = X`, which uses the accepted endomorphism lemma
+`IsExponentialPolynomial.map_antilinear` directly. -/
+theorem IsExponentialPolynomial.map_realLinear [FiniteDimensional ℂ X]
+    (T : X →L[ℝ] Y) {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ T (f t)) := by
+  have hcl : IsExponentialPolynomial
+      (fun t ↦ complexLinearPart T.toLinearMap (f t)) :=
+    hf.map (LinearMap.toContinuousLinearMap (complexLinearPart T.toLinearMap))
+  have hal : IsExponentialPolynomial
+      (fun t ↦ realLinearAntilinearPart T.toLinearMap (f t)) :=
+    hf.map_antilinear' (realLinearAntilinearPart_antilinear T.toLinearMap)
+  have hsum := hcl.add hal
+  convert hsum using 1
+  funext t
+  exact (complexLinearPart_add_antilinearPart T.toLinearMap (f t)).symm
+
+/-- **Real-linear closure, endomorphism form.** The specialization of
+`IsExponentialPolynomial.map_realLinear` to `T : X →L[ℝ] X`, proved directly from
+the accepted lemmas `IsExponentialPolynomial.map` and
+`IsExponentialPolynomial.map_antilinear` (the latter used in place of the general
+anti-linear closure). -/
+theorem IsExponentialPolynomial.map_realLinear_self [FiniteDimensional ℂ X]
+    (T : X →L[ℝ] X) {f : ℝ → X} (hf : IsExponentialPolynomial f) :
+    IsExponentialPolynomial (fun t ↦ T (f t)) := by
+  have hcl : IsExponentialPolynomial
+      (fun t ↦ complexLinearPart T.toLinearMap (f t)) :=
+    hf.map (LinearMap.toContinuousLinearMap (complexLinearPart T.toLinearMap))
+  have hal : IsExponentialPolynomial
+      (fun t ↦ realLinearAntilinearPart T.toLinearMap (f t)) :=
+    hf.map_antilinear (realLinearAntilinearPart T.toLinearMap)
+      (realLinearAntilinearPart_antilinear T.toLinearMap)
+  have hsum := hcl.add hal
+  convert hsum using 1
+  funext t
+  exact (complexLinearPart_add_antilinearPart T.toLinearMap (f t)).symm
+
+end RealLinearClosure
+
 /-- Constant curves are finite Bohl signals (the zero-frequency, degree-zero
 mode). -/
 theorem isExponentialPolynomial_const (c : X) :
