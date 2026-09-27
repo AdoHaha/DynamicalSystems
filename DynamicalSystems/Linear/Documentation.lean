@@ -415,6 +415,16 @@ from an arbitrary stabilizing dynamic controller is not yet formalized.
 
 {docstring LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions}
 
+For the converse, the closed-loop operator of the transposed plant and
+controller is the algebraic transpose of the original closed-loop operator,
+under the product-dual equivalence. A separate finite-dimensional theorem
+transfers decay of a readout channel to its transpose. These are supporting
+bridges, not yet a proof that every stabilizing controller yields both
+Corollary 6.22 subspace inclusions.
+
+{docstring LinearSystem.prodDualEquiv_closedLoopMap_apply}
+{docstring LinearSystem.dualReadout_tendsto_of_readout_tendsto}
+
 # Algebraic examples
 
 These concrete algebraic examples exercise the pair API. In particular the planar rotation with

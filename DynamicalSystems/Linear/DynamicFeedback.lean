@@ -13532,3 +13532,54 @@ theorem prodDualEquiv_closedLoopMap_apply
   abel
 
 end LinearSystem
+
+/-! ## Dual decay of finite-dimensional external channels
+
+Transposing a finite-dimensional impulse-response channel preserves its
+asymptotic decay, without requiring the internal generator to be Hurwitz. -/
+
+namespace LinearSystem
+
+open Filter
+
+variable {X D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
+
+/-- Decay of every vector-valued readout `H e^{tT} E d` implies decay of the
+transposed channel `Eᵀ e^{tTᵀ} Hᵀ z` for every dual readout direction `z`.
+Pointwise pairing uses `exp_smul_dualMap_apply`; finite dimensionality of `D`
+upgrades convergence on basis vectors to norm convergence in `Dᵀ`. -/
+theorem dualReadout_tendsto_of_readout_tendsto
+    (T : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ∀ d : D, Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • T.toContinuousLinearMap) (E d)))
+      atTop (nhds 0)) :
+    ∀ z : Module.Dual ℝ Z, Tendsto
+      (fun t : ℝ => E.dualMap
+        (NormedSpace.exp (t • T.dualMap.toContinuousLinearMap) (H.dualMap z)))
+      atTop (nhds 0) := by
+  intro z
+  let b := Module.finBasis ℝ D
+  have hcoord : Tendsto
+      (fun t : ℝ => b.dualBasis.equivFun
+        (E.dualMap (NormedSpace.exp (t • T.dualMap.toContinuousLinearMap) (H.dualMap z))))
+      atTop (nhds 0) := by
+    rw [tendsto_pi_nhds]
+    intro i
+    have hz : Continuous z := z.continuous_of_finiteDimensional
+    have hscalar : Tendsto
+        (fun t : ℝ => z (H (NormedSpace.exp (t • T.toContinuousLinearMap) (E (b i)))))
+        atTop (nhds 0) := by
+      simpa only [Function.comp_def, map_zero] using
+        (hz.tendsto 0).comp (h (b i))
+    simpa only [Module.Basis.dualBasis_equivFun, LinearMap.dualMap_apply,
+      LinearMap.exp_smul_dualMap_apply, Pi.zero_apply] using hscalar
+  have hcont : Continuous (fun q : Fin (Module.finrank ℝ D) → ℝ =>
+      b.dualBasis.equivFun.symm q) :=
+    b.dualBasis.equivFun.toContinuousLinearEquiv.symm.continuous
+  have hfinal := (hcont.tendsto 0).comp hcoord
+  simpa only [Function.comp_def, map_zero, LinearEquiv.symm_apply_apply] using hfinal
+
+end LinearSystem
