@@ -11891,3 +11891,285 @@ theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete
 end FiniteBohlSynthesisAssembly
 
 end LinearSystem
+
+/-! ## Extended-pair quotient spectrum of the observer-based controller -/
+
+namespace LinearSystem
+
+set_option linter.unusedSectionVars false
+set_option linter.defProp false
+
+noncomputable section
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+abbrev Vstar (sys : LinearSystem ℝ X U Y) (H : X →ₗ[ℝ] Z) : Submodule ℝ X :=
+  LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+
+abbrev Wg (sys : LinearSystem ℝ X U Y) (H : X →ₗ[ℝ] Z) : Submodule ℝ X :=
+  outputStabilizableSubspace sys.A sys.B H
+
+abbrev Sstar (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) : Submodule ℝ X :=
+  LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+
+abbrev Tg (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) : Submodule ℝ X :=
+  Sstar sys E ⊓ LinearMap.detectableSubspace sys.C sys.A
+
+/-! The six component-invariance inputs consumed by
+`LinearMap.isHurwitz_mapQ_prod_restrict_of_isHurwitz`, extracted from the
+accepted `LinearSystem.geometricBlockInputs`. -/
+
+theorem componentInputs_AW (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ x ∈ Wg sys H, (sys.A + sys.B.comp F) x ∈ Wg sys H := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).1
+
+theorem componentInputs_AS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ y ∈ Sstar sys E, (sys.A + G.comp sys.C) y ∈ Sstar sys E := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.1
+
+theorem componentInputs_BS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ y ∈ Sstar sys E, (-(G.comp sys.C)) y ∈ Wg sys H := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.1
+
+theorem componentInputs_AV (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ x ∈ Vstar sys H, (sys.A + sys.B.comp F) x ∈ Vstar sys H := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.2.1
+
+theorem componentInputs_AT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ y ∈ Tg sys E, (sys.A + G.comp sys.C) y ∈ Tg sys E := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.2.2.1
+
+theorem componentInputs_BT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    ∀ y ∈ Tg sys E, (-(G.comp sys.C)) y ∈ Vstar sys H := by
+  simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.2.2.2
+
+/-! Invariance of the two extended pair subspaces under the `N = 0`
+closed-loop map, extracted from
+`LinearSystem.extendedPairSubspaces_of_externalStabilizationConditions`. -/
+
+theorem extendedPairSubspace_closedLoopMap_inv_den (sys : LinearSystem ℝ X U Y)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    ∀ z ∈ extendedPairSubspace (Tg sys E) (Vstar sys H),
+      (cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp z ∈
+        extendedPairSubspace (Tg sys E) (Vstar sys H) := by
+  have hmain := extendedPairSubspaces_of_externalStabilizationConditions
+    sys hD E H h F G hF hG hwp
+  intro z hz
+  exact hmain.2.1 ⟨z, hz, rfl⟩
+
+theorem extendedPairSubspace_closedLoopMap_inv_num (sys : LinearSystem ℝ X U Y)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    ∀ z ∈ extendedPairSubspace (Sstar sys E) (Wg sys H),
+      (cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp z ∈
+        extendedPairSubspace (Sstar sys E) (Wg sys H) := by
+  have hmain := extendedPairSubspaces_of_externalStabilizationConditions
+    sys hD E H h F G hF hG hwp
+  intro z hz
+  exact hmain.2.2.1 ⟨z, hz, rfl⟩
+
+theorem extendedPairSubspace_mono_of_externalStabilizationConditions
+    (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    extendedPairSubspace (Tg sys E) (Vstar sys H) ≤
+      extendedPairSubspace (Sstar sys E) (Wg sys H) := by
+  have hmain := extendedPairSubspaces_of_externalStabilizationConditions
+    sys hD E H h F G hF hG hwp
+  exact hmain.1
+
+/-! Abbreviations for the three quotient maps occurring in the statement. -/
+
+abbrev stateFeedbackQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    (Wg sys H) ⧸ Submodule.comap (Submodule.subtype (Wg sys H)) (Vstar sys H) →ₗ[ℝ]
+      (Wg sys H) ⧸ Submodule.comap (Submodule.subtype (Wg sys H)) (Vstar sys H) :=
+  Submodule.mapQ
+    (Submodule.comap (Submodule.subtype (Wg sys H)) (Vstar sys H))
+    (Submodule.comap (Submodule.subtype (Wg sys H)) (Vstar sys H))
+    ((sys.A + sys.B.comp F).restrict (componentInputs_AW sys E H F G h hF hG))
+    (fun x hx => componentInputs_AV sys E H F G h hF hG x.1 hx)
+
+abbrev observerErrorQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E) :
+    (Sstar sys E) ⧸ Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E) →ₗ[ℝ]
+      (Sstar sys E) ⧸ Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E) :=
+  Submodule.mapQ
+    (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+    (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+    ((sys.A + G.comp sys.C).restrict (componentInputs_AS sys E H F G h hF hG))
+    (fun y hy => componentInputs_AT sys E H F G h hF hG y.1 hy)
+
+abbrev closedLoopMapQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    (extendedPairSubspace (Sstar sys E) (Wg sys H)) ⧸
+        Submodule.comap (extendedPairSubspace (Sstar sys E) (Wg sys H)).subtype
+          (extendedPairSubspace (Tg sys E) (Vstar sys H)) →ₗ[ℝ]
+      (extendedPairSubspace (Sstar sys E) (Wg sys H)) ⧸
+        Submodule.comap (extendedPairSubspace (Sstar sys E) (Wg sys H)).subtype
+          (extendedPairSubspace (Tg sys E) (Vstar sys H)) :=
+  Submodule.mapQ
+    (Submodule.comap (extendedPairSubspace (Sstar sys E) (Wg sys H)).subtype
+      (extendedPairSubspace (Tg sys E) (Vstar sys H)))
+    (Submodule.comap (extendedPairSubspace (Sstar sys E) (Wg sys H)).subtype
+      (extendedPairSubspace (Tg sys E) (Vstar sys H)))
+    (((cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp).restrict
+      (extendedPairSubspace_closedLoopMap_inv_num sys E H F G hD h hF hG hwp))
+    (fun z hz =>
+      extendedPairSubspace_closedLoopMap_inv_den sys E H F G hD h hF hG hwp z.1 hz)
+
+/-! ## The concrete sufficiency spectral assembly
+
+For a strictly proper plant (`sys.D = 0`) with the Corollary 6.22 geometric
+conditions, gains `F`, `G` preserving `V*(ker H)` and `S*(im E)`, and with the
+two quotient blocks Hurwitz, the quotient of the `N = 0` closed-loop map on
+`Vₑ₂ = Vₑ(S*, W_g)` modulo `Vₑ₁ = Vₑ(T_g, V*)` is Hurwitz. -/
+
+set_option maxHeartbeats 1000000 in
+-- Quotient conjugacy unfolds several nested subtype and mapQ equivalences.
+theorem isHurwitz_closedLoopMap_quotient_extendedPairSubspaces
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed)
+    (hFq : LinearMap.IsHurwitz (stateFeedbackQuotientMap sys E H F G h hF hG))
+    (hGq : LinearMap.IsHurwitz (observerErrorQuotientMap sys E H F G h hF hG)) :
+    LinearMap.IsHurwitz (closedLoopMapQuotientMap sys E H F G hD h hF hG hwp) := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G 0) E H
+  have hAW : ∀ x ∈ Wg sys H, (sys.A + sys.B.comp F) x ∈ Wg sys H :=
+    componentInputs_AW sys E H F G h hF hG
+  have hAS : ∀ y ∈ Sstar sys E, (sys.A + G.comp sys.C) y ∈ Sstar sys E :=
+    componentInputs_AS sys E H F G h hF hG
+  have hBS : ∀ y ∈ Sstar sys E, (-(G.comp sys.C)) y ∈ Wg sys H :=
+    componentInputs_BS sys E H F G h hF hG
+  have hAV : ∀ x ∈ Vstar sys H, (sys.A + sys.B.comp F) x ∈ Vstar sys H :=
+    componentInputs_AV sys E H F G h hF hG
+  have hAT : ∀ y ∈ Tg sys E, (sys.A + G.comp sys.C) y ∈ Tg sys E :=
+    componentInputs_AT sys E H F G h hF hG
+  have hBT : ∀ y ∈ Tg sys E, (-(G.comp sys.C)) y ∈ Vstar sys H :=
+    componentInputs_BT sys E H F G h hF hG
+  have hVW : Vstar sys H ≤ Wg sys H :=
+    controlledInvariantSubspace_le_outputStabilizableSubspace sys.A sys.B H
+  have hTU : Tg sys E ≤ Sstar sys E := inf_le_left
+  -- The conjugate operator is the heterogeneous block operator.
+  have hconj : (controllerStateErrorEquiv (𝕜 := ℝ) X).conj (ic.closedLoopMap hwp) =
+      LinearMap.blockOperator₂ (sys.A + sys.B.comp F) (-(G.comp sys.C))
+        (sys.A + G.comp sys.C) := by
+    rw [cabPairController_closedLoopMap_controllerStateError_conj sys hD E H F G hwp]
+    exact (LinearMap.blockOperator₂_self (sys.A + sys.B.comp F) (-(G.comp sys.C))
+      (sys.A + G.comp sys.C)).symm
+  -- Hurwitzness of the conjugate quotient by the product subspaces.
+  have hTarget : LinearMap.IsHurwitz
+      (Submodule.mapQ
+        (Submodule.comap (Submodule.subtype ((Wg sys H).prod (Sstar sys E)))
+          ((Vstar sys H).prod (Tg sys E)))
+        (Submodule.comap (Submodule.subtype ((Wg sys H).prod (Sstar sys E)))
+          ((Vstar sys H).prod (Tg sys E)))
+        ((LinearMap.blockOperator₂ (sys.A + sys.B.comp F) (-(G.comp sys.C))
+            (sys.A + G.comp sys.C)).restrict
+          (LinearMap.prodInvariance (sys.A + sys.B.comp F) (-(G.comp sys.C))
+            (sys.A + G.comp sys.C) (Wg sys H) (Sstar sys E) hAW hAS hBS))
+        (LinearMap.prodRestrictInvariance (sys.A + sys.B.comp F) (-(G.comp sys.C))
+          (sys.A + G.comp sys.C) (Wg sys H) (Sstar sys E) (Vstar sys H) (Tg sys E)
+          hAW hAS hBS hAV hAT hBT)) := by
+    exact LinearMap.isHurwitz_mapQ_prod_restrict_of_isHurwitz
+      (sys.A + sys.B.comp F) (-(G.comp sys.C)) (sys.A + G.comp sys.C)
+      (Wg sys H) (Sstar sys E) (Vstar sys H) (Tg sys E)
+      hVW hTU hAW hAS hBS hAV hAT hBT hFq hGq
+  -- Identify the two extended pair subspaces with the product subspaces.
+  have hPmap : Submodule.map (controllerStateErrorEquiv (𝕜 := ℝ) X :
+        (X × X) →ₗ[ℝ] (X × X))
+      (extendedPairSubspace (Tg sys E) (Vstar sys H)) =
+        Submodule.prod (Vstar sys H) (Tg sys E) := by
+    simpa [Vstar, Tg] using
+      controllerStateErrorEquiv_map_extendedPairSubspace (𝕜 := ℝ) (Tg sys E) (Vstar sys H)
+  have hQmap : Submodule.map (controllerStateErrorEquiv (𝕜 := ℝ) X :
+        (X × X) →ₗ[ℝ] (X × X))
+      (extendedPairSubspace (Sstar sys E) (Wg sys H)) =
+        Submodule.prod (Wg sys H) (Sstar sys E) := by
+    simpa [Sstar, Wg] using
+      controllerStateErrorEquiv_map_extendedPairSubspace (𝕜 := ℝ) (Sstar sys E) (Wg sys H)
+  have hP2Q2 : Submodule.prod (Vstar sys H) (Tg sys E) ≤
+      Submodule.prod (Wg sys H) (Sstar sys E) :=
+    Submodule.prod_mono hVW hTU
+  have hQ2 : ∀ y ∈ Submodule.prod (Wg sys H) (Sstar sys E),
+      (LinearMap.blockOperator₂ (sys.A + sys.B.comp F) (-(G.comp sys.C))
+        (sys.A + G.comp sys.C)) y ∈ Submodule.prod (Wg sys H) (Sstar sys E) :=
+    LinearMap.prodInvariance (sys.A + sys.B.comp F) (-(G.comp sys.C))
+      (sys.A + G.comp sys.C) (Wg sys H) (Sstar sys E) hAW hAS hBS
+  have hP2 : ∀ y ∈ Submodule.prod (Vstar sys H) (Tg sys E),
+      (LinearMap.blockOperator₂ (sys.A + sys.B.comp F) (-(G.comp sys.C))
+        (sys.A + G.comp sys.C)) y ∈ Submodule.prod (Vstar sys H) (Tg sys E) :=
+    LinearMap.prodInvariance (sys.A + sys.B.comp F) (-(G.comp sys.C))
+      (sys.A + G.comp sys.C) (Vstar sys H) (Tg sys E) hAV hAT hBT
+  -- Transfer Hurwitzness back through the nested quotient conjugacy.
+  exact (LinearMap.isHurwitz_mapQ_nested_conj
+    (ic.closedLoopMap hwp)
+    (LinearMap.blockOperator₂ (sys.A + sys.B.comp F) (-(G.comp sys.C))
+      (sys.A + G.comp sys.C))
+    (controllerStateErrorEquiv (𝕜 := ℝ) X) hconj
+    (extendedPairSubspace (Tg sys E) (Vstar sys H))
+    (extendedPairSubspace (Sstar sys E) (Wg sys H))
+    (extendedPairSubspace_mono_of_externalStabilizationConditions
+      sys E H F G hD h hF hG hwp)
+    (extendedPairSubspace_closedLoopMap_inv_num sys E H F G hD h hF hG hwp)
+    (extendedPairSubspace_closedLoopMap_inv_den sys E H F G hD h hF hG hwp)
+    (Submodule.prod (Vstar sys H) (Tg sys E))
+    (Submodule.prod (Wg sys H) (Sstar sys E))
+    hP2Q2 hQ2 hP2 hPmap hQmap).mpr hTarget
+
+end
+
+end LinearSystem
