@@ -1524,6 +1524,126 @@ theorem isDetectable_of_isHurwitz_unobservableRestriction (C : X →ₗ[ℝ] Y) 
 
 end ConversePBH
 
+/-! ## Hurwitz quotients of triangular product operators -/
+
+section BlockQuotient
+variable {M N : Type*}
+variable [AddCommGroup M] [Module ℝ M] [FiniteDimensional ℝ M]
+variable [AddCommGroup N] [Module ℝ N] [FiniteDimensional ℝ N]
+
+/-- The heterogeneous upper-triangular block operator
+`(m, n) ↦ (T m + K n, S n)` on `M × N`. -/
+noncomputable def blockOperator₂ (T : M →ₗ[ℝ] M) (K : N →ₗ[ℝ] M) (S : N →ₗ[ℝ] N) :
+    M × N →ₗ[ℝ] M × N :=
+  LinearMap.prod ((T.comp (LinearMap.fst ℝ M N)) + (K.comp (LinearMap.snd ℝ M N)))
+    (S.comp (LinearMap.snd ℝ M N))
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+theorem blockOperator₂_apply (T : M →ₗ[ℝ] M) (K : N →ₗ[ℝ] M) (S : N →ₗ[ℝ] N)
+    (m : M) (n : N) :
+    blockOperator₂ T K S (m, n) = (T m + K n, S n) := by
+  simp [blockOperator₂]
+
+omit [FiniteDimensional ℝ M] in
+/-- The heterogeneous definition agrees with the existing square-block operator. -/
+theorem blockOperator₂_self (T K S : M →ₗ[ℝ] M) :
+    blockOperator₂ T K S = blockOperator T K S := by
+  apply LinearMap.ext
+  rintro ⟨m, n⟩
+  simp [blockOperator₂_apply, blockOperator_apply]
+
+/-- The characteristic polynomial of the heterogeneous block operator factors as
+`T.charpoly * S.charpoly`. -/
+theorem charpoly_blockOperator₂ (T : M →ₗ[ℝ] M) (K : N →ₗ[ℝ] M) (S : N →ₗ[ℝ] N) :
+    (blockOperator₂ T K S).charpoly = T.charpoly * S.charpoly :=
+  charpoly_prodMap_of_lower_zero T S K
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+/-- The product `P × Q` is invariant under `blockOperator₂ T K S` when `T` preserves `P`,
+`S` preserves `Q` and `K` maps `Q` into `P`. -/
+theorem prodInvariance (T : M →ₗ[ℝ] M) (K : N →ₗ[ℝ] M) (S : N →ₗ[ℝ] N)
+    (P : Submodule ℝ M) (Q : Submodule ℝ N)
+    (hTP : ∀ x ∈ P, T x ∈ P) (hSQ : ∀ y ∈ Q, S y ∈ Q) (hKQ : ∀ y ∈ Q, K y ∈ P) :
+    ∀ z ∈ P.prod Q, blockOperator₂ T K S z ∈ P.prod Q := by
+  intro z hz
+  rw [Submodule.mem_prod] at hz
+  obtain ⟨hz1, hz2⟩ := hz
+  rw [blockOperator₂_apply, Submodule.mem_prod]
+  exact ⟨P.add_mem (hTP z.1 hz1) (hKQ z.2 hz2), hSQ z.2 hz2⟩
+
+/-- **Quotient of a block-upper-triangular map.** If `T` preserves `P`, `S` preserves
+`Q`, `K` maps `Q` into `P`, and the quotient maps induced by `T` on `M ⧸ P` and by `S`
+on `N ⧸ Q` are Hurwitz, then the map induced by `(m, n) ↦ (T m + K n, S n)` on
+`(M × N) ⧸ (P × Q)` is Hurwitz. -/
+theorem isHurwitz_mapQ_prod_of_isHurwitz
+    (T : M →ₗ[ℝ] M) (K : N →ₗ[ℝ] M) (S : N →ₗ[ℝ] N)
+    (P : Submodule ℝ M) (Q : Submodule ℝ N)
+    (hTP : ∀ x ∈ P, T x ∈ P) (hSQ : ∀ y ∈ Q, S y ∈ Q) (hKQ : ∀ y ∈ Q, K y ∈ P)
+    (hTq : IsHurwitz (Submodule.mapQ P P T (fun x hx => hTP x hx)))
+    (hSq : IsHurwitz (Submodule.mapQ Q Q S (fun y hy => hSQ y hy))) :
+    IsHurwitz (Submodule.mapQ (P.prod Q) (P.prod Q) (blockOperator₂ T K S)
+      (prodInvariance T K S P Q hTP hSQ hKQ)) := by
+  classical
+  let hA : ∀ z ∈ P.prod Q, blockOperator₂ T K S z ∈ P.prod Q :=
+    prodInvariance T K S P Q hTP hSQ hKQ
+  let φ : (M × N) ⧸ (P.prod Q) →ₗ[ℝ] (M × N) ⧸ (P.prod Q) :=
+    Submodule.mapQ (P.prod Q) (P.prod Q) (blockOperator₂ T K S) hA
+  let Tq : M ⧸ P →ₗ[ℝ] M ⧸ P := Submodule.mapQ P P T (fun x hx => hTP x hx)
+  let Sq : N ⧸ Q →ₗ[ℝ] N ⧸ Q := Submodule.mapQ Q Q S (fun y hy => hSQ y hy)
+  let Kbar : N ⧸ Q →ₗ[ℝ] M ⧸ P := Submodule.mapQ Q P K (fun y hy => hKQ y hy)
+  let f : M × N →ₗ[ℝ] (M ⧸ P) × (N ⧸ Q) :=
+    (P.mkQ.comp (LinearMap.fst ℝ M N)).prod (Q.mkQ.comp (LinearMap.snd ℝ M N))
+  have hf : Function.Surjective f := by
+    intro p
+    obtain ⟨u, v⟩ := p
+    refine Submodule.Quotient.induction_on P u ?_
+    intro m
+    refine Submodule.Quotient.induction_on Q v ?_
+    intro n
+    exact ⟨(m, n), rfl⟩
+  have hker : LinearMap.ker f = P.prod Q := by
+    ext z
+    obtain ⟨m, n⟩ := z
+    rw [LinearMap.mem_ker, Submodule.mem_prod]
+    change (P.mkQ m, Q.mkQ n) = 0 ↔ m ∈ P ∧ n ∈ Q
+    simp [Submodule.Quotient.mk_eq_zero]
+  let e : ((M × N) ⧸ (P.prod Q)) ≃ₗ[ℝ] ((M ⧸ P) × (N ⧸ Q)) :=
+    (Submodule.quotEquivOfEq (P.prod Q) (LinearMap.ker f) hker.symm).trans
+      (f.quotKerEquivOfSurjective hf)
+  have he : ∀ z : M × N, e (Submodule.Quotient.mk z) = f z := by
+    intro z
+    simp only [e, LinearEquiv.trans_apply, Submodule.quotEquivOfEq_mk,
+      LinearMap.quotKerEquivOfSurjective_apply_mk]
+  have hcomp : e.toLinearMap.comp φ = (blockOperator₂ Tq Kbar Sq).comp e.toLinearMap := by
+    apply LinearMap.ext
+    intro y
+    refine Submodule.Quotient.induction_on (P.prod Q) y ?_
+    intro z
+    obtain ⟨m, n⟩ := z
+    change e (Submodule.Quotient.mk (blockOperator₂ T K S (m, n))) =
+      (blockOperator₂ Tq Kbar Sq) (e (Submodule.Quotient.mk (m, n)))
+    rw [he (blockOperator₂ T K S (m, n)), he (m, n)]
+    simp only [blockOperator₂_apply, Tq, Sq, Kbar, f, Function.prod_apply,
+      LinearMap.prod_apply, LinearMap.comp_apply, LinearMap.fst_apply, LinearMap.snd_apply,
+      Submodule.mapQ_apply, Submodule.mkQ_apply, Submodule.Quotient.mk_add]
+  have hconj : e.conj φ = blockOperator₂ Tq Kbar Sq := by
+    rw [LinearEquiv.conj_apply, hcomp]
+    apply LinearMap.ext
+    intro x
+    simp
+  have hchar : φ.charpoly = (blockOperator₂ Tq Kbar Sq).charpoly := by
+    rw [← LinearEquiv.charpoly_conj e φ, hconj]
+  change IsHurwitz φ
+  intro z hz
+  have hz' : ((blockOperator₂ Tq Kbar Sq).charpoly.map (algebraMap ℝ ℂ)).eval z = 0 := by
+    rwa [← hchar]
+  rw [charpoly_blockOperator₂, Polynomial.map_mul, Polynomial.eval_mul] at hz'
+  rcases mul_eq_zero.mp hz' with h | h
+  · exact hTq z h
+  · exact hSq z h
+
+end BlockQuotient
+
 /-! ## Restriction and quotient characteristic polynomials
 
 For an `A`-invariant submodule `V`, the characteristic polynomial of `A` factors
