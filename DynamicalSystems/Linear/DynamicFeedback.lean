@@ -2957,16 +2957,13 @@ stabilizing controller exists exactly when
 * `S*(im E) ∩ Xdet ≤ ker H` (`S* = conditionedInvariantSubspace C A`,
   `Xdet = detectableSubspace C A`).
 
-The two inclusions are recorded by
-`ExternalStabilizationConditions`; the accepted
-`(C, A, B)`-pair certificate already entails both, and the necessary-direction
-extraction `externalStabilizationConditions_of_externalStability` obtains them
-from the exact external zero response. The trajectory/spectral stable-nonzero
-direction is now supported by the formalised quotient-decay bridge
-`tendsto_readout_exp_of_isHurwitz_mapQ` and the geometric state-feedback
-construction `exists_feedback_tendsto_readout_of_corollary622`, with observer dual
-`exists_observerError_readout_tendsto_of_externalStabilizationConditions`; the
-full necessary-and-sufficient dynamic-controller form of Corollary 6.22 is not
+The two inclusions are recorded by `ExternalStabilizationConditions`. The
+accepted `(C, A, B)`-pair certificate entails both, and
+`externalStabilizationConditions_of_externalStability` extracts them from exact
+external zero response. For the weaker stable-nonzero response, the geometric
+conditions are sufficient by
+`stableNonzeroExternalResponse_of_externalStabilizationConditions` below. The
+converse from a merely decaying response, and hence the full iff, is not yet
 claimed. -/
 
 /-- **The geometric subspace conditions of Corollary 6.22.** The disturbance
@@ -3170,45 +3167,35 @@ theorem exists_stableNonzeroExternalResponse_cabPair_gains
 
 end StableNonzeroExistence
 
-/-! ### Handoff: the exact remaining blocker for the full stable-nonzero iff
+/-! ### Handoff: the remaining converse for the full stable-nonzero iff
 
 The Corollary 6.22 stable-nonzero criterion would read
 
 `StableNonzeroExternalResponse sys hD E H ↔ ExternalStabilizationConditions sys E H`.
 
-Its two directions split as follows.
+The sufficiency direction is proved below by
+`stableNonzeroExternalResponse_of_externalStabilizationConditions`. It assembles
+the extended invariant subspaces and their Hurwitz quotient for the
+observer-based controller, then applies the forced-readout decay bridge.
 
-* **Sufficiency** (`ExternalStabilizationConditions → StableNonzeroExternalResponse`).
-  The state-feedback half is `exists_feedback_tendsto_readout_of_corollary622`
-  (`H e^{t(A+BF)} (E d) → 0`) and the observer half is
-  `exists_observerError_readout_tendsto_of_externalStabilizationConditions`
-  (`H e^{t(A-LC)} (E d) → 0`). The generic forced-readout consumer
-  `externalResponse_tendsto_zero_of_quotient_hurwitz` is also proved below.
-  The remaining step is to construct the extended invariant pair `(Ve, We)`
-  of Lemma 6.21 for the controller (6.39), containing the disturbance image,
-  annihilated by the external readout on `Ve`, and with Hurwitz quotient
-  `We / Ve` as in Theorem 6.18. The current feedback/observer theorems export
-  readout decay, but not yet the quotient data needed for this assembly.
+The remaining **necessity** direction
+(`StableNonzeroExternalResponse → ExternalStabilizationConditions`) is distinct.
+The source derives `im E ⊂ V*(ker H) + Xstab` from the definition of `W_g(ker H)`
+as the set of states from which an open-loop control can make the controlled
+output decay, together with Theorem 4.37 (`W_g(ker H) = V*(ker H) + Xstab`),
+and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The finite-Bohl
+forcing-image version of this open-loop characterisation is
+`finiteBohlWBridge`. Applying it to a generic real controller still requires
+real-to-complexification transport (the controller's state and input may have
+odd real dimension), plant-trajectory extraction from the closed-loop orbit,
+and a transposed closed-loop realization for the dual condition. The exact-zero
+case already has both halves
+(`externalStabilizationConditions_of_externalStability`), but it rests on the
+stronger zero-response premise and does not cover the merely stable response.
 
-* **Necessity** (`StableNonzeroExternalResponse → ExternalStabilizationConditions`).
-  The source derives `im E ⊂ V*(ker H) + Xstab` from the definition of `W_g(ker H)`
-  as the set of states from which an open-loop control can make the controlled
-  output decay, together with Theorem 4.37 (`W_g(ker H) = V*(ker H) + Xstab`),
-  and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The missing
-  finite-Bohl forcing-image version of this open-loop characterisation is now
-  `finiteBohlWBridge`. Applying it to a generic real controller still requires
-  real-to-complexification transport (the controller's state and input may have
-  odd real dimension), plant-trajectory extraction from the closed-loop orbit,
-  and a transposed closed-loop realization for the dual condition. The exact-zero
-  case already has both halves
-  (`externalStabilizationConditions_of_externalStability`), but it rests on the
-  stronger zero-response premise and does not cover the merely stable response.
-
-Until these two statements are available the genuine iff is not claimed; only the
-strictly weaker exact-zero criterion (`externalStability_iff_geometricCertificate_and_conditions`)
-and the stable-nonzero synthesis under the additional Hurwitz hypothesis
-(`stableNonzeroExternalResponse_of_isHurwitz_cabPair`,
-`exists_stableNonzeroExternalResponse_cabPair_gains`) are asserted. -/
+Until this converse is available the genuine iff is not claimed. The exact-zero
+criterion (`externalStability_iff_geometricCertificate_and_conditions`) remains
+a separate, stronger statement. -/
 
 /-- **BIBO stability and external zero response from a stabilising certificate.**
 Suppose the geometric certificate `(S, V)` is equipped with gains `F`, `G`, `N`
@@ -5675,16 +5662,13 @@ now formalised in two layers:
   explicit `Ve`, `We` data, together with the consistent
   `..._of_isHurwitz_closedLoopMap` global-Hurwitz case.
 
-The remaining geometric obligation is to *construct* the extended subspace pair
-`(Ve, We)` from the two Corollary 6.22 blocks — `We = V_{e,2}` and `Ve = V_{e,1}`
-of Trentelman–Stoorvogel–Hautus Lemma 6.21, equations (6.40)–(6.41) — and to
-derive `We ⧸ Ve` Hurwitz from the state-feedback quotient on `W_g / V*` and the
-observer quotient on `S* / T_g` (Theorem 6.18). That construction, and the
-matching necessity direction from the merely stable response, are not claimed
-here; the exact-zero criterion
-(`externalStability_iff_geometricCertificate_and_conditions`) and the
-stable-nonzero synthesis under explicit Hurwitz/quotient-Hurwitz data remain the
-certified statements. -/
+The extended subspace pair `(Ve, We)` corresponding to `V_{e,1}` and `V_{e,2}`
+of Trentelman–Stoorvogel–Hautus Lemma 6.21, equations (6.40)–(6.41), and its
+Hurwitz quotient are constructed later in this file. They culminate in
+`stableNonzeroExternalResponse_of_externalStabilizationConditions`. The
+necessity direction from a merely stable response remains open; the exact-zero
+criterion (`externalStability_iff_geometricCertificate_and_conditions`) is a
+separate statement. -/
 
 
 /-! ## The `W_g(ker H)` necessity bridge: algebraic form and dual
@@ -5700,10 +5684,10 @@ properties, and the state-feedback form of the reversed inclusion as
 `exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`. The dual
 condition is derived from the transposed inclusion with the accepted
 detectable-top-characterisation `isDetectable_iff_detectableSubspace_eq_bot`.
-The spectral `W_g(ker H) ⊆ V*(ker H) + Xstab` step — decomposing a Bohl input
-and trajectory into stable and antistable parts and splitting the error equation
-at the spectrum — is **not** formalised; the section note at the end of the file
-records the exact missing statement. -/
+The finite-Bohl forcing-image version of the spectral
+`W_g(ker H) ⊆ V*(ker H) + Xstab` step is formalised later as
+`finiteBohlWBridge`. The unrestricted locally-integrable version is not
+formalised; the section note below records its exact missing statement. -/
 
 namespace LinearSystem
 
