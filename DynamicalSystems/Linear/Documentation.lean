@@ -18,6 +18,7 @@ import DynamicalSystems.Linear.GenericControllerDuality
 import DynamicalSystems.Linear.GenericControllerDualResponse
 import DynamicalSystems.Linear.ArbitraryControllerCriterion
 import DynamicalSystems.Linear.TransferPoleStability
+import DynamicalSystems.Linear.MinimalPoleCancellation
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -1164,7 +1165,8 @@ poles. The numerator agrees with determinant times the resolvent channel value
 at nonsingular points, and evaluation of the reduced rational function agrees
 with the resolvent there. A zero-output lemma illustrates why the converse requires
 controllability and observability; the minimal-realization pole converse is not
-yet formalized.
+yet formalized. For the controllable–observable realization, Hurwitz stability
+implies pole stability of every complexified transfer-matrix entry.
 
 {docstring RatFunc.IsPoleStable}
 {docstring RatFunc.eval_mk_of_eval_ne_zero}
@@ -1173,6 +1175,18 @@ yet formalized.
 {docstring Matrix.channelTransferRatFunc_isPoleStable_of_spectrum}
 {docstring Matrix.channelTransferNumerator_eval_eq_det_mul_resolvent}
 {docstring Matrix.channelTransferRatFunc_eval_eq_resolvent}
+{docstring LinearSystem.charpoly_complexified_realMatrix}
+{docstring LinearSystem.controllableObservableRealization_entry_transfer_poleStable}
+
+## `DynamicalSystems.Linear.MinimalPoleCancellation`
+
+For a controllable and observable complex realization, a characteristic root
+with nonzero evaluated adjugate survives cancellation in at least one scalar
+transfer entry. This uses local Hautus reachability and observability to show
+the Cramer numerator is nonzero. Repeated-root cases with zero evaluated
+adjugate still need a higher-order argument.
+
+{docstring Matrix.exists_scalar_transfer_pole_of_minimal_rank_one_root}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 

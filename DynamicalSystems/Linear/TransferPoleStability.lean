@@ -5,11 +5,12 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.Linear.DynamicFeedback
+public import DynamicalSystems.Linear.ArbitraryControllerCriterion
 public import Mathlib.FieldTheory.RatFunc.Basic
 public import Mathlib.FieldTheory.RatFunc.AsPolynomial
 public import Mathlib.LinearAlgebra.Matrix.Charpoly.Basic
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+public import Mathlib.LinearAlgebra.Charpoly.BaseChange
 
 /-! # Rational pole stability of finite-dimensional scalar channels
 
@@ -253,3 +254,54 @@ theorem channelTransferRatFunc_isPoleStable_of_zero_output
   simp [channelTransferNumerator]
 
 end Matrix
+
+namespace LinearSystem
+
+variable {X D Z : Type*}
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup D] [Module ℝ D] [FiniteDimensional ℝ D]
+variable [AddCommGroup Z] [Module ℝ Z] [FiniteDimensional ℝ Z]
+
+/-- Complexifying the matrix of a real endomorphism preserves its
+characteristic polynomial after coefficient base change. -/
+theorem charpoly_complexified_realMatrix (A : X →ₗ[ℝ] X)
+    (b : Module.Basis (Fin (Module.finrank ℝ X)) ℝ X) :
+    ((A.toMatrix b b).map (algebraMap ℝ ℂ)).charpoly =
+      A.charpoly.map (algebraMap ℝ ℂ) := by
+  rw [Matrix.charpoly_map, LinearMap.charpoly_toMatrix]
+
+/-- If the controllable–observable realization is Hurwitz, every scalar entry
+of its complexified rational transfer matrix has only left-half-plane poles.
+The converse is not asserted: it needs a no-cancellation theorem for the
+entire MIMO transfer matrix. -/
+theorem controllableObservableRealization_entry_transfer_poleStable
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hHurwitz : LinearMap.IsHurwitz
+      (LinearMap.controllableObservableRealization A E H 0).A)
+    (i : Fin (Module.finrank ℝ Z)) (j : Fin (Module.finrank ℝ D)) :
+    RatFunc.IsPoleStable (Matrix.channelTransferRatFunc
+      (((LinearMap.controllableObservableRealization A E H 0).A.toMatrix
+        (Module.finBasis ℝ _) (Module.finBasis ℝ _)).map (algebraMap ℝ ℂ))
+      (fun k => (((LinearMap.controllableObservableRealization A E H 0).C.toMatrix
+        (Module.finBasis ℝ _) (Module.finBasis ℝ _)) i k : ℂ))
+      (fun k => (((LinearMap.controllableObservableRealization A E H 0).B.toMatrix
+        (Module.finBasis ℝ _) (Module.finBasis ℝ _)) k j : ℂ))) := by
+  let M := LinearMap.controllableObservableRealization A E H 0
+  let S := (LinearMap.reachableSubspace A E) ⧸ LinearMap.reachableIntersection A E H
+  let bS : Module.Basis (Fin (Module.finrank ℝ S)) ℝ S := Module.finBasis ℝ S
+  let bD : Module.Basis (Fin (Module.finrank ℝ D)) ℝ D := Module.finBasis ℝ D
+  let bZ : Module.Basis (Fin (Module.finrank ℝ Z)) ℝ Z := Module.finBasis ℝ Z
+  let AM := M.A.toMatrix bS bS
+  let BM := M.B.toMatrix bD bS
+  let HM := M.C.toMatrix bS bZ
+  change RatFunc.IsPoleStable (Matrix.channelTransferRatFunc (AM.map (algebraMap ℝ ℂ))
+    (fun k => (HM i k : ℂ)) (fun k => (BM k j : ℂ)))
+  apply Matrix.realMatrix_channelTransferRatFunc_isPoleStable
+  intro z hz
+  have hz' : (Polynomial.map (algebraMap ℝ ℂ) AM.charpoly).eval z = 0 := by
+    simpa only [Polynomial.IsRoot.def, Matrix.charpoly_map,
+      LinearMap.charpoly_toMatrix] using hz
+  apply hHurwitz z
+  simpa only [AM, LinearMap.charpoly_toMatrix] using hz'
+
+end LinearSystem
