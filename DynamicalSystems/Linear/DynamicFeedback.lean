@@ -3185,14 +3185,14 @@ as the set of states from which an open-loop control can make the controlled
 output decay, together with Theorem 4.37 (`W_g(ker H) = V*(ker H) + Xstab`),
 and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The finite-Bohl
 forcing-image version of this open-loop characterisation is
-`finiteBohlWBridge`. Applying it to a generic real controller still requires
-real-to-complexification transport (the controller's state and input may have
-odd real dimension) and transfer of external-response decay through the
-transposed closed-loop realization. The operator-level transpose identity is
-`prodDualEquiv_closedLoopMap_apply` below. The plant-trajectory extraction and
-first inclusion are proved below
-under the finite-Bohl bridge's explicit complex-structure hypothesis, in
-`range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse`. The exact-zero
+`finiteBohlWBridge`. Its arbitrary-real-space counterpart is
+`finiteBohlWBridge_real` in `RealBohlTransport`. The first inclusion from an
+arbitrary stable controller is also proved there by
+`range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse`.
+The remaining dual inclusion needs transfer of external-response decay through
+the transposed closed-loop realization. The operator-level transpose identity
+`prodDualEquiv_closedLoopMap_apply` and a general channel-decay transpose bridge
+`dualReadout_tendsto_of_readout_tendsto` are proved below. The exact-zero
 case already has both halves
 (`externalStabilizationConditions_of_externalStability`), but it rests on the
 stronger zero-response premise and does not cover the merely stable response.
@@ -13239,9 +13239,10 @@ end LinearSystem
 
 /-! ## Necessity: plant trajectory extracted from a stable dynamic loop
 
-The first geometric inclusion follows under the finite-Bohl bridge's explicit
-complex-linear input-map hypothesis. The arbitrary-real-space and transposed
-controller transports remain separate obligations. -/
+The plant component of a stable dynamic closed-loop orbit is an open-loop
+variation-of-constants trajectory driven by the resolved controller input.
+`RealBohlTransport` combines this real-space extraction with the finite-Bohl
+`W_g` bridge to prove the first geometric inclusion. -/
 
 namespace LinearSystem
 
@@ -13250,12 +13251,14 @@ noncomputable section
 open Filter
 open scoped Topology
 
+section RealClosedLoopOrbit
+
 variable {X U Y D Z : Type*}
-variable [NormedAddCommGroup X] [NormedSpace ℂ X] [FiniteDimensional ℝ X] [FiniteDimensional ℂ X]
-variable [NormedAddCommGroup U] [NormedSpace ℂ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
 variable [AddCommGroup Y] [Module ℝ Y]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
-variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
 
 /-- Extract the plant-component trajectory of the closed-loop autonomous orbit
 started from the disturbance image. For a strictly proper plant, the plant
@@ -13336,88 +13339,7 @@ lemma closedLoop_expFlow_fst_eq_variationOfConstants
     (variationOfConstants_self sysZ 0 (E d) u)
     (fun t => variationOfConstants_integral sysZ 0 (E d) u hu t))
 
-/-- **Necessity: first Corollary 6.22 inclusion from a stable nonzero external
-response.** Under the finite-Bohl transport hypotheses (complex scalar structures
-on the state and input and a complex-linear input map restricting to `sys.B`),
-an arbitrary dynamic measurement-feedback controller whose forced external
-response decays in every disturbance direction has disturbance image contained
-in `W_g(ker H) = V*(ker H) + Xstab(A, B)`.
-
-The closed-loop autonomous orbit started from `(E d, 0)` has plant component
-`x(t)`, and the resolved controller input `u(t) = solvedInput (e^{t A_e} (E d, 0))`
-is an open-loop control for the plant. The plant component is the
-variation-of-constants trajectory (`closedLoop_expFlow_fst_eq_variationOfConstants`),
-its readout decays by the stable-response hypothesis, and the input has finite-Bohl
-forcing image by the real-linear orbit theorem; the bridge
-`finiteBohlWBridge` then places `E d` in `W_g(ker H)`. -/
-theorem range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse
-    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
-    (Bℂ : U →ₗ[ℂ] X) (hB : Bℂ.restrictScalars ℝ = sys.B)
-    (h : StableNonzeroExternalResponse sys hD E H) :
-    LinearMap.range E ≤ outputStabilizableSubspace sys.A sys.B H := by
-  classical
-  obtain ⟨ctrl, hdec⟩ := h
-  let sysZ : LinearSystem ℝ X U Z := ⟨sys.A, sys.B, H, 0⟩
-  have hBZ : Bℂ.restrictScalars ℝ = sysZ.B := by
-    simpa [sysZ] using hB
-  have hbridge := finiteBohlWBridge (sys := sysZ) Bℂ hBZ H
-  rintro _ ⟨d, rfl⟩
-  let ic := cabPairInterconnection sys ctrl E H
-  let hwp := ic.isWellPosed_of_D_eq_zero hD
-  let p : ℝ → X × X := fun t => (ic.closedLoopSystem hwp).expFlow t (E d, 0)
-  let u : ℝ → U := fun t => ic.solvedInput hwp (p t)
-  have hp_cont : Continuous p := by
-    rw [continuous_iff_continuousAt]
-    intro t
-    exact (hasDerivAt_expFlow_apply_state (ic.closedLoopSystem hwp) t (E d, 0)).continuousAt
-  have hu_cont : Continuous u :=
-    (ic.solvedInput hwp).continuous_of_finiteDimensional.comp hp_cont
-  have hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume := hu_cont.locallyIntegrable
-  have hpBohl : IsExponentialPolynomial (fun t : ℝ => p t) := by
-    have hfun : (fun t : ℝ => p t) =
-        fun t : ℝ => NormedSpace.exp (t • (ic.closedLoopMap hwp).toContinuousLinearMap)
-          (E d, 0) := by
-      funext t
-      simp [p, ic.closedLoopSystem_expFlow_eq hwp]
-    rw [hfun]
-    exact isExponentialPolynomial_expFlow_of_realLinear (ic.closedLoopMap hwp) (E d, 0)
-  let r : X × X →ₗ[ℝ] X := (Bℂ.restrictScalars ℝ).comp (ic.solvedInput hwp)
-  have hBu : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)) := by
-    have hfun : (fun t : ℝ => Bℂ (u t)) = fun t : ℝ => r (p t) := by
-      funext t
-      simp [u, r, LinearMap.comp_apply, LinearMap.restrictScalars_apply]
-    rw [hfun]
-    exact hpBohl.map_realLinear r.toContinuousLinearMap
-  have hresp_fun : (fun t : ℝ => ic.externalResponse hwp t d) = fun t : ℝ => H (p t).1 := by
-    funext t
-    rw [ic.externalResponse_apply]
-    have hdist : ic.disturbanceMapWithF hwp d = (E d, 0) := by
-      rw [ic.disturbanceMapWithF_of_F_eq_zero hwp rfl, ic.disturbanceMap_apply]
-      change (E d, 0) = (E d, 0)
-      rfl
-    rw [hdist, ic.outputMap_apply]
-    change H (((ic.closedLoopSystem hwp).expFlow t) (E d, 0)).1 = H (p t).1
-    simp [p]
-  have hdec_ic : Filter.Tendsto (fun t : ℝ => ic.externalResponse hwp t d)
-      Filter.atTop (nhds 0) := by
-    simpa [ic, hwp] using hdec d
-  have hresp : Filter.Tendsto (fun t : ℝ => H (p t).1) Filter.atTop (nhds 0) := by
-    convert hdec_ic using 1
-    funext t
-    exact (congrFun hresp_fun t).symm
-  have htraj : (fun t : ℝ => (p t).1) = sysZ.variationOfConstants 0 (E d) u := by
-    simpa [ic, hwp, p, u] using
-      (closedLoop_expFlow_fst_eq_variationOfConstants sys sysZ rfl rfl ctrl hD E H d)
-  have hdecZ : Filter.Tendsto
-      (fun t : ℝ => H (sysZ.variationOfConstants 0 (E d) u t)) Filter.atTop (nhds 0) := by
-    have hfun : (fun t : ℝ => H (sysZ.variationOfConstants 0 (E d) u t)) =
-        fun t : ℝ => H (p t).1 := by
-      funext t
-      rw [← congrFun htraj t]
-    rw [hfun]
-    exact hresp
-  have hbohl : IsBohlOutputStabilizable sysZ Bℂ hBZ H (E d) := ⟨u, hu, hBu, hdecZ⟩
-  simpa [sysZ] using hbridge (E d) hbohl
+end RealClosedLoopOrbit
 
 end
 
@@ -13530,6 +13452,46 @@ theorem prodDualEquiv_closedLoopMap_apply
     map_add, icD, ic, cabPairInterconnection_dual, cabPairInterconnection, dual,
     LinearMap.add_apply, LinearMap.comp_apply]
   abel
+
+local instance : IsTopologicalRing
+    (Module.Dual ℝ (X × X) →L[ℝ] Module.Dual ℝ (X × X)) :=
+  { continuous_add := continuous_add
+    continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+    continuous_neg := continuous_neg }
+
+set_option synthInstance.maxHeartbeats 1000000 in
+/-- Transposed closed-loop exponential is conjugate to the primal transpose exponential. -/
+theorem prodDualEquiv_closedLoop_exp_apply
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (t : ℝ) (p : Module.Dual ℝ X × Module.Dual ℝ X) :
+    prodDualEquiv (X := X)
+      (NormedSpace.exp (t • ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+          (dual_D_eq_zero sys hD))).toContinuousLinearMap) p) =
+      NormedSpace.exp (t • (((cabPairInterconnection sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap).toContinuousLinearMap)
+        (prodDualEquiv (X := X) p) := by
+  let L := (prodDualEquiv (X := X)).toContinuousLinearEquiv
+  let A := ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+          (dual_D_eq_zero sys hD))).toContinuousLinearMap
+  let B := (((cabPairInterconnection sys ctrl E H).closedLoopMap
+        ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap).toContinuousLinearMap
+  have hconj : L.conjContinuousAlgEquiv A = B := by
+    apply ContinuousLinearMap.ext
+    intro q
+    change L (A (L.symm q)) = B q
+    simpa [L, A, B] using prodDualEquiv_closedLoopMap_apply sys hD ctrl E H (L.symm q)
+  have key := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (L.conjContinuousAlgEquiv)
+    (L.conjContinuousAlgEquiv).continuous (t • A)
+    ((NormedSpace.expSeries_radius_eq_top ℝ
+      (Module.Dual ℝ X × Module.Dual ℝ X →L[ℝ]
+        Module.Dual ℝ X × Module.Dual ℝ X)).symm ▸ edist_lt_top _ _)
+  have hsmul : L.conjContinuousAlgEquiv (t • A) = t • B := by rw [map_smul, hconj]
+  rw [hsmul] at key
+  have happ := congrArg (fun f : _ => f (L p)) key
+  simpa [L, A, B, ContinuousLinearEquiv.conjContinuousAlgEquiv_apply_apply] using happ
 
 end LinearSystem
 

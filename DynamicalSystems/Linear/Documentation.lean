@@ -10,6 +10,7 @@ import DynamicalSystems.Linear.Stabilization
 import DynamicalSystems.Linear.Observer
 import DynamicalSystems.Linear.DisturbanceDecoupling
 import DynamicalSystems.Linear.DynamicFeedback
+import DynamicalSystems.Linear.RealBohlTransport
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -368,11 +369,19 @@ image to a Bohl input remains separate.
 {docstring LinearSystem.finiteBohlSynthesis}
 {docstring LinearSystem.isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete}
 
+For arbitrary finite-dimensional real state and input spaces, the same
+finite-Bohl necessity is available by complexifying real coordinates and
+projecting the stable/antistable decomposition back to the original spaces.
+This removes the complex-module hypothesis from the open-loop `W_g` bridge.
+
+{docstring LinearSystem.finiteBohlWBridge_real}
+
 The plant component of an arbitrary stable dynamic closed-loop orbit is a
 variation-of-constants trajectory driven by the controller's resolved input.
-With the finite-Bohl bridge's explicit complex-linear input-map hypothesis,
-this proves the first Corollary 6.22 necessity inclusion `im E ≤ W_g(ker H)`.
-The general real-space transport and the dual necessity inclusion remain open.
+Combined with the real-coordinate finite-Bohl bridge, this proves the first
+Corollary 6.22 necessity inclusion `im E ≤ W_g(ker H)` for arbitrary
+finite-dimensional real state and input spaces. The dual necessity inclusion
+remains open.
 
 {docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse}
 
