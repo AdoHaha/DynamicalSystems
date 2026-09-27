@@ -29,6 +29,63 @@ noncomputable section
 
 namespace RatFunc
 
+/-- Evaluation of a reduced rational function agrees with its displayed
+polynomial fraction away from the original denominator's zero set. -/
+theorem eval_mk_of_eval_ne_zero (p q : Polynomial ℂ) (z : ℂ)
+    (hqz : q.eval z ≠ 0) :
+    RatFunc.eval (RingHom.id ℂ) z (RatFunc.mk p q) = p.eval z / q.eval z := by
+  have hq : q ≠ 0 := by
+    intro h
+    subst q
+    simp at hqz
+  rw [RatFunc.mk_eq_div, RatFunc.eval, RatFunc.num_div, RatFunc.denom_div _ hq]
+  let g := gcd p q
+  have hg0 : g ≠ 0 := by
+    intro hg
+    apply hq
+    have hdiv := gcd_dvd_right p q
+    change g ∣ q at hdiv
+    rw [hg] at hdiv
+    simpa using hdiv
+  have hg : g.eval z ≠ 0 := by
+    intro hz
+    have hmul : g * (q / g) = q := by
+      exact EuclideanDomain.mul_div_cancel' hg0 (gcd_dvd_right p q)
+    apply hqz
+    rw [← hmul, Polynomial.eval_mul, hz, zero_mul]
+  have hqdiv : (q / g).eval z ≠ 0 := by
+    intro hz
+    have hmul : g * (q / g) = q := by
+      exact EuclideanDomain.mul_div_cancel' hg0 (gcd_dvd_right p q)
+    apply hqz
+    rw [← hmul, Polynomial.eval_mul, hz, mul_zero]
+  have hmulP : g * (p / g) = p := by
+    exact EuclideanDomain.mul_div_cancel' hg0 (gcd_dvd_left p q)
+  have hmulQ : g * (q / g) = q := by
+    exact EuclideanDomain.mul_div_cancel' hg0 (gcd_dvd_right p q)
+  simp only [Polynomial.eval₂_id, Polynomial.eval_mul, Polynomial.eval_C]
+  have evalP : p.eval z = g.eval z * (p / g).eval z := by
+    have he := congrArg (fun t : Polynomial ℂ => t.eval z) hmulP
+    simpa only [Polynomial.eval_mul] using he.symm
+  have evalQ : q.eval z = g.eval z * (q / g).eval z := by
+    have he := congrArg (fun t : Polynomial ℂ => t.eval z) hmulQ
+    simpa only [Polynomial.eval_mul] using he.symm
+  rw [evalP, evalQ]
+  simp only [g]
+  have hqdiv0 : q / gcd p q ≠ 0 := by
+    intro h
+    rw [h] at hqdiv
+    simp at hqdiv
+  have hlc : (q / gcd p q).leadingCoeff ≠ 0 :=
+    Polynomial.leadingCoeff_ne_zero.mpr hqdiv0
+  field_simp [hqdiv, hg, hlc]
+  have hg' : Polynomial.eval z (gcd p q) ≠ 0 := by simpa [g] using hg
+  calc
+    _ = (Polynomial.eval z (p / gcd p q) * (Polynomial.eval z (q / gcd p q))⁻¹) *
+          (Polynomial.eval z (gcd p q) * (Polynomial.eval z (gcd p q))⁻¹) := by
+      simp [div_eq_mul_inv, mul_inv_cancel₀ hg']
+    _ = _ := by ring
+
 /-- A rational function is pole-stable when every root of its reduced denominator
 lies in the open left half-plane. This is algebraic pole stability, not an
 impulse-response or decay definition. -/
@@ -171,6 +228,21 @@ theorem channelTransferNumerator_eval_eq_det_mul_resolvent
       ring
     _ = M.det * ∑ i : n, c i * ((M⁻¹) *ᵥ b) i := by rw [Finset.mul_sum]
     _ = A.charpoly.eval z * ∑ i : n, c i * ((M⁻¹) *ᵥ b) i := by rw [← hdetchar]
+
+/-- At every nonsingular point, the evaluated rational state-space channel
+agrees with the ordinary matrix-resolvent channel. -/
+theorem channelTransferRatFunc_eval_eq_resolvent
+    (A : Matrix n n ℂ) (c b : n → ℂ) (z : ℂ)
+    (hdet : (Matrix.scalar n z - A).det ≠ 0) :
+    RatFunc.eval (RingHom.id ℂ) z (channelTransferRatFunc A c b) =
+      ∑ i : n, c i * (((Matrix.scalar n z - A)⁻¹) *ᵥ b) i := by
+  have hpoly : A.charpoly.eval z ≠ 0 := by
+    rw [Matrix.eval_charpoly]
+    simpa using hdet
+  rw [channelTransferRatFunc, RatFunc.eval_mk_of_eval_ne_zero _ _ _ hpoly]
+  rw [channelTransferNumerator_eval_eq_det_mul_resolvent A c b z hdet]
+  rw [Matrix.eval_charpoly]
+  field_simp [hpoly]
 
 /-- Zero output cancels every state pole, even for an internally unstable `A`;
 therefore transfer pole-stability alone cannot imply internal Hurwitz stability. -/

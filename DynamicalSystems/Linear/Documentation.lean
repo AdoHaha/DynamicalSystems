@@ -1161,15 +1161,18 @@ For a scalar finite-dimensional matrix channel, the adjugate formula defines a
 complex rational transfer function. Its reduced denominator divides the state
 characteristic polynomial, so Hurwitz state spectrum implies stable transfer
 poles. The numerator agrees with determinant times the resolvent channel value
-at nonsingular points. A zero-output example shows why the converse requires
+at nonsingular points, and evaluation of the reduced rational function agrees
+with the resolvent there. A zero-output lemma illustrates why the converse requires
 controllability and observability; the minimal-realization pole converse is not
 yet formalized.
 
 {docstring RatFunc.IsPoleStable}
+{docstring RatFunc.eval_mk_of_eval_ne_zero}
 {docstring Matrix.channelTransferRatFunc}
 {docstring Matrix.channelTransferRatFunc_denom_dvd_charpoly}
 {docstring Matrix.channelTransferRatFunc_isPoleStable_of_spectrum}
 {docstring Matrix.channelTransferNumerator_eval_eq_det_mul_resolvent}
+{docstring Matrix.channelTransferRatFunc_eval_eq_resolvent}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
