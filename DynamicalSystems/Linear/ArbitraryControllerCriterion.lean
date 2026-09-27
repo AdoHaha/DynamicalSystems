@@ -168,4 +168,115 @@ theorem channelReadout_tendsto_of_isHurwitz_minimalRealization
   apply tendsto_readout_exp_of_isHurwitz_mapQ_on A H E V W hW hV hVH hE
   exact h
 
+private theorem channel_decay_imp_reachable_le_unobservable_sup_hurwitz
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hdec : ∀ d : D, Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+      atTop (nhds 0)) :
+    LinearMap.reachableSubspace A E ≤
+      LinearMap.unobservableSubspace H A ⊔ LinearMap.hurwitzSubspace A := by
+  have hE : LinearMap.range E ≤
+      LinearMap.unobservableSubspace H A ⊔ LinearMap.hurwitzSubspace A :=
+    (channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz A E H).mp hdec
+  apply LinearMap.reachableSubspace_le A E hE
+  rw [Submodule.map_sup]
+  exact sup_le
+    ((LinearMap.map_unobservableSubspace_le H A).trans le_sup_left)
+    ((LinearMap.map_hurwitzSubspace_le A).trans le_sup_right)
+
+private theorem channel_decay_on_reachable
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hdec : ∀ d : D, Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+      atTop (nhds 0))
+    (w : LinearMap.reachableSubspace A E) :
+    Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (w : X)))
+      atTop (nhds 0) := by
+  have hW := channel_decay_imp_reachable_le_unobservable_sup_hurwitz A E H hdec
+  have hSub : LinearMap.range (LinearMap.reachableSubspace A E).subtype ≤
+      LinearMap.unobservableSubspace H A ⊔ LinearMap.hurwitzSubspace A := by
+    rintro x ⟨y, rfl⟩
+    exact hW y.2
+  exact (channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz
+    A (LinearMap.reachableSubspace A E).subtype H).mpr hSub w
+
+/-- Decay of every channel impulse response forces the controllable–observable
+realization to be Hurwitz. The converse to
+`channelReadout_tendsto_of_isHurwitz_minimalRealization` relies on observability
+to rule out antistable modes after restricting to the reachable space and
+quotienting by its unobservable part. -/
+theorem isHurwitz_minimalRealization_of_channelReadout_tendsto
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (hdec : ∀ d : D, Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+      atTop (nhds 0)) :
+    LinearMap.IsHurwitz (LinearMap.controllableObservableRealization A E H 0).A := by
+  let W := LinearMap.reachableSubspace A E
+  let I := LinearMap.reachableIntersection A E H
+  let M := LinearMap.controllableObservableRealization A E H 0
+  let AW := LinearMap.reachableRestrictionA A E
+  haveI : IsClosed (I : Set W) := I.closed_of_finiteDimensional
+  let q : W →L[ℝ] W ⧸ I := I.mkQ.toContinuousLinearMap
+  letI : IsTopologicalRing (W →L[ℝ] W) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  letI : IsTopologicalRing ((W ⧸ I) →L[ℝ] (W ⧸ I)) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  have hq : q.comp AW.toContinuousLinearMap = M.A.toContinuousLinearMap.comp q := by
+    ext y
+    exact LinearMap.controllableObservableRealization_A_mkQ A E H 0 y
+  have hsub : W.subtype.toContinuousLinearMap.comp AW.toContinuousLinearMap =
+      A.toContinuousLinearMap.comp W.subtype.toContinuousLinearMap := by
+    ext y
+    rfl
+  have hminread (y : W ⧸ I) : Tendsto
+      (fun t : ℝ => M.C (NormedSpace.exp (t • M.A.toContinuousLinearMap) y))
+      atTop (nhds 0) := by
+    obtain ⟨w, rfl⟩ := I.mkQ_surjective y
+    have hsame : (fun t : ℝ => M.C
+        (NormedSpace.exp (t • M.A.toContinuousLinearMap) (I.mkQ w))) =
+        (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (w : X))) := by
+      funext t
+      have hqflow := clm_map_exp_smul q AW.toContinuousLinearMap
+        M.A.toContinuousLinearMap hq t w
+      have hwflow := clm_map_exp_smul W.subtype.toContinuousLinearMap
+        AW.toContinuousLinearMap A.toContinuousLinearMap hsub t w
+      change M.C (NormedSpace.exp (t • M.A.toContinuousLinearMap) (q w)) =
+        H (NormedSpace.exp (t • A.toContinuousLinearMap) (w : X))
+      rw [← hqflow]
+      change M.C (I.mkQ (NormedSpace.exp (t • AW.toContinuousLinearMap) w)) = _
+      rw [LinearMap.controllableObservableRealization_C_mkQ]
+      exact congrArg H hwflow
+    rw [hsame]
+    exact channel_decay_on_reachable A E H hdec w
+  have hobs : LinearMap.IsObservable M.C M.A :=
+    LinearMap.isObservable_controllableObservableRealization A E H 0
+  have hU : LinearMap.unstableSubspace M.A = ⊥ := by
+    apply le_antisymm ?_ bot_le
+    intro y hy
+    have hyN := LinearMap.antistable_readout_forces_unobservable M.A M.C hy (hminread y)
+    change LinearMap.unobservableSubspace M.C M.A = ⊥ at hobs
+    rw [hobs, Submodule.mem_bot] at hyN
+    exact hyN
+  exact LinearMap.isHurwitz_of_unstableSubspace_eq_bot M.A hU
+
+/-- For a finite-dimensional real channel, the controllable–observable
+realization is Hurwitz exactly when every impulse-response direction decays.
+Unlike Hurwitzness of the original state map, this criterion allows unstable
+unreachable or unobservable modes. It does not yet identify rational transfer
+function poles with the eigenvalues of the minimal realization. -/
+theorem isHurwitz_minimalRealization_iff_channelReadout_tendsto
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    LinearMap.IsHurwitz (LinearMap.controllableObservableRealization A E H 0).A ↔
+      ∀ d : D, Tendsto
+        (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+        atTop (nhds 0) := by
+  constructor
+  · intro h d
+    exact channelReadout_tendsto_of_isHurwitz_minimalRealization A E H h d
+  · exact isHurwitz_minimalRealization_of_channelReadout_tendsto A E H
+
 end LinearSystem

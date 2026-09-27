@@ -32,6 +32,7 @@ import DynamicalSystems.Linear.ArbitraryControllerResponse
 import DynamicalSystems.Linear.GenericControllerDuality
 import DynamicalSystems.Linear.GenericControllerDualResponse
 import DynamicalSystems.Linear.ArbitraryControllerCriterion
+import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

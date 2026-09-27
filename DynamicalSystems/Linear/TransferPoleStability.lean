@@ -1,0 +1,183 @@
+/-
+Copyright (c) 2026 Igor Zubrycki. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Igor Zubrycki
+-/
+module
+
+public import DynamicalSystems.Linear.DynamicFeedback
+public import Mathlib.FieldTheory.RatFunc.Basic
+public import Mathlib.FieldTheory.RatFunc.AsPolynomial
+public import Mathlib.LinearAlgebra.Matrix.Charpoly.Basic
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+
+/-! # Rational pole stability of finite-dimensional scalar channels
+
+The adjugate formula defines a scalar rational transfer channel. The reduced
+rational-function denominator records algebraic pole cancellation, and its roots
+are contained in the spectrum of the state matrix. The bridge to matrix
+resolvent values is explicit at nonsingular points. A converse pole theorem
+for minimal realizations is not asserted here.
+-/
+
+@[expose] public section
+
+
+open Polynomial
+
+noncomputable section
+
+namespace RatFunc
+
+/-- A rational function is pole-stable when every root of its reduced denominator
+lies in the open left half-plane. This is algebraic pole stability, not an
+impulse-response or decay definition. -/
+def IsPoleStable (f : RatFunc ℂ) : Prop :=
+  ∀ z : ℂ, f.denom.IsRoot z → z.re < 0
+
+theorem isPoleStable_of_denominator_dvd_hurwitz
+    {f : RatFunc ℂ} {p : Polynomial ℂ}
+    (hdiv : f.denom ∣ p)
+    (hp : ∀ z : ℂ, p.IsRoot z → z.re < 0) :
+    IsPoleStable f := by
+  intro z hz
+  exact hp z (hz.dvd hdiv)
+
+theorem isPoleStable_mk_of_denominator_hurwitz
+    (p q : Polynomial ℂ)
+    (hHurwitz : ∀ z : ℂ, q.IsRoot z → z.re < 0) :
+    IsPoleStable (RatFunc.mk p q) := by
+  apply isPoleStable_of_denominator_dvd_hurwitz
+    (p := q) (hp := hHurwitz)
+  rw [RatFunc.mk_eq_div]
+  exact RatFunc.denom_div_dvd p q
+
+end RatFunc
+
+namespace Matrix
+
+variable {n : Type*} [Fintype n] [DecidableEq n]
+
+/-- Polynomial numerator in the Cramer/adjugate formula for the scalar channel
+`cᵀ (sI - A)⁻¹ b`. -/
+def channelTransferNumerator (A : Matrix n n ℂ) (c b : n → ℂ) : Polynomial ℂ :=
+  ∑ i : n, ∑ j : n,
+    Polynomial.C (c i) * (Matrix.adjugate (Matrix.charmatrix A) i j) * Polynomial.C (b j)
+
+/-- Rational state-space channel, represented by the adjugate formula over the
+characteristic denominator. Any pole cancellation is handled by `RatFunc`'s
+reduced denominator. -/
+def channelTransferRatFunc (A : Matrix n n ℂ) (c b : n → ℂ) : RatFunc ℂ :=
+  RatFunc.mk (channelTransferNumerator A c b) A.charpoly
+
+/-- The reduced denominator of the rational channel divides the characteristic
+polynomial. This is the formal pole-cancellation statement: cancellation may
+shrink the denominator, but cannot create a pole outside the state spectrum. -/
+theorem channelTransferRatFunc_denom_dvd_charpoly
+    (A : Matrix n n ℂ) (c b : n → ℂ) :
+    (channelTransferRatFunc A c b).denom ∣ A.charpoly := by
+  rw [channelTransferRatFunc, RatFunc.mk_eq_div]
+  exact RatFunc.denom_div_dvd _ _
+
+/-- Hurwitz internal matrix spectrum implies pole-stability of every scalar
+state-space channel formed by Cramer's rule. This only proves the forward
+implication: cancellations can remove poles, so the converse need not hold. -/
+theorem channelTransferRatFunc_isPoleStable
+    (A : Matrix n n ℂ) (c b : n → ℂ)
+    (hHurwitz : ∀ z : ℂ, A.charpoly.IsRoot z → z.re < 0) :
+    RatFunc.IsPoleStable (channelTransferRatFunc A c b) := by
+  exact RatFunc.isPoleStable_of_denominator_dvd_hurwitz
+    (channelTransferRatFunc_denom_dvd_charpoly A c b) hHurwitz
+
+/-- If the matrix's (complex) linear endomorphism has spectrum in the open
+left half-plane, then its scalar state-space channel is pole-stable. -/
+theorem channelTransferRatFunc_isPoleStable_of_spectrum
+    (A : Matrix n n ℂ) (c b : n → ℂ)
+    (hA : ∀ z : ℂ, z ∈ spectrum ℂ A.toLin' → z.re < 0) :
+    RatFunc.IsPoleStable (channelTransferRatFunc A c b) := by
+  apply channelTransferRatFunc_isPoleStable
+  intro z hz
+  apply hA z
+  exact (Module.End.mem_spectrum_iff_isRoot_charpoly A.toLin' z).2 (by simpa using hz)
+
+/-- Complex rational transfer of a real finite-dimensional realization, obtained
+by coefficient-wise complexification of its state and channel matrices. If the
+complex roots of the real characteristic polynomial all lie in the open left
+half-plane, then the reduced transfer denominator has no other roots. -/
+theorem realMatrix_channelTransferRatFunc_isPoleStable
+    (A : Matrix n n ℝ) (c b : n → ℝ)
+    (hA : ∀ z : ℂ,
+      (Polynomial.map (algebraMap ℝ ℂ) A.charpoly).IsRoot z → z.re < 0) :
+    RatFunc.IsPoleStable
+      (channelTransferRatFunc (A.map (algebraMap ℝ ℂ))
+        (fun i => (c i : ℂ)) (fun i => (b i : ℂ))) := by
+  apply channelTransferRatFunc_isPoleStable
+  intro z hz
+  apply hA z
+  simpa only [Polynomial.IsRoot.def, Matrix.charpoly_map, Polynomial.eval_map] using hz
+
+/-- The Cramer numerator evaluated at a nonsingular point is the characteristic
+determinant times the ordinary resolvent channel value. This is the pointwise
+bridge between the rational realization and `cᵀ (sI-A)⁻¹ b`. -/
+theorem channelTransferNumerator_eval_eq_det_mul_resolvent
+    (A : Matrix n n ℂ) (c b : n → ℂ) (z : ℂ)
+    (hdet : (Matrix.scalar n z - A).det ≠ 0) :
+    (channelTransferNumerator A c b).eval z =
+      A.charpoly.eval z *
+        ∑ i : n, c i * (((Matrix.scalar n z - A)⁻¹) *ᵥ b) i := by
+  let M : Matrix n n ℂ := Matrix.scalar n z - A
+  have hunit : IsUnit M.det := isUnit_iff_ne_zero.mpr (by simpa [M] using hdet)
+  have hdetchar : A.charpoly.eval z = M.det := by
+    simpa [M] using Matrix.eval_charpoly A z
+  have hM : (Polynomial.evalRingHom z).mapMatrix (Matrix.charmatrix A) = M := by
+    ext i j
+    change ((Matrix.charmatrix A) i j).eval z = M i j
+    by_cases hij : i = j
+    · subst j
+      simp [Matrix.charmatrix_apply_eq, M, Matrix.scalar_apply]
+    · simp [M, Matrix.scalar_apply, hij]
+  have hadjEval :
+      (Polynomial.evalRingHom z).mapMatrix (Matrix.adjugate (Matrix.charmatrix A)) =
+        M.adjugate := by
+    rw [RingHom.map_adjugate, hM]
+  have hadjEntry (i j : n) :
+      (Matrix.adjugate (Matrix.charmatrix A) i j).eval z = M.adjugate i j := by
+    have h := congrArg (fun N : Matrix n n ℂ => N i j) hadjEval
+    simpa using h
+  have hadj : M.adjugate = M.det • M⁻¹ := by
+    calc
+      M.adjugate = M.adjugate * 1 := by simp
+      _ = M.adjugate * (M * M⁻¹) := by rw [Matrix.mul_nonsing_inv M hunit]
+      _ = (M.adjugate * M) * M⁻¹ := by rw [Matrix.mul_assoc]
+      _ = (M.det • (1 : Matrix n n ℂ)) * M⁻¹ := by rw [Matrix.adjugate_mul]
+      _ = M.det • M⁻¹ := by simp
+  have hnum : (channelTransferNumerator A c b).eval z =
+      ∑ i : n, c i * (M.adjugate *ᵥ b) i := by
+    rw [channelTransferNumerator, Polynomial.eval_finsetSum]
+    simp_rw [Polynomial.eval_finsetSum, Polynomial.eval_mul, Polynomial.eval_C, hadjEntry]
+    simp only [Matrix.mulVec, dotProduct]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro j hj
+    ring
+  rw [hnum, hadj, smul_mulVec]
+  calc
+    _ = ∑ i : n, M.det * (c i * ((M⁻¹) *ᵥ b) i) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      simp only [Pi.smul_apply, smul_eq_mul]
+      ring
+    _ = M.det * ∑ i : n, c i * ((M⁻¹) *ᵥ b) i := by rw [Finset.mul_sum]
+    _ = A.charpoly.eval z * ∑ i : n, c i * ((M⁻¹) *ᵥ b) i := by rw [← hdetchar]
+
+/-- Zero output cancels every state pole, even for an internally unstable `A`;
+therefore transfer pole-stability alone cannot imply internal Hurwitz stability. -/
+theorem channelTransferRatFunc_isPoleStable_of_zero_output
+    (A : Matrix n n ℂ) (b : n → ℂ) :
+    RatFunc.IsPoleStable (channelTransferRatFunc A (0 : n → ℂ) b) := by
+  rw [RatFunc.IsPoleStable, channelTransferRatFunc]
+  simp [channelTransferNumerator]
+
+end Matrix

@@ -17,6 +17,7 @@ import DynamicalSystems.Linear.ArbitraryControllerResponse
 import DynamicalSystems.Linear.GenericControllerDuality
 import DynamicalSystems.Linear.GenericControllerDualResponse
 import DynamicalSystems.Linear.ArbitraryControllerCriterion
+import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -434,10 +435,13 @@ The channel-level spectral criterion identifies decay with the input range
 lying in the sum of the unobservable and Hurwitz subspaces. It accounts for
 unobservable non-Hurwitz modes, but does not itself formalize cancellation of
 poles in a rational transfer function. A Hurwitz controllable–observable
-realization also implies channel decay; the converse remains to be proved.
+realization is equivalent to channel decay: the converse uses observability
+to exclude antistable modes of the reduced realization.
 
 {docstring LinearSystem.channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz}
 {docstring LinearSystem.channelReadout_tendsto_of_isHurwitz_minimalRealization}
+{docstring LinearSystem.isHurwitz_minimalRealization_of_channelReadout_tendsto}
+{docstring LinearSystem.isHurwitz_minimalRealization_iff_channelReadout_tendsto}
 
 # Observer duality
 
@@ -1150,6 +1154,22 @@ Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bu
 * Transfer-function/resolvent form under `s > ‖A‖`: Lean
   `LinearMap.disturbanceTransferFunction_eq_resolvent`,
   `LinearMap.isDisturbanceDecoupled_of_forall_resolventTransferFunction_eq_zero`.
+
+## `DynamicalSystems.Linear.TransferPoleStability`
+
+For a scalar finite-dimensional matrix channel, the adjugate formula defines a
+complex rational transfer function. Its reduced denominator divides the state
+characteristic polynomial, so Hurwitz state spectrum implies stable transfer
+poles. The numerator agrees with determinant times the resolvent channel value
+at nonsingular points. A zero-output example shows why the converse requires
+controllability and observability; the minimal-realization pole converse is not
+yet formalized.
+
+{docstring RatFunc.IsPoleStable}
+{docstring Matrix.channelTransferRatFunc}
+{docstring Matrix.channelTransferRatFunc_denom_dvd_charpoly}
+{docstring Matrix.channelTransferRatFunc_isPoleStable_of_spectrum}
+{docstring Matrix.channelTransferNumerator_eval_eq_det_mul_resolvent}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
