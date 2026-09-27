@@ -6483,6 +6483,118 @@ end DualCondition
 
 end LinearSystem
 
+/-!
+# Concrete component-invariance inputs for the nested block-quotient theorem
+
+This section packages the six component-invariance hypotheses consumed by
+`LinearMap.isHurwitz_mapQ_prod_restrict_of_isHurwitz` when the block operator is
+the observer-error block operator of the dynamic controller (6.7),
+
+`blockOperator (A + B F) (-(G C)) (A + G C)`,
+
+with numerator `(W_g, S*)` and denominator `(V*, T_g)`.  All six facts are
+derived from the feedback preservation hypotheses `hF`, `hG` and the geometric
+conditions `ExternalStabilizationConditions sys E H`.
+-/
+
+namespace LinearSystem
+
+variable {X U Z Y D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+omit [FiniteDimensional ℝ U] [FiniteDimensional ℝ D] in
+/-- **The six component-invariance inputs of the observer-error block operator.**
+
+For the block operator `(x, y) ↦ ((A + B F) x - (G C) y, (A + G C) y)` with
+numerator `W = W_g(ker H)` and `U = S*(im E)` and denominator
+`V = V*(ker H)` and `T = S*(im E) ∩ Xdet`, the feedback preservation of `V`
+(`hF`) and of `S*` (`hG`), together with the Corollary 6.22 conditions `h`,
+yield all six preservation hypotheses required by
+`LinearMap.isHurwitz_mapQ_prod_restrict_of_isHurwitz`:
+
+* `(A + B F) W ≤ W` and `(A + B F) V ≤ V` (state-feedback block),
+* `(A + G C) U ≤ U` and `(A + G C) T ≤ T` (observer-error block),
+* `-(G C) U ≤ W` and `-(G C) T ≤ V` (cross block).
+
+The cross-block facts use `S* ≤ W_g` and `T ≤ ker C`; the latter makes the
+cross block vanish on `T`, so its `V*`-membership is immediate. -/
+theorem geometricBlockInputs
+    (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : ExternalStabilizationConditions sys E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F)
+      (LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)) ≤
+      LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H))
+    (hG : Submodule.map (sys.A + G.comp sys.C)
+      (LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)) ≤
+      LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)) :
+    let V := LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+    let W := outputStabilizableSubspace sys.A sys.B H
+    let U := LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+    let T := U ⊓ LinearMap.detectableSubspace sys.C sys.A
+    (∀ x ∈ W, (sys.A + sys.B.comp F) x ∈ W) ∧
+    (∀ y ∈ U, (sys.A + G.comp sys.C) y ∈ U) ∧
+    (∀ y ∈ U, (-(G.comp sys.C)) y ∈ W) ∧
+    (∀ x ∈ V, (sys.A + sys.B.comp F) x ∈ V) ∧
+    (∀ y ∈ T, (sys.A + G.comp sys.C) y ∈ T) ∧
+    (∀ y ∈ T, (-(G.comp sys.C)) y ∈ V) := by
+  let V := LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+  let W := outputStabilizableSubspace sys.A sys.B H
+  let U := LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+  let T := U ⊓ LinearMap.detectableSubspace sys.C sys.A
+  -- `S* = U` lies in `W_g = W`.
+  have hSW : U ≤ W :=
+    conditionedInvariantSubspace_le_outputStabilizableSubspace
+      sys.C sys.A sys.B H E h.1
+  -- `W_g = W` is `A`-invariant.
+  have hAW : Submodule.map sys.A W ≤ W :=
+    map_outputStabilizableSubspace_le sys.A sys.B H
+  -- `T_g = T` is `A`-invariant.
+  have hAT : Submodule.map sys.A T ≤ T :=
+    map_conditionedInvariant_inf_detectable_le sys.C sys.A E
+  -- `T_g = T` is annihilated by `C`.
+  have hTkerC : T ≤ LinearMap.ker sys.C :=
+    (inf_le_right).trans
+      ((LinearMap.detectableSubspace_le_unobservableSubspace sys.C sys.A).trans
+        (LinearMap.unobservableSubspace_le_ker sys.C sys.A))
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- `hAW`: `(A + B F)` preserves `W_g`.
+    intro x hx
+    exact map_add_feedback_sup_stabilizableSubspace_le sys.A sys.B F hF ⟨x, hx, rfl⟩
+  · -- `hCU`: `(A + G C)` preserves `S*`.
+    intro y hy
+    exact hG ⟨y, hy, rfl⟩
+  · -- `hBU`: `-(G C)` maps `S*` into `W_g`.
+    intro y hy
+    have hGy : (sys.A + G.comp sys.C) y ∈ U := hG ⟨y, hy, rfl⟩
+    have hAy : sys.A y ∈ W := hAW ⟨y, hSW hy, rfl⟩
+    have hGC : (G.comp sys.C) y ∈ W := by
+      have hsub : (sys.A + G.comp sys.C) y - sys.A y ∈ W :=
+        W.sub_mem (hSW hGy) hAy
+      simpa only [LinearMap.add_apply, LinearMap.comp_apply,
+        add_sub_cancel_left] using hsub
+    simpa only [LinearMap.neg_apply] using W.neg_mem hGC
+  · -- `hAV`: `(A + B F)` preserves `V*`.
+    intro x hx
+    exact hF ⟨x, hx, rfl⟩
+  · -- `hCT`: `(A + G C)` preserves `T_g`, since `G C` vanishes on `T_g`.
+    intro y hy
+    have hAy : sys.A y ∈ T := hAT ⟨y, hy, rfl⟩
+    have hCy : sys.C y = 0 := LinearMap.mem_ker.mp (hTkerC hy)
+    simpa only [LinearMap.add_apply, LinearMap.comp_apply, hCy, map_zero, add_zero]
+      using hAy
+  · -- `hBT`: `-(G C)` vanishes on `T_g ⊆ ker C`, hence lands in `V*`.
+    intro y hy
+    have hCy : sys.C y = 0 := LinearMap.mem_ker.mp (hTkerC hy)
+    simp only [LinearMap.neg_apply, LinearMap.comp_apply, hCy, map_zero, neg_zero]
+    exact V.zero_mem
+
+end LinearSystem
+
 /-! ### Remaining blocker for unrestricted-input `W_g` necessity
 
 The state-feedback *sufficiency* half of Trentelman–Stoorvogel–Hautus Theorem
