@@ -267,9 +267,11 @@ state-feedback construction `LinearSystem.exists_feedback_tendsto_readout_of_cor
 Corollary 6.22 subspace condition, and the observer-error decay
 `LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions` are
 formalized with their explicit finite-dimensional and admissibility hypotheses. The full
-*stable-nonzero* Corollary 6.22 necessary-and-sufficient criterion is not claimed; only the
-sufficiency under controllability and observability in
-`LinearSystem.exists_externallyStabilizing_cabPair_gains` is proved.
+*stable-nonzero* Corollary 6.22 necessary-and-sufficient criterion is not claimed: its geometric
+sufficiency direction is proved by
+`LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions`, while necessity
+from a merely decaying response remains open. The controllable/observable special case is
+`LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
 # Stabilizable and detectable spectral subspaces
 
@@ -392,6 +394,18 @@ and finally in primal norm form.
 {docstring LinearSystem.exists_observerError_dualReadout_tendsto_of_dualCondition}
 {docstring LinearSystem.exists_observerError_readout_tendsto_of_dualCondition}
 {docstring LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions}
+
+# Stable external response from the geometric conditions
+
+The sufficiency direction of TST Corollary 6.22 is assembled from the feedback
+quotient on `W_g/V*`, the observer quotient on `S*/T_g`, and the Hurwitz
+triangular-product quotient for the observer-based dynamic controller. The
+extended disturbance image lies in the invariant window, and the external
+readout vanishes on its invariant denominator. Quotient decay therefore gives
+a stable, possibly nonzero, external impulse response. The reverse implication
+from an arbitrary stabilizing dynamic controller is not yet formalized.
+
+{docstring LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions}
 
 # Algebraic examples
 
@@ -859,7 +873,9 @@ directly.
 
 In the external-stability row the first declaration is the exact-zero criterion (TST Theorem 6.6 /
 Corollary 6.7); the second records the stable-nonzero Corollary 6.22 subspace conditions, whose
-full necessary-and-sufficient dynamic-controller form is not claimed.
+geometric sufficiency is proved by
+`LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions`. The converse
+from a stable-nonzero dynamic-controller response, and hence the full iff, is not claimed.
 
 # Source-to-theorem ledger
 
@@ -1123,13 +1139,14 @@ The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both 
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
 
 External stability is recorded in two distinct forms and they are never identified. The exact-zero
-response is characterised geometrically by a `(C, A, B)`-pair; the stable-nonzero (BIBO) property
-additionally requires the Hurwitz gain data. The stabilizable/detectable spectral subspaces, the
-Corollary 6.22 conditions, the state-feedback and output-injection constructions, the
-transpose-exponential pairing, and the primal observer-error readout decay are formalized with
-their explicit finite-dimensional and admissibility hypotheses. The external-stability statements
-assume a strictly proper plant (`D = 0`); the general feedthrough-well-posedness case is left to
-the hypotheses of `LinearSystem.DynamicInterconnection.IsWellPosed`.
+response is characterised geometrically by a `(C, A, B)`-pair. A stable (possibly nonzero) external
+impulse response follows from the two Corollary 6.22 subspace conditions via the proved
+observer-based controller construction and quotient-decay theorem; the converse remains open.
+The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
+and transpose-exponential pairing are formalized with explicit finite-dimensional and
+admissibility hypotheses. These external-stability statements assume a strictly proper plant
+(`D = 0`); the general feedthrough-well-posedness case is left to the hypotheses of
+`LinearSystem.DynamicInterconnection.IsWellPosed`.
 
 Out of scope: the nonlinear theory of Trentelman–Stoorvogel–Hautus Chapters 7–15 (system zeros and
 strong observability, distributions and system invertibility, tracking and regulation, and the
