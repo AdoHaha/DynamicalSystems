@@ -368,6 +368,14 @@ image to a Bohl input remains separate.
 {docstring LinearSystem.finiteBohlSynthesis}
 {docstring LinearSystem.isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete}
 
+The plant component of an arbitrary stable dynamic closed-loop orbit is a
+variation-of-constants trajectory driven by the controller's resolved input.
+With the finite-Bohl bridge's explicit complex-linear input-map hypothesis,
+this proves the first Corollary 6.22 necessity inclusion `im E ≤ W_g(ker H)`.
+The general real-space transport and the dual necessity inclusion remain open.
+
+{docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse}
+
 # Observer duality
 
 The observation half of Corollary 6.22 follows from the state-feedback half by algebraic duality.

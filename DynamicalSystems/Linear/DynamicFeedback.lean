@@ -3187,8 +3187,10 @@ and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The finite-Boh
 forcing-image version of this open-loop characterisation is
 `finiteBohlWBridge`. Applying it to a generic real controller still requires
 real-to-complexification transport (the controller's state and input may have
-odd real dimension), plant-trajectory extraction from the closed-loop orbit,
-and a transposed closed-loop realization for the dual condition. The exact-zero
+odd real dimension) and a transposed closed-loop realization for the dual
+condition. The plant-trajectory extraction and first inclusion are proved below
+under the finite-Bohl bridge's explicit complex-structure hypothesis, in
+`range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse`. The exact-zero
 case already has both halves
 (`externalStabilizationConditions_of_externalStability`), but it rests on the
 stronger zero-response premise and does not cover the merely stable response.
@@ -13230,5 +13232,191 @@ theorem stableNonzeroExternalResponse_of_externalStabilizationConditions
     exists_observerErrorQuotientMap_isHurwitz_of_externalStabilizationConditions
       sys E H h
   exact ⟨G, hG, hQ F hF⟩
+
+end LinearSystem
+
+/-! ## Necessity: plant trajectory extracted from a stable dynamic loop
+
+The first geometric inclusion follows under the finite-Bohl bridge's explicit
+complex-linear input-map hypothesis. The arbitrary-real-space and transposed
+controller transports remain separate obligations. -/
+
+namespace LinearSystem
+
+noncomputable section
+
+open Filter
+open scoped Topology
+
+variable {X U Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℂ X] [FiniteDimensional ℝ X] [FiniteDimensional ℂ X]
+variable [NormedAddCommGroup U] [NormedSpace ℂ U] [FiniteDimensional ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+/-- Extract the plant-component trajectory of the closed-loop autonomous orbit
+started from the disturbance image. For a strictly proper plant, the plant
+component `x(t) = (e^{t A_e} (E d, 0)).1` is the variation-of-constants
+trajectory of the plant driven by the resolved controller input
+`u(t) = solvedInput (e^{t A_e} (E d, 0))`. -/
+lemma closedLoop_expFlow_fst_eq_variationOfConstants
+    (sys : LinearSystem ℝ X U Y) (sysZ : LinearSystem ℝ X U Z)
+    (hA : sysZ.A = sys.A) (hB : sysZ.B = sys.B)
+    (ctrl : DynamicController ℝ X Y U)
+    (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (d : D) :
+    let ic := cabPairInterconnection sys ctrl E H
+    let hwp := ic.isWellPosed_of_D_eq_zero hD
+    let p : ℝ → X × X := fun t => (ic.closedLoopSystem hwp).expFlow t (E d, 0)
+    let u : ℝ → U := fun t => ic.solvedInput hwp (p t)
+    (fun t : ℝ => (p t).1) = sysZ.variationOfConstants 0 (E d) u := by
+  classical
+  intro ic hwp p u
+  let x : ℝ → X := fun t => (p t).1
+  have hx_cont : Continuous x := by
+    rw [continuous_iff_continuousAt]
+    intro t
+    have hpderiv : HasDerivAt (fun s : ℝ => (ic.closedLoopSystem hwp).expFlow s (E d, 0))
+        ((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))) t :=
+      hasDerivAt_expFlow_apply_state (ic.closedLoopSystem hwp) t (E d, 0)
+    have hxderiv0 : HasDerivAt (fun s : ℝ => ((ic.closedLoopSystem hwp).expFlow s (E d, 0)).1)
+        (((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))).1) t :=
+      (ContinuousLinearMap.fst ℝ X X).hasFDerivAt.comp_hasDerivAt t hpderiv
+    have hxderiv : HasDerivAt x
+        (((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))).1) t := by
+      simpa [x, p] using hxderiv0
+    exact hxderiv.continuousAt
+  have hu_cont : Continuous u := by
+    have hp_cont : Continuous p := by
+      rw [continuous_iff_continuousAt]
+      intro t
+      exact (hasDerivAt_expFlow_apply_state (ic.closedLoopSystem hwp) t (E d, 0)).continuousAt
+    exact (ic.solvedInput hwp).continuous_of_finiteDimensional.comp hp_cont
+  have hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume := hu_cont.locallyIntegrable
+  have hx0 : x 0 = E d := by
+    simp [x, p, LinearSystem.expFlow_zero]
+  have hxderiv (t : ℝ) : HasDerivAt x (sys.dynamics (x t) (u t)) t := by
+    have hpderiv : HasDerivAt (fun s : ℝ => (ic.closedLoopSystem hwp).expFlow s (E d, 0))
+        ((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))) t :=
+      hasDerivAt_expFlow_apply_state (ic.closedLoopSystem hwp) t (E d, 0)
+    have hxderiv0 : HasDerivAt (fun s : ℝ => ((ic.closedLoopSystem hwp).expFlow s (E d, 0)).1)
+        (((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))).1) t :=
+      (ContinuousLinearMap.fst ℝ X X).hasFDerivAt.comp_hasDerivAt t hpderiv
+    have hxderiv' : HasDerivAt x
+        (((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))).1) t := by
+      simpa [x, p] using hxderiv0
+    have hAe : ((ic.closedLoopSystem hwp).A ((ic.closedLoopSystem hwp).expFlow t (E d, 0))).1 =
+        sys.dynamics (x t) (u t) := by
+      have hfst := ic.closedLoopMap_fst hwp (p t)
+      change (ic.closedLoopMap hwp (p t)).1 = sys.dynamics (x t) (u t)
+      rw [hfst]
+      change sys.A (p t).1 + sys.B (ic.solvedInput hwp (p t)) =
+        sys.dynamics (x t) (u t)
+      simp [x, p, u, LinearSystem.dynamics]
+    convert hxderiv' using 1
+    exact hAe.symm
+  have hxderivZ (t : ℝ) : HasDerivAt x (sysZ.dynamics (x t) (u t)) t := by
+    simpa [LinearSystem.dynamics, ← hA, ← hB] using hxderiv t
+  have hx_int : ∀ t : ℝ, x t = E d + ∫ s in (0 : ℝ)..t, sysZ.dynamics (x s) (u s) := by
+    intro t
+    have hcont' : Continuous (fun s : ℝ => sysZ.dynamics (x s) (u s)) :=
+      (sysZ.A.toContinuousLinearMap.continuous.comp hx_cont).add
+        (sysZ.B.toContinuousLinearMap.continuous.comp hu_cont)
+    have hFTC := intervalIntegral.sub_eq_integral_of_hasDerivAt
+      (f := x) (f' := fun s : ℝ => sysZ.dynamics (x s) (u s))
+      (fun s => hxderivZ s) hcont' 0 t
+    rw [hx0] at hFTC
+    rw [← hFTC]
+    abel
+  exact (integralSolution_unique sysZ 0 (E d) u hu
+    hx_cont hx0 hx_int
+    (continuous_variationOfConstants sysZ 0 (E d) u hu)
+    (variationOfConstants_self sysZ 0 (E d) u)
+    (fun t => variationOfConstants_integral sysZ 0 (E d) u hu t))
+
+/-- **Necessity: first Corollary 6.22 inclusion from a stable nonzero external
+response.** Under the finite-Bohl transport hypotheses (complex scalar structures
+on the state and input and a complex-linear input map restricting to `sys.B`),
+an arbitrary dynamic measurement-feedback controller whose forced external
+response decays in every disturbance direction has disturbance image contained
+in `W_g(ker H) = V*(ker H) + Xstab(A, B)`.
+
+The closed-loop autonomous orbit started from `(E d, 0)` has plant component
+`x(t)`, and the resolved controller input `u(t) = solvedInput (e^{t A_e} (E d, 0))`
+is an open-loop control for the plant. The plant component is the
+variation-of-constants trajectory (`closedLoop_expFlow_fst_eq_variationOfConstants`),
+its readout decays by the stable-response hypothesis, and the input has finite-Bohl
+forcing image by the real-linear orbit theorem; the bridge
+`finiteBohlWBridge` then places `E d` in `W_g(ker H)`. -/
+theorem range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (Bℂ : U →ₗ[ℂ] X) (hB : Bℂ.restrictScalars ℝ = sys.B)
+    (h : StableNonzeroExternalResponse sys hD E H) :
+    LinearMap.range E ≤ outputStabilizableSubspace sys.A sys.B H := by
+  classical
+  obtain ⟨ctrl, hdec⟩ := h
+  let sysZ : LinearSystem ℝ X U Z := ⟨sys.A, sys.B, H, 0⟩
+  have hBZ : Bℂ.restrictScalars ℝ = sysZ.B := by
+    simpa [sysZ] using hB
+  have hbridge := finiteBohlWBridge (sys := sysZ) Bℂ hBZ H
+  rintro _ ⟨d, rfl⟩
+  let ic := cabPairInterconnection sys ctrl E H
+  let hwp := ic.isWellPosed_of_D_eq_zero hD
+  let p : ℝ → X × X := fun t => (ic.closedLoopSystem hwp).expFlow t (E d, 0)
+  let u : ℝ → U := fun t => ic.solvedInput hwp (p t)
+  have hp_cont : Continuous p := by
+    rw [continuous_iff_continuousAt]
+    intro t
+    exact (hasDerivAt_expFlow_apply_state (ic.closedLoopSystem hwp) t (E d, 0)).continuousAt
+  have hu_cont : Continuous u :=
+    (ic.solvedInput hwp).continuous_of_finiteDimensional.comp hp_cont
+  have hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume := hu_cont.locallyIntegrable
+  have hpBohl : IsExponentialPolynomial (fun t : ℝ => p t) := by
+    have hfun : (fun t : ℝ => p t) =
+        fun t : ℝ => NormedSpace.exp (t • (ic.closedLoopMap hwp).toContinuousLinearMap)
+          (E d, 0) := by
+      funext t
+      simp [p, ic.closedLoopSystem_expFlow_eq hwp]
+    rw [hfun]
+    exact isExponentialPolynomial_expFlow_of_realLinear (ic.closedLoopMap hwp) (E d, 0)
+  let r : X × X →ₗ[ℝ] X := (Bℂ.restrictScalars ℝ).comp (ic.solvedInput hwp)
+  have hBu : IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)) := by
+    have hfun : (fun t : ℝ => Bℂ (u t)) = fun t : ℝ => r (p t) := by
+      funext t
+      simp [u, r, LinearMap.comp_apply, LinearMap.restrictScalars_apply]
+    rw [hfun]
+    exact hpBohl.map_realLinear r.toContinuousLinearMap
+  have hresp_fun : (fun t : ℝ => ic.externalResponse hwp t d) = fun t : ℝ => H (p t).1 := by
+    funext t
+    rw [ic.externalResponse_apply]
+    have hdist : ic.disturbanceMapWithF hwp d = (E d, 0) := by
+      rw [ic.disturbanceMapWithF_of_F_eq_zero hwp rfl, ic.disturbanceMap_apply]
+      change (E d, 0) = (E d, 0)
+      rfl
+    rw [hdist, ic.outputMap_apply]
+    change H (((ic.closedLoopSystem hwp).expFlow t) (E d, 0)).1 = H (p t).1
+    simp [p]
+  have hdec_ic : Filter.Tendsto (fun t : ℝ => ic.externalResponse hwp t d)
+      Filter.atTop (nhds 0) := by
+    simpa [ic, hwp] using hdec d
+  have hresp : Filter.Tendsto (fun t : ℝ => H (p t).1) Filter.atTop (nhds 0) := by
+    convert hdec_ic using 1
+    funext t
+    exact (congrFun hresp_fun t).symm
+  have htraj : (fun t : ℝ => (p t).1) = sysZ.variationOfConstants 0 (E d) u := by
+    simpa [ic, hwp, p, u] using
+      (closedLoop_expFlow_fst_eq_variationOfConstants sys sysZ rfl rfl ctrl hD E H d)
+  have hdecZ : Filter.Tendsto
+      (fun t : ℝ => H (sysZ.variationOfConstants 0 (E d) u t)) Filter.atTop (nhds 0) := by
+    have hfun : (fun t : ℝ => H (sysZ.variationOfConstants 0 (E d) u t)) =
+        fun t : ℝ => H (p t).1 := by
+      funext t
+      rw [← congrFun htraj t]
+    rw [hfun]
+    exact hresp
+  have hbohl : IsBohlOutputStabilizable sysZ Bℂ hBZ H (E d) := ⟨u, hu, hBu, hdecZ⟩
+  simpa [sysZ] using hbridge (E d) hbohl
+
+end
 
 end LinearSystem
