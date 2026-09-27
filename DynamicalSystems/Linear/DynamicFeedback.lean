@@ -1629,6 +1629,106 @@ theorem cabPairInterconnection_F (sys : LinearSystem 𝕜 X U Y)
     (ctrl : DynamicController 𝕜 X Y U) (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) :
     (cabPairInterconnection sys ctrl E H).F = 0 := rfl
 
+/-- The extended subspace associated with a pair `(S,V)` in Theorem 6.18:
+`{(s + v, v) | s ∈ S, v ∈ V}`. -/
+def extendedPairSubspace (S V : Submodule 𝕜 X) : Submodule 𝕜 (X × X) :=
+  LinearMap.range
+    (LinearMap.prod (S.subtype.coprod V.subtype)
+      (V.subtype.comp (LinearMap.snd 𝕜 S V)))
+
+/-- Elementwise description of the extended subspace of a `(C,A,B)`-pair. -/
+theorem mem_extendedPairSubspace (S V : Submodule 𝕜 X) (p : X × X) :
+    p ∈ extendedPairSubspace S V ↔
+      ∃ s ∈ S, ∃ v ∈ V, p = (s + v, v) := by
+  constructor
+  · rintro ⟨⟨s, v⟩, h⟩
+    refine ⟨s, s.2, v, v.2, ?_⟩
+    simpa [extendedPairSubspace, LinearMap.coprod_apply] using h.symm
+  · rintro ⟨s, hs, v, hv, rfl⟩
+    exact ⟨(⟨s, hs⟩, ⟨v, hv⟩), by
+      ext <;> simp [LinearMap.coprod_apply]⟩
+
+/-- Nested `(S,V)` pairs give nested extended subspaces. -/
+theorem extendedPairSubspace_mono {S₁ S₂ V₁ V₂ : Submodule 𝕜 X}
+    (hS : S₁ ≤ S₂) (hV : V₁ ≤ V₂) :
+    extendedPairSubspace S₁ V₁ ≤ extendedPairSubspace S₂ V₂ := by
+  intro p hp
+  obtain ⟨s, hs, v, hv, rfl⟩ := (mem_extendedPairSubspace S₁ V₁ p).mp hp
+  exact (mem_extendedPairSubspace S₂ V₂ _).mpr ⟨s, hS hs, v, hV hv, rfl⟩
+
+/-- The state-disturbance image lies in the extended pair whenever `im E ≤ S`. -/
+theorem disturbanceMap_range_le_extendedPairSubspace
+    (sys : LinearSystem 𝕜 X U Y) (ctrl : DynamicController 𝕜 X Y U)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hE : LinearMap.range E ≤ S) :
+    LinearMap.range (cabPairInterconnection sys ctrl E H).disturbanceMap ≤
+      extendedPairSubspace S V := by
+  rintro _ ⟨d, rfl⟩
+  exact (mem_extendedPairSubspace S V _).mpr
+    ⟨E d, hE ⟨d, rfl⟩, 0, V.zero_mem, by simp [cabPairInterconnection]⟩
+
+/-- The extended pair is invisible to the controlled output when both
+component subspaces lie in `ker H`. -/
+theorem extendedPairSubspace_le_outputMap_ker
+    (sys : LinearSystem 𝕜 X U Y) (ctrl : DynamicController 𝕜 X Y U)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z) (S V : Submodule 𝕜 X)
+    (hS : S ≤ LinearMap.ker H) (hV : V ≤ LinearMap.ker H) :
+    extendedPairSubspace S V ≤
+      LinearMap.ker (cabPairInterconnection sys ctrl E H).outputMap := by
+  intro p hp
+  obtain ⟨s, hs, v, hv, rfl⟩ := (mem_extendedPairSubspace S V p).mp hp
+  change H (s + v) = 0
+  rw [map_add, LinearMap.mem_ker.mp (hS hs), LinearMap.mem_ker.mp (hV hv), zero_add]
+
+/-- The two invariant subspaces of Lemma 6.21 are instances of this
+invariance criterion for the controller with `N = 0`. Besides preservation by
+the feedback and injection gains, it only needs `A S ≤ V`. -/
+theorem extendedPairSubspace_invariant_cabPairController_zero
+    (sys : LinearSystem 𝕜 X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[𝕜] X) (H : X →ₗ[𝕜] Z)
+    (S V : Submodule 𝕜 X) (F : X →ₗ[𝕜] U) (G : Y →ₗ[𝕜] X)
+    (hSV : S ≤ V) (hAS : Submodule.map sys.A S ≤ V)
+    (hF : Submodule.map (sys.A + sys.B.comp F) V ≤ V)
+    (hG : Submodule.map (sys.A + G.comp sys.C) S ≤ S)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    Submodule.map
+      ((cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp)
+      (extendedPairSubspace S V) ≤ extendedPairSubspace S V := by
+  let ic : DynamicInterconnection 𝕜 X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G 0) E H
+  have hcl0 : ∀ x : X, ic.closedLoopMap hwp (x, 0) =
+      (sys.A x, -G (sys.C x)) := by
+    intro x
+    rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, 0)]
+    ext <;> simp [ic, cabPairInterconnection, cabPairController,
+      LinearMap.add_apply, LinearMap.comp_apply]
+  have hcl2 : ∀ x : X, ic.closedLoopMap hwp (x, x) =
+      ((sys.A + sys.B.comp F) x, (sys.A + sys.B.comp F) x) := by
+    intro x
+    rw [ic.closedLoopMap_of_D_eq_zero hD hwp (x, x)]
+    ext <;> simp only [ic, cabPairInterconnection, cabPairController, LinearMap.add_apply,
+      LinearMap.sub_apply, LinearMap.comp_apply, map_sub] <;> abel
+  rintro _ ⟨p, hp, rfl⟩
+  obtain ⟨s, hs, v, hv, rfl⟩ := (mem_extendedPairSubspace S V p).mp hp
+  have hGs : (sys.A + G.comp sys.C) s ∈ S := hG ⟨s, hs, rfl⟩
+  have hnegGs : -G (sys.C s) ∈ V := by
+    have hdiff : sys.A s - (sys.A + G.comp sys.C) s ∈ V :=
+      V.sub_mem (hAS ⟨s, hs, rfl⟩) (hSV hGs)
+    simpa [LinearMap.add_apply, LinearMap.comp_apply] using hdiff
+  have hFv : (sys.A + sys.B.comp F) v ∈ V := hF ⟨v, hv, rfl⟩
+  have hdecomp : (s + v, v) = (s, 0) + (v, v) := by
+    ext <;> simp
+  have himage : ic.closedLoopMap hwp (s + v, v) =
+      ((sys.A + G.comp sys.C) s +
+          (-G (sys.C s) + (sys.A + sys.B.comp F) v),
+        -G (sys.C s) + (sys.A + sys.B.comp F) v) := by
+    rw [hdecomp, map_add, hcl0, hcl2]
+    ext <;> simp [LinearMap.add_apply, LinearMap.comp_apply]
+  rw [himage]
+  exact (mem_extendedPairSubspace S V _).mpr
+    ⟨(sys.A + G.comp sys.C) s, hGs,
+      -G (sys.C s) + (sys.A + sys.B.comp F) v, V.add_mem hnegGs hFv, rfl⟩
+
 /-- The dynamic measurement-feedback interconnection with an **explicit**
 measurement-disturbance channel `F : D →ₗ[𝕜] Y`. It generalises
 `cabPairInterconnection`, which is the special case `F = 0`, and is the
@@ -4139,31 +4239,25 @@ theorem comap_sup_subtype_eq_top {V S W : Submodule ℝ X} (hVW : V ≤ W)
   · rw [Submodule.mem_comap]; exact hs
   · apply Subtype.ext; simpa using hvs
 
-/-- **The external-stabilization state feedback of Trentelman–Stoorvogel–Hautus
-Lemma 4.38 / Theorem 4.39.** Let `V` be a controlled-invariant subspace
-contained in `ker H`, and suppose the disturbance image satisfies
-`im E ≤ V + Xstab(A, B)`. Then there is a state feedback `F` that preserves `V`
-and makes the closed loop externally stable, in the sense that the controlled
-output of every disturbance direction decays to zero:
-`t ↦ H (exp (t (A + B F)) (E d)) → 0`.
+/-- **Quotient-Hurwitz feedback from the geometric condition.** Let `V` be
+controlled invariant modulo the input image. There is a feedback preserving `V`
+whose induced closed-loop map on `(V ⊔ Xstab(A, B)) / V` is Hurwitz.
 
-The gain is assembled from the friend gain `F₀` produced by the controlled
-invariance of `V`, the quotient stabilising gain `G` of
-`isStabilizable_quotient_of_sup_stabilizableSubspace` on `W / V` (where
-`W = V ⊔ Xstab(A, B)`), the transport identity
-`stabilizableSubspace_restrict_eq`, the feedback monotonicity
-`stabilizableSubspace_le_add_feedback`, and the analytic quotient-decay bridge
-`tendsto_readout_exp_of_geometricCondition`. -/
-theorem exists_feedback_tendsto_readout_of_geometricCondition
-    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
-    (V : Submodule ℝ X)
-    (hV : Submodule.map A V ≤ V ⊔ LinearMap.range B)
-    (hVH : V ≤ LinearMap.ker H)
-    (hE : LinearMap.range E ≤ V ⊔ LinearMap.stabilizableSubspace A B) :
+This exposes the spectral witness in the construction underlying the external
+stabilization theorem below. -/
+theorem exists_feedback_isHurwitz_quotient_of_geometricCondition
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (V : Submodule ℝ X)
+    (hV : Submodule.map A V ≤ V ⊔ LinearMap.range B) :
     ∃ F : X →ₗ[ℝ] U,
-      Submodule.map (A + B.comp F) V ≤ V ∧
-      ∀ d : D, Tendsto (fun t : ℝ => H (NormedSpace.exp
-        (t • (A + B.comp F).toContinuousLinearMap) (E d))) atTop (nhds 0) := by
+      Nonempty {hFV : Submodule.map (A + B.comp F) V ≤ V //
+      let W : Submodule ℝ X := V ⊔ LinearMap.stabilizableSubspace A B
+      let hWinv : ∀ x ∈ W, (A + B.comp F) x ∈ W := fun x hx =>
+        map_add_feedback_sup_stabilizableSubspace_le A B F hFV ⟨x, hx, rfl⟩
+      let VW : Submodule ℝ W := V.comap W.subtype
+      let hmap : ∀ x ∈ VW, ((A + B.comp F).restrict hWinv) x ∈ VW := fun x hx => by
+        change ((A + B.comp F) (x : X)) ∈ V
+        exact hFV ⟨(x : X), hx, rfl⟩
+      LinearMap.IsHurwitz (Submodule.mapQ VW VW ((A + B.comp F).restrict hWinv) hmap)} := by
   classical
   obtain ⟨F₀, hF₀⟩ := LinearMap.exists_stateFeedback_of_isControlledInvariant hV
   let W : Submodule ℝ X := V ⊔ LinearMap.stabilizableSubspace A B
@@ -4217,7 +4311,6 @@ theorem exists_feedback_tendsto_readout_of_geometricCondition
       simp [F, hF1v]
     rw [hEq]
     exact hF₀ ⟨v, hv, rfl⟩
-  refine ⟨F, hFV, fun d => ?_⟩
   have hMinv : ∀ x ∈ W, (A + B.comp F) x ∈ W :=
     fun x hx => map_add_feedback_sup_stabilizableSubspace_le A B F hFV ⟨x, hx, rfl⟩
   have hmap : ∀ x ∈ VW, ((A + B.comp F).restrict hMinv) x ∈ VW := fun x hx => by
@@ -4247,6 +4340,36 @@ theorem exists_feedback_tendsto_readout_of_geometricCondition
   have hQ : LinearMap.IsHurwitz
       (Submodule.mapQ VW VW ((A + B.comp F).restrict hMinv) hmap) := by
     rw [hmapEq]; exact hG
+  refine ⟨F, ⟨⟨hFV, ?_⟩⟩⟩
+  simpa only [W, VW] using hQ
+
+/-- **The external-stabilization state feedback of Trentelman–Stoorvogel–Hautus
+Lemma 4.38 / Theorem 4.39.** Let `V` be a controlled-invariant subspace
+contained in `ker H`, and suppose the disturbance image satisfies
+`im E ≤ V + Xstab(A, B)`. Then there is a state feedback `F` that preserves `V`
+and makes the closed loop externally stable, in the sense that the controlled
+output of every disturbance direction decays to zero:
+`t ↦ H (exp (t (A + B F)) (E d)) → 0`.
+
+The gain is assembled from the friend gain `F₀` produced by the controlled
+invariance of `V`, the quotient stabilising gain `G` of
+`isStabilizable_quotient_of_sup_stabilizableSubspace` on `W / V` (where
+`W = V ⊔ Xstab(A, B)`), the transport identity
+`stabilizableSubspace_restrict_eq`, the feedback monotonicity
+`stabilizableSubspace_le_add_feedback`, and the analytic quotient-decay bridge
+`tendsto_readout_exp_of_geometricCondition`. -/
+theorem exists_feedback_tendsto_readout_of_geometricCondition
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (V : Submodule ℝ X)
+    (hV : Submodule.map A V ≤ V ⊔ LinearMap.range B)
+    (hVH : V ≤ LinearMap.ker H)
+    (hE : LinearMap.range E ≤ V ⊔ LinearMap.stabilizableSubspace A B) :
+    ∃ F : X →ₗ[ℝ] U,
+      Submodule.map (A + B.comp F) V ≤ V ∧
+      ∀ d : D, Tendsto (fun t : ℝ => H (NormedSpace.exp
+        (t • (A + B.comp F).toContinuousLinearMap) (E d))) atTop (nhds 0) := by
+  obtain ⟨F, ⟨⟨hFV, hQ⟩⟩⟩ := exists_feedback_isHurwitz_quotient_of_geometricCondition A B V hV
+  refine ⟨F, hFV, fun d => ?_⟩
   exact tendsto_readout_exp_of_geometricCondition A B H E V F hFV hVH hE hQ d
 
 /-- **State-feedback external stabilization from the geometric condition of
@@ -4301,6 +4424,19 @@ variable [Field 𝕜]
 variable [AddCommGroup X] [Module 𝕜 X]
 variable [AddCommGroup Y] [Module 𝕜 Y]
 
+/-- Invariance of an annihilator under the transpose implies invariance of the
+original subspace under the primal map. -/
+theorem map_le_of_dualMap_dualAnnihilator_le (T : X →ₗ[𝕜] X)
+    (S : Submodule 𝕜 X)
+    (h : Submodule.map T.dualMap S.dualAnnihilator ≤ S.dualAnnihilator) :
+    Submodule.map T S ≤ S := by
+  rintro _ ⟨x, hx, rfl⟩
+  apply (Subspace.forall_mem_dualAnnihilator_apply_eq_zero_iff S (T x)).mp
+  intro φ hφ
+  have hTφ : T.dualMap φ ∈ S.dualAnnihilator := h ⟨φ, hφ, rfl⟩
+  have hz := (Submodule.mem_dualAnnihilator (W := S) (T.dualMap φ)).mp hTφ x hx
+  simpa [LinearMap.dualMap_apply] using hz
+
 /-- **Step-by-step duality of the CISA and ISA recurrences.** The annihilator of
 the `n`-th conditioned-invariant iterate is the `n`-th controlled-invariant
 iterate of the transposed pair, starting from the annihilator `Eᵃⁿⁿ`.
@@ -4334,6 +4470,32 @@ theorem dualAnnihilator_conditionedInvariantSubspace (C : X →ₗ[𝕜] Y) (A :
   rw [conditionedInvariantSubspace, controlledInvariantSubspace,
     Submodule.dualAnnihilator_iSup_eq]
   exact iInf_congr fun n => dualAnnihilator_conditionedInvariantSeq C A E n
+
+/-- A feedback on the transposed controlled-invariant subspace gives an
+output injection preserving the primal smallest conditioned-invariant
+subspace. This is the friend transport used for Lemma 6.21. -/
+theorem outputInjection_preserves_conditionedInvariant_of_dual_feedback
+    {D : Type*} [AddCommGroup D] [Module 𝕜 D]
+    (C : X →ₗ[𝕜] Y) (A : X →ₗ[𝕜] X) (E : D →ₗ[𝕜] X) (G : Y →ₗ[𝕜] X)
+    (hV : Submodule.map (A.dualMap + C.dualMap.comp G.dualMap)
+      (controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap)) ≤
+      controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap)) :
+    Submodule.map (A + G.comp C)
+      (conditionedInvariantSubspace C A (LinearMap.range E)) ≤
+      conditionedInvariantSubspace C A (LinearMap.range E) := by
+  let S := conditionedInvariantSubspace C A (LinearMap.range E)
+  have hdual : S.dualAnnihilator =
+      controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap) := by
+    dsimp [S]
+    rw [dualAnnihilator_conditionedInvariantSubspace,
+      ← LinearMap.ker_dualMap_eq_dualAnnihilator_range]
+  have hmap : (A + G.comp C).dualMap =
+      A.dualMap + C.dualMap.comp G.dualMap := by
+    ext φ x
+    simp [LinearMap.dualMap_apply, LinearMap.add_apply, LinearMap.comp_apply]
+  apply map_le_of_dualMap_dualAnnihilator_le (A + G.comp C) S
+  rw [hdual, hmap]
+  exact hV
 
 end LinearMap
 
@@ -4759,6 +4921,62 @@ variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 variable [NormedAddCommGroup D] [NormedSpace ℝ D]
 variable [FiniteDimensional ℝ Y] [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D]
 
+omit [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D] in
+/-- **The observer-side Hurwitz quotient in transpose coordinates.** Under the
+output-injection condition of Corollary 6.22, the transpose of an output
+injection preserves `V*(ker Eᵀ)` and is Hurwitz on
+`(V*(ker Eᵀ) ⊔ Xstab(Aᵀ, Cᵀ)) / V*(ker Eᵀ)`. The disturbance readout image
+`im Hᵀ` lies in the numerator. By the annihilator identities, this is the
+dual-coordinate form of the quotient `S*(im E) / T_g` in Lemma 6.21. -/
+theorem exists_outputInjection_isHurwitz_dualQuotient_of_dualCondition
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A ≤ LinearMap.ker H) :
+    ∃ G : Y →ₗ[ℝ] X,
+      let V := LinearMap.controlledInvariantSubspace A.dualMap C.dualMap
+        (LinearMap.ker E.dualMap)
+      LinearMap.range H.dualMap ≤ V ⊔
+        LinearMap.stabilizableSubspace A.dualMap C.dualMap ∧
+      Nonempty {hFV : Submodule.map (A.dualMap + C.dualMap.comp G.dualMap) V ≤ V //
+        let W : Submodule ℝ (Module.Dual ℝ X) :=
+          V ⊔ LinearMap.stabilizableSubspace A.dualMap C.dualMap
+        let hWinv : ∀ x ∈ W, (A.dualMap + C.dualMap.comp G.dualMap) x ∈ W :=
+          fun x hx => map_add_feedback_sup_stabilizableSubspace_le
+            A.dualMap C.dualMap G.dualMap hFV ⟨x, hx, rfl⟩
+        let VW : Submodule ℝ W := V.comap W.subtype
+        let hmap : ∀ x ∈ VW,
+            ((A.dualMap + C.dualMap.comp G.dualMap).restrict hWinv) x ∈ VW :=
+          fun x hx => by
+            change (A.dualMap + C.dualMap.comp G.dualMap) (x : Module.Dual ℝ X) ∈ V
+            exact hFV ⟨(x : Module.Dual ℝ X), hx, rfl⟩
+        LinearMap.IsHurwitz
+          (Submodule.mapQ VW VW
+            ((A.dualMap + C.dualMap.comp G.dualMap).restrict hWinv) hmap)} := by
+  have hdual :=
+    (LinearMap.conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition
+      C A E H).mp h
+  have hstab : LinearMap.stabilizableSubspace A.dualMap C.dualMap =
+      LinearMap.reachableSubspace A.dualMap C.dualMap ⊔
+        LinearMap.stableSubspaceOfBasis
+          (Module.finBasis ℝ (Module.Dual ℝ X)) A.dualMap := by
+    rw [LinearMap.stabilizableSubspace,
+      ← LinearMap.stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace A.dualMap, sup_comm]
+  have hE : LinearMap.range H.dualMap ≤
+      LinearMap.controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap) ⊔
+        LinearMap.stabilizableSubspace A.dualMap C.dualMap := by
+    rw [LinearMap.ker_dualMap_eq_dualAnnihilator_range, hstab]
+    exact hdual
+  let V := LinearMap.controlledInvariantSubspace A.dualMap C.dualMap
+    (LinearMap.ker E.dualMap)
+  obtain ⟨F', ⟨⟨hFV, hQ⟩⟩⟩ :=
+    exists_feedback_isHurwitz_quotient_of_geometricCondition A.dualMap C.dualMap V
+      (LinearMap.isControlledInvariant_controlledInvariantSubspace
+        A.dualMap C.dualMap (LinearMap.ker E.dualMap))
+  obtain ⟨G, hG⟩ := LinearMap.dualMap_surjective (X := X) (Y := Y) F'
+  refine ⟨G, hE, ⟨⟨?_, ?_⟩⟩⟩
+  · simpa only [hG] using hFV
+  · simpa only [hG] using hQ
+
 /-- **Observer/output-injection assembly from the dual geometric condition.**
 Assume the Corollary 6.22 output-injection condition
 `S*(im E) ∩ Xdet(C, A) ≤ ker H`. Then there is an output injection
@@ -5083,6 +5301,123 @@ theorem map_outputStabilizableSubspace_le
       outputStabilizableSubspace A B H :=
   map_sup_stabilizableSubspace_le A B
     (LinearMap.isControlledInvariant_controlledInvariantSubspace A B (LinearMap.ker H))
+
+omit [FiniteDimensional ℝ U] in
+/-- The first Corollary 6.22 inclusion places the least conditioned-invariant
+subspace generated by the disturbance inside `W_g(ker H)`. -/
+theorem conditionedInvariantSubspace_le_outputStabilizableSubspace
+    {Y D : Type*} [AddCommGroup Y] [Module ℝ Y]
+    [AddCommGroup D] [Module ℝ D]
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (E : D →ₗ[ℝ] X)
+    (hE : LinearMap.range E ≤ outputStabilizableSubspace A B H) :
+    LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ≤
+      outputStabilizableSubspace A B H := by
+  apply LinearMap.conditionedInvariantSubspace_le hE
+  change Submodule.map A
+      (outputStabilizableSubspace A B H ⊓ LinearMap.ker C) ≤
+      outputStabilizableSubspace A B H
+  exact (Submodule.map_mono inf_le_left).trans
+    (map_outputStabilizableSubspace_le A B H)
+
+/-- The subspace `T_g = S*(im E) ∩ Xdet` is `A`-invariant. -/
+theorem map_conditionedInvariant_inf_detectable_le
+    {Y D : Type*} [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+    [AddCommGroup D] [Module ℝ D]
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) :
+    Submodule.map A
+      (LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A) ≤
+      LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A := by
+  let S := LinearMap.conditionedInvariantSubspace C A (LinearMap.range E)
+  let T := S ⊓ LinearMap.detectableSubspace C A
+  have hTker : T ≤ LinearMap.ker C :=
+    (inf_le_right).trans ((LinearMap.detectableSubspace_le_unobservableSubspace C A).trans
+      (LinearMap.unobservableSubspace_le_ker C A))
+  have hS : LinearMap.IsConditionedInvariant C A S :=
+    LinearMap.isConditionedInvariant_conditionedInvariantSubspace C A (LinearMap.range E)
+  rintro _ ⟨x, hx, rfl⟩
+  refine ⟨?_, ?_⟩
+  · exact hS ⟨x, ⟨hx.1, hTker hx⟩, rfl⟩
+  · exact LinearMap.map_detectableSubspace_le C A ⟨x, hx.2, rfl⟩
+
+omit [FiniteDimensional ℝ U] in
+/-- **The algebraic extended-pair assembly of Lemma 6.21.** Once the two gains
+preserve `V*(ker H)` and `S*(im E)`, the Corollary 6.22 conditions produce the
+nested invariant subspaces `Vₑ,₁ = Vₑ(T_g,V*)` and
+`Vₑ,₂ = Vₑ(S*,W_g)`, with the disturbance image in the latter and the former
+inside the output kernel. The quotient-Hurwitz assertion is separate. -/
+theorem extendedPairSubspaces_of_externalStabilizationConditions
+    {Y : Type*} [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+    {D : Type*} [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : ExternalStabilizationConditions sys E H)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hF : Submodule.map (sys.A + sys.B.comp F)
+      (LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)) ≤
+      LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H))
+    (hG : Submodule.map (sys.A + G.comp sys.C)
+      (LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)) ≤
+      LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E))
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    let V := LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+    let W := outputStabilizableSubspace sys.A sys.B H
+    let S := LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+    let T := S ⊓ LinearMap.detectableSubspace sys.C sys.A
+    let Vₑ₁ := extendedPairSubspace T V
+    let Vₑ₂ := extendedPairSubspace S W
+    Vₑ₁ ≤ Vₑ₂ ∧
+      Submodule.map
+        ((cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp)
+        Vₑ₁ ≤ Vₑ₁ ∧
+      Submodule.map
+        ((cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp)
+        Vₑ₂ ≤ Vₑ₂ ∧
+      LinearMap.range
+        (cabPairInterconnection sys (cabPairController sys F G 0) E H).disturbanceMap ≤ Vₑ₂ ∧
+      Vₑ₁ ≤ LinearMap.ker
+        (cabPairInterconnection sys (cabPairController sys F G 0) E H).outputMap := by
+  let V := LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+  let W := outputStabilizableSubspace sys.A sys.B H
+  let S := LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+  let T := S ⊓ LinearMap.detectableSubspace sys.C sys.A
+  have hAT : Submodule.map sys.A T ≤ T :=
+    map_conditionedInvariant_inf_detectable_le sys.C sys.A E
+  have hTkerC : T ≤ LinearMap.ker sys.C :=
+    (inf_le_right).trans
+      ((LinearMap.detectableSubspace_le_unobservableSubspace sys.C sys.A).trans
+        (LinearMap.unobservableSubspace_le_ker sys.C sys.A))
+  have hTV : T ≤ V := by
+    apply LinearMap.le_controlledInvariantSubspace h.2
+    exact hAT.trans le_sup_left
+  have hSW : S ≤ W :=
+    conditionedInvariantSubspace_le_outputStabilizableSubspace
+      sys.C sys.A sys.B H E h.1
+  have hAW : Submodule.map sys.A W ≤ W := map_outputStabilizableSubspace_le sys.A sys.B H
+  have hASW : Submodule.map sys.A S ≤ W := (Submodule.map_mono hSW).trans hAW
+  have hATV : Submodule.map sys.A T ≤ V := hAT.trans hTV
+  have hFW : Submodule.map (sys.A + sys.B.comp F) W ≤ W :=
+    map_add_feedback_sup_stabilizableSubspace_le sys.A sys.B F hF
+  have hGT : Submodule.map (sys.A + G.comp sys.C) T ≤ T := by
+    rintro _ ⟨x, hx, rfl⟩
+    have hCx : sys.C x = 0 := LinearMap.mem_ker.mp (hTkerC hx)
+    simpa [LinearMap.add_apply, LinearMap.comp_apply, hCx] using hAT ⟨x, hx, rfl⟩
+  have hE_S : LinearMap.range E ≤ S :=
+    LinearMap.le_conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
+  have hVker : V ≤ LinearMap.ker H :=
+    LinearMap.controlledInvariantSubspace_le_K sys.A sys.B (LinearMap.ker H)
+  dsimp
+  refine ⟨extendedPairSubspace_mono inf_le_left le_sup_left, ?_, ?_, ?_, ?_⟩
+  · exact extendedPairSubspace_invariant_cabPairController_zero
+      sys hD E H T V F G hTV hATV hF hGT hwp
+  · exact extendedPairSubspace_invariant_cabPairController_zero
+      sys hD E H S W F G hSW hASW hFW hG hwp
+  · exact disturbanceMap_range_le_extendedPairSubspace
+      sys (cabPairController sys F G 0) E H S W hE_S
+  · exact extendedPairSubspace_le_outputMap_ker
+      sys (cabPairController sys F G 0) E H T V h.2 hVker
 
 /-- **The open-loop output-stabilizability predicate.** A state `x` lies in the
 source's `W_g(ker H)` if there is a locally integrable open-loop input `u` for
