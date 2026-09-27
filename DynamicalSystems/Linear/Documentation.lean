@@ -433,9 +433,11 @@ arbitrary-state time-domain equivalence.
 The channel-level spectral criterion identifies decay with the input range
 lying in the sum of the unobservable and Hurwitz subspaces. It accounts for
 unobservable non-Hurwitz modes, but does not itself formalize cancellation of
-poles in a rational transfer function.
+poles in a rational transfer function. A Hurwitz controllable–observable
+realization also implies channel decay; the converse remains to be proved.
 
 {docstring LinearSystem.channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz}
+{docstring LinearSystem.channelReadout_tendsto_of_isHurwitz_minimalRealization}
 
 # Observer duality
 

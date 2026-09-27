@@ -6,6 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Linear.GenericControllerDualResponse
+public import DynamicalSystems.Linear.KalmanDecomposition
 
 /-! # Stable external response with arbitrary controller state
 
@@ -145,5 +146,26 @@ theorem channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz
       rw [hsum t, hu0 t, zero_add]
     rw [heq]
     exact hvdec
+
+/-- A Hurwitz controllable–observable realization gives a decaying impulse
+readout for the original channel, even when the original state map has
+unreachable or unobservable non-Hurwitz modes. -/
+theorem channelReadout_tendsto_of_isHurwitz_minimalRealization
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : LinearMap.IsHurwitz
+      (LinearMap.controllableObservableRealization A E H 0).A)
+    (d : D) :
+    Tendsto (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+      atTop (nhds 0) := by
+  let V := LinearMap.reachableUnobservable A E H
+  let W := LinearMap.reachableSubspace A E
+  have hW : Submodule.map A W ≤ W := LinearMap.map_reachableSubspace_le A E
+  have hV : Submodule.map A V ≤ V := LinearMap.map_reachableUnobservable_le A E H
+  have hVH : V ≤ LinearMap.ker H := by
+    intro x hx
+    exact LinearMap.unobservableSubspace_le_ker H A hx.2
+  have hE : LinearMap.range E ≤ W := LinearMap.range_le_reachableSubspace A E
+  apply tendsto_readout_exp_of_isHurwitz_mapQ_on A H E V W hW hV hVH hE
+  exact h
 
 end LinearSystem
