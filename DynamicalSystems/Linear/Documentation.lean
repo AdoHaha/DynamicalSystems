@@ -430,6 +430,13 @@ arbitrary-state time-domain equivalence.
 {docstring LinearSystem.externalStabilizationConditions_of_anyStateStableExternalResponse}
 {docstring LinearSystem.anyStateStableExternalResponse_iff_externalStabilizationConditions}
 
+The channel-level spectral criterion identifies decay with the input range
+lying in the sum of the unobservable and Hurwitz subspaces. It accounts for
+unobservable non-Hurwitz modes, but does not itself formalize cancellation of
+poles in a rational transfer function.
+
+{docstring LinearSystem.channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz}
+
 # Observer duality
 
 The observation half of Corollary 6.22 follows from the state-feedback half by algebraic duality.

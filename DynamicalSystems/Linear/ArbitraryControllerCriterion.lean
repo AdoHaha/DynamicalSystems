@@ -101,4 +101,49 @@ theorem anyStateStableExternalResponse_iff_externalStabilizationConditions
   · exact externalStabilizationConditions_of_anyStateStableExternalResponse sys hD E H
   · exact anyStateStableExternalResponse_of_externalStabilizationConditions sys hD E H
 
+/-- A finite-dimensional channel has a decaying impulse readout in every input
+direction exactly when its input range is contained in the sum of the
+unobservable and Hurwitz spectral subspaces. This is a time-domain spectral
+criterion, not yet a statement about poles of a rational transfer function. -/
+theorem channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz
+    (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    (∀ d : D, Tendsto
+      (fun t : ℝ => H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)))
+      atTop (nhds 0)) ↔
+      LinearMap.range E ≤
+        LinearMap.unobservableSubspace H A ⊔ LinearMap.hurwitzSubspace A := by
+  constructor
+  · intro hdec
+    change ∀ y, y ∈ LinearMap.range E →
+      y ∈ LinearMap.unobservableSubspace H A ⊔ LinearMap.hurwitzSubspace A
+    intro y hy
+    obtain ⟨d, rfl⟩ := LinearMap.mem_range.mp hy
+    have hs := mem_outputStabilizableSubspace_of_decay_of_B_eq_zero
+      (U := D) A H
+      (fun x hx h => LinearMap.antistable_readout_forces_unobservable A H hx h)
+      (hdec d)
+    rw [outputStabilizableSubspace_zero_eq_sup_unobservableSubspace] at hs
+    simpa [sup_comm] using hs
+  · intro hrange d
+    have hEd : E d ∈ LinearMap.unobservableSubspace H A ⊔
+        LinearMap.hurwitzSubspace A :=
+      hrange (LinearMap.mem_range_self E d)
+    obtain ⟨u, hu, v, hv, huv⟩ := Submodule.mem_sup.mp hEd
+    have hu0 : ∀ t : ℝ, H (NormedSpace.exp (t • A.toContinuousLinearMap) u) = 0 :=
+      fun t => readout_exp_eq_zero_of_mem_unobservableSubspace A H hu t
+    have hvdec := tendsto_readout_exp_of_mem_hurwitzSubspace A H hv
+    have hsum : ∀ t : ℝ,
+        H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d)) =
+          H (NormedSpace.exp (t • A.toContinuousLinearMap) u) +
+            H (NormedSpace.exp (t • A.toContinuousLinearMap) v) := by
+      intro t
+      rw [← huv, map_add, map_add]
+    have heq : (fun t : ℝ =>
+        H (NormedSpace.exp (t • A.toContinuousLinearMap) (E d))) =
+        fun t => H (NormedSpace.exp (t • A.toContinuousLinearMap) v) := by
+      funext t
+      rw [hsum t, hu0 t, zero_add]
+    rw [heq]
+    exact hvdec
+
 end LinearSystem
