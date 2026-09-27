@@ -41,12 +41,13 @@ space `W` and a dynamic controller `ctrl : DynamicController ℝ W Y U` such tha
 the forced external response of the generic zero-`F` interconnection decays to
 zero in every disturbance direction.
 
-This is the literal reading of the Corollary 6.22 statement, in which the
-controller order is not fixed: the fixed-state predicate
-`StableNonzeroExternalResponse` only allows `W = X`. The generic
+This expresses the controller-order quantifier of Corollary 6.22: the
+controller order is not fixed, unlike the fixed-state predicate
+`StableNonzeroExternalResponse`, which only allows `W = X`. The generic
 interconnection is `genericZeroFInterconnection`, which is the same
 `⟨sys, ctrl, E, 0, H⟩` interconnection as `cabPairInterconnection` but with an
-arbitrary controller state. -/
+arbitrary controller state. All spaces use one Lean universe `u`; this limits
+API polymorphism, not ordinary finite-dimensional real models. -/
 def AnyStateStableExternalResponse (sys : LinearSystem ℝ X U Y)
     (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) : Prop :=
   ∃ (W : Type u) (_ : NormedAddCommGroup W) (_ : NormedSpace ℝ W)

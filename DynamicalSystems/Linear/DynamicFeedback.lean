@@ -232,8 +232,9 @@ construction of Lemma 4.38 `exists_feedback_tendsto_readout_of_corollary622`,
 and its observer dual
 `exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
 The fixed-state-controller stable-nonzero equivalence is proved in
-`DynamicFeedbackNecessity`; the book's arbitrary-controller-state quantifier
-is not formalized. In particular the
+`DynamicFeedbackNecessity`; the arbitrary-controller-state time-domain decay
+equivalence is proved in `ArbitraryControllerCriterion`. The link to the book's
+transfer-function stability predicate remains separate. In particular the
 zero-response predicate above must not be read as BIBO/external asymptotic
 stability; the two are separated by
 `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`,
@@ -2406,8 +2407,9 @@ response of (6.12) is Lyapunov stable and attractive at the origin. The gains
 
 This is the dynamic measurement-feedback counterpart of the sufficient
 direction of external stabilization (Trentelman–Stoorvogel–Hautus, Section 6.6);
-the geometric necessary-and-sufficient conditions of Corollary 6.22 remain
-future work. The only hypotheses are controllability and observability of the
+the general geometric time-domain criterion is proved later in
+`ArbitraryControllerCriterion`. The only hypotheses here are controllability
+and observability of the
 strictly proper plant; the gains exist without being assumed and external
 stability is derived from their Hurwitz closed loop. -/
 theorem exists_externallyStabilizing_cabPair_gains (sys : LinearSystem ℝ X U Y)
@@ -2780,9 +2782,10 @@ asks for a controller making the closed-loop transfer function
 `G_Κ(s) = H_e (s I - A_e)⁻¹ B_e` *stable*. Corollary 6.22 characterises this by
 `im E ⊂ V*(ker H) + Xstab` together with `S*(im E) ∩ Xdet ⊂ ker H`, where
 `Xstab` is the stabilizable subspace of `(A, B)` and `Xdet` the undetectable
-subspace of `(C, A)`. Neither subspace (nor its spectral characterisation) is
-available in the pinned library, so the full Corollary 6.22 is **not** formalised
-here; the package `external-stability-subspaces` records the gap.
+subspace of `(C, A)`. These subspaces and the arbitrary-controller-state
+time-domain decay criterion are formalized in later modules; this section
+develops the earlier exact-decoupling layer. The transfer-function stability
+formulation is not identified with decay here.
 
 What *is* formalised is the exact-decoupling idealisation: the forced external
 impulse response `t ↦ H_e e^{t A_e} B_e` vanishes identically. By the analytic
@@ -2963,8 +2966,9 @@ accepted `(C, A, B)`-pair certificate entails both, and
 `externalStabilizationConditions_of_externalStability` extracts them from exact
 external zero response. For the weaker stable-nonzero response with controller
 state space `X`, the geometric equivalence is proved in
-`DynamicFeedbackNecessity`. The book's arbitrary-controller-state version is
-not yet claimed. -/
+`DynamicFeedbackNecessity`. The arbitrary-controller-state time-domain version
+is proved in `ArbitraryControllerCriterion`; the transfer-function stability
+formulation remains separate. -/
 
 /-- **The geometric subspace conditions of Corollary 6.22.** The disturbance
 image lies in the sum of the largest controlled invariant subspace inside
@@ -3199,8 +3203,8 @@ stronger zero-response premise and does not cover the merely stable response.
 
 The resulting iff in `DynamicFeedbackNecessity` is for controllers with state
 space `X`, as required by `StableNonzeroExternalResponse`. The book allows an
-arbitrary finite-dimensional controller state space; that quantifier remains to
-be formalized. The exact-zero criterion
+arbitrary finite-dimensional controller state space; that quantifier is packaged
+and proved for time-domain decay in `ArbitraryControllerCriterion`. The exact-zero criterion
 (`externalStability_iff_geometricCertificate_and_conditions`) remains a
 separate, stronger statement. -/
 
@@ -5674,7 +5678,8 @@ of Trentelman–Stoorvogel–Hautus Lemma 6.21, equations (6.40)–(6.41), and i
 Hurwitz quotient are constructed later in this file. They culminate in
 `stableNonzeroExternalResponse_of_externalStabilizationConditions`. The
 necessity direction for controller state `X` is completed in
-`DynamicFeedbackNecessity`; arbitrary controller state remains open. The
+`DynamicFeedbackNecessity`; arbitrary controller state in the time-domain decay
+form is covered by `ArbitraryControllerCriterion`. The
 exact-zero criterion (`externalStability_iff_geometricCertificate_and_conditions`)
 is a separate statement. -/
 
@@ -7018,8 +7023,9 @@ into two state equations, concludes `x₁(0) ∈ Xstab` from the stable trajecto
 and `x₂(0) ∈ V*(ker H)` from `H x₂ = 0`. The finite-Bohl *forcing-image*
 version of this argument is now proved by `finiteBohlWBridge` below, using
 quotient non-cancellation of the projected ODE residuals. It does not extend
-the conclusion to every locally integrable input or settle the full
-dynamic-controller equivalence of Corollary 6.22. -/
+the conclusion to every locally integrable input; the time-domain
+dynamic-controller equivalence is obtained later via finite-Bohl closed-loop
+inputs in `ArbitraryControllerCriterion`. -/
 
 /-! ### The `B = 0` reduction added by the spectral-decomposition task
 
@@ -7880,8 +7886,8 @@ the trajectory is constant past a finite horizon and the forced trajectory
 becomes the autonomous orbit of a single state, so the accepted antistable
 readout theorem applies with no extra spectral input. The resulting theorem is a
 genuine strict subclass of the general statement and therefore does **not**
-imply the original Corollary 6.22 necessity; the exact remaining obligation is
-the unrestricted locally-integrable statement recorded above. -/
+by itself imply Corollary 6.22 necessity; the unrestricted locally-integrable
+open-loop statement remains separate from the finite-Bohl closed-loop route. -/
 
 section EventuallyZeroInput
 
@@ -7975,7 +7981,9 @@ subspace `W_g(ker H)` at time `-T` recovers `x = e^{-TA} (e^{TA} x) ∈ W_g(ker 
 This is a strict subclass of the general locally integrable statement: it says
 that no finite-horizon open-loop control can stabilize a state outside
 `W_g(ker H)`, and it does not cover inputs with a persistent tail. The
-unrestricted Corollary 6.22 necessity remains open. -/
+unrestricted open-loop characterization remains separate; Corollary 6.22
+necessity is instead established through the finite-Bohl closed-loop route in
+`ArbitraryControllerCriterion`. -/
 theorem mem_outputStabilizableSubspace_of_isOutputStabilizable_of_eventuallyZero
     (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) {x : X} {u : ℝ → U}
     (hu : LocallyIntegrable u volume) (hevent : HasEventuallyZeroInput u)
@@ -13353,7 +13361,7 @@ end LinearSystem
 
 The dual plant and controller yield the algebraic transpose of the primal
 closed-loop map under the canonical product-dual equivalence. This is the
-operator-level part of the remaining Corollary 6.22 necessity argument. -/
+operator-level part used by the Corollary 6.22 necessity argument. -/
 
 namespace LinearSystem
 

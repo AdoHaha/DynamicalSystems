@@ -15,6 +15,8 @@ import DynamicalSystems.Linear.DynamicFeedbackNecessity
 import DynamicalSystems.Linear.GenericControllerNecessity
 import DynamicalSystems.Linear.ArbitraryControllerResponse
 import DynamicalSystems.Linear.GenericControllerDuality
+import DynamicalSystems.Linear.GenericControllerDualResponse
+import DynamicalSystems.Linear.ArbitraryControllerCriterion
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -275,8 +277,12 @@ formalized with their explicit finite-dimensional and admissibility hypotheses. 
 controllers whose state space is the plant state space `X`, the *stable-nonzero*
 Corollary 6.22 geometric equivalence is proved by
 `LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions`.
-The book's arbitrary finite-dimensional controller-state quantifier is not yet
-formalized. The controllable/observable special case is
+The arbitrary finite-dimensional controller-state *time-domain decay* version
+is proved by
+`LinearSystem.anyStateStableExternalResponse_iff_externalStabilizationConditions`.
+It uses Hurwitz (left-half-plane) stability. Equivalence with the book's
+transfer-function formulation, and arbitrary stability domains, remain separate.
+The controllable/observable special case is
 `LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
 # Stabilizable and detectable spectral subspaces
@@ -396,15 +402,15 @@ for that controller class.
 
 The first inclusion also holds when the controller state is an arbitrary
 finite-dimensional real space `W`; the generic proof extracts the plant
-trajectory from a closed-loop state in `X × W`. The corresponding generic dual
-response bridge is separate.
+trajectory from a closed-loop state in `X × W`.
 
 {docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_genericStableResponse}
 
 For the book's quantifier over controller order, the controller state space is
 existentially quantified in `AnyStateStableExternalResponse`. The existing
-observer construction gives sufficiency, and the generic first-inclusion
-theorem gives one half of necessity. The second half awaits generic duality.
+observer construction gives sufficiency. The generic first-inclusion theorem
+and its transposed application give both necessity inclusions for time-domain
+decay. A transfer-function stability-to-decay bridge is not claimed.
 
 {docstring LinearSystem.AnyStateStableExternalResponse}
 {docstring LinearSystem.anyStateStableExternalResponse_of_externalStabilizationConditions}
@@ -412,11 +418,17 @@ theorem gives one half of necessity. The second half awaits generic duality.
 
 For a generic controller state `W`, the closed-loop operator and its
 exponential are conjugate to the primal transposes under the product-dual
-equivalence. The pointwise dual external-response identity remains to be
-assembled from these operator-level results.
+equivalence. The pointwise dual readout identity is also proved in explicit
+channel form, avoiding an elaboration bottleneck in `externalResponse` over
+dual spaces. Transposed channel decay then gives the second inclusion and the
+arbitrary-state time-domain equivalence.
 
 {docstring LinearSystem.genericW_closedLoopMap_apply}
 {docstring LinearSystem.genericW_closedLoop_exp_apply}
+{docstring LinearSystem.genericW_dualExplicitResponse}
+{docstring LinearSystem.firstInclusion_of_explicitReadout}
+{docstring LinearSystem.externalStabilizationConditions_of_anyStateStableExternalResponse}
+{docstring LinearSystem.anyStateStableExternalResponse_iff_externalStabilizationConditions}
 
 # Observer duality
 
@@ -453,8 +465,9 @@ triangular-product quotient for the observer-based dynamic controller. The
 extended disturbance image lies in the invariant window, and the external
 readout vanishes on its invariant denominator. Quotient decay therefore gives
 a stable, possibly nonzero, external impulse response. The reverse implication
-is proved for the repository's controller class with state space `X`; the
-book's arbitrary-controller-state version remains open.
+is also proved for arbitrary finite-dimensional controller state spaces by the
+real-coordinate Bohl bridge and generic closed-loop duality. This is the
+time-domain decay form; transfer-function stability is not yet identified with it.
 
 {docstring LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions}
 
@@ -936,7 +949,8 @@ In the external-stability row the first declaration is the exact-zero criterion 
 Corollary 6.7); the second records the stable-nonzero Corollary 6.22 subspace conditions, whose
 geometric equivalence for controllers with state space `X` is proved by
 `LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions`.
-The book's arbitrary-controller-state version is not yet claimed.
+The arbitrary-controller-state time-domain version is
+`LinearSystem.anyStateStableExternalResponse_iff_externalStabilizationConditions`.
 
 # Source-to-theorem ledger
 
@@ -1202,8 +1216,9 @@ explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function sta
 External stability is recorded in two distinct forms and they are never identified. The exact-zero
 response is characterised geometrically by a `(C, A, B)`-pair. A stable (possibly nonzero) external
 impulse response is equivalent to the two Corollary 6.22 subspace conditions
-for controllers with state space `X`, using the observer-based construction and
-the real-space dual necessity proof. Arbitrary controller state remains open.
+even when the finite-dimensional controller state is arbitrary, using the
+observer-based construction and the real-space dual necessity proof. The
+transfer-function stability formulation still needs a formal analytic bridge.
 The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
 and transpose-exponential pairing are formalized with explicit finite-dimensional and
 admissibility hypotheses. These external-stability statements assume a strictly proper plant
@@ -1248,7 +1263,7 @@ documentation-only review records but cannot edit.
   * Fullness overclaim
   * The fixed-state stable-nonzero criterion must not be presented as the book's
     arbitrary-controller-state version of Corollary 6.22.
-  * The formalized iff is identified as the `W = X` specialization above.
+  * The fixed-state and arbitrary-state iff declarations are distinguished above.
 *
   * Medium
   * Stale handoff (non-owned)
