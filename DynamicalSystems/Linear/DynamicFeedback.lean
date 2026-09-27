@@ -4598,6 +4598,16 @@ theorem dualAnnihilator_detectableSubspace (C : X →ₗ[ℝ] Y) (A : X →ₗ[�
       reachableSubspace A.dualMap C.dualMap ⊔ (unstableSubspace A).dualAnnihilator := by
   rw [detectableSubspace, Subspace.dualAnnihilator_inf_eq, ← reachableSubspace_dualMap]
 
+omit [FiniteDimensional ℝ X] in
+/-- The annihilator of `S*(im E)` is the controlled-invariant subspace of the
+transposed pair inside `ker E.dualMap`. -/
+theorem conditionedInvariantSubspace_dualAnnihilator_eq
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) :
+    (conditionedInvariantSubspace C A (LinearMap.range E)).dualAnnihilator =
+      controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap) := by
+  rw [dualAnnihilator_conditionedInvariantSubspace C A (LinearMap.range E),
+    ← ker_dualMap_eq_dualAnnihilator_range E]
+
 /-- **Dual form of the Corollary 6.22 output-injection condition.** The source's
 second condition `S*(im E) ∩ Xdet(C, A) ≤ ker H` is equivalent to the purely
 algebraic condition on the transposed pair
@@ -4975,6 +4985,31 @@ theorem exp_smul_dualMap_apply (T : X →ₗ[ℝ] X) (t : ℝ) (φ : Module.Dual
       φ ((NormedSpace.exp (t • T.toContinuousLinearMap)) x) := by
   rw [exp_smul_dualMap_eq]
   simp [LinearMap.dualMap_apply]
+
+end LinearMap
+
+namespace LinearMap
+
+variable {X Y D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+
+/-- The annihilator of `T_g = S*(im E) ⊓ Xdet(C,A)` is the dual
+controlled-invariant subspace enlarged by the dual stabilizable subspace. -/
+theorem conditionedInvariantSubspace_inf_detectableSubspace_dualAnnihilator_eq
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) :
+    (conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        detectableSubspace C A).dualAnnihilator =
+      controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap) ⊔
+        stabilizableSubspace A.dualMap C.dualMap := by
+  rw [Subspace.dualAnnihilator_inf_eq,
+    conditionedInvariantSubspace_dualAnnihilator_eq C A E,
+    dualAnnihilator_detectableSubspace C A,
+    dualAnnihilator_unstableSubspace_eq_stableSubspace_dualMap A]
+  congr 1
+  rw [stabilizableSubspace,
+    ← stableSubspaceOfBasis_finBasis_eq_hurwitzSubspace A.dualMap, sup_comm]
 
 end LinearMap
 
@@ -12169,6 +12204,48 @@ theorem isHurwitz_closedLoopMap_quotient_extendedPairSubspaces
     (Submodule.prod (Vstar sys H) (Tg sys E))
     (Submodule.prod (Wg sys H) (Sstar sys E))
     hP2Q2 hQ2 hP2 hPmap hQmap).mpr hTarget
+
+/-- **Stable-nonzero external response from the two geometric quotients.**
+For a strictly proper plant with the Corollary 6.22 conditions, gains `F`, `G`
+preserving `V*(ker H)` and `S*(im E)`, and with the state-feedback quotient and
+the observer-error quotient both Hurwitz, the `(C,A,B)`-pair controller (6.7)
+with `N = 0` realises the stable-nonzero external response. The two extended
+pair subspaces of Lemma 6.21 provide the invariant window `We` and the
+unobservable subspace `Ve`; the quotient-Hurwitz spectral input is transferred
+from the two separation-principle blocks to `We ⧸ Ve`. -/
+theorem stableNonzeroExternalResponse_of_geometricQuotients
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (h : sys.ExternalStabilizationConditions E H)
+    (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H)
+    (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E)
+    (hFq : LinearMap.IsHurwitz (stateFeedbackQuotientMap sys E H F G h hF hG))
+    (hGq : LinearMap.IsHurwitz (observerErrorQuotientMap sys E H F G h hF hG)) :
+    StableNonzeroExternalResponse sys hD E H := by
+  let ctrl : DynamicController ℝ X Y U := cabPairController sys F G 0
+  let Ve : Submodule ℝ (X × X) := extendedPairSubspace (Tg sys E) (Vstar sys H)
+  let We : Submodule ℝ (X × X) := extendedPairSubspace (Sstar sys E) (Wg sys H)
+  have hwp : (cabPairInterconnection sys ctrl E H).IsWellPosed :=
+    (cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD
+  -- The algebraic extended-pair assembly of Lemma 6.21.
+  have hmain := extendedPairSubspaces_of_externalStabilizationConditions
+    sys hD E H h F G hF hG hwp
+  obtain ⟨_, hInvDen, hInvNum, hEeDist, hVeH⟩ := hmain
+  -- The disturbance channel of `cabPairInterconnection` is the zero-`F` one.
+  have hEe : LinearMap.range
+      ((cabPairInterconnection sys ctrl E H).disturbanceMapWithF hwp) ≤ We := by
+    rw [(cabPairInterconnection sys ctrl E H).disturbanceMapWithF_of_F_eq_zero hwp rfl]
+    exact hEeDist
+  -- Transfer the quotient Hurwitz data from the two separation-principle blocks.
+  have hQ : LinearMap.IsHurwitz
+      (Submodule.mapQ (Ve.comap We.subtype) (Ve.comap We.subtype)
+        (((cabPairInterconnection sys ctrl E H).closedLoopMap hwp).restrict
+          (fun x hx => hInvNum ⟨x, hx, rfl⟩))
+        (fun x hx => hInvDen ⟨(x : X × X), hx, rfl⟩)) :=
+    isHurwitz_closedLoopMap_quotient_extendedPairSubspaces
+      sys hD E H F G h hF hG hwp hFq hGq
+  exact stableNonzeroExternalResponse_of_quotient_hurwitz
+    sys hD E H ctrl Ve We hInvNum hInvDen hVeH hEe hQ
 
 end
 
