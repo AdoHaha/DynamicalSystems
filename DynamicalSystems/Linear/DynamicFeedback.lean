@@ -230,9 +230,10 @@ now supported by the formalised quotient-decay bridge
 `tendsto_readout_exp_of_isHurwitz_mapQ`, the geometric state-feedback
 construction of Lemma 4.38 `exists_feedback_tendsto_readout_of_corollary622`,
 and its observer dual
-`exists_observerError_readout_tendsto_of_externalStabilizationConditions`; the
-full necessary-and-sufficient dynamic-controller form of Corollary 6.22 is not
-claimed. In particular the
+`exists_observerError_readout_tendsto_of_externalStabilizationConditions`.
+The fixed-state-controller stable-nonzero equivalence is proved in
+`DynamicFeedbackNecessity`; the book's arbitrary-controller-state quantifier
+is not formalized. In particular the
 zero-response predicate above must not be read as BIBO/external asymptotic
 stability; the two are separated by
 `LinearSystem.bibo_and_externalZeroResponse_of_geometricCertificate_hurwitz`,
@@ -2960,11 +2961,10 @@ stabilizing controller exists exactly when
 The two inclusions are recorded by `ExternalStabilizationConditions`. The
 accepted `(C, A, B)`-pair certificate entails both, and
 `externalStabilizationConditions_of_externalStability` extracts them from exact
-external zero response. For the weaker stable-nonzero response, the geometric
-conditions are sufficient by
-`stableNonzeroExternalResponse_of_externalStabilizationConditions` below. The
-converse from a merely decaying response, and hence the full iff, is not yet
-claimed. -/
+external zero response. For the weaker stable-nonzero response with controller
+state space `X`, the geometric equivalence is proved in
+`DynamicFeedbackNecessity`. The book's arbitrary-controller-state version is
+not yet claimed. -/
 
 /-- **The geometric subspace conditions of Corollary 6.22.** The disturbance
 image lies in the sum of the largest controlled invariant subspace inside
@@ -3167,9 +3167,9 @@ theorem exists_stableNonzeroExternalResponse_cabPair_gains
 
 end StableNonzeroExistence
 
-/-! ### Handoff: the remaining converse for the full stable-nonzero iff
+/-! ### Stable-nonzero necessity and its controller-state scope
 
-The Corollary 6.22 stable-nonzero criterion would read
+For the repository's controller class, the stable-nonzero criterion reads
 
 `StableNonzeroExternalResponse sys hD E H ↔ ExternalStabilizationConditions sys E H`.
 
@@ -3178,7 +3178,7 @@ The sufficiency direction is proved below by
 the extended invariant subspaces and their Hurwitz quotient for the
 observer-based controller, then applies the forced-readout decay bridge.
 
-The remaining **necessity** direction
+The **necessity** direction
 (`StableNonzeroExternalResponse → ExternalStabilizationConditions`) is distinct.
 The source derives `im E ⊂ V*(ker H) + Xstab` from the definition of `W_g(ker H)`
 as the set of states from which an open-loop control can make the controlled
@@ -3189,17 +3189,20 @@ forcing-image version of this open-loop characterisation is
 `finiteBohlWBridge_real` in `RealBohlTransport`. The first inclusion from an
 arbitrary stable controller is also proved there by
 `range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse`.
-The remaining dual inclusion needs transfer of external-response decay through
-the transposed closed-loop realization. The operator-level transpose identity
-`prodDualEquiv_closedLoopMap_apply` and a general channel-decay transpose bridge
-`dualReadout_tendsto_of_readout_tendsto` are proved below. The exact-zero
-case already has both halves
+The dual inclusion is completed in `DynamicFeedbackNecessity` by transferring
+external-response decay through the transposed closed-loop realization. The
+operator-level transpose identity `prodDualEquiv_closedLoopMap_apply` and a
+general channel-decay transpose bridge `dualReadout_tendsto_of_readout_tendsto`
+are proved below. The exact-zero case also has both halves
 (`externalStabilizationConditions_of_externalStability`), but it rests on the
 stronger zero-response premise and does not cover the merely stable response.
 
-Until this converse is available the genuine iff is not claimed. The exact-zero
-criterion (`externalStability_iff_geometricCertificate_and_conditions`) remains
-a separate, stronger statement. -/
+The resulting iff in `DynamicFeedbackNecessity` is for controllers with state
+space `X`, as required by `StableNonzeroExternalResponse`. The book allows an
+arbitrary finite-dimensional controller state space; that quantifier remains to
+be formalized. The exact-zero criterion
+(`externalStability_iff_geometricCertificate_and_conditions`) remains a
+separate, stronger statement. -/
 
 /-- **BIBO stability and external zero response from a stabilising certificate.**
 Suppose the geometric certificate `(S, V)` is equipped with gains `F`, `G`, `N`
@@ -5670,9 +5673,10 @@ The extended subspace pair `(Ve, We)` corresponding to `V_{e,1}` and `V_{e,2}`
 of Trentelman–Stoorvogel–Hautus Lemma 6.21, equations (6.40)–(6.41), and its
 Hurwitz quotient are constructed later in this file. They culminate in
 `stableNonzeroExternalResponse_of_externalStabilizationConditions`. The
-necessity direction from a merely stable response remains open; the exact-zero
-criterion (`externalStability_iff_geometricCertificate_and_conditions`) is a
-separate statement. -/
+necessity direction for controller state `X` is completed in
+`DynamicFeedbackNecessity`; arbitrary controller state remains open. The
+exact-zero criterion (`externalStability_iff_geometricCertificate_and_conditions`)
+is a separate statement. -/
 
 
 /-! ## The `W_g(ker H)` necessity bridge: algebraic form and dual

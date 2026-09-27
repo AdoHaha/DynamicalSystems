@@ -11,6 +11,7 @@ import DynamicalSystems.Linear.Observer
 import DynamicalSystems.Linear.DisturbanceDecoupling
 import DynamicalSystems.Linear.DynamicFeedback
 import DynamicalSystems.Linear.RealBohlTransport
+import DynamicalSystems.Linear.DynamicFeedbackNecessity
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -267,11 +268,12 @@ is formalized under an explicit factorization hypothesis. The exact-zero respons
 state-feedback construction `LinearSystem.exists_feedback_tendsto_readout_of_corollary622` for the
 Corollary 6.22 subspace condition, and the observer-error decay
 `LinearSystem.exists_observerError_readout_tendsto_of_externalStabilizationConditions` are
-formalized with their explicit finite-dimensional and admissibility hypotheses. The full
-*stable-nonzero* Corollary 6.22 necessary-and-sufficient criterion is not claimed: its geometric
-sufficiency direction is proved by
-`LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions`, while necessity
-from a merely decaying response remains open. The controllable/observable special case is
+formalized with their explicit finite-dimensional and admissibility hypotheses. For
+controllers whose state space is the plant state space `X`, the *stable-nonzero*
+Corollary 6.22 geometric equivalence is proved by
+`LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions`.
+The book's arbitrary finite-dimensional controller-state quantifier is not yet
+formalized. The controllable/observable special case is
 `LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
 # Stabilizable and detectable spectral subspaces
@@ -380,10 +382,14 @@ The plant component of an arbitrary stable dynamic closed-loop orbit is a
 variation-of-constants trajectory driven by the controller's resolved input.
 Combined with the real-coordinate finite-Bohl bridge, this proves the first
 Corollary 6.22 necessity inclusion `im E ≤ W_g(ker H)` for arbitrary
-finite-dimensional real state and input spaces. The dual necessity inclusion
-remains open.
+finite-dimensional real plant and input spaces, with controller state `X`.
+Transposing the closed-loop response gives the corresponding dual inclusion,
+and together with the existing observer construction proves the equivalence
+for that controller class.
 
 {docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse}
+{docstring LinearSystem.stableNonzeroExternalResponse_dual}
+{docstring LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions}
 
 # Observer duality
 
@@ -420,16 +426,17 @@ triangular-product quotient for the observer-based dynamic controller. The
 extended disturbance image lies in the invariant window, and the external
 readout vanishes on its invariant denominator. Quotient decay therefore gives
 a stable, possibly nonzero, external impulse response. The reverse implication
-from an arbitrary stabilizing dynamic controller is not yet formalized.
+is proved for the repository's controller class with state space `X`; the
+book's arbitrary-controller-state version remains open.
 
 {docstring LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions}
 
 For the converse, the closed-loop operator of the transposed plant and
 controller is the algebraic transpose of the original closed-loop operator,
 under the product-dual equivalence. A separate finite-dimensional theorem
-transfers decay of a readout channel to its transpose. These are supporting
-bridges, not yet a proof that every stabilizing controller yields both
-Corollary 6.22 subspace inclusions.
+transfers decay of a readout channel to its transpose. Together with the
+real-space first-inclusion bridge, they prove both Corollary 6.22 subspace
+inclusions for any stable controller in the fixed-state class.
 
 {docstring LinearSystem.prodDualEquiv_closedLoopMap_apply}
 {docstring LinearSystem.dualReadout_tendsto_of_readout_tendsto}
@@ -900,9 +907,9 @@ directly.
 
 In the external-stability row the first declaration is the exact-zero criterion (TST Theorem 6.6 /
 Corollary 6.7); the second records the stable-nonzero Corollary 6.22 subspace conditions, whose
-geometric sufficiency is proved by
-`LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions`. The converse
-from a stable-nonzero dynamic-controller response, and hence the full iff, is not claimed.
+geometric equivalence for controllers with state space `X` is proved by
+`LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions`.
+The book's arbitrary-controller-state version is not yet claimed.
 
 # Source-to-theorem ledger
 
@@ -1167,8 +1174,9 @@ explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function sta
 
 External stability is recorded in two distinct forms and they are never identified. The exact-zero
 response is characterised geometrically by a `(C, A, B)`-pair. A stable (possibly nonzero) external
-impulse response follows from the two Corollary 6.22 subspace conditions via the proved
-observer-based controller construction and quotient-decay theorem; the converse remains open.
+impulse response is equivalent to the two Corollary 6.22 subspace conditions
+for controllers with state space `X`, using the observer-based construction and
+the real-space dual necessity proof. Arbitrary controller state remains open.
 The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
 and transpose-exponential pairing are formalized with explicit finite-dimensional and
 admissibility hypotheses. These external-stability statements assume a strictly proper plant
@@ -1211,11 +1219,9 @@ documentation-only review records but cannot edit.
 *
   * Medium
   * Fullness overclaim
-  * The manual said the "geometric necessary-and-sufficient external-stability converse" was
-    formalized, but the stable-nonzero Corollary 6.22 criterion is explicitly not claimed
-    (`exists_externallyStabilizing_cabPair_gains` docstring; `DynamicFeedback.lean` 229, 2544,
-    2755).
-  * Corrected in the prose above.
+  * The fixed-state stable-nonzero criterion must not be presented as the book's
+    arbitrary-controller-state version of Corollary 6.22.
+  * The formalized iff is identified as the `W = X` specialization above.
 *
   * Medium
   * Stale handoff (non-owned)
