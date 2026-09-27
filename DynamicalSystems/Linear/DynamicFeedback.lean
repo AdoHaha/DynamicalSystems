@@ -6087,7 +6087,7 @@ end DualCondition
 
 end LinearSystem
 
-/-! ### Exact remaining blocker for the `W_g` necessity direction
+/-! ### Remaining blocker for unrestricted-input `W_g` necessity
 
 The state-feedback *sufficiency* half of Trentelman–Stoorvogel–Hautus Theorem
 4.37 / 4.39 is now available in algebraic form:
@@ -6109,10 +6109,8 @@ The state-feedback *sufficiency* half of Trentelman–Stoorvogel–Hautus Theore
   `LinearMap.isDetectable_iff_detectableSubspace_eq_bot`, from the transposed
   detectable-top characterisation).
 
-The *necessity* half — the spectral inclusion `W_g(ker H) ⊆ V*(ker H) ⊔ Xstab`,
-which would turn a decaying open-loop output trajectory into membership in
-`outputStabilizableSubspace` — is **not** formalised. The exact missing statement
-is:
+The necessity direction for an *arbitrary locally integrable input* is not
+formalised. Its exact missing statement is:
 
 ```lean
 theorem LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable
@@ -6126,15 +6124,11 @@ input `u` and trajectory `x_u(·, x)` as `u = u₁ + u₂`,
 `x = x₁ + x₂` with the spectra of `u₁, x₁` in `C_g` and of `u₂, x₂` in `C_b`,
 uses that the two sides of the error equation have disjoint spectra to split it
 into two state equations, concludes `x₁(0) ∈ Xstab` from the stable trajectory
-and `x₂(0) ∈ V*(ker H)` from `H x₂ = 0`. The pinned library has no Bohl-function
-or spectrum-of-a-function API, so this decomposition must be rebuilt from the
-stable/antistable spectral subspaces of the *system matrix* and the variation-of-
-constants integral representation; the finite-dimensional spectral decomposition
-of `Stabilization.lean` and the accepted trajectory API of `Trajectory.lean` are
-the intended ingredients. Until that step is available the stable-nonzero
-necessity direction of Corollary 6.22 is not claimed, and the exact-zero
-necessity `externalStabilizationConditions_of_externalStability` remains the only
-certified forward direction. -/
+and `x₂(0) ∈ V*(ker H)` from `H x₂ = 0`. The finite-Bohl *forcing-image*
+version of this argument is now proved by `finiteBohlWBridge` below, using
+quotient non-cancellation of the projected ODE residuals. It does not extend
+the conclusion to every locally integrable input or settle the full
+dynamic-controller equivalence of Corollary 6.22. -/
 
 /-! ### The `B = 0` reduction added by the spectral-decomposition task
 
@@ -6156,9 +6150,9 @@ accepted stable/antistable direct sum `hurwitzSubspace_sup_unstableSubspace_eq_t
 and the accepted trajectory bridge
 `mem_unobservableSubspace_of_forall_continuousC_expFlow_eq_zero` /
 `continuousC_expFlow_eq_zero_of_mem_unobservableSubspace` are the tools a future
-attempt needs; the source's Bohl/spectral function decomposition is still not
-formalised, which is why the hypothesis stays explicit rather than being hidden
-as an unsupported assumption.
+attempt needs for the unrestricted predicate. The finite-Bohl forcing-image
+decomposition is formalised later in this file, but does not remove the
+locally-integrable-input hypothesis here.
 
 The `B = 0` characterisation is now two-sided. The unconditional converse is
 `isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero`, packaged
@@ -6166,8 +6160,8 @@ with the forward reduction as
 `isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero`. The
 zero-operator non-vacuity witness is `hspectral_zero_operator`, giving the
 hypothesis-free instance `isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_zero_operator`.
-The general-`B` necessity `mem_outputStabilizableSubspace_of_isOutputStabilizable`
-remains the single open obligation. -/
+The general-`B`, unrestricted-input necessity
+`mem_outputStabilizableSubspace_of_isOutputStabilizable` remains open. -/
 
 /-! ### The character-independence bridge added by the antistable-readout task
 
@@ -7787,17 +7781,14 @@ separation.
 
 ### Exact remaining obligation
 
-The single open obligation remains
+The unrestricted-input obligation remains
 `LinearSystem.mem_outputStabilizableSubspace_of_isOutputStabilizable`; the tools
-it needs are the ones recorded in the handoff notes: the complex Bohl/spectral
-projection of a finite-dimensional trajectory (the stable/antistable direct sum
-`hurwitzSubspace_sup_unstableSubspace_eq_top` gives the splitting of the *space*,
-but not the spectral projection of the *input* or the reachable readout), the
+it needs are the ones recorded in the handoff notes: a way to handle arbitrary
+locally integrable forcing without a finite-Bohl spectral projection, the
 observability-chain readout on the reachable subspace, and the PBH separation at
-the threshold `V*(ker H ⊔ ⟨A | im B⟩)`. The pinned library has no Laplace
-transform, Bohl-function, or spectrum-of-a-function API for the first of these
-(the repository/API search evidence is recorded in the audit section above), which
-is why the theorem is still not claimed. The closest unrestricted-input result
+the threshold `V*(ker H ⊔ ⟨A | im B⟩)`. The finite-Bohl forcing-image case is
+proved below by `finiteBohlWBridge`; it does not settle this broader theorem.
+The closest unrestricted-input result
 proved here is
 `mem_outputStabilizableSubspace_of_isOutputStabilizable_of_reachable_le_ker`,
 which handles every readout annihilating the reachable subspace; it is a strict
@@ -10536,6 +10527,57 @@ theorem stable_forced_component_mem_stabilizableSubspace
   rw [_root_.LinearMap.comap_hurwitzSubspace_quotientReachable_eq A B] at hcomap
   simpa [R] using hcomap
 
+/-- The range span of a differentiable forced trajectory with zero readout is
+a controlled-invariant witness. The derivative remains in this span because
+its quotient trajectory is identically zero. This avoids any coefficientwise
+realification when the antistable trajectory is already real-valued. -/
+theorem forced_curve_initial_mem_controlledInvariantSubspace
+    {X U Z : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    [FiniteDimensional ℝ X] [NormedAddCommGroup U] [NormedSpace ℝ U]
+    [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (b r : ℝ → X)
+    (hode : ∀ t, HasDerivAt b (A (b t) + r t) t)
+    (hr : ∀ t, r t ∈ LinearMap.range B)
+    (hH : ∀ t, H (b t) = 0) :
+    b 0 ∈ LinearMap.controlledInvariantSubspace A B (LinearMap.ker H) := by
+  let V : Submodule ℝ X := Submodule.span ℝ (Set.range b)
+  haveI : IsClosed (V : Set X) := V.closed_of_finiteDimensional
+  have hbV (t : ℝ) : b t ∈ V := Submodule.subset_span ⟨t, rfl⟩
+  have hqzero (t : ℝ) : V.mkQ (b t) = 0 :=
+    (Submodule.Quotient.mk_eq_zero V).mpr (hbV t)
+  have hderivV (t : ℝ) : A (b t) + r t ∈ V := by
+    have hd := (ContinuousLinearMap.hasFDerivAt V.mkQ.toContinuousLinearMap).comp_hasDerivAt
+      t (hode t)
+    have hz : HasDerivAt (fun s : ℝ => V.mkQ (b s)) (0 : X ⧸ V) t := by
+      simpa only [hqzero] using (hasDerivAt_const (x := t) (c := (0 : X ⧸ V)))
+    have hq : V.mkQ (A (b t) + r t) = 0 := (hd.deriv).symm.trans hz.deriv
+    exact (Submodule.Quotient.mk_eq_zero V).mp hq
+  have hVker : V ≤ LinearMap.ker H := by
+    apply Submodule.span_le.mpr
+    rintro x ⟨t, rfl⟩
+    exact LinearMap.mem_ker.mpr (hH t)
+  have hVmap : ∀ x ∈ V, A x ∈ V ⊔ LinearMap.range B := by
+    intro x hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · rintro _ ⟨t, rfl⟩
+      have hAeq : A (b t) = (A (b t) + r t) - r t := by abel
+      rw [hAeq]
+      have hv : A (b t) + r t ∈ V ⊔ LinearMap.range B :=
+        (le_sup_left : V ≤ V ⊔ LinearMap.range B) (hderivV t)
+      have hr' : r t ∈ V ⊔ LinearMap.range B :=
+        (le_sup_right : LinearMap.range B ≤ V ⊔ LinearMap.range B) (hr t)
+      exact (V ⊔ LinearMap.range B).sub_mem hv hr'
+    · simpa using (V ⊔ LinearMap.range B).zero_mem
+    · intro x y _ _ hx hy
+      simpa only [map_add] using (V ⊔ LinearMap.range B).add_mem hx hy
+    · intro c x _ hx
+      simpa only [map_smul] using (V ⊔ LinearMap.range B).smul_mem c hx
+  have hVctrl : LinearMap.IsControlledInvariant A B V := by
+    rw [LinearMap.isControlledInvariant_iff, Submodule.map_le_iff_le_comap]
+    exact hVmap
+  exact LinearMap.le_controlledInvariantSubspace hVker hVctrl (hbV 0)
+
 end LinearMap
 
 namespace LinearSystem
@@ -10588,6 +10630,194 @@ theorem variationOfConstants_hasDerivAt_of_finiteBohl_forcing
     simp [F, x, continuousA_apply, continuousB_apply]
   rw [hderiv] at hd'
   exact hd'.congr_of_eventuallyEq (Filter.Eventually.of_forall fun s => heq s)
+
+private theorem stable_sub_bohl {f g : ℝ → X}
+    (hf : IsStableExponentialPolynomial f) (hg : IsStableExponentialPolynomial g) :
+    IsStableExponentialPolynomial (f - g) := by
+  have hneg : IsStableExponentialPolynomial (-g) := by
+    apply hg.isExponentialPolynomial.neg |>.of_tendsto_zero
+    change Filter.Tendsto (fun t => -g t) Filter.atTop (nhds 0)
+    simpa using hg.tendsto_zero.neg
+  have hsum : IsExponentialPolynomial (f + -g) :=
+    hf.isExponentialPolynomial.add hneg.isExponentialPolynomial
+  have hlim : Filter.Tendsto (f - g) Filter.atTop (nhds 0) := by
+    change Filter.Tendsto (fun t => f t - g t) Filter.atTop (nhds 0)
+    simpa using hf.tendsto_zero.sub hg.tendsto_zero
+  have hfun : f - g = f + -g := by funext t; exact sub_eq_add_neg _ _
+  rw [hfun]
+  exact hsum.of_tendsto_zero (by simpa [hfun] using hlim)
+
+private theorem antistable_neg_bohl {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
+    IsAntistableBohlSignal (-f) := by
+  obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
+  refine ⟨s, D, fun μ k => -a μ k, hfreq, fun t => ?_⟩
+  rw [Pi.neg_apply, hrepr t]
+  simp only [Finset.sum_neg_distrib, smul_neg]
+
+private theorem antistable_sub_bohl {f g : ℝ → X}
+    (hf : IsAntistableBohlSignal f) (hg : IsAntistableBohlSignal g) :
+    IsAntistableBohlSignal (f - g) := by
+  have h := hf.add (antistable_neg_bohl hg)
+  simpa [sub_eq_add_neg] using h
+
+private theorem hasDerivAt_deriv_exponentialPolynomial {f : ℝ → X}
+    (hf : IsExponentialPolynomial f) (t : ℝ) : HasDerivAt f (deriv f t) t := by
+  obtain ⟨s, D, a, hrepr⟩ := hf
+  have h := hasDerivAt_sum_exp_mul_sum_pow_smul s D a t
+  have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
+  exact h'.congr_deriv h'.deriv.symm
+
+private theorem stable_deriv_bohl {f : ℝ → X} (hf : IsStableExponentialPolynomial f) :
+    IsStableExponentialPolynomial (fun t => deriv f t) := by
+  obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
+  let d : ℂ → ℕ → X := fun μ k =>
+    μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0
+  refine ⟨s, D, d, hfreq, fun t => ?_⟩
+  have h := hasDerivAt_sum_exp_mul_sum_pow_smul s D a t
+  have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
+  simpa [d] using h'.deriv
+
+private theorem antistable_deriv_bohl {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
+    IsAntistableBohlSignal (fun t => deriv f t) := by
+  obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
+  let d : ℂ → ℕ → X := fun μ k =>
+    μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0
+  refine ⟨s, D, d, hfreq, fun t => ?_⟩
+  have h := hasDerivAt_sum_exp_mul_sum_pow_smul s D a t
+  have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
+  simpa [d] using h'.deriv
+
+/-- For a real-linear forced ODE, the stable and antistable state components
+have range-valued ODE residuals separately whenever the full forcing takes
+values in a complex subspace. Quotienting by that subspace and using
+stable/antistable non-cancellation avoids complexifying the generator. -/
+theorem stable_antistable_ode_residuals_mem_submodule
+    (A : X →L[ℝ] X) (S : Submodule ℂ X)
+    {f r g b : ℝ → X}
+    (hfb : f = g + b)
+    (hg : IsStableExponentialPolynomial g)
+    (hb : IsAntistableBohlSignal b)
+    (hode : ∀ t, HasDerivAt f (A (f t) + r t) t)
+    (hrange : ∀ t, r t ∈ S) :
+    (∀ t, deriv g t - A (g t) ∈ S) ∧
+      (∀ t, deriv b t - A (b t) ∈ S) ∧
+      (∀ t, HasDerivAt g (A (g t) + (deriv g t - A (g t))) t) ∧
+      (∀ t, HasDerivAt b (A (b t) + (deriv b t - A (b t))) t) := by
+  classical
+  haveI : IsClosed (S : Set X) := S.closed_of_finiteDimensional
+  let q : X →L[ℂ] X ⧸ S := S.mkQ.toContinuousLinearMap
+  let rg : ℝ → X := fun t => deriv g t - A (g t)
+  let rb : ℝ → X := fun t => deriv b t - A (b t)
+  have hAg : IsStableExponentialPolynomial (fun t => A (g t)) := by
+    have hEP : IsExponentialPolynomial (fun t => A (g t)) :=
+      hg.isExponentialPolynomial.map_realLinear A
+    have hlim : Filter.Tendsto (fun t => A (g t)) Filter.atTop (nhds 0) := by
+      simpa only [Function.comp_def, map_zero] using
+        (A.continuous.tendsto 0).comp hg.tendsto_zero
+    exact hEP.of_tendsto_zero hlim
+  have hAb : IsAntistableBohlSignal (fun t => A (b t)) := hb.map_realLinear A
+  have hrg : IsStableExponentialPolynomial rg := by
+    change IsStableExponentialPolynomial ((fun t => deriv g t) - (fun t => A (g t)))
+    exact stable_sub_bohl (stable_deriv_bohl hg) hAg
+  have hrb : IsAntistableBohlSignal rb := by
+    change IsAntistableBohlSignal ((fun t => deriv b t) - (fun t => A (b t)))
+    exact antistable_sub_bohl (antistable_deriv_bohl hb) hAb
+  have hodeSplit : ∀ t, deriv f t = deriv g t + deriv b t := by
+    intro t
+    have hg' := hasDerivAt_deriv_exponentialPolynomial hg.isExponentialPolynomial t
+    have hb' := hasDerivAt_deriv_exponentialPolynomial hb.isExponentialPolynomial t
+    have hsum := hg'.add hb'
+    have hsum' := hsum.congr_of_eventuallyEq
+      (Filter.Eventually.of_forall fun s => congrFun hfb s)
+    exact hsum'.deriv
+  have hforceDecomp : r = rg + rb := by
+    funext t
+    have hcoeff : deriv g t + deriv b t = A (g t) + A (b t) + r t := by
+      have h := (hode t).deriv
+      rw [congrFun hfb t] at h
+      change deriv f t = A (g t + b t) + r t at h
+      rw [map_add] at h
+      rw [hodeSplit t] at h
+      exact h
+    have hcoeff' : r t + (A (g t) + A (b t)) = deriv g t + deriv b t := by
+      rw [hcoeff]
+      abel
+    have hsub : r t = deriv g t + deriv b t - (A (g t) + A (b t)) :=
+      (eq_sub_iff_add_eq).2 hcoeff'
+    dsimp [rg, rb]
+    rw [hsub]
+    abel
+  have hqSum : (fun t => q (rg t)) + (fun t => q (rb t)) = 0 := by
+    funext t
+    calc
+      q (rg t) + q (rb t) = q (rg t + rb t) := by rw [map_add]
+      _ = q (r t) := by
+        congr 1
+        calc
+          rg t + rb t = (rg + rb) t := rfl
+          _ = r t := congrFun hforceDecomp.symm t
+      _ = 0 := (Submodule.Quotient.mk_eq_zero S).2 (hrange t)
+  have hqg : IsStableExponentialPolynomial (fun t => q (rg t)) := by
+    have hEP := hrg.isExponentialPolynomial.map q
+    have hlim : Filter.Tendsto (fun t => q (rg t)) Filter.atTop (nhds 0) := by
+      have h := (q.continuous.tendsto 0).comp hrg.tendsto_zero
+      simpa only [Function.comp_def, map_zero] using h
+    exact hEP.of_tendsto_zero hlim
+  have hqb : IsAntistableBohlSignal (fun t => q (rb t)) := hrb.map q.toLinearMap
+  have hqb0 : (fun t => q (rb t)) = 0 :=
+    eq_zero_of_eq_stable_add_antistable_of_tendsto_zero
+      hqSum.symm hqg hqb tendsto_const_nhds
+  have hqg0 : (fun t => q (rg t)) = 0 := by
+    funext t
+    have hs := congrFun hqSum t
+    have hb0 := congrFun hqb0 t
+    have hs' : q (rg t) + q (rb t) = 0 := by simpa using hs
+    have hb0' : q (rb t) = 0 := by simpa using hb0
+    rw [hb0', add_zero] at hs'
+    exact hs'
+  have hr_mem : ∀ t, rg t ∈ S ∧ rb t ∈ S := by
+    intro t
+    exact ⟨(Submodule.Quotient.mk_eq_zero S).mp (congrFun hqg0 t),
+      (Submodule.Quotient.mk_eq_zero S).mp (congrFun hqb0 t)⟩
+  have hderivG (t : ℝ) : HasDerivAt g (deriv g t) t :=
+    hasDerivAt_deriv_exponentialPolynomial hg.isExponentialPolynomial t
+  have hderivB (t : ℝ) : HasDerivAt b (deriv b t) t :=
+    hasDerivAt_deriv_exponentialPolynomial hb.isExponentialPolynomial t
+  refine ⟨fun t => (hr_mem t).1, fun t => (hr_mem t).2, ?_, ?_⟩
+  · intro t
+    have heq : deriv g t = A (g t) + rg t := by
+      dsimp [rg]
+      abel
+    exact (hderivG t).congr_deriv heq
+  · intro t
+    have heq : deriv b t = A (b t) + rb t := by
+      dsimp [rb]
+      abel
+    exact (hderivB t).congr_deriv heq
+
+/-- The two projected forced ODEs are sufficient for the finite-Bohl `W_g`
+necessity conclusion: the stable initial component is stabilizable, while the
+zero-readout antistable component lies in a controlled invariant subspace. -/
+theorem mem_outputStabilizableSubspace_of_projected_forced_state
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x₀ : X)
+    (g b r_g r_b : ℝ → X)
+    (hsplit : x₀ = g 0 + b 0)
+    (hg : IsStableExponentialPolynomial g)
+    (hode_g : ∀ t, HasDerivAt g (sys.A (g t) + r_g t) t)
+    (hr_g : ∀ t, r_g t ∈ _root_.LinearMap.reachableSubspace sys.A sys.B)
+    (hode_b : ∀ t, HasDerivAt b (sys.A (b t) + r_b t) t)
+    (hr_b : ∀ t, r_b t ∈ _root_.LinearMap.range sys.B)
+    (hHb : ∀ t, H (b t) = 0) :
+    x₀ ∈ outputStabilizableSubspace sys.A sys.B H := by
+  have hgmem : g 0 ∈ _root_.LinearMap.stabilizableSubspace sys.A sys.B := by
+    exact _root_.LinearMap.stable_forced_component_mem_stabilizableSubspace
+      sys.A sys.B g r_g hg hode_g hr_g
+  have hbmem : b 0 ∈ _root_.LinearMap.controlledInvariantSubspace
+      sys.A sys.B (_root_.LinearMap.ker H) :=
+    _root_.LinearMap.forced_curve_initial_mem_controlledInvariantSubspace
+      sys.A sys.B H b r_b hode_b hr_b hHb
+  rw [outputStabilizableSubspace, hsplit, add_comm]
+  exact Submodule.add_mem_sup hbmem hgmem
 
 /-- **State-level finite-Bohl projection under real-linear readout.** If the
 system's forcing image is a finite exponential polynomial and the controlled
@@ -10715,37 +10945,32 @@ The predicate `LinearSystem.IsOutputStabilizable` of this file quantifies over a
 *arbitrary* locally integrable input. The predicate `IsBohlOutputStabilizable`
 below is a finite-Bohl forcing-image variant, kept deliberately distinct: the
 input is required to be locally integrable and its `Bℂ`-image to be a finite exponential
-polynomial, exactly the representation hypothesis consumed by the accepted
-real/complex transport `variationOfConstants_transport_of_complexification` and
-the accepted finite-Bohl spectral projection
-`finiteBohl_readout_isStable_of_tendsto_zero`. The complex-linear input map
+polynomial, the representation hypothesis consumed by the finite-Bohl state
+projection. The complex-linear input map
 `Bℂ : U →ₗ[ℂ] X` comes with the compatibility equality
 `hB : Bℂ.restrictScalars ℝ = sys.B`, so its represented Bohl signal is exactly
 the actual system forcing `sys.B (u t)`. This equality is explicit because the
 finite-Bohl class is a complex class. The book puts the Bohl condition on `u`
 itself; in finite dimension a linear section of `B` on its range should lift a
 Bohl forcing image to a Bohl input with the same forcing, but that equivalence is
-not formalized here. The same-carrier complex scalar structures also restrict
-the current transport to systems admitting the displayed complex-linear
-extensions; a separate real-system complexification bridge is not provided.
+not formalized here. The state and input use the real scalar structures induced
+by their complex normed spaces; no complex-linear extension of the real state
+map `A` is needed for the necessity proof.
 
 The two directions of the forcing-image characterization are recorded as
-separately named obligations (`FiniteBohlWBridge`, `FiniteBohlSynthesis`), so
-that the packaged equivalence never silently identifies
-the restricted statement with the unrestricted
+separately named propositions (`FiniteBohlWBridge`, `FiniteBohlSynthesis`) and
+proved below. This keeps the restricted statement distinct from the unrestricted
 `mem_outputStabilizableSubspace_of_isOutputStabilizable`, which is *not* claimed.
-The structural facts proved here are implication into `IsOutputStabilizable` and
-closure under addition for the encoded forcing-image class. Identifying that class
+Identifying the forcing-image class
 with the book's Bohl-input set still requires the finite-dimensional lifting
 lemma described above. -/
 
 section FiniteBohlWg
 
 variable {X U Z : Type*}
-variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
-variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup X] [NormedSpace ℂ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℂ U] [FiniteDimensional ℝ U]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
-variable [NormedSpace ℂ X] [NormedSpace ℂ U]
 
 /-- **The finite-Bohl forcing-image open-loop predicate.** A state `x` lies in
 the encoded forcing-image variant of `W_g(ker H)` when there is a locally integrable input `u` whose
@@ -10824,25 +11049,84 @@ names the necessity direction of the forcing-image variant of the book's
 Theorem 4.37: a finite Bohl forcing image whose controlled output decays keeps the state inside
 `W_g(ker H) = V*(ker H) + Xstab(A, B)`. It is the finite-Bohl spectral projection
 form of `mem_outputStabilizableSubspace_of_isOutputStabilizable`, isolated as a
-named hypothesis because the unrestricted locally-integrable statement is not
-proved and the finite-Bohl statement is not yet derived from the accepted
-stable/antistable projection APIs. The argument `hB` fixes the complex input map
+named proposition so it is not confused with the unrestricted locally-integrable
+statement. It is proved by `finiteBohlWBridge` below. The argument `hB` fixes the complex input map
 to the system's actual input map. -/
 def FiniteBohlWBridge (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
     (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) : Prop :=
   ∀ x : X, IsBohlOutputStabilizable sys Bℂ hB H x →
     x ∈ outputStabilizableSubspace sys.A sys.B H
 
+/-- The finite-Bohl forcing-image necessity direction of Theorem 4.37.
+The state response is split into stable and antistable Bohl parts. Their ODE
+residuals are separately in `range Bℂ` by quotient non-cancellation; the
+stable part starts in `Xstab`, and the zero-readout antistable part generates
+a controlled-invariant subspace of `ker H`. -/
+theorem finiteBohlWBridge [FiniteDimensional ℂ X]
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) :
+    FiniteBohlWBridge sys Bℂ hB H := by
+  intro x hx
+  obtain ⟨u, hu, hBu, hdec⟩ := hx
+  have hBpoint (v : U) : Bℂ v = sys.B v := by
+    have h := congrFun (congrArg DFunLike.coe hB) v
+    exact h
+  have hBu' : IsExponentialPolynomial (fun t : ℝ => sys.continuousB (u t)) := by
+    convert hBu using 1
+    funext t
+    rw [continuousB_apply]
+    exact (hBpoint (u t)).symm
+  have hdecomp : ∃ g b : ℝ → X,
+      sys.variationOfConstants 0 x u = g + b ∧
+      IsStableExponentialPolynomial g ∧ IsAntistableBohlSignal b ∧
+      Filter.Tendsto g Filter.atTop (nhds 0) ∧ ∀ t, H (b t) = 0 :=
+    finiteBohl_state_stable_antistable_decomposition (X := X) (U := U) (Z := Z)
+      sys H x u hu hBu' hdec
+  obtain ⟨g, b, hsplit, hg, hb, _, hHb⟩ := hdecomp
+  have hode : ∀ t, HasDerivAt (sys.variationOfConstants 0 x u)
+      (sys.continuousA (sys.variationOfConstants 0 x u t) + sys.B (u t)) t := by
+    intro t
+    simpa only [continuousA_apply] using
+      variationOfConstants_hasDerivAt_of_finiteBohl_forcing sys x u hu hBu' t
+  have hrange : ∀ t, sys.B (u t) ∈ LinearMap.range Bℂ := by
+    intro t
+    exact ⟨u t, hBpoint (u t)⟩
+  have hres := stable_antistable_ode_residuals_mem_submodule
+    sys.continuousA (LinearMap.range Bℂ) hsplit hg hb hode hrange
+  let rg : ℝ → X := fun t => deriv g t - sys.A (g t)
+  let rb : ℝ → X := fun t => deriv b t - sys.A (b t)
+  have hrangeReal (z : X) (hz : z ∈ LinearMap.range Bℂ) : z ∈ LinearMap.range sys.B := by
+    obtain ⟨v, hv⟩ := hz
+    exact ⟨v, (hBpoint v).symm.trans hv⟩
+  have hrg : ∀ t, rg t ∈ LinearMap.reachableSubspace sys.A sys.B := by
+    intro t
+    exact LinearMap.range_le_reachableSubspace sys.A sys.B
+      (hrangeReal _ (hres.1 t))
+  have hrb : ∀ t, rb t ∈ LinearMap.range sys.B := by
+    intro t
+    exact hrangeReal _ (hres.2.1 t)
+  have hodeg : ∀ t, HasDerivAt g (sys.A (g t) + rg t) t := by
+    intro t
+    simpa only [continuousA_apply] using hres.2.2.1 t
+  have hodeb : ∀ t, HasDerivAt b (sys.A (b t) + rb t) t := by
+    intro t
+    simpa only [continuousA_apply] using hres.2.2.2 t
+  have hstart : x = g 0 + b 0 := by
+    have hzero : sys.variationOfConstants 0 x u 0 = x := by
+      simp [variationOfConstants]
+    calc
+      x = sys.variationOfConstants 0 x u 0 := hzero.symm
+      _ = g 0 + b 0 := congrFun hsplit 0
+  exact mem_outputStabilizableSubspace_of_projected_forced_state
+    sys H x g b rg rb hstart hg hodeg hrg hodeb hrb hHb
+
 /-- **The finite-Bohl synthesis direction.** Every state in
 `W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a *finite Bohl* stabilizing input:
 the state feedback `F` of
 `exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace`, read as an
-open-loop input along its own closed-loop orbit, is finite Bohl. This is the easy,
-constructive direction of the book's Theorem 4.37. It is recorded as a named
-hypothesis because the complexification transport of the feedback gain is what
-makes the closed-loop orbit's `Bℂ`-image a finite exponential polynomial, and the
-accepted transport layer consumes inputs already known to have finite-Bohl
-`Bℂ`-image. -/
+open-loop input along its own closed-loop orbit, is finite Bohl. This is the
+constructive direction of the book's Theorem 4.37, proved by
+`finiteBohlSynthesis` below. -/
 def FiniteBohlSynthesis (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
     (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) : Prop :=
   ∀ x : X, x ∈ outputStabilizableSubspace sys.A sys.B H →
@@ -11069,14 +11353,8 @@ theorem finiteBohlSynthesis [FiniteDimensional ℂ X]
 
 set_option maxHeartbeats 800000 in
 -- Packaging the conditional iff against the discharged synthesis exceeds the default budget.
-/-- **The finite-Bohl-forcing-image `W_g` identity, with synthesis discharged.**
-The left-half-plane forcing-image characterization of
-`isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace` follows with only
-the necessity direction `FiniteBohlWBridge` still named as a hypothesis: the
-constructive direction `FiniteBohlSynthesis` is supplied by
-`finiteBohlSynthesis`. This is the packaged left-half-plane statement in the
-finite-Bohl forcing-image class, without redundant definitions and without claiming the
-unrestricted locally-integrable necessity. -/
+/-- The finite-Bohl-forcing-image `W_g` identity with synthesis supplied and an
+explicit necessity argument, retained as a compositional API. -/
 theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace'
     [FiniteDimensional ℂ X]
     (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
@@ -11086,6 +11364,21 @@ theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace'
       x ∈ outputStabilizableSubspace sys.A sys.B H :=
   isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace sys Bℂ hB H hbridge
     (finiteBohlSynthesis sys Bℂ hB H) x
+
+/-- **Finite-Bohl forcing-image output stabilization (Theorem 4.37 variant).**
+For the coherent real/complex scalar structures and a complex-linear input map
+restricting to `sys.B`, the finite-Bohl forcing-image output-stabilizable states
+are exactly `V*(ker H) + Xstab(A,B)`. Unlike the book's Bohl-input statement,
+this formulation constrains the forcing image; it does not assert the
+unrestricted locally-integrable characterization. -/
+theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete
+    [FiniteDimensional ℂ X]
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) (x : X) :
+    IsBohlOutputStabilizable sys Bℂ hB H x ↔
+      x ∈ outputStabilizableSubspace sys.A sys.B H :=
+  isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace'
+    sys Bℂ hB H (finiteBohlWBridge sys Bℂ hB H) x
 
 end FiniteBohlSynthesisAssembly
 

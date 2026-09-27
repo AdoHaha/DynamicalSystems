@@ -353,6 +353,19 @@ construction of Lemma 4.38 is proved as `exists_feedback_tendsto_readout_of_coro
 {docstring LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on}
 {docstring LinearSystem.exists_feedback_tendsto_readout_of_corollary622}
 
+For TST Theorem 4.37, the finite-Bohl *forcing-image* formulation is proved in both
+directions: a finite-Bohl forcing image with decaying readout has initial state in
+`V*(ker H) + Xstab(A,B)`, and every state in that sum has such an input. The
+necessity proof uses a stable/antistable state split, a pointwise state ODE,
+quotient non-cancellation for the two ODE residuals, and a real controlled-invariant
+span of the antistable trajectory. This is not the unrestricted locally-integrable
+input theorem, nor yet the book's Bohl-*input* formulation: lifting a Bohl forcing
+image to a Bohl input remains separate.
+
+{docstring LinearSystem.finiteBohlWBridge}
+{docstring LinearSystem.finiteBohlSynthesis}
+{docstring LinearSystem.isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete}
+
 # Observer duality
 
 The observation half of Corollary 6.22 follows from the state-feedback half by algebraic duality.
@@ -1057,6 +1070,9 @@ Hautus, *Control Theory for Linear Systems*, and "LF" abbreviates Gokhale and Bu
   4.37, Lemma 4.38): Lean `LinearSystem.tendsto_readout_exp_of_isHurwitz_mapQ`,
   `LinearSystem.tendsto_readout_exp_of_isHurwitz_quotient_on`,
   `LinearSystem.exists_feedback_tendsto_readout_of_corollary622`.
+* Finite-Bohl forcing-image output-stabilization identity (TST Theorem 4.37 variant): Lean
+  `LinearSystem.finiteBohlWBridge`, `LinearSystem.finiteBohlSynthesis`,
+  `LinearSystem.isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace_complete`.
 * Observer/output-injection duality (TST Lemmas 6.20–6.21): Lean
   `LinearMap.dualAnnihilator_conditionedInvariantSubspace`,
   `LinearMap.conditionedInvariant_inf_detectable_le_ker_iff_dualStableCondition`,
