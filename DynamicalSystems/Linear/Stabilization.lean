@@ -1644,6 +1644,172 @@ theorem isHurwitz_mapQ_prod_of_isHurwitz
 
 end BlockQuotient
 
+section NestedBlockQuotient
+
+variable {M N : Type*}
+variable [AddCommGroup M] [Module ℝ M] [FiniteDimensional ℝ M]
+variable [AddCommGroup N] [Module ℝ N] [FiniteDimensional ℝ N]
+
+/-- Canonical linear equivalence between the subtype `↥(W.prod U)` of a product
+and the product `W × U` of the subtypes. This is the "product subtype
+equivalence" used to move the restriction of a block operator into the product
+picture where `isHurwitz_mapQ_prod_of_isHurwitz` applies. -/
+noncomputable def prodSubtypeEquiv (W : Submodule ℝ M) (U : Submodule ℝ N) :
+    ↥(W.prod U) ≃ₗ[ℝ] (W × U) where
+  toFun z :=
+    (⟨z.1.1, (Submodule.mem_prod.mp z.2).1⟩, ⟨z.1.2, (Submodule.mem_prod.mp z.2).2⟩)
+  invFun p := ⟨(p.1.1, p.2.1), Submodule.mem_prod.mpr ⟨p.1.2, p.2.2⟩⟩
+  left_inv z := by ext <;> rfl
+  right_inv p := by ext <;> rfl
+  map_add' z w := by ext <;> rfl
+  map_smul' c z := by ext <;> rfl
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+@[simp]
+theorem prodSubtypeEquiv_apply (W : Submodule ℝ M) (U : Submodule ℝ N)
+    (z : ↥(W.prod U)) :
+    prodSubtypeEquiv W U z =
+      (⟨z.1.1, (Submodule.mem_prod.mp z.2).1⟩,
+        ⟨z.1.2, (Submodule.mem_prod.mp z.2).2⟩) :=
+  rfl
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+@[simp]
+theorem prodSubtypeEquiv_symm_apply (W : Submodule ℝ M) (U : Submodule ℝ N)
+    (p : W × U) :
+    (prodSubtypeEquiv W U).symm p =
+      ⟨(p.1.1, p.2.1), Submodule.mem_prod.mpr ⟨p.1.2, p.2.2⟩⟩ :=
+  rfl
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+/-- **Conjugacy of the restricted block operator with the block operator built
+from the restricted diagonal maps.** Restricting `(m,n) ↦ (A m + B n, C n)` to
+`W.prod U` and transporting along `prodSubtypeEquiv` gives the block operator
+`(w,u) ↦ (A|_W w + B|_{U→W} u, C|_U u)`. -/
+theorem prodSubtypeEquiv_conj_blockOperator₂
+    (A : M →ₗ[ℝ] M) (B : N →ₗ[ℝ] M) (C : N →ₗ[ℝ] N)
+    (W : Submodule ℝ M) (U : Submodule ℝ N)
+    (hAW : ∀ x ∈ W, A x ∈ W) (hCU : ∀ y ∈ U, C y ∈ U) (hBU : ∀ y ∈ U, B y ∈ W) :
+    (prodSubtypeEquiv W U).conj
+        ((blockOperator₂ A B C).restrict (prodInvariance A B C W U hAW hCU hBU)) =
+      blockOperator₂ (A.restrict hAW) (B.restrict hBU) (C.restrict hCU) := by
+  apply LinearMap.ext
+  intro p
+  obtain ⟨w, u⟩ := p
+  rw [LinearEquiv.conj_apply_apply]
+  simp only [prodSubtypeEquiv_apply, prodSubtypeEquiv_symm_apply, blockOperator₂_apply,
+    LinearMap.restrict_apply]
+  rfl
+
+omit [FiniteDimensional ℝ M] [FiniteDimensional ℝ N] in
+/-- The submodule `V.prod T` (pulled back along the subtype inclusion) is
+invariant under the restriction of the block operator to `W.prod U`, when
+`A` preserves `V`, `C` preserves `T` and `B` maps `T` into `V`. -/
+theorem prodRestrictInvariance
+    (A : M →ₗ[ℝ] M) (B : N →ₗ[ℝ] M) (C : N →ₗ[ℝ] N)
+    (W : Submodule ℝ M) (U : Submodule ℝ N)
+    (V : Submodule ℝ M) (T : Submodule ℝ N)
+    (hAW : ∀ x ∈ W, A x ∈ W) (hCU : ∀ y ∈ U, C y ∈ U) (hBU : ∀ y ∈ U, B y ∈ W)
+    (hAV : ∀ x ∈ V, A x ∈ V) (hCT : ∀ y ∈ T, C y ∈ T) (hBT : ∀ y ∈ T, B y ∈ V) :
+    ∀ z ∈ (V.prod T).comap (Submodule.subtype (W.prod U)),
+      (blockOperator₂ A B C).restrict (prodInvariance A B C W U hAW hCU hBU) z ∈
+        (V.prod T).comap (Submodule.subtype (W.prod U)) := by
+  intro z hz
+  rw [Submodule.mem_comap] at hz ⊢
+  obtain ⟨hz1, hz2⟩ := Submodule.mem_prod.mp hz
+  rw [LinearMap.restrict_apply]
+  exact Submodule.mem_prod.mpr
+    ⟨V.add_mem (hAV _ hz1) (hBT _ hz2), hCT _ hz2⟩
+
+/-- **Hurwitz quotient of a nested block restriction.** Let
+`(m,n) ↦ (A m + B n, C n)` be an upper-triangular block operator on `M × N`.
+Let `W ≤ M`, `U ≤ N` be invariant numerator subspaces and `V ≤ W`, `T ≤ U`
+invariant denominator subspaces, with `B U ≤ W` and `B T ≤ V`. If the induced
+maps on `W ⧸ V` and `U ⧸ T` are Hurwitz, then the map induced by the block
+operator restricted to `W.prod U` on the quotient `(W.prod U) ⧸ (V.prod T)` is
+Hurwitz.
+
+The proof transports the restriction along the product subtype equivalence
+`↥(W.prod U) ≃ₗ W × U`, applies
+`LinearMap.isHurwitz_mapQ_prod_of_isHurwitz` to the resulting block operator on
+`W × U`, and transports Hurwitzness back along the induced quotient
+conjugacy. -/
+theorem isHurwitz_mapQ_prod_restrict_of_isHurwitz
+    (A : M →ₗ[ℝ] M) (B : N →ₗ[ℝ] M) (C : N →ₗ[ℝ] N)
+    (W : Submodule ℝ M) (U : Submodule ℝ N)
+    (V : Submodule ℝ M) (T : Submodule ℝ N)
+    (hVW : V ≤ W) (hTU : T ≤ U)
+    (hAW : ∀ x ∈ W, A x ∈ W) (hCU : ∀ y ∈ U, C y ∈ U) (hBU : ∀ y ∈ U, B y ∈ W)
+    (hAV : ∀ x ∈ V, A x ∈ V) (hCT : ∀ y ∈ T, C y ∈ T) (hBT : ∀ y ∈ T, B y ∈ V)
+    (hAq : IsHurwitz (Submodule.mapQ (V.comap W.subtype) (V.comap W.subtype)
+      (A.restrict hAW) (fun x hx => hAV x.1 hx)))
+    (hCq : IsHurwitz (Submodule.mapQ (T.comap U.subtype) (T.comap U.subtype)
+      (C.restrict hCU) (fun y hy => hCT y.1 hy))) :
+    IsHurwitz (Submodule.mapQ
+      ((V.prod T).comap (Submodule.subtype (W.prod U)))
+      ((V.prod T).comap (Submodule.subtype (W.prod U)))
+      ((blockOperator₂ A B C).restrict (prodInvariance A B C W U hAW hCU hBU))
+      (prodRestrictInvariance A B C W U V T hAW hCU hBU hAV hCT hBT)) := by
+  classical
+  have _ := hVW
+  have _ := hTU
+  let A' : W →ₗ[ℝ] W := A.restrict hAW
+  let B' : U →ₗ[ℝ] W := B.restrict hBU
+  let C' : U →ₗ[ℝ] U := C.restrict hCU
+  let V' : Submodule ℝ W := V.comap W.subtype
+  let T' : Submodule ℝ U := T.comap U.subtype
+  let P : Submodule ℝ ↥(W.prod U) := (V.prod T).comap (Submodule.subtype (W.prod U))
+  let fr : ↥(W.prod U) →ₗ[ℝ] ↥(W.prod U) :=
+    (blockOperator₂ A B C).restrict (prodInvariance A B C W U hAW hCU hBU)
+  let hP : ∀ z ∈ P, fr z ∈ P :=
+    prodRestrictInvariance A B C W U V T hAW hCU hBU hAV hCT hBT
+  -- The product-side invariance used by `isHurwitz_mapQ_prod_of_isHurwitz`.
+  have hV'T' : ∀ p ∈ V'.prod T', (blockOperator₂ A' B' C') p ∈ V'.prod T' := by
+    intro p hp
+    obtain ⟨hp1, hp2⟩ := Submodule.mem_prod.mp hp
+    exact Submodule.mem_prod.mpr
+      ⟨V'.add_mem (hAV _ hp1) (hBT _ hp2), hCT _ hp2⟩
+  -- Apply the existing product quotient theorem.
+  have hQuot : IsHurwitz (Submodule.mapQ (V'.prod T') (V'.prod T')
+      (blockOperator₂ A' B' C') hV'T') := by
+    refine isHurwitz_mapQ_prod_of_isHurwitz A' B' C' V' T'
+      (fun x hx => hAV x.1 hx) (fun y hy => hCT y.1 hy) (fun y hy => hBT y.1 hy)
+      ?_ ?_
+    · simpa only [A', V'] using hAq
+    · simpa only [C', T'] using hCq
+  -- The product subtype equivalence and the induced quotient conjugacy.
+  let e : ↥(W.prod U) ≃ₗ[ℝ] (W × U) := prodSubtypeEquiv W U
+  have hmap : Submodule.map (e : ↥(W.prod U) →ₗ[ℝ] (W × U)) P = V'.prod T' := by
+    ext p
+    rw [Submodule.mem_map_equiv]
+    change (e.symm p).1 ∈ V.prod T ↔ p ∈ V'.prod T'
+    simp only [e, V', T', prodSubtypeEquiv_symm_apply, Submodule.mem_prod,
+      Submodule.mem_comap, Submodule.subtype_apply]
+  let qe : (↥(W.prod U) ⧸ P) ≃ₗ[ℝ] ((W × U) ⧸ (V'.prod T')) :=
+    Submodule.Quotient.equiv P (V'.prod T') e hmap
+  have hconj : qe.conj (Submodule.mapQ P P fr hP) =
+      Submodule.mapQ (V'.prod T') (V'.prod T') (blockOperator₂ A' B' C') hV'T' := by
+    apply LinearMap.ext
+    intro x
+    induction x using Submodule.Quotient.induction_on with
+    | _ y =>
+      simp only [LinearEquiv.conj_apply_apply, qe, Submodule.Quotient.equiv_symm,
+        Submodule.Quotient.equiv_apply, Submodule.mapQ_apply, e, fr]
+      rw [← prodSubtypeEquiv_conj_blockOperator₂ A B C W U hAW hCU hBU]
+      rw [LinearEquiv.conj_apply_apply]
+      rfl
+  -- Transfer Hurwitzness across the conjugacy.
+  have hchar : (Submodule.mapQ P P fr hP).charpoly =
+      (Submodule.mapQ (V'.prod T') (V'.prod T') (blockOperator₂ A' B' C') hV'T').charpoly := by
+    rw [← LinearEquiv.charpoly_conj qe (Submodule.mapQ P P fr hP), hconj]
+  have hφ : IsHurwitz (Submodule.mapQ P P fr hP) := by
+    intro z hz
+    apply hQuot z
+    rwa [hchar] at hz
+  exact hφ
+
+end NestedBlockQuotient
+
 /-! ## Restriction and quotient characteristic polynomials
 
 For an `A`-invariant submodule `V`, the characteristic polynomial of `A` factors
