@@ -12606,3 +12606,263 @@ theorem stableNonzeroExternalResponse_of_geometricQuotients
 end
 
 end LinearSystem
+
+
+/-!
+# First-isomorphism bridge between a nested quotient and its image model
+
+For a real vector space `M`, nested submodules `P ≤ Q`, and an endomorphism `T`
+preserving both `P` and `Q`, the induced map on `Q ⧸ P.comap Q.subtype` is
+conjugate, along the first-isomorphism equivalence
+`(Q ⧸ P.comap Q.subtype) ≃ₗ[ℝ] ↥(Q.map P.mkQ)`, to the direct quotient map of
+`T` restricted to the image model `Q.map P.mkQ`.
+
+We then specialize to `P = (S*(im E)).dualAnnihilator`,
+`Q = (T_g).dualAnnihilator` and `T = (A + G ∘ C).dualMap`.
+-/
+
+namespace LinearMap
+
+section ImageQuotientBridge
+
+variable {M : Type*} [AddCommGroup M] [Module ℝ M]
+
+noncomputable section
+
+/-- The first-isomorphism equivalence between the nested quotient
+`Q ⧸ P.comap Q.subtype` and the image model `Q.map P.mkQ`, induced by
+`f = P.mkQ ∘ Q.subtype`. -/
+def imageQuotientEquiv {P Q : Submodule ℝ M} (_hPQ : P ≤ Q) :
+    (Q ⧸ P.comap Q.subtype) ≃ₗ[ℝ] ↥(Q.map P.mkQ) := by
+  let f : Q →ₗ[ℝ] M ⧸ P := P.mkQ.comp Q.subtype
+  have hker : f.ker = P.comap Q.subtype := by
+    ext q
+    rw [LinearMap.mem_ker]
+    rw [Submodule.mem_comap]
+    change P.mkQ (q : M) = 0 ↔ (q : M) ∈ P
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+  have hrange : f.range = Q.map P.mkQ := by
+    ext r
+    constructor
+    · rintro ⟨q, rfl⟩
+      exact Submodule.mem_map.mpr ⟨q, q.2, rfl⟩
+    · rintro ⟨m, hm, rfl⟩
+      exact ⟨⟨m, hm⟩, rfl⟩
+  let eQ : (Q ⧸ P.comap Q.subtype) ≃ₗ[ℝ] (Q ⧸ f.ker) :=
+    Submodule.quotEquivOfEq (p := P.comap Q.subtype) (p' := f.ker) hker.symm
+  let eR : f.range ≃ₗ[ℝ] Q.map P.mkQ := LinearEquiv.ofEq _ _ hrange
+  exact eQ.trans (f.quotKerEquivRange.trans eR)
+
+@[simp]
+lemma imageQuotientEquiv_apply_mk {P Q : Submodule ℝ M} (hPQ : P ≤ Q) (q : Q) :
+    imageQuotientEquiv hPQ (Submodule.Quotient.mk q) =
+      ⟨P.mkQ (q : M), Submodule.mem_map.mpr ⟨q, q.2, rfl⟩⟩ := by
+  apply Subtype.ext
+  simp [imageQuotientEquiv]
+
+@[simp]
+lemma imageQuotientEquiv_symm_apply_mk {P Q : Submodule ℝ M} (hPQ : P ≤ Q)
+    (m : M) (hm : m ∈ Q) :
+    (imageQuotientEquiv hPQ).symm
+      ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
+      Submodule.Quotient.mk ⟨m, hm⟩ := by
+  rw [LinearEquiv.symm_apply_eq]
+  exact imageQuotientEquiv_apply_mk hPQ ⟨m, hm⟩
+
+/-- The direct map induced by `T` on the image model `Q.map P.mkQ`: descend `T`
+to `M ⧸ P` with `mapQ` and restrict to the invariant image submodule. -/
+def imageMapInd (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M}
+    (hTP : P ≤ P.comap T) (hTQ : Q ≤ Q.comap T) :
+    ↥(Q.map P.mkQ) →ₗ[ℝ] ↥(Q.map P.mkQ) := by
+  let A : M ⧸ P →ₗ[ℝ] M ⧸ P := P.mapQ P T hTP
+  have hI : Q.map P.mkQ ≤ (Q.map P.mkQ).comap A := by
+    intro r hr
+    rw [Submodule.mem_comap]
+    obtain ⟨m, hm, rfl⟩ := Submodule.mem_map.mp hr
+    refine Submodule.mem_map.mpr ⟨T m, hTQ hm, ?_⟩
+    simp [A, Submodule.mapQ_apply]
+  exact A.restrict hI
+
+@[simp]
+lemma imageMapInd_apply_mk (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M}
+    (hTP : P ≤ P.comap T) (hTQ : Q ≤ Q.comap T) (m : M) (hm : m ∈ Q) :
+    imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
+      ⟨P.mkQ (T m), Submodule.mem_map.mpr ⟨T m, hTQ hm, rfl⟩⟩ := by
+  apply Subtype.ext
+  simp [imageMapInd, Submodule.mapQ_apply]
+
+@[simp]
+lemma nestedQuotientMap_apply_mk (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M}
+    (hTP : P ≤ P.comap T) (hTQ : Q ≤ Q.comap T) (q : Q) :
+    (nestedQuotientMap T hTP hTQ : (Q ⧸ P.comap Q.subtype) →ₗ[ℝ] (Q ⧸ P.comap Q.subtype))
+        (Submodule.Quotient.mk q) =
+      (Submodule.Quotient.mk ⟨T q, hTQ q.2⟩ : Q ⧸ P.comap Q.subtype) := by
+  unfold nestedQuotientMap restrictT
+  simp only
+  congr
+
+/-- The induced quotient map on `Q/P` is conjugate to the direct quotient map
+on the image model `Q.map P.mkQ`, along the first-isomorphism equivalence. -/
+theorem imageQuotientEquiv_conj_nestedQuotientMap_eq_imageMapInd
+    (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M} (hPQ : P ≤ Q)
+    (hTP : P ≤ P.comap T) (hTQ : Q ≤ Q.comap T) :
+    (imageQuotientEquiv hPQ).conj (nestedQuotientMap T hTP hTQ) =
+      imageMapInd T hTP hTQ := by
+  apply LinearMap.ext
+  intro r
+  obtain ⟨m, hm, hmq⟩ := Submodule.mem_map.mp r.2
+  have hr : r = ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ := by
+    apply Subtype.ext
+    exact hmq.symm
+  rw [hr]
+  change (imageQuotientEquiv hPQ).toLinearMap
+      ((nestedQuotientMap T hTP hTQ : (Q ⧸ P.comap Q.subtype) →ₗ[ℝ] (Q ⧸ P.comap Q.subtype))
+        ((imageQuotientEquiv hPQ).symm ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩)) =
+    imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩
+  rw [imageQuotientEquiv_symm_apply_mk hPQ m hm]
+  change (imageQuotientEquiv hPQ).toLinearMap
+      ((nestedQuotientMap T hTP hTQ : (Q ⧸ P.comap Q.subtype) →ₗ[ℝ] (Q ⧸ P.comap Q.subtype))
+        (Submodule.Quotient.mk ⟨m, hm⟩)) =
+    imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩
+  rw [nestedQuotientMap_apply_mk T hTP hTQ ⟨m, hm⟩]
+  change (imageQuotientEquiv hPQ) (Submodule.Quotient.mk ⟨T m, hTQ hm⟩) =
+    imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩
+  rw [imageQuotientEquiv_apply_mk hPQ ⟨T m, hTQ hm⟩]
+  exact (imageMapInd_apply_mk T hTP hTQ m hm).symm
+
+end
+
+end ImageQuotientBridge
+
+/-! ### Specialization to the dual annihilators of `S*` and `T_g` -/
+
+section DualAnnihilatorSpecialization
+
+variable {X' Y D : Type*}
+variable [NormedAddCommGroup X'] [NormedSpace ℝ X'] [FiniteDimensional ℝ X']
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [AddCommGroup D] [Module ℝ D]
+
+noncomputable section
+
+/-- `P = (S*(im E)).dualAnnihilator`. -/
+def SstarDualAnnihilator (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    Submodule ℝ (Module.Dual ℝ X') :=
+  (Sstar C A E).dualAnnihilator
+
+/-- `Q = (T_g).dualAnnihilator`. -/
+def TgDualAnnihilator (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    Submodule ℝ (Module.Dual ℝ X') :=
+  (Tg C A E).dualAnnihilator
+
+/-- Since `T_g ≤ S*`, the annihilators are nested in the reverse order:
+`S*.dualAnnihilator ≤ T_g.dualAnnihilator`. -/
+lemma SstarDualAnnihilator_le_TgDualAnnihilator
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    SstarDualAnnihilator C A E ≤ TgDualAnnihilator C A E := by
+  dsimp [SstarDualAnnihilator, TgDualAnnihilator]
+  exact Submodule.dualAnnihilator_anti (Tg_le_Sstar C A E)
+
+omit [FiniteDimensional ℝ X'] in
+/-- Invariance of a dual annihilator under the algebraic transpose, in `comap`
+form. -/
+lemma dualAnnihilator_comap_dualMap {S : Submodule ℝ X'} {T : X' →ₗ[ℝ] X'}
+    (hT : S ≤ S.comap T) :
+    S.dualAnnihilator ≤ (S.dualAnnihilator).comap T.dualMap := by
+  intro φ hφ
+  rw [Submodule.mem_comap]
+  exact dualMap_mem_dualAnnihilator hT hφ
+
+omit [FiniteDimensional ℝ X'] in
+/-- `(A + G ∘ C).dualMap` preserves `S*.dualAnnihilator`. -/
+lemma SstarDualAnnihilator_comap_dualMap
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    SstarDualAnnihilator C A E ≤
+      (SstarDualAnnihilator C A E).comap (A + G.comp C).dualMap := by
+  dsimp [SstarDualAnnihilator]
+  exact dualAnnihilator_comap_dualMap (Sstar_comap_add_comp C A E G hG)
+
+/-- `(A + G ∘ C).dualMap` preserves `T_g.dualAnnihilator`. -/
+lemma TgDualAnnihilator_comap_dualMap
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    TgDualAnnihilator C A E ≤
+      (TgDualAnnihilator C A E).comap (A + G.comp C).dualMap := by
+  dsimp [TgDualAnnihilator]
+  exact dualAnnihilator_comap_dualMap (Tg_comap_add_comp C A E G hG)
+
+/-- The first-isomorphism equivalence specialized to
+`P = S*.dualAnnihilator` and `Q = T_g.dualAnnihilator`. -/
+noncomputable def dualAnnihilatorImageQuotientEquiv
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    ((TgDualAnnihilator C A E) ⧸
+      (SstarDualAnnihilator C A E).comap (TgDualAnnihilator C A E).subtype) ≃ₗ[ℝ]
+      ↥((TgDualAnnihilator C A E).map (SstarDualAnnihilator C A E).mkQ) :=
+  imageQuotientEquiv (SstarDualAnnihilator_le_TgDualAnnihilator C A E)
+
+/-- The direct quotient map on
+`Q.map P.mkQ = T_g.dualAnnihilator.map S*.dualAnnihilator.mkQ` induced by
+`T = (A + G ∘ C).dualMap`. -/
+noncomputable def dualAnnihilatorImageMapInd
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    ↥((TgDualAnnihilator C A E).map (SstarDualAnnihilator C A E).mkQ) →ₗ[ℝ]
+      ↥((TgDualAnnihilator C A E).map (SstarDualAnnihilator C A E).mkQ) :=
+  imageMapInd (A + G.comp C).dualMap
+    (SstarDualAnnihilator_comap_dualMap C A E G hG)
+    (TgDualAnnihilator_comap_dualMap C A E G hG)
+
+/-- The induced quotient map on
+`T_g.dualAnnihilator / S*.dualAnnihilator` is conjugate to the direct dual map
+on the image model. -/
+theorem dualAnnihilatorImageQuotientEquiv_conj_nestedQuotientMap
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    (dualAnnihilatorImageQuotientEquiv C A E).conj
+        (nestedQuotientMap (A + G.comp C).dualMap
+          (SstarDualAnnihilator_comap_dualMap C A E G hG)
+          (TgDualAnnihilator_comap_dualMap C A E G hG)) =
+      dualAnnihilatorImageMapInd C A E G hG := by
+  exact imageQuotientEquiv_conj_nestedQuotientMap_eq_imageMapInd
+    (A + G.comp C).dualMap (SstarDualAnnihilator_le_TgDualAnnihilator C A E)
+    (SstarDualAnnihilator_comap_dualMap C A E G hG)
+    (TgDualAnnihilator_comap_dualMap C A E G hG)
+
+/-- The specialized direct map is exactly the repo's
+`dualNestedQuotientMapInd (A + G ∘ C)` for `S₁ = T_g`, `S₂ = S*`. -/
+theorem dualAnnihilatorImageMapInd_eq_dualNestedQuotientMapInd
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    dualAnnihilatorImageMapInd C A E G hG =
+      dualNestedQuotientMapInd (A + G.comp C) (Tg_le_Sstar C A E)
+        (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG) := by
+  apply LinearMap.ext
+  intro q
+  obtain ⟨φ, hφ, hφq⟩ := Submodule.mem_map.mp q.2
+  have hq : q = ⟨(SstarDualAnnihilator C A E).mkQ φ,
+      Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ := by
+    apply Subtype.ext
+    exact hφq.symm
+  rw [hq]
+  change (dualAnnihilatorImageMapInd C A E G hG
+      ⟨(SstarDualAnnihilator C A E).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ :
+        DualNestedQuotient (Tg C A E) (Sstar C A E)) =
+    dualNestedQuotientMapInd (A + G.comp C) (Tg_le_Sstar C A E)
+      (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG)
+      ⟨(Sstar C A E).dualAnnihilator.mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩
+  unfold dualAnnihilatorImageMapInd
+  rw [imageMapInd_apply_mk (A + G.comp C).dualMap
+      (P := SstarDualAnnihilator C A E) (Q := TgDualAnnihilator C A E)
+      (SstarDualAnnihilator_comap_dualMap C A E G hG)
+      (TgDualAnnihilator_comap_dualMap C A E G hG) φ hφ]
+  rw [dualNestedQuotientMapInd_apply_mk (A + G.comp C) (Tg_le_Sstar C A E)
+      (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG) φ hφ]
+  apply Subtype.ext
+  rfl
+
+end
+
+end DualAnnihilatorSpecialization
+
+end LinearMap
