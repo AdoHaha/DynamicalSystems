@@ -1810,6 +1810,96 @@ theorem isHurwitz_mapQ_prod_restrict_of_isHurwitz
 
 end NestedBlockQuotient
 
+/-! ## Conjugacy transport for nested Hurwitz quotients -/
+
+section NestedQuotientConj
+
+/-- **Transport of Hurwitzness across a nested invariant quotient.**
+
+Let `e : X ≃ₗ[ℝ] Y` conjugate `T` to `U` (`e.conj T = U`). Let `P ≤ Q` be
+`T`-invariant subspaces of `X` and `P2 ≤ Q2` be `U`-invariant subspaces of `Y`,
+with `P.map e = P2` and `Q.map e = Q2`. Then the map induced by `T|_Q` on the
+nested quotient `Q ⧸ P` is Hurwitz if and only if the map induced by `U|_{Q2}`
+on `Q2 ⧸ P2` is Hurwitz.
+
+The nested quotient `Q ⧸ P` is realised as `Q ⧸ (P.comap Q.subtype)`, and the
+proof transports along the restricted linear equivalence
+`e.ofSubmodules Q Q2 hQmap` using `Submodule.Quotient.equiv` and
+`LinearEquiv.charpoly_conj`. -/
+theorem isHurwitz_mapQ_nested_conj
+    (T : X →ₗ[ℝ] X) (U : Y →ₗ[ℝ] Y) (e : X ≃ₗ[ℝ] Y)
+    (he : e.conj T = U)
+    (P Q : Submodule ℝ X) (hPQ : P ≤ Q)
+    (hQ : ∀ x ∈ Q, T x ∈ Q) (hP : ∀ x ∈ P, T x ∈ P)
+    (P2 Q2 : Submodule ℝ Y) (_hP2Q2 : P2 ≤ Q2)
+    (hQ2 : ∀ y ∈ Q2, U y ∈ Q2) (hP2 : ∀ y ∈ P2, U y ∈ P2)
+    (hPmap : P.map (e : X →ₗ[ℝ] Y) = P2)
+    (hQmap : Q.map (e : X →ₗ[ℝ] Y) = Q2) :
+    IsHurwitz (Submodule.mapQ (P.comap Q.subtype) (P.comap Q.subtype)
+        (T.restrict hQ) (fun x hx => hP (x : X) hx)) ↔
+      IsHurwitz (Submodule.mapQ (P2.comap Q2.subtype) (P2.comap Q2.subtype)
+        (U.restrict hQ2) (fun y hy => hP2 (y : Y) hy)) := by
+  let TQ : Q →ₗ[ℝ] Q := T.restrict hQ
+  let UQ : Q2 →ₗ[ℝ] Q2 := U.restrict hQ2
+  let Pq : Submodule ℝ Q := P.comap Q.subtype
+  let P2q : Submodule ℝ Q2 := P2.comap Q2.subtype
+  let eQ : Q ≃ₗ[ℝ] Q2 := e.ofSubmodules Q Q2 hQmap
+  have hPmap' : Pq.map (eQ : Q →ₗ[ℝ] Q2) = P2q := by
+    ext y
+    rw [Submodule.mem_map]
+    constructor
+    · rintro ⟨x, hx, rfl⟩
+      change ((eQ x : Q2) : Y) ∈ P2
+      rw [LinearEquiv.ofSubmodules_apply]
+      exact hPmap ▸ Submodule.mem_map_of_mem hx
+    · intro hy
+      have hy' : (y : Y) ∈ P2 := hy
+      rw [← hPmap, Submodule.mem_map] at hy'
+      obtain ⟨x, hxP, hxeq⟩ := hy'
+      refine ⟨⟨x, hPQ hxP⟩, hxP, ?_⟩
+      · apply Subtype.ext
+        change (e : X →ₗ[ℝ] Y) x = (y : Y)
+        exact hxeq
+  let φ : Q ⧸ Pq →ₗ[ℝ] Q ⧸ Pq :=
+    Submodule.mapQ Pq Pq TQ (fun x hx => hP (x : X) hx)
+  let ψ : Q2 ⧸ P2q →ₗ[ℝ] Q2 ⧸ P2q :=
+    Submodule.mapQ P2q P2q UQ (fun y hy => hP2 (y : Y) hy)
+  let eP := Submodule.Quotient.equiv Pq P2q eQ hPmap'
+  have hchar : ψ.charpoly = φ.charpoly := by
+    have hconj : eP.conj φ = ψ := by
+      apply LinearMap.ext
+      intro x
+      refine Submodule.Quotient.induction_on (p := P2q) x ?_
+      intro y
+      rw [LinearEquiv.conj_apply_apply]
+      have hs : eP.symm (Submodule.Quotient.mk y) =
+          Submodule.Quotient.mk (eQ.symm y) := by
+        rw [Submodule.Quotient.equiv_symm, Submodule.Quotient.equiv_apply,
+          Submodule.mapQ_apply]
+        rfl
+      rw [hs]
+      have h1 : φ (Submodule.Quotient.mk (eQ.symm y)) =
+          Submodule.Quotient.mk (TQ (eQ.symm y)) := rfl
+      rw [h1]
+      have h2 : eP (Submodule.Quotient.mk (TQ (eQ.symm y))) =
+          Submodule.Quotient.mk (eQ (TQ (eQ.symm y))) := rfl
+      rw [h2]
+      have h3 : ψ (Submodule.Quotient.mk y) =
+          Submodule.Quotient.mk (UQ y) := rfl
+      rw [h3]
+      congr 1
+      apply Subtype.ext
+      have hzs : ((eQ.symm y : Q) : X) = e.symm (y : Y) :=
+        LinearEquiv.ofSubmodules_symm_apply e hQmap y
+      change e (T ((eQ.symm y : Q) : X)) = U (y : Y)
+      rw [hzs]
+      rw [← LinearEquiv.conj_apply_apply, he]
+    rw [← hconj, LinearEquiv.charpoly_conj]
+  change IsHurwitz φ ↔ IsHurwitz ψ
+  rw [IsHurwitz, IsHurwitz, hchar]
+
+end NestedQuotientConj
+
 /-! ## Restriction and quotient characteristic polynomials
 
 For an `A`-invariant submodule `V`, the characteristic polynomial of `A` factors
