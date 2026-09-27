@@ -19,6 +19,12 @@ import DynamicalSystems.Linear.GenericControllerDualResponse
 import DynamicalSystems.Linear.ArbitraryControllerCriterion
 import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Linear.MinimalPoleCancellation
+import DynamicalSystems.Linear.TransferNumeratorDegree
+import DynamicalSystems.Linear.TransferDenominatorRecurrence
+import DynamicalSystems.Linear.MinimalTransferPoles
+import DynamicalSystems.Linear.TransferCoordinateBridge
+import DynamicalSystems.Linear.TransferPoleDecay
+import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -283,7 +289,9 @@ The arbitrary finite-dimensional controller-state *time-domain decay* version
 is proved by
 `LinearSystem.anyStateStableExternalResponse_iff_externalStabilizationConditions`.
 It uses Hurwitz (left-half-plane) stability. Equivalence with the book's
-transfer-function formulation, and arbitrary stability domains, remain separate.
+reduced transfer-pole formulation for that domain is proved by
+`LinearSystem.anyStatePoleStableExternalResponse_iff_externalStabilizationConditions`.
+Arbitrary stability domains remain separate.
 The controllable/observable special case is
 `LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
@@ -412,7 +420,9 @@ For the book's quantifier over controller order, the controller state space is
 existentially quantified in `AnyStateStableExternalResponse`. The existing
 observer construction gives sufficiency. The generic first-inclusion theorem
 and its transposed application give both necessity inclusions for time-domain
-decay. A transfer-function stability-to-decay bridge is not claimed.
+decay. The Hurwitz-domain transfer-pole stability-to-decay bridge is now
+provided by `TransferPoleDecay.lean` and lifted to this arbitrary-controller
+quantifier in `TransferPoleControllerCriterion.lean`.
 
 {docstring LinearSystem.AnyStateStableExternalResponse}
 {docstring LinearSystem.anyStateStableExternalResponse_of_externalStabilizationConditions}
@@ -481,7 +491,8 @@ readout vanishes on its invariant denominator. Quotient decay therefore gives
 a stable, possibly nonzero, external impulse response. The reverse implication
 is also proved for arbitrary finite-dimensional controller state spaces by the
 real-coordinate Bohl bridge and generic closed-loop duality. This is the
-time-domain decay form; transfer-function stability is not yet identified with it.
+time-domain decay form; the Hurwitz-domain transfer-pole form is identified
+with it in `TransferPoleControllerCriterion.lean`.
 
 {docstring LinearSystem.stableNonzeroExternalResponse_of_externalStabilizationConditions}
 
@@ -1164,9 +1175,8 @@ characteristic polynomial, so Hurwitz state spectrum implies stable transfer
 poles. The numerator agrees with determinant times the resolvent channel value
 at nonsingular points, and evaluation of the reduced rational function agrees
 with the resolvent there. A zero-output lemma illustrates why the converse requires
-controllability and observability; the minimal-realization pole converse is not
-yet formalized. For the controllable–observable realization, Hurwitz stability
-implies pole stability of every complexified transfer-matrix entry.
+controllability and observability. For the controllable–observable realization,
+Hurwitz stability implies pole stability of every complexified transfer-matrix entry.
 
 {docstring RatFunc.IsPoleStable}
 {docstring RatFunc.eval_mk_of_eval_ne_zero}
@@ -1183,14 +1193,70 @@ implies pole stability of every complexified transfer-matrix entry.
 For a controllable and observable complex realization, a characteristic root
 with nonzero evaluated adjugate survives cancellation in at least one scalar
 transfer entry. This uses local Hautus reachability and observability to show
-the Cramer numerator is nonzero. Repeated-root cases with zero evaluated
-adjugate still need a higher-order argument. A separate minimal-realization
-lemma shows that if all Markov parameters vanish after applying a polynomial
-`q` to the state map, then `q(A) = 0`; relating a common transfer denominator
-to that Markov recurrence is the remaining bridge.
+the Cramer numerator is nonzero. A separate minimal-realization lemma shows
+that if all Markov parameters vanish after applying a polynomial `q` to the
+state map, then `q(A) = 0`.
 
 {docstring Matrix.exists_scalar_transfer_pole_of_minimal_rank_one_root}
 {docstring LinearMap.aeval_eq_zero_of_markov_annihilation}
+
+## `DynamicalSystems.Linear.TransferNumeratorDegree`
+
+The scalar Cramer numerator has degree strictly below the state characteristic
+polynomial, including a separate zero-dimensional case. Hence divisibility by
+the characteristic polynomial forces the numerator to vanish.
+
+{docstring Matrix.channelTransferNumerator_natDegree_lt}
+{docstring Matrix.channelTransferNumerator_eq_zero_of_charpoly_dvd}
+
+## `DynamicalSystems.Linear.TransferDenominatorRecurrence`
+
+A polynomial multiple of a reduced scalar transfer denominator annihilates
+every Markov parameter after evaluation at the state matrix. This is proved
+with a finite adjugate recurrence, without an expansion at infinity.
+
+{docstring Matrix.channel_markov_annihilation_of_denom_dvd}
+
+## `DynamicalSystems.Linear.MinimalTransferPoles`
+
+For a controllable and observable complex matrix realization, every
+characteristic root is a pole of at least one reduced transfer-matrix entry,
+including repeated roots (setwise, without a multiplicity assertion).
+Consequently, all entry poles are left-half-plane exactly when the
+realization's characteristic roots are left-half-plane; the same equivalence
+is proved for a complexified real matrix realization.
+
+{docstring Matrix.exists_scalar_transfer_pole_of_minimal}
+{docstring Matrix.all_channels_pole_stable_iff_charpoly_hurwitz_of_minimal}
+{docstring Matrix.real_all_channels_pole_stable_iff_charpoly_hurwitz_of_minimal}
+
+## `DynamicalSystems.Linear.TransferCoordinateBridge`
+
+Finite-basis matrix representations preserve controllability and
+observability. For the controllable–observable realization, every complexified
+transfer entry has left-half-plane poles exactly when its state map is Hurwitz.
+
+{docstring LinearSystem.minimalRealizationAllChannelsPoleStable}
+{docstring LinearSystem.controllableObservableRealization_all_channels_poleStable_iff_hurwitz}
+
+## `DynamicalSystems.Linear.TransferPoleDecay`
+
+For a real finite-dimensional channel, pole stability of the reduced minimal
+realization transfer matrix is equivalent to decay of every impulse-response
+direction. This is the Hurwitz (open left-half-plane) choice only.
+
+{docstring LinearSystem.controllableObservableRealization_all_channels_poleStable_iff_channelReadout_tendsto}
+
+## `DynamicalSystems.Linear.TransferPoleControllerCriterion`
+
+With arbitrary finite-dimensional controller state and a strictly proper
+plant, the closed-loop external transfer-pole predicate is equivalent to the
+time-domain response predicate and to the two Corollary 6.22 geometric
+conditions, for Hurwitz stability.
+
+{docstring LinearSystem.AnyStatePoleStableExternalResponse}
+{docstring LinearSystem.anyStatePoleStableExternalResponse_iff_anyStateStableExternalResponse}
+{docstring LinearSystem.anyStatePoleStableExternalResponse_iff_externalStabilizationConditions}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
@@ -1263,12 +1329,13 @@ certificate and proves the closed loop decoupled.
 The resolvent transfer-function form `H (s I - A)⁻¹ E = 0` is proved in both directions under the
 explicit hypothesis `s > ‖A‖`; the unqualified all-`s` rational-function statement is not claimed.
 
-External stability is recorded in two distinct forms and they are never identified. The exact-zero
-response is characterised geometrically by a `(C, A, B)`-pair. A stable (possibly nonzero) external
+Exact-zero external response is characterised geometrically by a `(C, A, B)`-pair. A stable (possibly nonzero) external
 impulse response is equivalent to the two Corollary 6.22 subspace conditions
 even when the finite-dimensional controller state is arbitrary, using the
-observer-based construction and the real-space dual necessity proof. The
-transfer-function stability formulation still needs a formal analytic bridge.
+observer-based construction and the real-space dual necessity proof. Reduced
+rational transfer-pole stability is now identified with that decay criterion
+for the left-half-plane stability domain. Arbitrary stability domains `C_g`
+remain outside this equivalence.
 The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
 and transpose-exponential pairing are formalized with explicit finite-dimensional and
 admissibility hypotheses. These external-stability statements assume a strictly proper plant

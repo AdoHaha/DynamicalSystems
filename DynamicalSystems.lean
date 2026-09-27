@@ -34,6 +34,12 @@ import DynamicalSystems.Linear.GenericControllerDualResponse
 import DynamicalSystems.Linear.ArbitraryControllerCriterion
 import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Linear.MinimalPoleCancellation
+import DynamicalSystems.Linear.TransferNumeratorDegree
+import DynamicalSystems.Linear.TransferDenominatorRecurrence
+import DynamicalSystems.Linear.MinimalTransferPoles
+import DynamicalSystems.Linear.TransferCoordinateBridge
+import DynamicalSystems.Linear.TransferPoleDecay
+import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

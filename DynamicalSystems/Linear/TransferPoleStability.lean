@@ -87,6 +87,29 @@ theorem eval_mk_of_eval_ne_zero (p q : Polynomial ℂ) (z : ℂ)
       simp [div_eq_mul_inv, mul_inv_cancel₀ hg']
     _ = _ := by ring
 
+/-- Multiplying a rational function by a polynomial that contains its reduced
+denominator yields a polynomial. -/
+theorem exists_polynomial_mul_eq_of_denom_dvd
+    (f : RatFunc ℂ) (q : Polynomial ℂ) (hdiv : f.denom ∣ q) :
+    ∃ p : Polynomial ℂ, (q : RatFunc ℂ) * f = p := by
+  obtain ⟨r, hr⟩ := hdiv
+  refine ⟨r * f.num, ?_⟩
+  change algebraMap ℂ[X] ℂ⟮X⟯ q * f = _
+  have hd : algebraMap ℂ[X] ℂ⟮X⟯ f.denom ≠ 0 := by
+    intro hzero
+    apply RatFunc.denom_ne_zero f
+    apply RatFunc.algebraMap_injective ℂ
+    simpa using hzero
+  calc
+    _ = algebraMap ℂ[X] ℂ⟮X⟯ q *
+          (algebraMap ℂ[X] ℂ⟮X⟯ f.num / algebraMap ℂ[X] ℂ⟮X⟯ f.denom) := by
+      exact congrArg (fun x : RatFunc ℂ ↦ algebraMap ℂ[X] ℂ⟮X⟯ q * x)
+        f.num_div_denom.symm
+    _ = algebraMap ℂ[X] ℂ⟮X⟯ (r * f.num) := by
+      rw [hr, map_mul]
+      field_simp [hd]
+      simp only [map_mul]
+
 /-- A rational function is pole-stable when every root of its reduced denominator
 lies in the open left half-plane. This is algebraic pole stability, not an
 impulse-response or decay definition. -/
