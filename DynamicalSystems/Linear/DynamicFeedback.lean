@@ -1680,6 +1680,41 @@ theorem extendedPairSubspace_le_outputMap_ker
   change H (s + v) = 0
   rw [map_add, LinearMap.mem_ker.mp (hS hs), LinearMap.mem_ker.mp (hV hv), zero_add]
 
+/-- Controller-state/error coordinates `(x,w) ↦ (w,x-w)`. In these coordinates
+the extended pair `Vₑ(S,V)` becomes the product `V × S`. -/
+def controllerStateErrorEquiv (X : Type*) [AddCommGroup X] [Module 𝕜 X] :
+    (X × X) ≃ₗ[𝕜] (X × X) where
+  toFun p := (p.2, p.1 - p.2)
+  invFun p := (p.1 + p.2, p.1)
+  left_inv p := by rcases p with ⟨x, w⟩; simp
+  right_inv p := by rcases p with ⟨w, e⟩; simp
+  map_add' p q := by
+    rcases p with ⟨x, w⟩
+    rcases q with ⟨y, v⟩
+    ext <;> simp
+    abel
+  map_smul' c p := by
+    rcases p with ⟨x, w⟩
+    ext <;> simp [smul_sub]
+
+/-- The coordinate change identifies the book's extended pair with the
+product of its two component subspaces. -/
+theorem controllerStateErrorEquiv_map_extendedPairSubspace (S V : Submodule 𝕜 X) :
+    (extendedPairSubspace S V).map (controllerStateErrorEquiv (𝕜 := 𝕜) X).toLinearMap =
+      Submodule.prod V S := by
+  ext p
+  constructor
+  · rintro ⟨q, hq, rfl⟩
+    obtain ⟨s, hs, v, hv, rfl⟩ := (mem_extendedPairSubspace S V q).mp hq
+    change v ∈ V ∧ (s + v - v) ∈ S
+    exact ⟨hv, by simpa using hs⟩
+  · intro hp
+    obtain ⟨v, s⟩ := p
+    change v ∈ V ∧ s ∈ S at hp
+    refine ⟨(s + v, v), (mem_extendedPairSubspace S V _).mpr
+      ⟨s, hp.2, v, hp.1, rfl⟩, ?_⟩
+    simp [controllerStateErrorEquiv]
+
 /-- The two invariant subspaces of Lemma 6.21 are instances of this
 invariance criterion for the controller with `N = 0`. Besides preservation by
 the feedback and injection gains, it only needs `A S ≤ V`. -/
@@ -2089,6 +2124,39 @@ theorem cabPairController_closedLoopMap_conj (sys : LinearSystem ℝ X U Y)
   · simp only [ic, cabPairInterconnection, cabPairController, LinearMap.blockOperator_apply,
       LinearMap.add_apply, LinearMap.sub_apply, LinearMap.comp_apply, map_sub,
       LinearMap.neg_apply]
+    abel
+
+omit [FiniteDimensional ℝ X] in
+/-- In controller-state/error coordinates, the `N = 0` closed loop has
+diagonal blocks `A + B F` and `A + G C` and cross block `-G C`. The extended
+pair `Vₑ(S,V)` is exactly `V × S` in these same coordinates. -/
+theorem cabPairController_closedLoopMap_controllerStateError_conj
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
+    (hwp : (cabPairInterconnection sys (cabPairController sys F G 0) E H).IsWellPosed) :
+    (controllerStateErrorEquiv (𝕜 := ℝ) X).conj
+      ((cabPairInterconnection sys (cabPairController sys F G 0) E H).closedLoopMap hwp) =
+      LinearMap.blockOperator (sys.A + sys.B.comp F) (-(G.comp sys.C))
+        (sys.A + G.comp sys.C) := by
+  let ic : DynamicInterconnection ℝ X U Y X D Z :=
+    cabPairInterconnection sys (cabPairController sys F G 0) E H
+  change (controllerStateErrorEquiv (𝕜 := ℝ) X).conj (ic.closedLoopMap hwp) = _
+  apply LinearMap.ext
+  intro p
+  obtain ⟨w, e⟩ := p
+  rw [LinearEquiv.conj_apply_apply]
+  change (controllerStateErrorEquiv (𝕜 := ℝ) X)
+      (ic.closedLoopMap hwp (w + e, w)) = _
+  rw [ic.closedLoopMap_of_D_eq_zero hD hwp (w + e, w)]
+  apply Prod.ext
+  · simp [controllerStateErrorEquiv, ic, cabPairInterconnection,
+      cabPairController, LinearMap.blockOperator_apply, LinearMap.add_apply,
+      LinearMap.comp_apply, map_add, LinearMap.neg_apply]
+    abel
+  · simp [controllerStateErrorEquiv, ic, cabPairInterconnection,
+      cabPairController, LinearMap.blockOperator_apply, LinearMap.add_apply,
+      LinearMap.comp_apply, map_add, LinearMap.neg_apply]
     abel
 
 /-- `IsHurwitz` depends only on the characteristic polynomial. -/
