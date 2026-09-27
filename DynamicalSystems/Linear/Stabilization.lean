@@ -203,7 +203,10 @@ is the existing Mathlib map `Submodule.mapQ V V A`. The spectrum-transfer form
 `LinearMap.isHurwitz_restrict_of_hurwitzSubspace` moves `IsHurwitz` from `A` to
 its restriction on the stable subspace `hurwitzSubspace A`, which is the
 invariant-submodule half of the lift into stabilizable/detectable
-decompositions. No new quotient-spectrum API is introduced.
+decompositions. Later in this file,
+`isHurwitz_mapQ_prod_restrict_of_isHurwitz` transports Hurwitzness through a
+triangular product quotient, and `isHurwitz_mapQ_nested_conj` transports it
+across a conjugacy of nested invariant quotients.
 
 ## Definition of stability
 
