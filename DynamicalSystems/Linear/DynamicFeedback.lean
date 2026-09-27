@@ -12931,3 +12931,320 @@ theorem stableNonzeroExternalResponse_of_observerQuotient
     sys hD E H F G h hFV hG hFq hGq
 
 end LinearSystem
+
+/-!
+# Primal observer-error quotient Hurwitzness from the dual condition
+
+Under the output-injection half of the Corollary 6.22 geometric conditions,
+
+`S*(im E) ∩ Xdet(C, A) ≤ ker H`,
+
+we construct an output injection `G : Y →ₗ[ℝ] X` that preserves `S*(im E)` and
+makes the induced primal observer-error map on the nested quotient
+`S*(im E) / T_g` Hurwitz.
+
+The gain and the Hurwitz witness on the dual quotient
+`T_g.dualAnnihilator / S*.dualAnnihilator` are extracted from
+`LinearSystem.exists_outputInjection_isHurwitz_dualQuotient_of_dualCondition`.
+The dual Hurwitz map is transported:
+
+1. from the theorem's `mapQ`/`restrict` form to `nestedQuotientMap`
+   (`isHurwitz_nestedQuotientMap_of_isHurwitz_mapQ_restrict`),
+2. across the dual-map identity `(A + G C).dualMap = Aᵀ + Cᵀ ∘ Gᵀ` and the
+   annihilator identities `S*.dualAnnihilator = V*(ker Eᵀ)` and
+   `T_g.dualAnnihilator = V*(ker Eᵀ) ⊔ Xstab(Aᵀ, Cᵀ)`
+   (`isHurwitz_nestedQuotientMap_congr`),
+3. through the first-isomorphism bridge
+   `dualAnnihilatorImageQuotientEquiv_conj_nestedQuotientMap` and the direct
+   dual map `dualAnnihilatorImageMapInd_eq_dualNestedQuotientMapInd`,
+4. back to the primal nested quotient through
+   `isHurwitz_SstarTg_nestedQuotient_iff_dualNestedQuotientMapInd`.
+-/
+
+namespace LinearMap
+
+/-! ## Small Hurwitz transport lemmas -/
+
+section HurwitzTransport
+
+variable {X Y : Type*}
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+
+/-- Hurwitzness is invariant under linear conjugation. -/
+lemma isHurwitz_conj_iff (e : X ≃ₗ[ℝ] Y) (T : X →ₗ[ℝ] X) :
+    IsHurwitz (e.conj T) ↔ IsHurwitz T := by
+  rw [IsHurwitz, IsHurwitz, LinearEquiv.charpoly_conj]
+
+end HurwitzTransport
+
+section NestedQuotientMapCongr
+
+variable {X : Type*}
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+
+/-- A `mapQ`/`restrict` Hurwitz witness (the shape produced by the dual output
+injection theorem) implies Hurwitzness of the corresponding
+`nestedQuotientMap`, which is the same induced quotient map written with
+`comap`-form invariance proofs. -/
+lemma isHurwitz_nestedQuotientMap_of_isHurwitz_mapQ_restrict
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hT₁ : Submodule.map T S₁ ≤ S₁) (hT₂ : Submodule.map T S₂ ≤ S₂) :
+    IsHurwitz (Submodule.mapQ (S₁.comap S₂.subtype) (S₁.comap S₂.subtype)
+      (T.restrict (fun x hx => hT₂ ⟨x, hx, rfl⟩))
+      (fun x hx => hT₁ ⟨(x : X), hx, rfl⟩)) →
+    IsHurwitz (nestedQuotientMap T
+      (Submodule.map_le_iff_le_comap.mp hT₁)
+      (Submodule.map_le_iff_le_comap.mp hT₂)) := by
+  intro hQ
+  have hEq : Submodule.mapQ (S₁.comap S₂.subtype) (S₁.comap S₂.subtype)
+      (T.restrict (fun x hx => hT₂ ⟨x, hx, rfl⟩))
+      (fun x hx => hT₁ ⟨(x : X), hx, rfl⟩) =
+    nestedQuotientMap T
+      (Submodule.map_le_iff_le_comap.mp hT₁)
+      (Submodule.map_le_iff_le_comap.mp hT₂) := by
+    unfold nestedQuotientMap restrictT
+    apply LinearMap.ext
+    intro q
+    refine Submodule.Quotient.induction_on (p := S₁.comap S₂.subtype) q ?_
+    intro x
+    simp only [Submodule.mapQ_apply]
+    congr 1
+  rw [← hEq]
+  exact hQ
+
+/-- The converse of `isHurwitz_nestedQuotientMap_of_isHurwitz_mapQ_restrict`:
+a `nestedQuotientMap` Hurwitz witness yields the `mapQ`/`restrict` form. -/
+lemma isHurwitz_mapQ_restrict_of_isHurwitz_nestedQuotientMap
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hT₁ : Submodule.map T S₁ ≤ S₁) (hT₂ : Submodule.map T S₂ ≤ S₂) :
+    IsHurwitz (nestedQuotientMap T
+      (Submodule.map_le_iff_le_comap.mp hT₁)
+      (Submodule.map_le_iff_le_comap.mp hT₂)) →
+    IsHurwitz (Submodule.mapQ (S₁.comap S₂.subtype) (S₁.comap S₂.subtype)
+      (T.restrict (fun x hx => hT₂ ⟨x, hx, rfl⟩))
+      (fun x hx => hT₁ ⟨(x : X), hx, rfl⟩)) := by
+  intro hQ
+  have hEq : Submodule.mapQ (S₁.comap S₂.subtype) (S₁.comap S₂.subtype)
+      (T.restrict (fun x hx => hT₂ ⟨x, hx, rfl⟩))
+      (fun x hx => hT₁ ⟨(x : X), hx, rfl⟩) =
+    nestedQuotientMap T
+      (Submodule.map_le_iff_le_comap.mp hT₁)
+      (Submodule.map_le_iff_le_comap.mp hT₂) := by
+    unfold nestedQuotientMap restrictT
+    apply LinearMap.ext
+    intro q
+    refine Submodule.Quotient.induction_on (p := S₁.comap S₂.subtype) q ?_
+    intro x
+    simp only [Submodule.mapQ_apply]
+    congr 1
+  rw [hEq]
+  exact hQ
+
+/-- Hurwitzness of a `nestedQuotientMap` is unchanged when the map and the two
+nested submodules are replaced by equal ones; the invariance proofs are
+irrelevant. -/
+lemma isHurwitz_nestedQuotientMap_congr
+    (T T' : X →ₗ[ℝ] X) (S₁ S₂ S₁' S₂' : Submodule ℝ X)
+    (hT : T = T') (hS₁ : S₁ = S₁') (hS₂ : S₂ = S₂')
+    (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T)
+    (hT₁' : S₁' ≤ S₁'.comap T') (hT₂' : S₂' ≤ S₂'.comap T') :
+    IsHurwitz (nestedQuotientMap T hT₁ hT₂) →
+    IsHurwitz (nestedQuotientMap T' hT₁' hT₂') := by
+  intro hQ
+  subst T
+  subst S₁
+  subst S₂
+  exact hQ
+
+end NestedQuotientMapCongr
+
+/-! ## The concrete primal observer-error quotient theorem -/
+
+variable {X Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+omit [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D] in
+/-- **Primal observer-error quotient Hurwitzness from the dual condition.**
+
+If the output-injection condition `S*(im E) ∩ Xdet(C, A) ≤ ker H` holds, then
+there exists an output injection `G : Y →ₗ[ℝ] X` preserving `S*(im E)` such that
+the map induced by the observer error operator `A + G C` on the nested quotient
+`S*(im E) / T_g` is Hurwitz. -/
+theorem exists_primalObserverQuotientHurwitz_of_dualCondition
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : LinearMap.conditionedInvariantSubspace C A (LinearMap.range E) ⊓
+        LinearMap.detectableSubspace C A ≤ LinearMap.ker H) :
+    ∃ G : Y →ₗ[ℝ] X, ∃ hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E,
+      LinearMap.IsHurwitz (nestedQuotientMap (A + G.comp C)
+        (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG)) := by
+  -- Extract the dual Hurwitz quotient witness.
+  obtain ⟨G, hE, hQpair⟩ :=
+    LinearSystem.exists_outputInjection_isHurwitz_dualQuotient_of_dualCondition C A E H h
+  obtain ⟨⟨hFV, hQ⟩⟩ := hQpair
+  -- The primal output injection preserves `S*`.
+  have hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E := by
+    simpa [Sstar] using
+      (outputInjection_preserves_conditionedInvariant_of_dual_feedback C A E G hFV)
+  -- Rewrite the dual witness in terms of the annihilators `S*.dualAnnihilator`
+  -- and `T_g.dualAnnihilator`.
+  let Vd : Submodule ℝ (Module.Dual ℝ X) :=
+    LinearMap.controlledInvariantSubspace A.dualMap C.dualMap (LinearMap.ker E.dualMap)
+  let Wd : Submodule ℝ (Module.Dual ℝ X) :=
+    Vd ⊔ LinearMap.stabilizableSubspace A.dualMap C.dualMap
+  have hVd : Vd = SstarDualAnnihilator C A E := by
+    dsimp [Vd, SstarDualAnnihilator, Sstar]
+    exact (conditionedInvariantSubspace_dualAnnihilator_eq C A E).symm
+  have hWd : Wd = TgDualAnnihilator C A E := by
+    dsimp [Wd, TgDualAnnihilator, Tg, Sstar]
+    exact (conditionedInvariantSubspace_inf_detectableSubspace_dualAnnihilator_eq C A E).symm
+  have hFV' : Submodule.map (A.dualMap + C.dualMap.comp G.dualMap) Vd ≤ Vd := by
+    simpa [Vd] using hFV
+  have hWmap : Submodule.map (A.dualMap + C.dualMap.comp G.dualMap) Wd ≤ Wd := by
+    simpa [Wd] using (LinearSystem.map_add_feedback_sup_stabilizableSubspace_le
+      A.dualMap C.dualMap G.dualMap hFV')
+  have hQ' : LinearMap.IsHurwitz
+      (Submodule.mapQ (Vd.comap Wd.subtype) (Vd.comap Wd.subtype)
+        ((A.dualMap + C.dualMap.comp G.dualMap).restrict
+          (fun x hx => LinearSystem.map_add_feedback_sup_stabilizableSubspace_le
+            A.dualMap C.dualMap G.dualMap hFV' ⟨x, hx, rfl⟩))
+        (fun x hx => hFV' ⟨(x : Module.Dual ℝ X), hx, rfl⟩)) := by
+    simpa [Vd, Wd] using hQ
+  -- Step 1: from `mapQ`/`restrict` form to the dual `nestedQuotientMap`.
+  have hNestDual0 : LinearMap.IsHurwitz
+      (nestedQuotientMap (A.dualMap + C.dualMap.comp G.dualMap)
+        (Submodule.map_le_iff_le_comap.mp hFV')
+        (Submodule.map_le_iff_le_comap.mp hWmap)) :=
+    isHurwitz_nestedQuotientMap_of_isHurwitz_mapQ_restrict
+      (A.dualMap + C.dualMap.comp G.dualMap) hFV' hWmap hQ'
+  -- Step 2: identify the dual map and the two annihilator submodules.
+  have hdualMap : (A + G.comp C).dualMap = A.dualMap + C.dualMap.comp G.dualMap := by
+    rw [LinearMap.dualMap_add, LinearMap.dualMap_comp_dualMap]
+  have hNestDual : LinearMap.IsHurwitz
+      (nestedQuotientMap (A + G.comp C).dualMap
+        (SstarDualAnnihilator_comap_dualMap C A E G hG)
+        (TgDualAnnihilator_comap_dualMap C A E G hG)) :=
+    isHurwitz_nestedQuotientMap_congr
+      (A.dualMap + C.dualMap.comp G.dualMap) ((A + G.comp C).dualMap)
+      Vd Wd (SstarDualAnnihilator C A E) (TgDualAnnihilator C A E)
+      hdualMap.symm hVd hWd
+      (Submodule.map_le_iff_le_comap.mp hFV')
+      (Submodule.map_le_iff_le_comap.mp hWmap)
+      (SstarDualAnnihilator_comap_dualMap C A E G hG)
+      (TgDualAnnihilator_comap_dualMap C A E G hG)
+      hNestDual0
+  -- Step 3: conjugate through the first-isomorphism bridge to the image model,
+  -- and identify it with the direct dual map `dualNestedQuotientMapInd`.
+  have hImage : LinearMap.IsHurwitz (dualAnnihilatorImageMapInd C A E G hG) := by
+    rw [← dualAnnihilatorImageQuotientEquiv_conj_nestedQuotientMap C A E G hG]
+    exact (isHurwitz_conj_iff (dualAnnihilatorImageQuotientEquiv C A E)
+      (nestedQuotientMap (A + G.comp C).dualMap
+        (SstarDualAnnihilator_comap_dualMap C A E G hG)
+        (TgDualAnnihilator_comap_dualMap C A E G hG))).mpr hNestDual
+  have hDualInd : LinearMap.IsHurwitz
+      (dualNestedQuotientMapInd (A + G.comp C)
+        (Tg_le_Sstar C A E) (Tg_comap_add_comp C A E G hG)
+        (Sstar_comap_add_comp C A E G hG)) := by
+    rw [← dualAnnihilatorImageMapInd_eq_dualNestedQuotientMapInd C A E G hG]
+    exact hImage
+  -- Step 4: transfer Hurwitzness back to the primal nested quotient.
+  refine ⟨G, hG, ?_⟩
+  exact (isHurwitz_SstarTg_nestedQuotient_iff_dualNestedQuotientMapInd C A E G hG).mpr hDualInd
+
+end LinearMap
+
+/-! ## Packaged form for `LinearSystem.observerErrorQuotientMap` -/
+
+namespace LinearSystem
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+omit [FiniteDimensional ℝ Z] in
+/-- **Primal `observerErrorQuotientMap` Hurwitzness from the Corollary 6.22
+output-injection condition.**
+
+Under the second `ExternalStabilizationConditions` condition
+`S*(im E) ∩ Xdet(C, A) ≤ ker H` there exists an output injection
+`G : Y →ₗ[ℝ] X` preserving `S*(im E)` such that, for every state-feedback gain
+`F` preserving `V*(ker H)`, the primal observer-error quotient map
+`observerErrorQuotientMap sys E H F G h hF hG` is Hurwitz. The map is
+independent of `F` up to the invariance certificates, so it is stated for all
+such `F`. -/
+theorem exists_observerErrorQuotientMap_isHurwitz_of_externalStabilizationConditions
+    (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (h : sys.ExternalStabilizationConditions E H) :
+    ∃ G : Y →ₗ[ℝ] X, ∃ hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E,
+      ∀ (F : X →ₗ[ℝ] U)
+        (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H),
+        LinearMap.IsHurwitz (observerErrorQuotientMap sys E H F G h hF hG) := by
+  obtain ⟨G, hG, hNest⟩ :=
+    LinearMap.exists_primalObserverQuotientHurwitz_of_dualCondition sys.C sys.A E H h.2
+  refine ⟨G, hG, fun F hF => ?_⟩
+  have hTgMap : Submodule.map (sys.A + G.comp sys.C) (Tg sys E) ≤ Tg sys E := by
+    intro y hy
+    rcases hy with ⟨x, hx, rfl⟩
+    exact componentInputs_AT sys E H F G h hF hG x hx
+  have hSstarMap : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E := by
+    intro y hy
+    rcases hy with ⟨x, hx, rfl⟩
+    exact componentInputs_AS sys E H F G h hF hG x hx
+  have hNestMapForm : LinearMap.IsHurwitz (LinearMap.nestedQuotientMap (sys.A + G.comp sys.C)
+      (Submodule.map_le_iff_le_comap.mp hTgMap)
+      (Submodule.map_le_iff_le_comap.mp hSstarMap)) :=
+    LinearMap.isHurwitz_nestedQuotientMap_congr
+      (sys.A + G.comp sys.C) (sys.A + G.comp sys.C)
+      (LinearMap.Tg sys.C sys.A E) (LinearMap.Sstar sys.C sys.A E)
+      (Tg sys E) (Sstar sys E)
+      rfl rfl rfl
+      (LinearMap.Tg_comap_add_comp sys.C sys.A E G hG)
+      (LinearMap.Sstar_comap_add_comp sys.C sys.A E G hG)
+      (Submodule.map_le_iff_le_comap.mp hTgMap)
+      (Submodule.map_le_iff_le_comap.mp hSstarMap)
+      hNest
+  have hMap : LinearMap.IsHurwitz
+      (Submodule.mapQ (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+        (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+        ((sys.A + G.comp sys.C).restrict
+          (fun x hx => hSstarMap ⟨x, hx, rfl⟩))
+        (fun x hx => hTgMap ⟨(x : X), hx, rfl⟩)) :=
+    LinearMap.isHurwitz_mapQ_restrict_of_isHurwitz_nestedQuotientMap
+      (sys.A + G.comp sys.C) hTgMap hSstarMap hNestMapForm
+  have hObsEq : observerErrorQuotientMap sys E H F G h hF hG =
+      Submodule.mapQ (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+        (Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E))
+        ((sys.A + G.comp sys.C).restrict
+          (fun x hx => hSstarMap ⟨x, hx, rfl⟩))
+        (fun x hx => hTgMap ⟨(x : X), hx, rfl⟩) := by
+    unfold observerErrorQuotientMap
+    apply LinearMap.ext
+    intro q
+    refine Submodule.Quotient.induction_on
+      (p := Submodule.comap (Submodule.subtype (Sstar sys E)) (Tg sys E)) q ?_
+    intro x
+    rw [Submodule.mapQ_apply]
+    rfl
+  simpa [hObsEq] using hMap
+
+omit [FiniteDimensional ℝ Z] in
+/-- The geometric conditions of Corollary 6.22 suffice for a stable-nonzero
+external response, realized by the observer-based controller. -/
+theorem stableNonzeroExternalResponse_of_externalStabilizationConditions
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (h : sys.ExternalStabilizationConditions E H) :
+    StableNonzeroExternalResponse sys hD E H := by
+  apply stableNonzeroExternalResponse_of_observerQuotient sys hD E H h
+  intro F hF
+  obtain ⟨G, hG, hQ⟩ :=
+    exists_observerErrorQuotientMap_isHurwitz_of_externalStabilizationConditions
+      sys E H h
+  exact ⟨G, hG, hQ F hF⟩
+
+end LinearSystem
