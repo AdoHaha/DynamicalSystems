@@ -12,6 +12,9 @@ import DynamicalSystems.Linear.DisturbanceDecoupling
 import DynamicalSystems.Linear.DynamicFeedback
 import DynamicalSystems.Linear.RealBohlTransport
 import DynamicalSystems.Linear.DynamicFeedbackNecessity
+import DynamicalSystems.Linear.GenericControllerNecessity
+import DynamicalSystems.Linear.ArbitraryControllerResponse
+import DynamicalSystems.Linear.GenericControllerDuality
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -390,6 +393,30 @@ for that controller class.
 {docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse}
 {docstring LinearSystem.stableNonzeroExternalResponse_dual}
 {docstring LinearSystem.stableNonzeroExternalResponse_iff_externalStabilizationConditions}
+
+The first inclusion also holds when the controller state is an arbitrary
+finite-dimensional real space `W`; the generic proof extracts the plant
+trajectory from a closed-loop state in `X × W`. The corresponding generic dual
+response bridge is separate.
+
+{docstring LinearSystem.range_E_le_outputStabilizableSubspace_of_genericStableResponse}
+
+For the book's quantifier over controller order, the controller state space is
+existentially quantified in `AnyStateStableExternalResponse`. The existing
+observer construction gives sufficiency, and the generic first-inclusion
+theorem gives one half of necessity. The second half awaits generic duality.
+
+{docstring LinearSystem.AnyStateStableExternalResponse}
+{docstring LinearSystem.anyStateStableExternalResponse_of_externalStabilizationConditions}
+{docstring LinearSystem.first_inclusion_of_anyStateStableExternalResponse}
+
+For a generic controller state `W`, the closed-loop operator and its
+exponential are conjugate to the primal transposes under the product-dual
+equivalence. The pointwise dual external-response identity remains to be
+assembled from these operator-level results.
+
+{docstring LinearSystem.genericW_closedLoopMap_apply}
+{docstring LinearSystem.genericW_closedLoop_exp_apply}
 
 # Observer duality
 

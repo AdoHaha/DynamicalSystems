@@ -27,6 +27,9 @@ import DynamicalSystems.Linear.DisturbanceDecoupling
 import DynamicalSystems.Linear.DynamicFeedback
 import DynamicalSystems.Linear.RealBohlTransport
 import DynamicalSystems.Linear.DynamicFeedbackNecessity
+import DynamicalSystems.Linear.GenericControllerNecessity
+import DynamicalSystems.Linear.ArbitraryControllerResponse
+import DynamicalSystems.Linear.GenericControllerDuality
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
