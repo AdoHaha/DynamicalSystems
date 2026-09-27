@@ -12866,3 +12866,68 @@ end
 end DualAnnihilatorSpecialization
 
 end LinearMap
+
+/-! ## Final geometric sufficiency reduction -/
+
+namespace LinearSystem
+
+variable {X U Y Z D : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+
+/-- **Final sufficiency reduction.** Given the geometric Corollary 6.22
+conditions `h`, the state-feedback quotient gain is constructed by
+`exists_feedback_isHurwitz_quotient_of_geometricCondition`, and the observer
+primal quotient gain is supplied by the hypothesis `hObs`.  Then the stable
+nonzero external response follows from
+`stableNonzeroExternalResponse_of_geometricQuotients`. -/
+theorem stableNonzeroExternalResponse_of_observerQuotient
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) (E : D →ₗ[ℝ] X)
+    (H : X →ₗ[ℝ] Z) (h : sys.ExternalStabilizationConditions E H)
+    (hObs : ∀ (F : X →ₗ[ℝ] U)
+      (hF : Submodule.map (sys.A + sys.B.comp F) (Vstar sys H) ≤ Vstar sys H),
+      ∃ (G : Y →ₗ[ℝ] X)
+        (hG : Submodule.map (sys.A + G.comp sys.C) (Sstar sys E) ≤ Sstar sys E),
+        LinearMap.IsHurwitz (observerErrorQuotientMap sys E H F G h hF hG)) :
+    StableNonzeroExternalResponse sys hD E H := by
+  have hV : Submodule.map sys.A (Vstar sys H) ≤ Vstar sys H ⊔ LinearMap.range sys.B :=
+    LinearMap.isControlledInvariant_controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
+  obtain ⟨F, ⟨hFV, hQ⟩⟩ :=
+    exists_feedback_isHurwitz_quotient_of_geometricCondition sys.A sys.B (Vstar sys H) hV
+  obtain ⟨G, hG, hGq⟩ := hObs F hFV
+  have hQ' : LinearMap.IsHurwitz
+      (let W : Submodule ℝ X := sys.Vstar H ⊔ LinearMap.stabilizableSubspace sys.A sys.B
+       let hWinv : ∀ x ∈ W, (sys.A + sys.B.comp F) x ∈ W := fun x hx =>
+         map_add_feedback_sup_stabilizableSubspace_le sys.A sys.B F hFV ⟨x, hx, rfl⟩
+       let VW : Submodule ℝ W := Submodule.comap W.subtype (sys.Vstar H)
+       let hmap : ∀ x ∈ VW, ((sys.A + sys.B.comp F).restrict hWinv) x ∈ VW := fun x hx => by
+         change ((sys.A + sys.B.comp F) (x : X)) ∈ sys.Vstar H
+         exact hFV ⟨(x : X), hx, rfl⟩
+       Submodule.mapQ VW VW ((sys.A + sys.B.comp F).restrict hWinv) hmap) :=
+    hQ
+  have hmap_eq : stateFeedbackQuotientMap sys E H F G h hFV hG =
+      (let W : Submodule ℝ X := sys.Vstar H ⊔ LinearMap.stabilizableSubspace sys.A sys.B
+       let hWinv : ∀ x ∈ W, (sys.A + sys.B.comp F) x ∈ W := fun x hx =>
+         map_add_feedback_sup_stabilizableSubspace_le sys.A sys.B F hFV ⟨x, hx, rfl⟩
+       let VW : Submodule ℝ W := Submodule.comap W.subtype (sys.Vstar H)
+       let hmap : ∀ x ∈ VW, ((sys.A + sys.B.comp F).restrict hWinv) x ∈ VW := fun x hx => by
+         change ((sys.A + sys.B.comp F) (x : X)) ∈ sys.Vstar H
+         exact hFV ⟨(x : X), hx, rfl⟩
+       Submodule.mapQ VW VW ((sys.A + sys.B.comp F).restrict hWinv) hmap) := by
+    unfold stateFeedbackQuotientMap
+    apply LinearMap.ext
+    intro y
+    refine Submodule.Quotient.induction_on
+      (p := Submodule.comap (Submodule.subtype (Wg sys H)) (Vstar sys H)) y ?_
+    intro x
+    congr 1
+  have hFq : LinearMap.IsHurwitz (stateFeedbackQuotientMap sys E H F G h hFV hG) := by
+    rw [hmap_eq]
+    exact hQ'
+  exact stableNonzeroExternalResponse_of_geometricQuotients
+    sys hD E H F G h hFV hG hFq hGq
+
+end LinearSystem
