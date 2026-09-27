@@ -5560,6 +5560,36 @@ theorem antistable_readout_forces_unobservable
     simpa [hρ, Hc, L] using hk'
   exact hfinal
 
+/-- **Decay of an autonomous orbit characterizes the Hurwitz subspace.** If
+`t ↦ exp (t A) x` tends to zero, then the unstable component in the
+Hurwitz/unstable spectral decomposition must vanish. This is the identity-readout
+case of `antistable_readout_forces_unobservable`. -/
+theorem orbit_decay_mem_hurwitz (A : X →ₗ[ℝ] X) {x : X}
+    (hdec : Tendsto (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x)
+      atTop (𝓝 0)) :
+    x ∈ hurwitzSubspace A := by
+  have hxmem : x ∈ hurwitzSubspace A ⊔ unstableSubspace A := by
+    rw [hurwitzSubspace_sup_unstableSubspace_eq_top]
+    trivial
+  obtain ⟨xg, hxg, xb, hxb, hxeq⟩ := Submodule.mem_sup.mp hxmem
+  have hgdec := tendsto_exp_restrict_hurwitzSubspace A hxg
+  have hbdec : Tendsto (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) xb)
+      atTop (𝓝 0) := by
+    have hsplit : (fun t : ℝ => NormedSpace.exp (t • A.toContinuousLinearMap) x) =
+        fun t => NormedSpace.exp (t • A.toContinuousLinearMap) xg +
+          NormedSpace.exp (t • A.toContinuousLinearMap) xb := by
+      funext t
+      rw [← hxeq, map_add]
+    have h' := hdec
+    rw [hsplit] at h'
+    simpa using h'.sub hgdec
+  have hunobs : xb ∈ unobservableSubspace (LinearMap.id : X →ₗ[ℝ] X) A :=
+    antistable_readout_forces_unobservable A (LinearMap.id : X →ₗ[ℝ] X) hxb hbdec
+  have hxbot := unobservableSubspace_le_ker (LinearMap.id : X →ₗ[ℝ] X) A hunobs
+  have hxb0 : xb = 0 := by simpa using (mem_ker.mp hxbot)
+  rw [← hxeq, hxb0, add_zero]
+  exact hxg
+
 end RealAntistableReadout
 
 end LinearMap

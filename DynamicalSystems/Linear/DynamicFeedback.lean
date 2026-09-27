@@ -10,6 +10,7 @@ public import DynamicalSystems.Linear.Stabilization
 public import DynamicalSystems.Linear.Trajectory
 public import DynamicalSystems.Linear.Trajectories
 public import Mathlib.MeasureTheory.Integral.ExpDecay
+public import Mathlib.Analysis.Normed.Module.HahnBanach
 
 /-! # Dynamic measurement-feedback: algebraic foundations
 
@@ -4285,6 +4286,7 @@ end GeometricFeedbackConstruction
 
 end LinearSystem
 
+
 /-! ## The dual output-injection (detectable) half: annihilator duality
 
 Corollary 6.22 of Trentelman–Stoorvogel–Hautus pairs the primal state-feedback
@@ -7510,6 +7512,160 @@ variable {X U : Type*}
 variable [NormedAddCommGroup X] [NormedSpace ℝ X]
 variable [NormedAddCommGroup U] [NormedSpace ℝ U]
 
+private theorem map_spectralComplexSubspace_of_intertwining
+    {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y] [FiniteDimensional ℝ Y]
+    [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (T : Y →ₗ[ℝ] Y) (q : X →ₗ[ℝ] Y)
+    (hq : q.comp A = T.comp q) (p : ℂ → Prop) :
+    Submodule.map
+      (Matrix.toLin' (((LinearMap.toMatrix (Module.finBasis ℝ X)
+        (Module.finBasis ℝ Y) q).map (algebraMap ℝ ℂ))))
+      (⨆ μ : {μ : ℂ // p μ}, Module.End.maxGenEigenspace
+        (Matrix.toLin' ((hurwitzMatrix A).map (algebraMap ℝ ℂ))) μ.1) ≤
+      ⨆ μ : {μ : ℂ // p μ}, Module.End.maxGenEigenspace
+        (Matrix.toLin' ((hurwitzMatrix T).map (algebraMap ℝ ℂ))) μ.1 := by
+  let M := LinearMap.toMatrix (Module.finBasis ℝ X) (Module.finBasis ℝ Y) q
+  have hmat : M * hurwitzMatrix A = hurwitzMatrix T * M := by
+    dsimp [M, hurwitzMatrix]
+    rw [← LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ X)
+          (v₂ := Module.finBasis ℝ X) (v₃ := Module.finBasis ℝ Y) q A,
+      hq, LinearMap.toMatrix_comp (v₁ := Module.finBasis ℝ X)
+        (v₂ := Module.finBasis ℝ Y) (v₃ := Module.finBasis ℝ Y) T q]
+  have hmatc : M.map (algebraMap ℝ ℂ) *
+        (hurwitzMatrix A).map (algebraMap ℝ ℂ) =
+      (hurwitzMatrix T).map (algebraMap ℝ ℂ) * M.map (algebraMap ℝ ℂ) := by
+    rw [← Matrix.map_mul, ← Matrix.map_mul, hmat]
+  rw [Submodule.map_iSup]
+  refine iSup_le fun μ => ?_
+  exact le_iSup_of_le μ (map_toLin'_maxGenEigenspace _ _ _ μ.1 hmatc)
+
+private theorem map_hurwitzSubspace_of_intertwining
+    {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y] [FiniteDimensional ℝ Y]
+    [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (T : Y →ₗ[ℝ] Y) (q : X →ₗ[ℝ] Y)
+    (hq : q.comp A = T.comp q) :
+    Submodule.map q (hurwitzSubspace A) ≤ hurwitzSubspace T := by
+  have hmap := map_spectralComplexSubspace_of_intertwining A T q hq (fun μ => μ.re < 0)
+  intro z hz
+  rw [Submodule.mem_map] at hz
+  obtain ⟨x, hx, rfl⟩ := hz
+  rw [mem_hurwitzSubspace] at hx ⊢
+  rw [← ofRealPi_equivFun_toLin'_apply q x]
+  exact hmap ⟨_, hx, rfl⟩
+
+private theorem map_unstableSubspace_of_intertwining
+    {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y] [FiniteDimensional ℝ Y]
+    [FiniteDimensional ℝ X]
+    (A : X →ₗ[ℝ] X) (T : Y →ₗ[ℝ] Y) (q : X →ₗ[ℝ] Y)
+    (hq : q.comp A = T.comp q) :
+    Submodule.map q (unstableSubspace A) ≤ unstableSubspace T := by
+  have hmap := map_spectralComplexSubspace_of_intertwining A T q hq (fun μ => ¬ μ.re < 0)
+  intro z hz
+  rw [Submodule.mem_map] at hz
+  obtain ⟨x, hx, rfl⟩ := hz
+  rw [mem_unstableSubspace] at hx ⊢
+  rw [← ofRealPi_equivFun_toLin'_apply q x]
+  exact hmap ⟨_, hx, rfl⟩
+
+/-- **Hurwitz spectral subspaces pass to the uncontrollable quotient.** The
+quotient map by `reachableSubspace A B` intertwines `A` with
+`quotientReachableA A B`, so it carries negative-real-part generalized modes to
+negative-real-part generalized modes. The closedness assumption supplies the
+normed quotient required by the Hurwitz-subspace definition. -/
+theorem map_hurwitzSubspace_quotientReachable_le
+    [FiniteDimensional ℝ X] (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    [IsClosed (reachableSubspace A B : Set X)] :
+    Submodule.map (reachableSubspace A B).mkQ (hurwitzSubspace A) ≤
+      hurwitzSubspace (quotientReachableA A B) := by
+  let R := reachableSubspace A B
+  let Aq : (X ⧸ R) →ₗ[ℝ] (X ⧸ R) := R.mapQ R A
+    ((Submodule.map_le_iff_le_comap).mp (map_reachableSubspace_le A B))
+  have hR : R ≤ R.comap A := fun x hx => map_reachableSubspace_le A B ⟨x, hx, rfl⟩
+  have hq : R.mkQ.comp A = Aq.comp R.mkQ := by
+    ext x
+    exact (congrFun (congrArg DFunLike.coe
+      (Submodule.mapQ_mkQ R R A (h := hR))) x).symm
+  exact map_hurwitzSubspace_of_intertwining A Aq R.mkQ hq
+
+/-- **Unstable spectral subspaces pass to the uncontrollable quotient.** This is
+the closed-right-half-plane counterpart of
+`map_hurwitzSubspace_quotientReachable_le`. -/
+theorem map_unstableSubspace_quotientReachable_le
+    [FiniteDimensional ℝ X] (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    [IsClosed (reachableSubspace A B : Set X)] :
+    Submodule.map (reachableSubspace A B).mkQ (unstableSubspace A) ≤
+      unstableSubspace (quotientReachableA A B) := by
+  let R := reachableSubspace A B
+  let Aq : (X ⧸ R) →ₗ[ℝ] (X ⧸ R) := R.mapQ R A
+    ((Submodule.map_le_iff_le_comap).mp (map_reachableSubspace_le A B))
+  have hR : R ≤ R.comap A := fun x hx => map_reachableSubspace_le A B ⟨x, hx, rfl⟩
+  have hq : R.mkQ.comp A = Aq.comp R.mkQ := by
+    ext x
+    exact (congrFun (congrArg DFunLike.coe
+      (Submodule.mapQ_mkQ R R A (h := hR))) x).symm
+  exact map_unstableSubspace_of_intertwining A Aq R.mkQ hq
+
+/-- **The stable quotient lifts to the stabilizable subspace.** The preimage
+under the uncontrollable quotient map of its Hurwitz subspace is exactly the
+sum of the original Hurwitz subspace and the reachable subspace, i.e. the
+stabilizable subspace `Xstab(A, B)`. -/
+theorem comap_hurwitzSubspace_quotientReachable_eq
+    [FiniteDimensional ℝ X] (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    [IsClosed (reachableSubspace A B : Set X)] :
+    Submodule.comap (reachableSubspace A B).mkQ
+      (hurwitzSubspace (quotientReachableA A B)) =
+      hurwitzSubspace A ⊔ reachableSubspace A B := by
+  apply le_antisymm
+  · let R := reachableSubspace A B
+    let Aq : (X ⧸ R) →ₗ[ℝ] (X ⧸ R) := R.mapQ R A
+      ((Submodule.map_le_iff_le_comap).mp (map_reachableSubspace_le A B))
+    intro x hx
+    have hxQ : R.mkQ x ∈ hurwitzSubspace Aq := by
+      simpa [Aq, quotientReachableA, R] using hx
+    have hxsplit : x ∈ hurwitzSubspace A ⊔ unstableSubspace A := by
+      rw [hurwitzSubspace_sup_unstableSubspace_eq_top]
+      trivial
+    obtain ⟨xg, hxg, xb, hxb, hsum⟩ := Submodule.mem_sup.mp hxsplit
+    have hxgQ : R.mkQ xg ∈ hurwitzSubspace Aq := by
+      have h := map_hurwitzSubspace_quotientReachable_le A B ⟨xg, hxg, rfl⟩
+      simpa [Aq, quotientReachableA, R] using h
+    have hxbQ_unstable : R.mkQ xb ∈ unstableSubspace Aq := by
+      have h := map_unstableSubspace_quotientReachable_le A B ⟨xb, hxb, rfl⟩
+      simpa [Aq, quotientReachableA, R] using h
+    have hsumQ : R.mkQ xg + R.mkQ xb = R.mkQ x := by
+      rw [← hsum, map_add]
+    have hxbQ_hurwitz : R.mkQ xb ∈ hurwitzSubspace Aq := by
+      have hsub := (hurwitzSubspace Aq).sub_mem hxQ hxgQ
+      have heq : R.mkQ xb = R.mkQ x - R.mkQ xg := by
+        calc
+          R.mkQ xb = R.mkQ xg + R.mkQ xb - R.mkQ xg := by abel
+          _ = R.mkQ x - R.mkQ xg := by rw [hsumQ]
+      rw [heq]
+      exact hsub
+    have hxbQ_bot : R.mkQ xb = 0 := by
+      have hmem : R.mkQ xb ∈ hurwitzSubspace Aq ⊓ unstableSubspace Aq :=
+        ⟨hxbQ_hurwitz, hxbQ_unstable⟩
+      have hdisj := disjoint_iff.mp (disjoint_hurwitzSubspace_unstableSubspace Aq)
+      rw [hdisj] at hmem
+      simpa using hmem
+    have hxbR : xb ∈ R := by
+      rw [← Submodule.ker_mkQ R]
+      exact hxbQ_bot
+    exact Submodule.mem_sup.mpr ⟨xg, hxg, xb, hxbR, hsum⟩
+  · intro x hx
+    rw [Submodule.mem_comap]
+    rw [Submodule.mem_sup] at hx
+    obtain ⟨xg, hxg, xr, hxr, hsum⟩ := hx
+    rw [← hsum, map_add]
+    have hxgQ : (reachableSubspace A B).mkQ xg ∈
+        hurwitzSubspace (quotientReachableA A B) :=
+      map_hurwitzSubspace_quotientReachable_le A B ⟨xg, hxg, rfl⟩
+    have hxrQ : (reachableSubspace A B).mkQ xr = 0 := by
+      rw [Submodule.mkQ_apply]
+      exact (Submodule.Quotient.mk_eq_zero _).mpr hxr
+    rw [hxrQ, add_zero]
+    exact hxgQ
+
 /-- **Laplace/transfer non-cancellation at an uncontrollable eigenmode.** Let
 `ρ : X →L[ℝ] ℂ` be a complex left eigenfunctional of `A` at the mode `lam`,
 `ρ (A y) = lam * ρ y`, and suppose `ρ` annihilates the input channel,
@@ -7715,6 +7871,463 @@ theorem isExponentialPolynomial_iff {f : ℝ → X} :
         ∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
           (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) := Iff.rfl
 
+/-- Coefficients in a finite exponential-polynomial representation are unique:
+if the represented function is zero, every polynomial coefficient at every
+frequency in the support is zero. The proof shifts all frequencies by one common
+real scalar into the closed right half-plane, then applies
+`LinearMap.tendsto_zero_of_sum_exp_polynomial`. -/
+theorem exponentialPolynomial_coefficients_eq_zero_of_eq_zero
+    (s : Finset ℂ) (D : ℕ) (a : ℂ → ℕ → X)
+    (hzero : ∀ t : ℝ, ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) = 0) :
+    ∀ μ ∈ s, ∀ k ≤ D, a μ k = 0 := by
+  classical
+  let R : ℝ := ∑ μ ∈ s, ‖μ‖
+  have hR_dom : ∀ μ ∈ s, ‖μ‖ ≤ R := by
+    intro μ hμ
+    dsimp [R]
+    exact Finset.single_le_sum (fun ν hν => norm_nonneg (ν : ℂ)) hμ
+  have hμ_nonneg : ∀ μ ∈ s, 0 ≤ (μ + (R : ℂ)).re := by
+    intro μ hμ
+    have hRe : -‖μ‖ ≤ μ.re := (abs_le.mp (Complex.abs_re_le_norm μ)).1
+    have hReR : 0 ≤ μ.re + R := by linarith [hR_dom μ hμ]
+    simpa using hReR
+  have hshift (t : ℝ) :
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * (μ + (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+      Complex.exp ((t : ℂ) * (R : ℂ)) •
+        (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) := by
+    rw [Finset.smul_sum]
+    apply Finset.sum_congr rfl
+    intro μ hμ
+    rw [show (t : ℂ) * (μ + (R : ℂ)) = (t : ℂ) * (R : ℂ) + (t : ℂ) * μ by ring,
+      Complex.exp_add, mul_smul]
+  have hshift_zero : ∀ t : ℝ,
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * (μ + (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k) = 0 := by
+    intro t
+    rw [hshift t, hzero t, smul_zero]
+  apply LinearMap.tendsto_zero_of_sum_exp_polynomial s
+    (fun μ => μ + (R : ℂ)) (fun μ hμ => hμ_nonneg μ hμ)
+    (by
+      intro μ hμ ν hν h
+      exact add_right_cancel h)
+    D a
+  have hfun : (fun t : ℝ =>
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * (μ + (R : ℂ))) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) = fun _ => (0 : X) := by
+    funext t
+    exact hshift_zero t
+  rw [hfun]
+  exact tendsto_const_nhds
+
+/-- Two finite exponential-polynomial representations with the same distinct
+frequency set and degree bound have equal coefficients when they agree at every
+time. This is the algebraic coefficient-comparison step used after expanding a
+finite-dimensional ODE into exponential-polynomial form. -/
+theorem exponentialPolynomial_coefficients_eq_of_eq
+    (s : Finset ℂ) (D : ℕ) (a b : ℂ → ℕ → X)
+    (heq : ∀ t : ℝ,
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) :
+    ∀ μ ∈ s, ∀ k ≤ D, a μ k = b μ k := by
+  have hzero : ∀ t : ℝ,
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • (a μ k - b μ k)) = 0 := by
+    intro t
+    rw [show
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • (a μ k - b μ k))) =
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) -
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) by
+        simp only [smul_sub, Finset.sum_sub_distrib]]
+    rw [sub_eq_zero.mpr (heq t)]
+  have hcoeff := exponentialPolynomial_coefficients_eq_zero_of_eq_zero
+    s D (fun μ k => a μ k - b μ k) hzero
+  intro μ hμ k hk
+  exact sub_eq_zero.mp (hcoeff μ hμ k hk)
+
+/-- Derivative of a finite vector-valued polynomial, before reindexing its
+coefficients into the usual degree convention. -/
+lemma hasDerivAt_sum_pow_smul (a : ℕ → X) (D : ℕ) (t : ℝ) :
+    HasDerivAt (fun r : ℝ =>
+      ∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a k)
+      (∑ k ∈ Finset.range (D + 1),
+        (((k : ℂ) * (t : ℂ) ^ (k - 1)) • a k)) t := by
+  have h := HasDerivAt.sum (u := Finset.range (D + 1))
+    (A := fun k (r : ℝ) => (r : ℂ) ^ k • a k)
+    (A' := fun k => ((k : ℂ) * (t : ℂ) ^ (k - 1)) • a k)
+    (fun k _ => by
+      have hpow := (hasDerivAt_pow k (t : ℂ)).comp_ofReal
+      have hpow' : HasDerivAt (fun r : ℝ => (r : ℂ) ^ k)
+          ((k : ℂ) * (t : ℂ) ^ (k - 1)) t := by
+        simpa using hpow
+      exact hpow'.smul_const (a k))
+  convert h using 1
+  ext r
+  simp only [Finset.sum_apply]
+
+/-- Reindex the polynomial derivative into ordinary nonnegative powers. The
+coefficient at degree `D + 1` is padded by zero. -/
+lemma sum_pow_smul_derivative_reindex (a : ℕ → X) (D : ℕ) (t : ℝ)
+    (hpad : a (D + 1) = 0) :
+    (∑ k ∈ Finset.range (D + 1),
+      (((k : ℂ) * (t : ℂ) ^ (k - 1)) • a k)) =
+    ∑ k ∈ Finset.range (D + 1),
+      (t : ℂ) ^ k • ((k + 1 : ℂ) • a (k + 1)) := by
+  have hraw :
+      (∑ k ∈ Finset.range (D + 1),
+        (((k : ℂ) * (t : ℂ) ^ (k - 1)) • a k)) =
+      ∑ k ∈ Finset.range D, (((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1) := by
+    rw [Finset.sum_range_succ']
+    simp only [Nat.cast_zero, zero_mul, zero_smul, pow_zero, one_mul]
+    rw [add_zero]
+    apply Finset.sum_congr rfl
+    intro k hk
+    congr 1
+  calc
+    _ = ∑ k ∈ Finset.range D, (((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1) := hraw
+    _ = ∑ k ∈ Finset.range D,
+      (t : ℂ) ^ k • ((k + 1 : ℂ) • a (k + 1)) := by
+      apply Finset.sum_congr rfl
+      intro k hk
+      calc
+        (((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1) =
+            ((t : ℂ) ^ k * ((k + 1 : ℕ) : ℂ)) • a (k + 1) := by rw [mul_comm]
+        _ = (t : ℂ) ^ k • (((k + 1 : ℕ) : ℂ) • a (k + 1)) := by rw [smul_smul]
+      simpa only [Nat.cast_add, Nat.cast_one]
+    _ = ∑ k ∈ Finset.range (D + 1),
+          (t : ℂ) ^ k • ((k + 1 : ℂ) • a (k + 1)) := by
+      apply Finset.sum_subset (Finset.range_mono (Nat.le_succ D))
+      intro k hk hknot
+      have hlt : k < D + 1 := Finset.mem_range.mp hk
+      have hnot : ¬ k < D := by simpa [Finset.mem_range] using hknot
+      have hkd : k = D := by omega
+      subst k
+      simp [hpad]
+
+/-- Derivative of one exponential times a vector-valued polynomial. The derivative
+coefficients use a terminal-zero convention at the top degree. -/
+lemma hasDerivAt_exp_mul_sum_pow_smul (a : ℕ → X) (D : ℕ) (μ : ℂ) (t : ℝ) :
+    HasDerivAt (fun r : ℝ => Complex.exp ((r : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a k))
+      (Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+          (μ • a k + if k < D then ((k + 1 : ℕ) : ℂ) • a (k + 1) else 0))) t := by
+  let P : X := ∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a k
+  let Q : X := ∑ k ∈ Finset.range D,
+    ((((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1))
+  have hcoef :
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+        (μ • a k + if k < D then ((k + 1 : ℕ) : ℂ) • a (k + 1) else 0)) =
+      μ • P + Q := by
+    dsimp [P, Q]
+    rw [show (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+        (μ • a k + if k < D then ((k + 1 : ℕ) : ℂ) • a (k + 1) else 0)) =
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • (μ • a k)) +
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+          (if k < D then ((k + 1 : ℕ) : ℂ) • a (k + 1) else 0)) by
+          simp only [smul_add, Finset.sum_add_distrib]]
+    rw [show (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • (μ • a k)) =
+        μ • (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a k) by
+          rw [Finset.smul_sum]
+          apply Finset.sum_congr rfl
+          intro k hk
+          rw [smul_smul, smul_smul, mul_comm]]
+    rw [show (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+        (if k < D then ((k + 1 : ℕ) : ℂ) • a (k + 1) else 0)) =
+        ∑ k ∈ Finset.range D, ((((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1)) by
+          rw [Finset.sum_range_succ]
+          have hlast : ¬ D < D := Nat.lt_irrefl D
+          simp only [hlast, if_false, smul_zero, add_zero]
+          apply Finset.sum_congr rfl
+          intro k hk
+          have hlt : k < D := Finset.mem_range.mp hk
+          rw [if_pos hlt]
+          simp [smul_smul, mul_comm]]
+  have hExp : HasDerivAt (fun r : ℝ => Complex.exp ((r : ℂ) * μ))
+      (μ * Complex.exp ((t : ℂ) * μ)) t := by
+    have hmul : HasDerivAt (fun z : ℂ => z * μ) μ (t : ℂ) := by
+      simpa using (hasDerivAt_id (t : ℂ)).mul_const μ
+    simpa [mul_comm] using
+      ((Complex.hasDerivAt_exp ((t : ℂ) * μ)).comp (t : ℂ) hmul).comp_ofReal
+  have hpoly : HasDerivAt (fun r : ℝ =>
+      ∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a k) Q t := by
+    have h := HasDerivAt.fun_sum (u := Finset.range (D + 1)) (fun k hk =>
+      (hasDerivAt_pow k (t : ℂ)).comp_ofReal |>.smul_const (a k))
+    dsimp [Q]
+    convert h using 1
+    rw [Finset.sum_range_succ']
+    simp [Nat.cast_succ, add_comm]
+  have h := hExp.smul hpoly
+  convert h using 1
+  · funext r
+    rfl
+  · rw [hcoef]
+    simp only [smul_add]
+    rw [add_comm]
+    congr 1
+    rw [smul_smul]
+    congr 1
+    ring
+
+/-- Differentiate a finite exponential-polynomial representation, preserving
+its frequency support and degree bound. -/
+lemma hasDerivAt_sum_exp_mul_sum_pow_smul (s : Finset ℂ) (D : ℕ)
+    (a : ℂ → ℕ → X) (t : ℝ) :
+    HasDerivAt (fun r : ℝ =>
+      ∑ μ ∈ s, Complex.exp ((r : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k))
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+          (μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0))) t := by
+  have h := HasDerivAt.sum (u := s)
+    (A := fun μ (r : ℝ) => Complex.exp ((r : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k))
+    (A' := fun μ => Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+        (μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0)))
+    (fun μ _ => hasDerivAt_exp_mul_sum_pow_smul (a μ) D μ t)
+  convert h using 1
+  ext r
+  simp only [Finset.sum_apply]
+
+/-- Comparing a represented trajectory's ODE with its finite exponential-
+polynomial derivative gives the usual coefficientwise ODE recurrence. At the
+top degree the shifted coefficient is interpreted as zero. -/
+theorem exponentialPolynomial_ode_coefficient_recurrence (s : Finset ℂ) (D : ℕ)
+    (A : X →ₗ[ℂ] X) (a b : ℂ → ℕ → X)
+    (hode : ∀ t : ℝ, HasDerivAt
+      (fun r : ℝ =>
+        ∑ μ ∈ s, Complex.exp ((r : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k))
+      (A (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) +
+        (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k))) t) :
+    ∀ μ ∈ s, ∀ k ≤ D,
+      A (a μ k) + b μ k =
+        μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0 := by
+  let x (t : ℝ) : X :=
+    ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+  let c (μ : ℂ) (k : ℕ) : X :=
+    A (a μ k) + b μ k
+  have hrepr (t : ℝ) : A (x t) +
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) =
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • c μ k) := by
+    dsimp [x, c]
+    simp only [map_sum, map_smul, smul_add, Finset.sum_add_distrib]
+  have heq : ∀ t : ℝ,
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+          (μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0))) =
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • c μ k) := by
+    intro t
+    have hderiv := (hasDerivAt_sum_exp_mul_sum_pow_smul s D a t).deriv
+    calc
+      _ = deriv x t := hderiv.symm
+      _ = A (x t) +
+          (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) := (hode t).deriv
+      _ = _ := hrepr t
+  have hcoeff := exponentialPolynomial_coefficients_eq_of_eq s D
+    (fun μ k => μ • a μ k +
+      if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) c heq
+  intro μ hμ k hk
+  exact (hcoeff μ hμ k hk).symm
+
+/-- A coefficientwise ODE recurrence survives any frequency projection. In
+particular, filtering to stable or antistable frequencies produces forced
+trajectories satisfying their projected ODEs pointwise. -/
+theorem filtered_exponentialPolynomial_hasDerivAt_of_recurrence
+    (A : X →ₗ[ℂ] X)
+    (s tfilter : Finset ℂ) (D : ℕ) (a b : ℂ → ℕ → X)
+    (hrec : ∀ μ ∈ s, ∀ k ≤ D,
+      A (a μ k) + b μ k =
+        μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0)
+    (t : ℝ) :
+    HasDerivAt
+      (fun r : ℝ =>
+        ∑ μ ∈ s, if μ ∈ tfilter then
+          Complex.exp ((r : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k)
+          else 0)
+      (A (∑ μ ∈ s, if μ ∈ tfilter then
+          Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+          else 0) +
+        (∑ μ ∈ s, if μ ∈ tfilter then
+          Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)
+          else 0)) t := by
+  classical
+  let a' : ℂ → ℕ → X := fun μ k => if μ ∈ tfilter then a μ k else 0
+  let b' : ℂ → ℕ → X := fun μ k => if μ ∈ tfilter then b μ k else 0
+  have hrec' : ∀ μ ∈ s, ∀ k ≤ D,
+      A (a' μ k) + b' μ k =
+        μ • a' μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a' μ (k + 1) else 0 := by
+    intro μ hμ k hk
+    by_cases hμf : μ ∈ tfilter
+    · simp [a', b', hμf, hrec μ hμ k hk]
+    · simp [a', b', hμf]
+  let x : ℝ → X := fun r =>
+    ∑ μ ∈ s, Complex.exp ((r : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a' μ k)
+  let g : ℝ → X := fun r =>
+    ∑ μ ∈ s, Complex.exp ((r : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • b' μ k)
+  have hx : ∀ r : ℝ,
+      x r = ∑ μ ∈ s, if μ ∈ tfilter then
+        Complex.exp ((r : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k)
+        else 0 := by
+    intro r
+    simp [x, a']
+  have hg : ∀ r : ℝ,
+      g r = ∑ μ ∈ s, if μ ∈ tfilter then
+        Complex.exp ((r : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • b μ k)
+        else 0 := by
+    intro r
+    simp [g, b']
+  have hcalc := hasDerivAt_sum_exp_mul_sum_pow_smul s D a' t
+  have hmatch :
+      (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+          (μ • a' μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a' μ (k + 1) else 0))) =
+      A (x t) + g t := by
+    rw [show A (x t) + g t =
+        ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k •
+            (A (a' μ k) + b' μ k)) by
+          simp only [x, g, map_sum, map_smul, smul_add, Finset.sum_add_distrib]]
+    apply Finset.sum_congr rfl
+    intro μ hμ
+    congr 1
+    apply Finset.sum_congr rfl
+    intro k hk
+    have hkD : k ≤ D := by
+      have := Finset.mem_range.mp hk
+      omega
+    rw [hrec' μ hμ k hkD]
+  have hcalc' := hcalc.congr_deriv hmatch
+  have hfun :
+      (fun r : ℝ =>
+        ∑ μ ∈ s, if μ ∈ tfilter then
+          Complex.exp ((r : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (r : ℂ) ^ k • a μ k)
+          else 0) = x := by
+    funext r
+    rw [hx r]
+  have hx_t := hx t
+  have hg_t := hg t
+  rw [hfun, ← hx_t, ← hg_t]
+  exact hcalc'
+
+/-- The coefficients of an antistable finite exponential-polynomial trajectory
+span a controlled-invariant subspace in the output kernel whenever the forcing
+coefficients lie in the input image. The output map here is explicitly complex
+linear; this lemma does not perform real-to-complex output complexification. -/
+theorem exponentialPolynomial_coeff_span_controlledInvariant
+    {U Z : Type*} [AddCommGroup U] [Module ℂ U]
+    [AddCommGroup Z] [Module ℂ Z]
+    (s : Finset ℂ) (D : ℕ) (A : X →ₗ[ℂ] X) (B : U →ₗ[ℂ] X)
+    (H : X →ₗ[ℂ] Z) (a b : ℂ → ℕ → X)
+    (_hfreq : ∀ μ ∈ s, 0 ≤ μ.re)
+    (hforce : ∀ μ ∈ s, ∀ k ≤ D, b μ k ∈ LinearMap.range B)
+    (hrec : ∀ μ ∈ s, ∀ k ≤ D,
+      A (a μ k) + b μ k =
+        μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0)
+    (houtput : ∀ μ ∈ s, ∀ k ≤ D, H (a μ k) = 0) :
+    ∃ S : Submodule ℂ X,
+      S ≤ LinearMap.ker H ∧ LinearMap.IsControlledInvariant A B S := by
+  classical
+  let S : Submodule ℂ X := Submodule.span ℂ
+    {x | ∃ μ ∈ s, ∃ k ≤ D, x = a μ k}
+  have hSker : S ≤ LinearMap.ker H := by
+    apply Submodule.span_le.mpr
+    intro x hx
+    obtain ⟨μ, hμ, k, hk, rfl⟩ := hx
+    exact houtput μ hμ k hk
+  have hSmap : ∀ x ∈ S, A x ∈ S ⊔ LinearMap.range B := by
+    intro x hx
+    dsimp [S] at hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · intro x hx
+      obtain ⟨μ, hμ, k, hk, rfl⟩ := hx
+      have hcoeff := hrec μ hμ k hk
+      have ha : a μ k ∈ S := Submodule.subset_span ⟨μ, hμ, k, hk, rfl⟩
+      have hshift :
+          (μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) ∈ S := by
+        by_cases hlt : k < D
+        · have hk' : k + 1 ≤ D := by omega
+          have ha' : a μ (k + 1) ∈ S :=
+            Submodule.subset_span ⟨μ, hμ, k + 1, hk', rfl⟩
+          simpa [hlt] using S.add_mem (S.smul_mem μ ha)
+            (S.smul_mem ((k + 1 : ℕ) : ℂ) ha')
+        · simpa [hlt] using S.smul_mem μ ha
+      have hb : b μ k ∈ S ⊔ LinearMap.range B :=
+        Submodule.mem_sup.mpr ⟨0, S.zero_mem, b μ k, hforce μ hμ k hk, by simp⟩
+      have hrhs :
+          (μ • a μ k +
+            if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) ∈
+              S ⊔ LinearMap.range B :=
+        Submodule.mem_sup.mpr ⟨_, hshift, 0, (LinearMap.range B).zero_mem, by simp⟩
+      have hAeq : A (a μ k) =
+          (μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) - b μ k := by
+        calc
+          A (a μ k) = A (a μ k) + b μ k - b μ k := by abel
+          _ = (μ • a μ k +
+              if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) - b μ k := by
+            rw [hcoeff]
+      rw [hAeq]
+      exact Submodule.sub_mem _ hrhs hb
+    · simpa using (S ⊔ LinearMap.range B).zero_mem
+    · intro x y _ _ hx hy
+      simpa only [map_add] using (S ⊔ LinearMap.range B).add_mem hx hy
+    · intro c x _ hx
+      simpa only [map_smul] using (S ⊔ LinearMap.range B).smul_mem c hx
+  refine ⟨S, hSker, ?_⟩
+  rw [LinearMap.isControlledInvariant_iff, Submodule.map_le_iff_le_comap]
+  exact hSmap
+
+/-- If a finite exponential-polynomial signal takes all its values in a
+finite-dimensional complex subspace, then every coefficient in its chosen
+representation lies in that subspace. This lets one lift the coefficients of a
+range-valued Bohl forcing through its input map. -/
+theorem exponentialPolynomial_coefficients_mem_submodule
+    [FiniteDimensional ℂ X] (S : Submodule ℂ X) (s : Finset ℂ) (D : ℕ)
+    (a : ℂ → ℕ → X)
+    (hval : ∀ t : ℝ, (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+      (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) ∈ S) :
+    ∀ μ ∈ s, ∀ k ≤ D, a μ k ∈ S := by
+  classical
+  letI : IsClosed (S : Set X) := S.closed_of_finiteDimensional
+  let q : X →ₗ[ℂ] X ⧸ S := S.mkQ
+  have hqzero : ∀ t : ℝ,
+      ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • q (a μ k)) = 0 := by
+    intro t
+    have hqt : q (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) = 0 := by
+      change (Submodule.Quotient.mk _) = 0
+      exact (Submodule.Quotient.mk_eq_zero S).2 (hval t)
+    simpa only [map_sum, map_smul] using hqt
+  have hcoeff := exponentialPolynomial_coefficients_eq_zero_of_eq_zero
+    s D (fun μ k => q (a μ k)) hqzero
+  intro μ hμ k hk
+  exact (Submodule.Quotient.mk_eq_zero S).1 (by
+    simpa only [q, Submodule.mkQ_apply] using hcoeff μ hμ k hk)
+
 /-- Every Bohl mode is an exponential polynomial. -/
 theorem IsBohlMode.isExponentialPolynomial {f : ℝ → X} (hf : IsBohlMode f) :
     IsExponentialPolynomial f := by
@@ -7812,6 +8425,83 @@ theorem IsExponentialPolynomial.add {f g : ℝ → X}
     rw [h1]
     exact Finset.sum_subset Finset.subset_union_right
       (fun μ _ hμnot => by simp [hμnot])
+
+/-- **Align two finite exponential-polynomial representations.** Any pair of
+finite Bohl signals can be represented on the same frequency support and with
+the same polynomial degree bound. This is useful when comparing the ODE
+coefficients of a state trajectory and its forcing. -/
+theorem IsExponentialPolynomial.exists_common_representation {f g : ℝ → X}
+    (hf : IsExponentialPolynomial f) (hg : IsExponentialPolynomial g) :
+    ∃ (s : Finset ℂ) (D : ℕ) (a b : ℂ → ℕ → X),
+      (∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) ∧
+      (∀ t, g t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) := by
+  obtain ⟨s, D, a, hf⟩ := hf
+  obtain ⟨s', E, b, hg⟩ := hg
+  refine ⟨s ∪ s', max D E,
+    (fun μ k => if μ ∈ s then (if k ≤ D then a μ k else 0) else 0),
+    (fun μ k => if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0), ?_, ?_⟩
+  · intro t
+    rw [hf t]
+    have h1 : (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+        ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0)) := by
+      apply Finset.sum_congr rfl
+      intro μ hμ
+      congr 1
+      simp only [ite_eq_left hμ]
+      exact (sum_range_smul_ite D E ((t : ℂ)) (a μ)).symm
+    rw [h1]
+    exact Finset.sum_subset Finset.subset_union_left
+      (fun μ _ hμnot => by simp [hμnot])
+  · intro t
+    rw [hg t]
+    have h1 : (∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (E + 1), (t : ℂ) ^ k • b μ k)) =
+        ∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0)) := by
+      apply Finset.sum_congr rfl
+      intro μ hμ
+      congr 1
+      simp only [ite_eq_left hμ]
+      exact (sum_range_smul_ite' D E ((t : ℂ)) (b μ)).symm
+    rw [h1]
+    exact Finset.sum_subset Finset.subset_union_right
+      (fun μ _ hμnot => by simp [hμnot])
+
+/-- **Coefficient recurrence for an ODE with finite-Bohl state and forcing.**
+After aligning the two finite representations, the pointwise equation
+`f' = A f + r` yields its coefficientwise polynomial-exponential recurrence.
+The common-support result is important: independent representations of `f` and
+`r` need not initially use the same frequencies or degree bound. -/
+theorem IsExponentialPolynomial.exists_ode_coefficient_recurrence
+    {f r : ℝ → X} (hf : IsExponentialPolynomial f) (hr : IsExponentialPolynomial r)
+    (A : X →ₗ[ℂ] X)
+    (hode : ∀ t, HasDerivAt f (A (f t) + r t) t) :
+    ∃ (s : Finset ℂ) (D : ℕ) (a b : ℂ → ℕ → X),
+      (∀ t, f t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) ∧
+      (∀ t, r t = ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+        (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)) ∧
+      (∀ μ ∈ s, ∀ k ≤ D,
+        A (a μ k) + b μ k =
+          μ • a μ k + if k < D then ((k + 1 : ℕ) : ℂ) • a μ (k + 1) else 0) := by
+  obtain ⟨s, D, a, b, hfrepr, hrrepr⟩ := hf.exists_common_representation hr
+  let F : ℝ → X := fun t => ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+    (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)
+  let G : ℝ → X := fun t => ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+    (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • b μ k)
+  have hF : f = F := funext fun t => hfrepr t
+  have hG : r = G := funext fun t => hrrepr t
+  have hode' : ∀ t, HasDerivAt F (A (F t) + G t) t := by
+    intro t
+    simpa [F, G, hF, hG] using hode t
+  refine ⟨s, D, a, b, hfrepr, hrrepr, ?_⟩
+  exact exponentialPolynomial_ode_coefficient_recurrence s D A a b hode'
 
 theorem IsExponentialPolynomial.smul (c : ℂ) {f : ℝ → X}
     (hf : IsExponentialPolynomial f) : IsExponentialPolynomial (c • f) := by
@@ -8717,6 +9407,164 @@ theorem IsExponentialPolynomial.map_realLinear [FiniteDimensional ℂ X]
   funext t
   exact (complexLinearPart_add_antilinearPart T.toLinearMap (f t)).symm
 
+/-- The antistable finite-Bohl class is closed under addition. The union support
+combines coincident frequencies, and the degree is padded to the larger bound. -/
+theorem IsAntistableBohlSignal.add {f g : ℝ → X}
+    (hf : IsAntistableBohlSignal f) (hg : IsAntistableBohlSignal g) :
+    IsAntistableBohlSignal (f + g) := by
+  obtain ⟨s, D, a, hfreq, hf⟩ := hf
+  obtain ⟨s', E, b, hfreq', hg⟩ := hg
+  refine ⟨s ∪ s', max D E,
+    fun μ k => (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0) +
+      (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0), ?_, ?_⟩
+  · intro μ hμ
+    rcases Finset.mem_union.mp hμ with hs | hs'
+    · exact hfreq μ hs
+    · exact hfreq' μ hs'
+  · intro t
+    rw [Pi.add_apply, hf t, hg t]
+    have hsplit :
+        (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            ((if μ ∈ s then (if k ≤ D then a μ k else 0) else 0) +
+              (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0)))) =
+        (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0))) +
+        (∑ μ ∈ s ∪ s', Complex.exp ((t : ℂ) * μ) •
+          (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+            (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0))) := by
+      simp only [smul_add, Finset.sum_add_distrib]
+    rw [hsplit]
+    congr 1
+    · have h1 :
+        (∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (D + 1), (t : ℂ) ^ k • a μ k)) =
+          ∑ μ ∈ s, Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+              (if μ ∈ s then (if k ≤ D then a μ k else 0) else 0)) := by
+        apply Finset.sum_congr rfl
+        intro μ hμ
+        congr 1
+        simp only [ite_eq_left hμ]
+        exact (sum_range_smul_ite D E (t : ℂ) (a μ)).symm
+      rw [h1]
+      exact Finset.sum_subset Finset.subset_union_left
+        (fun μ _ hμnot => by simp [hμnot])
+    · have h1 :
+        (∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (E + 1), (t : ℂ) ^ k • b μ k)) =
+          ∑ μ ∈ s', Complex.exp ((t : ℂ) * μ) •
+            (∑ k ∈ Finset.range (max D E + 1), (t : ℂ) ^ k •
+              (if μ ∈ s' then (if k ≤ E then b μ k else 0) else 0)) := by
+        apply Finset.sum_congr rfl
+        intro μ hμ
+        congr 1
+        simp only [ite_eq_left hμ]
+        exact (sum_range_smul_ite' D E (t : ℂ) (b μ)).symm
+      rw [h1]
+      exact Finset.sum_subset Finset.subset_union_right
+        (fun μ _ hμnot => by simp [hμnot])
+
+/-- A complex-linear map preserves both the finite-Bohl representation and its
+closed-right-half-plane support. -/
+theorem IsAntistableBohlSignal.map {f : ℝ → X} (T : X →ₗ[ℂ] Y)
+    (hf : IsAntistableBohlSignal f) :
+    IsAntistableBohlSignal (fun t ↦ T (f t)) := by
+  obtain ⟨s, D, a, hfreq, hf⟩ := hf
+  refine ⟨s, D, fun μ k => T (a μ k), hfreq, fun t => ?_⟩
+  change T (f t) = _
+  rw [hf t, map_sum]
+  apply Finset.sum_congr rfl
+  intro μ hμ
+  rw [map_smul, map_sum]
+  congr 1
+  apply Finset.sum_congr rfl
+  intro k hk
+  rw [map_smul]
+
+/-- An antilinear map preserves antistability because complex conjugation leaves
+the real part of every frequency unchanged. -/
+theorem IsAntistableBohlSignal.map_antilinear' {M : X →ₗ[ℝ] Y}
+    (hM : ∀ (c : ℂ) (x : X), M (c • x) = (star c) • M x)
+    {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
+    IsAntistableBohlSignal (fun t ↦ M (f t)) := by
+  obtain ⟨s, D, a, hfreq, hf⟩ := hf
+  refine ⟨s.image star, D, fun ν k => M (a (star ν) k), ?_, ?_⟩
+  · intro ν hν
+    obtain ⟨μ, hμ, rfl⟩ := Finset.mem_image.mp hν
+    simpa [Complex.conj_re] using hfreq μ hμ
+  · intro t
+    change M (f t) = _
+    rw [hf t, map_sum]
+    rw [Finset.sum_image]
+    · apply Finset.sum_congr rfl
+      intro μ hμ
+      rw [hM, map_sum]
+      congr 1
+      · simp only [Complex.star_def]
+        rw [← Complex.exp_conj]
+        congr 1
+        simp
+      · apply Finset.sum_congr rfl
+        intro k hk
+        rw [hM]
+        congr 1
+        · simp only [Complex.star_def, map_pow, Complex.conj_ofReal]
+        · simp only [star_star]
+    · intro μ _ ν _ hμν
+      exact star_injective hμν
+
+/-- **Real-linear transport of antistable finite Bohl signals.** Decomposing the
+map into its complex-linear and antilinear parts preserves the support half-plane:
+the first keeps each frequency, while the second conjugates frequencies, which
+does not change their real parts. -/
+theorem IsAntistableBohlSignal.map_realLinear [FiniteDimensional ℂ X]
+    (T : X →L[ℝ] Y) {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
+    IsAntistableBohlSignal (fun t ↦ T (f t)) := by
+  have hcl : IsAntistableBohlSignal
+      (fun t ↦ complexLinearPart T.toLinearMap (f t)) :=
+    hf.map (complexLinearPart T.toLinearMap)
+  have hal : IsAntistableBohlSignal
+      (fun t ↦ realLinearAntilinearPart T.toLinearMap (f t)) :=
+    hf.map_antilinear' (realLinearAntilinearPart_antilinear T.toLinearMap)
+  have hsum := hcl.add hal
+  convert hsum using 1
+  funext t
+  exact (complexLinearPart_add_antilinearPart T.toLinearMap (f t)).symm
+
+/-- **A decaying real-linear readout of an antistable Bohl signal vanishes.**
+The output map need not be complex-linear: scalarize each output by a separating
+real continuous functional, embed that scalar in `ℂ`, and apply antistable
+polynomial-exponential uniqueness. This is the output-side step needed before
+turning the antistable part of a real-system trajectory into an unobservable
+state component. -/
+theorem tendsto_zero_of_antistable_realLinear_readout
+    [FiniteDimensional ℂ X]
+    {Z : Type*} [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+    (H : X →L[ℝ] Z) {b : ℝ → X}
+    (hb : IsAntistableBohlSignal b)
+    (hlim : Filter.Tendsto (fun t => H (b t)) Filter.atTop (nhds 0)) :
+    ∀ t, H (b t) = 0 := by
+  intro t
+  by_contra hne
+  have hn : ‖H (b t)‖ ≠ 0 := norm_ne_zero_iff.mpr hne
+  obtain ⟨ℓ, hnorm, hℓ⟩ := exists_dual_vector ℝ (H (b t)) hn
+  let S : Z →L[ℝ] ℂ := Complex.ofRealCLM.comp ℓ
+  let T : X →L[ℝ] ℂ := S.comp H
+  have hbT : IsAntistableBohlSignal (fun s => T (b s)) :=
+    hb.map_realLinear T
+  have hlimT : Filter.Tendsto (fun s => T (b s)) Filter.atTop (nhds 0) := by
+    change Filter.Tendsto (fun s => S (H (b s))) Filter.atTop (nhds 0)
+    simpa [Function.comp_def] using (S.continuous.tendsto 0).comp hlim
+  have hz := tendsto_zero_of_isAntistableBohlSignal hbT hlimT
+  have hzt := congrFun hz t
+  have hval : ℓ (H (b t)) = 0 := by
+    apply (Complex.ofReal_eq_zero).mp
+    simpa [T, S, ContinuousLinearMap.comp_apply, Complex.ofRealCLM_apply] using hzt
+  rw [hℓ] at hval
+  exact hn (norm_eq_zero.mp (by simpa using hval))
+
 /-- **Real-linear closure, endomorphism form.** The specialization of
 `IsExponentialPolynomial.map_realLinear` to `T : X →L[ℝ] X`, proved directly from
 the accepted lemmas `IsExponentialPolynomial.map` and
@@ -9242,6 +10090,143 @@ theorem variationOfConstants_transport_of_complexification
 
 end RealTransport
 
+/-! ### Real-basis Bohl response for an arbitrary real-linear generator
+
+Unlike `variationOfConstants_transport_of_complexification`, the theorem below
+does not require `sys.A` to be complex-linear for the chosen complex structure on
+`X`. It chooses a real basis, complexifies the resulting real matrix, solves the
+finite-Bohl response in those coordinates, and projects the response back to
+the real state space. -/
+
+section RealBohlResponse
+
+open scoped Matrix
+
+variable {X U Y : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℂ X] [FiniteDimensional ℝ X]
+variable [FiniteDimensional ℂ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+
+/-- **A real finite-dimensional forced trajectory is finite Bohl.** If the
+system's forcing image `t ↦ B (u t)` is a finite exponential polynomial, then
+the variation-of-constants trajectory is one as well, even when the real-linear
+state map `A` is not complex-linear for the chosen complex structure on `X`.
+The proof realifies through a real basis, complexifies its matrix, takes a
+finite-Bohl primitive of the rotated forcing, and projects the resulting complex
+response back to `X`. -/
+theorem variationOfConstants_isExponentialPolynomial_of_realLinear
+    (sys : LinearSystem ℝ X U Y) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBu : IsExponentialPolynomial (fun t : ℝ => sys.continuousB (u t))) :
+    IsExponentialPolynomial (sys.variationOfConstants 0 x₀ u) := by
+  let n : ℕ := Module.finrank ℝ X
+  let b : Module.Basis (Fin n) ℝ X := Module.finBasis ℝ X
+  let L : X ≃L[ℝ] (Fin n → ℝ) := b.equivFun.toContinuousLinearEquiv
+  let M : Matrix (Fin n) (Fin n) ℝ := LinearMap.toMatrix b b sys.A
+  let g : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) :=
+    (Matrix.toLin' M).toContinuousLinearMap
+  let h : (Fin n → ℂ) →ₗ[ℂ] (Fin n → ℂ) :=
+    Matrix.toLin' (M.map (algebraMap ℝ ℂ))
+  let hC : (Fin n → ℂ) →L[ℂ] (Fin n → ℂ) := h.toContinuousLinearMap
+  have hg : g = L.conjContinuousAlgEquiv sys.continuousA := by
+    apply ContinuousLinearMap.ext
+    intro y
+    have hrepr : M *ᵥ b.repr (L.symm y) = b.repr (sys.A (L.symm y)) :=
+      LinearMap.toMatrix_mulVec_repr b b sys.A (L.symm y)
+    have hLy : b.repr (L.symm y) = y := by
+      rw [← Module.Basis.equivFun_apply b (L.symm y)]
+      exact b.equivFun.apply_symm_apply y
+    rw [hLy] at hrepr
+    change M *ᵥ y = L (sys.continuousA (L.symm y))
+    rw [hrepr]
+    rw [← Module.Basis.equivFun_apply b (sys.A (L.symm y))]
+    rfl
+  have hLexp : ∀ t : ℝ, ∀ v : X,
+      L (sys.expFlow t v) = NormedSpace.exp (t • g) (L v) := by
+    intro t v
+    have key := NormedSpace.map_exp_of_mem_ball (𝕂 := ℝ) (L.conjContinuousAlgEquiv)
+      (L.conjContinuousAlgEquiv).continuous (t • sys.continuousA)
+      ((NormedSpace.expSeries_radius_eq_top ℝ (X →L[ℝ] X)).symm ▸ edist_lt_top _ _)
+    have hcongr : (L.conjContinuousAlgEquiv) (t • sys.continuousA) = t • g := by
+      rw [map_smul, hg.symm]
+    have hk := congrArg (fun f : (Fin n → ℝ) →L[ℝ] (Fin n → ℝ) => f (L v)) key
+    rw [hcongr] at hk
+    simpa [ContinuousLinearEquiv.conjContinuousAlgEquiv_apply_apply, g,
+      LinearSystem.expFlow] using hk
+  let rePi : (Fin n → ℂ) →ₗ[ℝ] (Fin n → ℝ) :=
+    { toFun := fun z i => (z i).re
+      map_add' := by intro z w; ext i; simp
+      map_smul' := by intro r z; ext i; simp }
+  let R : (Fin n → ℂ) →ₗ[ℝ] X := L.symm.toLinearMap.comp rePi
+  let T : X →L[ℝ] (Fin n → ℂ) :=
+    LinearMap.ofRealPi.toContinuousLinearMap.comp L.toContinuousLinearMap
+  have hBuC : IsExponentialPolynomial
+      (fun t : ℝ => LinearMap.ofRealPi (L (sys.continuousB (u t)))) := by
+    have h := hBu.map_realLinear (Y := Fin n → ℂ) T
+    convert h using 1
+    funext t
+    simp [T, L]
+  have hforceC : IsExponentialPolynomial
+      (fun s : ℝ => LinearMap.ofRealPi (L (sys.forcing 0 u s))) := by
+    have hf := IsExponentialPolynomial.forcing hC 0 hBuC
+    have hEq : (fun s : ℝ => LinearMap.ofRealPi (L (sys.forcing 0 u s))) =
+        (fun s : ℝ => NormedSpace.exp (s • (-hC))
+          (LinearMap.ofRealPi (L (sys.continuousB (u s))))) := by
+      funext s
+      rw [show sys.forcing 0 u s = sys.expFlow (-s) (sys.continuousB (u s)) by
+        simp [LinearSystem.forcing]]
+      rw [hLexp (-s), LinearMap.ofRealPi_exp M (-s)
+        (L (sys.continuousB (u s)))]
+      change NormedSpace.exp ((-s : ℝ) • hC) _ =
+        NormedSpace.exp (s • (-hC)) _
+      congr 1
+      congr 1
+      ext i
+      simp [h, hC, smul_neg]
+    rw [hEq]
+    simpa [sub_eq_add_neg, neg_smul] using hf
+  obtain ⟨P, hP, hPderiv⟩ := hforceC.hasPrimitive
+  let q₀ : Fin n → ℂ := LinearMap.ofRealPi (L x₀)
+  let Q : ℝ → (Fin n → ℂ) := fun t => P t + (q₀ - P 0)
+  have hQ : IsExponentialPolynomial Q := by
+    have hh := hP.add (isExponentialPolynomial_const (q₀ - P 0))
+    convert hh using 1 <;> funext t <;> simp [Q]
+  have hQintegral : ∀ t : ℝ,
+      Q t = LinearMap.ofRealPi (L (x₀ + ∫ s in (0 : ℝ)..t, sys.forcing 0 u s)) := by
+    intro t
+    have hPint : P t - P 0 =
+        ∫ s in (0 : ℝ)..t, LinearMap.ofRealPi (L (sys.forcing 0 u s)) :=
+      intervalIntegral.sub_eq_integral_of_hasDerivAt hPderiv hforceC.continuous 0 t
+    have hInt : IntervalIntegrable (sys.forcing 0 u) MeasureTheory.volume 0 t :=
+      intervalIntegrable_forcing sys 0 hu 0 t
+    have hMap := T.intervalIntegral_comp_comm hInt
+    calc
+      Q t = q₀ + (P t - P 0) := by simp [Q, q₀]; abel
+      _ = q₀ + ∫ s in (0 : ℝ)..t, T (sys.forcing 0 u s) := by
+        rw [show (∫ s in (0 : ℝ)..t, T (sys.forcing 0 u s)) =
+          ∫ s in (0 : ℝ)..t, LinearMap.ofRealPi (L (sys.forcing 0 u s)) by
+            rfl, hPint]
+      _ = q₀ + T (∫ s in (0 : ℝ)..t, sys.forcing 0 u s) := by rw [← hMap]
+      _ = LinearMap.ofRealPi (L (x₀ + ∫ s in (0 : ℝ)..t, sys.forcing 0 u s)) := by
+        simp [q₀, T, map_add]
+  let z : ℝ → (Fin n → ℂ) := fun t => NormedSpace.exp (t • hC) (Q t)
+  have hz : IsExponentialPolynomial z := flow_mul_isExponentialPolynomial h hQ
+  let xcoord : ℝ → X := fun t => R (z t)
+  have hxcoord : xcoord = sys.variationOfConstants 0 x₀ u := by
+    funext t
+    change R (NormedSpace.exp (t • hC) (Q t)) = _
+    rw [hQintegral t]
+    have hExp (v : X) : NormedSpace.exp (t • hC) (LinearMap.ofRealPi (L v)) =
+        LinearMap.ofRealPi (L (sys.expFlow t v)) := by
+      rw [hLexp t v, ← LinearMap.ofRealPi_exp M t (L v)]
+    rw [hExp]
+    simp [R, rePi, LinearMap.ofRealPi, LinearSystem.variationOfConstants, map_add]
+  rw [← hxcoord]
+  exact hz.map_realLinear R.toContinuousLinearMap
+
+end RealBohlResponse
+
 /-! ## Finite-Bohl quotient non-cancellation
 
 The real/complex transport of the previous section shows that, for a real system
@@ -9393,7 +10378,238 @@ theorem IsExponentialPolynomial.of_tendsto_zero {f : ℝ → X}
   rw [hf_eq_g]
   exact hg
 
+/-- **Real-linear output projection of a decaying Bohl signal.** If a
+finite-dimensional complex state signal is a finite exponential polynomial and
+its real-linear readout tends to zero, it splits into a decaying stable state
+part and an antistable state part whose readout vanishes identically. This
+packages the stable/antistable frequency split with real-output scalarization. -/
+theorem IsExponentialPolynomial.exists_stable_add_antistable_of_tendsto_realLinear
+    [FiniteDimensional ℂ X]
+    {Z : Type*} [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+    {f : ℝ → X} (hf : IsExponentialPolynomial f) (H : X →L[ℝ] Z)
+    (hlim : Filter.Tendsto (fun t => H (f t)) Filter.atTop (nhds 0)) :
+    ∃ g b : ℝ → X, f = g + b ∧ IsStableExponentialPolynomial g ∧
+      IsAntistableBohlSignal b ∧ Filter.Tendsto g Filter.atTop (nhds 0) ∧
+      ∀ t, H (b t) = 0 := by
+  obtain ⟨g, b, hgb, hg, hb⟩ := hf.exists_stable_add_antistable
+  have hg0 : Filter.Tendsto g Filter.atTop (nhds 0) := hg.tendsto_zero
+  have hHg0 : Filter.Tendsto (fun t => H (g t)) Filter.atTop (nhds 0) := by
+    have h := (H.continuous.tendsto 0).comp hg0
+    simpa [Function.comp_def] using h
+  have hbdec : Filter.Tendsto (fun t => H (b t)) Filter.atTop (nhds 0) := by
+    have hsplit : (fun t => H (f t)) = fun t => H (g t) + H (b t) := by
+      funext t
+      rw [congrFun hgb t, Pi.add_apply, map_add]
+    have h' := hlim
+    rw [hsplit] at h'
+    simpa using h'.sub hHg0
+  exact ⟨g, b, hgb, hg, hb, hg0,
+    tendsto_zero_of_antistable_realLinear_readout H hb hbdec⟩
+
 end FiniteBohlProjection
+
+end LinearSystem
+
+namespace LinearMap
+
+private theorem finiteBohl_linear_ode_eq_exp
+    {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y] [CompleteSpace Y]
+    (A : Y →L[ℝ] Y) (y : ℝ → Y)
+    (hode : ∀ t, HasDerivAt y (A (y t)) t) :
+    ∀ t, y t = NormedSpace.exp (t • A) (y 0) := by
+  let P : ℝ → Y := fun t => NormedSpace.exp (t • (-A)) (y t)
+  have hP : ∀ t, HasDerivAt P 0 t := by
+    intro t
+    have hexp : HasDerivAt (fun s : ℝ => NormedSpace.exp (s • (-A)))
+        (NormedSpace.exp (t • (-A)) * (-A)) t := by
+      simpa using hasDerivAt_exp_smul_const (𝕂 := ℝ) (-A) t
+    have h := hexp.clm_apply (hode t)
+    convert h using 1 <;> simp [P, mul_apply_eq_comp]
+  have hconst : ∀ t, P t = P 0 := by
+    intro t
+    exact is_const_of_deriv_eq_zero (fun s => (hP s).differentiableAt)
+      (fun s => (hP s).deriv) t 0
+  intro t
+  let E : Y →L[ℝ] Y := NormedSpace.exp (t • A)
+  have headd : E * NormedSpace.exp (t • (-A)) = 1 := by
+    have hneg : t • (-A) = (-t) • A := by simp
+    have hcomm : Commute (t • A) (t • (-A)) := by
+      rw [hneg]
+      exact ((Commute.refl A).smul_left t).smul_right (-t)
+    have hsum : t • A + t • (-A) = 0 := by rw [hneg, ← add_smul]; simp
+    have hmem1 : (t • A) ∈
+        Metric.eball (0 : Y →L[ℝ] Y) (NormedSpace.expSeries ℝ (Y →L[ℝ] Y)).radius :=
+      (NormedSpace.expSeries_radius_eq_top ℝ (Y →L[ℝ] Y)).symm ▸ edist_lt_top _ _
+    have hmem2 : (t • (-A)) ∈
+        Metric.eball (0 : Y →L[ℝ] Y) (NormedSpace.expSeries ℝ (Y →L[ℝ] Y)).radius :=
+      (NormedSpace.expSeries_radius_eq_top ℝ (Y →L[ℝ] Y)).symm ▸ edist_lt_top _ _
+    rw [← NormedSpace.exp_add_of_commute_of_mem_ball hcomm hmem1 hmem2, hsum,
+      NormedSpace.exp_zero]
+  have hcancel : E (P t) = y t := by
+    change (NormedSpace.exp (t • A))
+      ((NormedSpace.exp (t • (-A))) (y t)) = y t
+    rw [← mul_apply_eq_comp, headd]
+    simp
+  calc
+    y t = E (P t) := hcancel.symm
+    _ = E (P 0) := congrArg E (hconst t)
+    _ = NormedSpace.exp (t • A) (y 0) := by simp [E, P]
+
+private theorem finiteBohl_quotient_ode_eq_exp
+    {X U : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    [FiniteDimensional ℝ X] [NormedAddCommGroup U] [NormedSpace ℝ U]
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    [IsClosed (_root_.LinearMap.reachableSubspace A B : Set X)]
+    [IsTopologicalRing
+      ((X ⧸ _root_.LinearMap.reachableSubspace A B) →L[ℝ]
+        (X ⧸ _root_.LinearMap.reachableSubspace A B))]
+    (g : ℝ → X) (r : ℝ → X) (x₀ : X)
+    (hg0 : g 0 = x₀)
+    (hode : ∀ t, HasDerivAt g (A (g t) + r t) t)
+    (hr : ∀ t, r t ∈ _root_.LinearMap.reachableSubspace A B) :
+    ∀ t, (_root_.LinearMap.reachableSubspace A B).mkQ (g t) =
+      NormedSpace.exp (t • (_root_.LinearMap.quotientReachableA A B).toContinuousLinearMap)
+        ((_root_.LinearMap.reachableSubspace A B).mkQ x₀) := by
+  let R := _root_.LinearMap.reachableSubspace A B
+  let Aq : (X ⧸ R) →ₗ[ℝ] (X ⧸ R) := R.mapQ R A
+    ((Submodule.map_le_iff_le_comap).mp (_root_.LinearMap.map_reachableSubspace_le A B))
+  have hR : R ≤ R.comap A := fun x hx =>
+    _root_.LinearMap.map_reachableSubspace_le A B ⟨x, hx, rfl⟩
+  have hq : R.mkQ.comp A = Aq.comp R.mkQ := by
+    ext x
+    exact (congrFun (congrArg DFunLike.coe (Submodule.mapQ_mkQ R R A (h := hR))) x).symm
+  have hqode : ∀ t, HasDerivAt (fun s : ℝ => R.mkQ (g s))
+      (Aq (R.mkQ (g t))) t := by
+    intro t
+    have hd := (ContinuousLinearMap.hasFDerivAt R.mkQ.toContinuousLinearMap).comp_hasDerivAt
+      t (hode t)
+    have hderiv : R.mkQ (A (g t) + r t) = Aq (R.mkQ (g t)) := by
+      have hr0 : R.mkQ (r t) = 0 :=
+        (Submodule.Quotient.mk_eq_zero R).mpr (hr t)
+      calc
+        R.mkQ (A (g t) + r t) = R.mkQ (A (g t)) + R.mkQ (r t) := map_add _ _ _
+        _ = R.mkQ (A (g t)) := by rw [hr0, add_zero]
+        _ = Aq (R.mkQ (g t)) := congrFun (congrArg DFunLike.coe hq) (g t)
+    exact hd.congr_deriv hderiv
+  have hflow := finiteBohl_linear_ode_eq_exp Aq.toContinuousLinearMap
+    (fun t => R.mkQ (g t)) hqode
+  intro t
+  simpa [Aq, _root_.LinearMap.quotientReachableA, R, hg0] using hflow t
+
+/-- **A stable forced component starts in the stabilizable subspace.** If a
+stable finite exponential-polynomial signal solves `g' = A g + r` and the
+forcing lies pointwise in `range B`, then its initial state belongs to
+`Xstab(A,B) = X_g(A) + R(A,B)`. Passing to the uncontrollable quotient removes
+the forcing; decay then places the quotient initial state in the Hurwitz
+subspace, and `comap_hurwitzSubspace_quotientReachable_eq` lifts it back. -/
+theorem stable_forced_component_mem_stabilizableSubspace
+    {X U : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [NormedSpace ℂ X]
+    [FiniteDimensional ℝ X] [NormedAddCommGroup U] [NormedSpace ℝ U]
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (g r : ℝ → X) (hg : LinearSystem.IsStableExponentialPolynomial g)
+    (hode : ∀ t, HasDerivAt g (A (g t) + r t) t)
+    (hr : ∀ t, r t ∈ _root_.LinearMap.reachableSubspace A B) :
+    g 0 ∈ _root_.LinearMap.hurwitzSubspace A ⊔ _root_.LinearMap.reachableSubspace A B := by
+  let R := _root_.LinearMap.reachableSubspace A B
+  haveI : IsClosed (R : Set X) := R.closed_of_finiteDimensional
+  letI : IsTopologicalRing ((X ⧸ R) →L[ℝ] (X ⧸ R)) :=
+    { continuous_add := continuous_add
+      continuous_mul := Continuous.clm_comp continuous_fst continuous_snd
+      continuous_neg := continuous_neg }
+  have hflow := finiteBohl_quotient_ode_eq_exp A B g r (g 0) rfl hode hr
+  let q : X →L[ℝ] X ⧸ R := R.mkQ.toContinuousLinearMap
+  have hqdec : Filter.Tendsto (fun t : ℝ => q (g t)) Filter.atTop (nhds 0) := by
+    have h := (q.continuous.tendsto 0).comp hg.tendsto_zero
+    simpa only [Function.comp_def, map_zero] using h
+  have horbit : Filter.Tendsto
+      (fun t : ℝ => NormedSpace.exp
+        (t • (_root_.LinearMap.quotientReachableA A B).toContinuousLinearMap)
+        (R.mkQ (g 0))) Filter.atTop (nhds 0) := by
+    refine hqdec.congr' (Filter.Eventually.of_forall fun t => ?_)
+    exact hflow t
+  have hquot : R.mkQ (g 0) ∈ _root_.LinearMap.hurwitzSubspace
+      (_root_.LinearMap.quotientReachableA A B) :=
+    _root_.LinearMap.orbit_decay_mem_hurwitz (_root_.LinearMap.quotientReachableA A B) horbit
+  have hcomap : g 0 ∈ Submodule.comap R.mkQ
+      (_root_.LinearMap.hurwitzSubspace (_root_.LinearMap.quotientReachableA A B)) :=
+    Submodule.mem_comap.mpr hquot
+  rw [_root_.LinearMap.comap_hurwitzSubspace_quotientReachable_eq A B] at hcomap
+  simpa [R] using hcomap
+
+end LinearMap
+
+namespace LinearSystem
+
+open Filter
+open scoped Topology
+
+variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℂ X]
+
+/-! ### Stable/antistable decomposition of a decaying forced state
+
+The preceding analytic facts combine without any complex-linearity assumption
+on the real state map: a finite-Bohl forcing image makes the whole state
+trajectory finite Bohl, and a decaying real-linear readout kills the
+antistable state's readout. The remaining `W_g` proof is algebraic: show the
+stable initial component lies in `Xstab` and the antistable initial component
+lies in `V*(ker H)`. -/
+
+section FiniteBohlStateProjection
+
+variable {X U Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℂ X]
+variable [FiniteDimensional ℝ X] [FiniteDimensional ℂ X]
+variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- A finite-Bohl forcing image upgrades the variation-of-constants ODE from
+almost-everywhere to pointwise, even when the input itself is only locally
+integrable. -/
+theorem variationOfConstants_hasDerivAt_of_finiteBohl_forcing
+    (sys : LinearSystem ℝ X U Z) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBu : IsExponentialPolynomial (fun t : ℝ => sys.continuousB (u t)))
+    (t : ℝ) :
+    HasDerivAt (sys.variationOfConstants 0 x₀ u)
+      (sys.A (sys.variationOfConstants 0 x₀ u t) + sys.B (u t)) t := by
+  let x := sys.variationOfConstants 0 x₀ u
+  let F : ℝ → X := fun s => sys.continuousA (x s) + sys.continuousB (u s)
+  have hx : Continuous x := sys.continuous_variationOfConstants 0 x₀ u hu
+  have hF : Continuous F := (sys.continuousA.continuous.comp hx).add hBu.continuous
+  have heq (s : ℝ) : x s = x₀ + ∫ r in (0 : ℝ)..s, F r := by
+    simpa only [x, F, dynamics, continuousA_apply, continuousB_apply] using
+      (sys.variationOfConstants_integral 0 x₀ u hu s)
+  have hd := intervalIntegral.integral_hasDerivAt_right
+    (hF.intervalIntegrable 0 t)
+    hF.aestronglyMeasurable.stronglyMeasurableAtFilter hF.continuousAt
+  have hd' := (hasDerivAt_const (x := t) (c := x₀)).add hd
+  have hderiv : (0 : X) + F t =
+      sys.A (sys.variationOfConstants 0 x₀ u t) + sys.B (u t) := by
+    simp [F, x, continuousA_apply, continuousB_apply]
+  rw [hderiv] at hd'
+  exact hd'.congr_of_eventuallyEq (Filter.Eventually.of_forall fun s => heq s)
+
+/-- **State-level finite-Bohl projection under real-linear readout.** If the
+system's forcing image is a finite exponential polynomial and the controlled
+readout tends to zero, the forced state trajectory decomposes into a stable
+finite-Bohl component and an antistable component whose readout is pointwise
+zero. No complex-linear extension of `sys.A` or `H` is assumed. -/
+theorem finiteBohl_state_stable_antistable_decomposition
+    (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z) (x₀ : X) (u : ℝ → U)
+    (hu : MeasureTheory.LocallyIntegrable u MeasureTheory.volume)
+    (hBu : IsExponentialPolynomial (fun t : ℝ => sys.continuousB (u t)))
+    (hdec : Filter.Tendsto
+      (fun t : ℝ => H (sys.variationOfConstants 0 x₀ u t)) Filter.atTop (nhds 0)) :
+    ∃ g b : ℝ → X,
+      sys.variationOfConstants 0 x₀ u = g + b ∧
+      IsStableExponentialPolynomial g ∧ IsAntistableBohlSignal b ∧
+      Filter.Tendsto g Filter.atTop (nhds 0) ∧ ∀ t, H (b t) = 0 := by
+  have htraj : IsExponentialPolynomial (sys.variationOfConstants 0 x₀ u) :=
+    variationOfConstants_isExponentialPolynomial_of_realLinear (sys := sys) x₀ u hu hBu
+  exact htraj.exists_stable_add_antistable_of_tendsto_realLinear
+    H.toContinuousLinearMap hdec
+
+end FiniteBohlStateProjection
 
 section FiniteBohlReadout
 
@@ -9488,7 +10704,7 @@ theorem finiteBohl_readout_isStable_of_tendsto_zero
 
 end FiniteBohlReadout
 
-/-! ## The finite-Bohl input version of Theorem 4.37
+/-! ## The finite-Bohl forcing-image version of Theorem 4.37
 
 Trentelman–Stoorvogel–Hautus, Theorem 4.37 (PDF page 115 / printed page 99)
 states the output-stabilizable set `W_g(ker H)` for **Bohl inputs**:
@@ -9496,26 +10712,32 @@ states the output-stabilizable set `W_g(ker H)` for **Bohl inputs**:
 `W_g(ker H) = {x | ∃ Bohl input u, H x_u(·, x) is stable} = V*(ker H) + Xstab(A, B)`.
 
 The predicate `LinearSystem.IsOutputStabilizable` of this file quantifies over an
-*arbitrary* locally integrable input and is therefore strictly stronger than the
-book's Bohl-input predicate. The predicate `IsBohlOutputStabilizable` below is the
-book-exact finite-Bohl restriction, kept deliberately distinct: the input is
-required to be locally integrable and its `Bℂ`-image to be a finite exponential
+*arbitrary* locally integrable input. The predicate `IsBohlOutputStabilizable`
+below is a finite-Bohl forcing-image variant, kept deliberately distinct: the
+input is required to be locally integrable and its `Bℂ`-image to be a finite exponential
 polynomial, exactly the representation hypothesis consumed by the accepted
 real/complex transport `variationOfConstants_transport_of_complexification` and
 the accepted finite-Bohl spectral projection
-`finiteBohl_readout_isStable_of_tendsto_zero`. The complexification parameter
-`Bℂ : U →ₗ[ℂ] X` is the complex-linear input map whose real restriction is
-`sys.B`; it is an explicit argument of the predicate because the finite-Bohl
-class is a complex class.
+`finiteBohl_readout_isStable_of_tendsto_zero`. The complex-linear input map
+`Bℂ : U →ₗ[ℂ] X` comes with the compatibility equality
+`hB : Bℂ.restrictScalars ℝ = sys.B`, so its represented Bohl signal is exactly
+the actual system forcing `sys.B (u t)`. This equality is explicit because the
+finite-Bohl class is a complex class. The book puts the Bohl condition on `u`
+itself; in finite dimension a linear section of `B` on its range should lift a
+Bohl forcing image to a Bohl input with the same forcing, but that equivalence is
+not formalized here. The same-carrier complex scalar structures also restrict
+the current transport to systems admitting the displayed complex-linear
+extensions; a separate real-system complexification bridge is not provided.
 
-The two directions of the source equivalence are recorded as separately named
-obligations (`FiniteBohlWBridge`, `FiniteBohlSynthesis`), so that the packaged
-equivalence carries exactly the finite-Bohl content and never silently identifies
+The two directions of the forcing-image characterization are recorded as
+separately named obligations (`FiniteBohlWBridge`, `FiniteBohlSynthesis`), so
+that the packaged equivalence never silently identifies
 the restricted statement with the unrestricted
 `mem_outputStabilizableSubspace_of_isOutputStabilizable`, which is *not* claimed.
-The structural facts proved here are the restriction to `IsOutputStabilizable`
-and closure under addition, the two ingredients that let the source's `W_g(ker H)`
-be treated as a subspace of the Bohl-input set. -/
+The structural facts proved here are implication into `IsOutputStabilizable` and
+closure under addition for the encoded forcing-image class. Identifying that class
+with the book's Bohl-input set still requires the finite-dimensional lifting
+lemma described above. -/
 
 section FiniteBohlWg
 
@@ -9525,17 +10747,18 @@ variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 variable [NormedSpace ℂ X] [NormedSpace ℂ U]
 
-/-- **The finite-Bohl open-loop output-stabilizability predicate.** A state `x`
-lies in the book's `W_g(ker H)` when there is a locally integrable input `u` whose
+/-- **The finite-Bohl forcing-image open-loop predicate.** A state `x` lies in
+the encoded forcing-image variant of `W_g(ker H)` when there is a locally integrable input `u` whose
 `Bℂ`-image is a finite exponential polynomial and whose controlled output of the
 variation-of-constants trajectory decays: `t ↦ H (x_u(t, x)) → 0`.
 
-This is the finite-Bohl restriction of `LinearSystem.IsOutputStabilizable`; the
+This is a finite-Bohl forcing-image restriction of
+`LinearSystem.IsOutputStabilizable`; the
 complexification map `Bℂ : U →ₗ[ℂ] X` records the representation hypothesis of
 the accepted transport layer. Source: Trentelman–Stoorvogel–Hautus, equation
 (4.28) together with Definition 2.5 (Bohl functions). -/
 def IsBohlOutputStabilizable (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
-    (H : X →ₗ[ℝ] Z) (x : X) : Prop :=
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) (x : X) : Prop :=
   ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧
     IsExponentialPolynomial (fun t : ℝ => Bℂ (u t)) ∧
     Filter.Tendsto (fun t : ℝ => H (sys.variationOfConstants 0 x u t))
@@ -9547,20 +10770,20 @@ keeps the same locally integrable witness and the same decay. This is the formal
 record that the book's Theorem 4.37 statement is *weaker* than the unrestricted
 extension. -/
 theorem IsBohlOutputStabilizable.isOutputStabilizable {sys : LinearSystem ℝ X U Z}
-    {Bℂ : U →ₗ[ℂ] X} {H : X →ₗ[ℝ] Z} {x : X}
-    (h : IsBohlOutputStabilizable sys Bℂ H x) : IsOutputStabilizable sys H x :=
+    {Bℂ : U →ₗ[ℂ] X} {hB : Bℂ.restrictScalars ℝ = sys.B}
+    {H : X →ₗ[ℝ] Z} {x : X}
+    (h : IsBohlOutputStabilizable sys Bℂ hB H x) : IsOutputStabilizable sys H x :=
   ⟨h.choose, h.choose_spec.1, h.choose_spec.2.2⟩
 
-/-- **The finite-Bohl output-stabilizable set is closed under addition.** If `u`
+/-- **The finite-Bohl forcing-image set is closed under addition.** If `u`
 stabilizes `x` and `v` stabilizes `y`, then `u + v` stabilizes `x + y`; the
 `Bℂ`-image of `u + v` is the finite sum of the two finite Bohl signals, hence a
-finite Bohl signal. This is the structural fact that the source's `W_g(ker H)` is
-a subspace in the Bohl-input class. -/
+finite Bohl signal. This proves additivity of the encoded forcing-image class. -/
 theorem IsBohlOutputStabilizable.add {sys : LinearSystem ℝ X U Z} {Bℂ : U →ₗ[ℂ] X}
-    {H : X →ₗ[ℝ] Z} {x y : X}
-    (hx : IsBohlOutputStabilizable sys Bℂ H x)
-    (hy : IsBohlOutputStabilizable sys Bℂ H y) :
-    IsBohlOutputStabilizable sys Bℂ H (x + y) := by
+    {hB : Bℂ.restrictScalars ℝ = sys.B} {H : X →ₗ[ℝ] Z} {x y : X}
+    (hx : IsBohlOutputStabilizable sys Bℂ hB H x)
+    (hy : IsBohlOutputStabilizable sys Bℂ hB H y) :
+    IsBohlOutputStabilizable sys Bℂ hB H (x + y) := by
   obtain ⟨u, hu, hBu, hux⟩ := hx
   obtain ⟨v, hv, hBv, hvy⟩ := hy
   refine ⟨u + v, hu.add hv, ?_, ?_⟩
@@ -9596,17 +10819,18 @@ theorem IsBohlOutputStabilizable.add {sys : LinearSystem ℝ X U Z} {Bℂ : U �
     rw [hfun]
     simpa using hux.add hvy
 
-/-- **The finite-Bohl `W_g` bridge (necessity direction).** This names the
-exact necessity direction of the book's Theorem 4.37 for the finite-Bohl input
-class: a finite Bohl input whose controlled output decays keeps the state inside
+/-- **The finite-Bohl-forcing-image `W_g` bridge (necessity direction).** This
+names the necessity direction of the forcing-image variant of the book's
+Theorem 4.37: a finite Bohl forcing image whose controlled output decays keeps the state inside
 `W_g(ker H) = V*(ker H) + Xstab(A, B)`. It is the finite-Bohl spectral projection
 form of `mem_outputStabilizableSubspace_of_isOutputStabilizable`, isolated as a
 named hypothesis because the unrestricted locally-integrable statement is not
 proved and the finite-Bohl statement is not yet derived from the accepted
-stable/antistable projection APIs. -/
+stable/antistable projection APIs. The argument `hB` fixes the complex input map
+to the system's actual input map. -/
 def FiniteBohlWBridge (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
-    (H : X →ₗ[ℝ] Z) : Prop :=
-  ∀ x : X, IsBohlOutputStabilizable sys Bℂ H x →
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) : Prop :=
+  ∀ x : X, IsBohlOutputStabilizable sys Bℂ hB H x →
     x ∈ outputStabilizableSubspace sys.A sys.B H
 
 /-- **The finite-Bohl synthesis direction.** Every state in
@@ -9620,24 +10844,27 @@ makes the closed-loop orbit's `Bℂ`-image a finite exponential polynomial, and 
 accepted transport layer consumes inputs already known to have finite-Bohl
 `Bℂ`-image. -/
 def FiniteBohlSynthesis (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
-    (H : X →ₗ[ℝ] Z) : Prop :=
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) : Prop :=
   ∀ x : X, x ∈ outputStabilizableSubspace sys.A sys.B H →
-    IsBohlOutputStabilizable sys Bℂ H x
+    IsBohlOutputStabilizable sys Bℂ hB H x
 
-/-- **The finite-Bohl input version of Theorem 4.37.** Under the two named
+/-- **The finite-Bohl forcing-image version of Theorem 4.37.** Under the two named
 finite-Bohl obligations — the spectral-projection necessity `FiniteBohlWBridge`
 and the constructive synthesis `FiniteBohlSynthesis` — the finite-Bohl
 output-stabilizable set is exactly `W_g(ker H) = V*(ker H) + Xstab(A, B)`.
 
-This is the book-exact statement with its Bohl representation and
-complexification hypotheses explicit. The unrestricted predicate theorem
+This is a forcing-image variant of the book statement. The book's Bohl-input
+form is equivalent once the finite-dimensional Bohl lifting lemma is supplied;
+the same-carrier complex scalar structures and restriction equality are explicit
+here. The unrestricted predicate theorem
 `mem_outputStabilizableSubspace_of_isOutputStabilizable` is *not* claimed, and
 neither bridge is identified with it. -/
 theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace
-    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z)
-    (hbridge : FiniteBohlWBridge sys Bℂ H)
-    (hsynth : FiniteBohlSynthesis sys Bℂ H) (x : X) :
-    IsBohlOutputStabilizable sys Bℂ H x ↔
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z)
+    (hbridge : FiniteBohlWBridge sys Bℂ hB H)
+    (hsynth : FiniteBohlSynthesis sys Bℂ hB H) (x : X) :
+    IsBohlOutputStabilizable sys Bℂ hB H x ↔
       x ∈ outputStabilizableSubspace sys.A sys.B H :=
   ⟨hbridge x, hsynth x⟩
 
@@ -9645,7 +10872,7 @@ end FiniteBohlWg
 
 /-! ## Discharging the finite-Bohl synthesis obligation
 
-The book-exact finite-Bohl `W_g` package of the previous section names the
+The finite-Bohl forcing-image `W_g` package of the previous section names the
 constructive direction of Trentelman–Stoorvogel–Hautus Theorem 4.37 as the
 obligation `FiniteBohlSynthesis`: every state of the algebraic
 `W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a locally integrable input whose
@@ -9800,10 +11027,10 @@ set_option maxHeartbeats 800000 in
 -- Instantiating the real-linear Bohl closure at the state space exceeds the default budget.
 /-- **The finite-Bohl synthesis obligation is discharged.** Under the explicit
 finite-dimensionality `[FiniteDimensional ℂ X]` of the complexified state space,
-every real system `sys` and every complex-linear input map
-`Bℂ : U →ₗ[ℂ] X` satisfy `FiniteBohlSynthesis sys Bℂ H`: each state of the
-algebraic `W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a finite-Bohl input with
-decaying controlled readout.
+a complex-linear input map `Bℂ : U →ₗ[ℂ] X` whose real restriction equals
+`sys.B` satisfies `FiniteBohlSynthesis sys Bℂ hB H`: each state of the algebraic
+`W_g(ker H) = V*(ker H) + Xstab(A, B)` admits a finite-Bohl input with decaying
+controlled readout.
 
 The state-feedback characterization supplies a real gain `F` with
 `t ↦ H (exp (t (A + B F)) x) → 0`. The orbit is finite Bohl by
@@ -9814,8 +11041,9 @@ real-linear map `Bℂ ∘ F` is finite Bohl by
 open-loop decay. No complexification of the gain and no spectral hypothesis on
 `A` is assumed. -/
 theorem finiteBohlSynthesis [FiniteDimensional ℂ X]
-    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z) :
-    FiniteBohlSynthesis sys Bℂ H := by
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) :
+    FiniteBohlSynthesis sys Bℂ hB H := by
   intro x hx
   obtain ⟨F, hdec⟩ :=
     exists_feedback_tendsto_readout_of_mem_outputStabilizableSubspace sys.A sys.B H hx
@@ -9841,24 +11069,24 @@ theorem finiteBohlSynthesis [FiniteDimensional ℂ X]
 
 set_option maxHeartbeats 800000 in
 -- Packaging the conditional iff against the discharged synthesis exceeds the default budget.
-/-- **The finite-Bohl `W_g` identity, with the synthesis hypothesis discharged.**
-The book-exact finite-Bohl characterization of
+/-- **The finite-Bohl-forcing-image `W_g` identity, with synthesis discharged.**
+The left-half-plane forcing-image characterization of
 `isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace` follows with only
 the necessity direction `FiniteBohlWBridge` still named as a hypothesis: the
 constructive direction `FiniteBohlSynthesis` is supplied by
-`finiteBohlSynthesis`. This is the packaged statement of Theorem 4.37 in the
-finite-Bohl class, without redundant definitions and without claiming the
+`finiteBohlSynthesis`. This is the packaged left-half-plane statement in the
+finite-Bohl forcing-image class, without redundant definitions and without claiming the
 unrestricted locally-integrable necessity. -/
 theorem isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace'
     [FiniteDimensional ℂ X]
-    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X) (H : X →ₗ[ℝ] Z)
-    (hbridge : FiniteBohlWBridge sys Bℂ H) (x : X) :
-    IsBohlOutputStabilizable sys Bℂ H x ↔
+    (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
+    (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z)
+    (hbridge : FiniteBohlWBridge sys Bℂ hB H) (x : X) :
+    IsBohlOutputStabilizable sys Bℂ hB H x ↔
       x ∈ outputStabilizableSubspace sys.A sys.B H :=
-  isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace sys Bℂ H hbridge
-    (finiteBohlSynthesis sys Bℂ H) x
+  isBohlOutputStabilizable_iff_mem_outputStabilizableSubspace sys Bℂ hB H hbridge
+    (finiteBohlSynthesis sys Bℂ hB H) x
 
 end FiniteBohlSynthesisAssembly
 
 end LinearSystem
-
