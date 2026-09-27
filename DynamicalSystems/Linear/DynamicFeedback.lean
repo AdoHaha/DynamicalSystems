@@ -3187,8 +3187,10 @@ and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The finite-Boh
 forcing-image version of this open-loop characterisation is
 `finiteBohlWBridge`. Applying it to a generic real controller still requires
 real-to-complexification transport (the controller's state and input may have
-odd real dimension) and a transposed closed-loop realization for the dual
-condition. The plant-trajectory extraction and first inclusion are proved below
+odd real dimension) and transfer of external-response decay through the
+transposed closed-loop realization. The operator-level transpose identity is
+`prodDualEquiv_closedLoopMap_apply` below. The plant-trajectory extraction and
+first inclusion are proved below
 under the finite-Bohl bridge's explicit complex-structure hypothesis, in
 `range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse`. The exact-zero
 case already has both halves
@@ -13418,5 +13420,115 @@ theorem range_E_le_outputStabilizableSubspace_of_stableNonzeroExternalResponse
   simpa [sysZ] using hbridge (E d) hbohl
 
 end
+
+end LinearSystem
+
+/-! ## Transposed dynamic closed-loop realization
+
+The dual plant and controller yield the algebraic transpose of the primal
+closed-loop map under the canonical product-dual equivalence. This is the
+operator-level part of the remaining Corollary 6.22 necessity argument. -/
+
+namespace LinearSystem
+
+namespace DynamicController
+
+variable {X Y U : Type*}
+variable [AddCommGroup X] [Module ℝ X]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [AddCommGroup U] [Module ℝ U]
+
+/-- The transpose of a dynamic controller. -/
+def dual (ctrl : DynamicController ℝ X Y U) :
+    DynamicController ℝ (Module.Dual ℝ X) (Module.Dual ℝ U) (Module.Dual ℝ Y) where
+  K := ctrl.K.dualMap
+  L := ctrl.M.dualMap
+  M := ctrl.L.dualMap
+  N := ctrl.N.dualMap
+
+@[simp] theorem dual_K (ctrl : DynamicController ℝ X Y U) :
+    ctrl.dual.K = ctrl.K.dualMap := rfl
+@[simp] theorem dual_L (ctrl : DynamicController ℝ X Y U) :
+    ctrl.dual.L = ctrl.M.dualMap := rfl
+@[simp] theorem dual_M (ctrl : DynamicController ℝ X Y U) :
+    ctrl.dual.M = ctrl.L.dualMap := rfl
+@[simp] theorem dual_N (ctrl : DynamicController ℝ X Y U) :
+    ctrl.dual.N = ctrl.N.dualMap := rfl
+
+end DynamicController
+
+variable {X U Y D Z : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [NormedAddCommGroup D] [NormedSpace ℝ D]
+variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
+
+/-- The algebraic transpose (dual) system. -/
+noncomputable def dual (sys : LinearSystem ℝ X U Y) :
+    LinearSystem ℝ (Module.Dual ℝ X) (Module.Dual ℝ Y) (Module.Dual ℝ U) where
+  A := sys.A.dualMap
+  B := sys.C.dualMap
+  C := sys.B.dualMap
+  D := sys.D.dualMap
+
+@[simp] theorem dual_A (sys : LinearSystem ℝ X U Y) : sys.dual.A = sys.A.dualMap := rfl
+@[simp] theorem dual_B (sys : LinearSystem ℝ X U Y) : sys.dual.B = sys.C.dualMap := rfl
+@[simp] theorem dual_C (sys : LinearSystem ℝ X U Y) : sys.dual.C = sys.B.dualMap := rfl
+@[simp] theorem dual_D (sys : LinearSystem ℝ X U Y) : sys.dual.D = sys.D.dualMap := rfl
+
+/-- The dual system is strictly proper when the primal one is. -/
+theorem dual_D_eq_zero (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) :
+    sys.dual.D = 0 := by
+  simp only [dual]
+  rw [hD]
+  exact map_zero _
+
+/-- The transpose of the cab-pair interconnection. -/
+noncomputable def cabPairInterconnection_dual (sys : LinearSystem ℝ X U Y)
+    (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
+    DynamicInterconnection ℝ (Module.Dual ℝ X) (Module.Dual ℝ Y) (Module.Dual ℝ U)
+      (Module.Dual ℝ X) (Module.Dual ℝ Z) (Module.Dual ℝ D) :=
+  cabPairInterconnection sys.dual ctrl.dual H.dualMap E.dualMap
+
+/-- The two-sided product/dual linear equivalence. -/
+noncomputable def prodDualEquiv :
+    (Module.Dual ℝ X × Module.Dual ℝ X) ≃ₗ[ℝ] Module.Dual ℝ (X × X) :=
+  Module.dualProdDualEquivDual ℝ X X
+
+/-- **The dual closed loop is the transpose of the primal closed loop.** Under
+the product/dual equivalence `X* × X* ≃ (X × X)*`, the closed-loop map of the
+dual (transposed) cab-pair interconnection is the algebraic transpose of the
+primal closed-loop map. -/
+theorem prodDualEquiv_closedLoopMap_apply
+    (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
+    (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
+    (p : Module.Dual ℝ X × Module.Dual ℝ X) :
+    prodDualEquiv (X := X)
+        ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
+          ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+            (dual_D_eq_zero sys hD)) p) =
+      ((cabPairInterconnection sys ctrl E H).closedLoopMap
+          ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap
+        (prodDualEquiv (X := X) p) := by
+  let ic := cabPairInterconnection sys ctrl E H
+  let icD := cabPairInterconnection_dual sys ctrl E H
+  let hD' : icD.plant.D = 0 := dual_D_eq_zero sys hD
+  let h : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
+  let h' : icD.IsWellPosed := icD.isWellPosed_of_D_eq_zero hD'
+  change prodDualEquiv (icD.closedLoopMap h' p) = (ic.closedLoopMap h).dualMap (prodDualEquiv p)
+  rw [icD.closedLoopMap_of_D_eq_zero hD' h' p]
+  obtain ⟨ξ, ψ⟩ := p
+  apply LinearMap.ext
+  rintro ⟨a, b⟩
+  rw [LinearMap.dualMap_apply, ic.closedLoopMap_of_D_eq_zero hD h (a, b)]
+  simp only [prodDualEquiv, Module.dualProdDualEquivDual_apply, LinearMap.coprod_apply,
+    LinearMap.add_apply, LinearMap.comp_apply,
+    DynamicController.dual_K, DynamicController.dual_L, DynamicController.dual_M,
+    DynamicController.dual_N, LinearMap.dualMap_add, LinearMap.dualMap_comp_dualMap,
+    LinearMap.dualMap_apply,
+    map_add, icD, ic, cabPairInterconnection_dual, cabPairInterconnection, dual,
+    LinearMap.add_apply, LinearMap.comp_apply]
+  abel
 
 end LinearSystem
