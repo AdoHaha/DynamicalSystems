@@ -3014,32 +3014,25 @@ Its two directions split as follows.
   The state-feedback half is `exists_feedback_tendsto_readout_of_corollary622`
   (`H e^{t(A+BF)} (E d) → 0`) and the observer half is
   `exists_observerError_readout_tendsto_of_externalStabilizationConditions`
-  (`H e^{t(A-LC)} (E d) → 0`). What is *not* yet packaged is the passage from
-  these two block decays to the decay of the forced external response of the
-  dynamic controller (6.39). In the observer-error coordinates `(x, e) = (x, x - w)`
-  the closed loop is block upper triangular with blocks `A + B F` and `A + G C`,
-  and
-  `H x(t) = H e^{t(A+BF)}(E d) - ∫_0^t H e^{(t-s)(A+BF)} B F e^{s(A+GC)}(E d) ds`.
-  The missing analytic statement is a **forced/convolution quotient-decay lemma**
-  generalising the accepted initial-state bridge
-  `tendsto_readout_exp_of_isHurwitz_quotient_on`: for a feedback `F` preserving a
-  controlled-invariant witness `V ≤ ker H` with `(A + B F)|_{W/V}` Hurwitz on a
-  closed-loop-invariant `W ⊇ im E`, the convolution of `s ↦ H e^{s(A+BF)} B F`
-  with any exponentially decaying internal signal `e(s) = e^{s(A+GC)} y` tends to
-  `0`. Equivalently, a direct proof that the extended closed loop of (6.39) is
-  `DynamicInterconnection.IsExternallyStable` from the two quotient spectra
-  (Trentelman–Stoorvogel–Hautus Theorem 6.18 and its convolution decoding).
+  (`H e^{t(A-LC)} (E d) → 0`). The generic forced-readout consumer
+  `externalResponse_tendsto_zero_of_quotient_hurwitz` is also proved below.
+  The remaining step is to construct the extended invariant pair `(Ve, We)`
+  of Lemma 6.21 for the controller (6.39), containing the disturbance image,
+  annihilated by the external readout on `Ve`, and with Hurwitz quotient
+  `We / Ve` as in Theorem 6.18. The current feedback/observer theorems export
+  readout decay, but not yet the quotient data needed for this assembly.
 
 * **Necessity** (`StableNonzeroExternalResponse → ExternalStabilizationConditions`).
   The source derives `im E ⊂ V*(ker H) + Xstab` from the definition of `W_g(ker H)`
   as the set of states from which an open-loop control can make the controlled
   output decay, together with Theorem 4.37 (`W_g(ker H) = V*(ker H) + Xstab`),
   and then dualises the argument for `S*(im E) ∩ Xdet ⊂ ker H`. The missing
-  reusable statement is exactly that open-loop characterisation: for every
-  admissible (locally integrable) input `v` and every initial state `x`, if
-  `t ↦ H x_v(t, x) → 0` then `x ∈ V*(ker H) + Xstab(A, B)`, plus its dual
-  `im Hᵀ ⊂ V*(Eᵀ, Aᵀ, Cᵀ) + Xstab(Aᵀ, Cᵀ)` from which the second inclusion
-  follows. The exact-zero case already has both halves
+  finite-Bohl forcing-image version of this open-loop characterisation is now
+  `finiteBohlWBridge`. Applying it to a generic real controller still requires
+  real-to-complexification transport (the controller's state and input may have
+  odd real dimension), plant-trajectory extraction from the closed-loop orbit,
+  and a transposed closed-loop realization for the dual condition. The exact-zero
+  case already has both halves
   (`externalStabilizationConditions_of_externalStability`), but it rests on the
   stronger zero-response premise and does not cover the merely stable response.
 
