@@ -4470,6 +4470,362 @@ end GeometricFeedbackConstruction
 
 end LinearSystem
 
+/-!
+# The induced dual map on a nested dual quotient, defined directly from `T.dualMap`
+
+For a finite-dimensional real vector space `X`, a real endomorphism `T`, and nested
+`T`-invariant subspaces `S₁ ≤ S₂`, the induced map on `S₂ / S₁` is Hurwitz iff the
+map induced by the algebraic transpose `T.dualMap` on
+`S₁.dualAnnihilator / S₂.dualAnnihilator` is Hurwitz.
+
+The dual side is represented by the canonical image model
+`S₁.dualAnnihilator.map S₂.dualAnnihilator.mkQ`.  The important point of this section is
+that the dual map is **not** introduced as the conjugate of the primal dual map:
+it is the quotient map of `T.dualMap` on `Module.Dual ℝ X ⧸ S₂.dualAnnihilator`
+restricted to the invariant submodule `S₁.dualAnnihilator.map S₂.dualAnnihilator.mkQ`.
+The equality with the conjugate transport is then proved, and Hurwitzness is moved
+through `charpoly_dualMap_ofField`.
+-/
+
+universe u
+
+namespace LinearMap
+
+variable {X : Type u} [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
+
+noncomputable section
+
+/-- The nested quotient `S₂ / S₁`, with `S₁` considered as a submodule of `S₂` by `comap`. -/
+abbrev NestedQuotient (S₁ S₂ : Submodule ℝ X) : Type u :=
+  ↥S₂ ⧸ S₁.submoduleOf S₂
+
+/-- The dual nested quotient `S₁.dualAnnihilator / S₂.dualAnnihilator`, as the image of
+`S₁.dualAnnihilator` in `Module.Dual ℝ X ⧸ S₂.dualAnnihilator`. -/
+abbrev DualNestedQuotient (S₁ S₂ : Submodule ℝ X) : Type u :=
+  ↥(S₁.dualAnnihilator.map (S₂.dualAnnihilator).mkQ)
+
+/-- The restriction of `T` to an invariant subspace `S₂`. -/
+def restrictT (T : X →ₗ[ℝ] X) {S₂ : Submodule ℝ X} (hT₂ : S₂ ≤ S₂.comap T) :
+    S₂ →ₗ[ℝ] S₂ :=
+  T.restrict (fun _x hx => Submodule.mem_comap.mp (hT₂ hx))
+
+/-- The map induced by `T` on `S₂ / S₁`. -/
+def nestedQuotientMap (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T) :
+    NestedQuotient S₁ S₂ →ₗ[ℝ] NestedQuotient S₁ S₂ := by
+  let Tr : S₂ →ₗ[ℝ] S₂ := restrictT T hT₂
+  exact (S₁.submoduleOf S₂).mapQ (S₁.submoduleOf S₂) Tr (by
+    intro x hx
+    change T x ∈ S₁
+    exact hT₁ hx)
+
+/-! ### The dual map, defined directly as a restriction/quotient of `T.dualMap` -/
+
+omit [FiniteDimensional ℝ X] in
+lemma dualMap_mem_dualAnnihilator {S : Submodule ℝ X} {T : X →ₗ[ℝ] X}
+    {φ : Module.Dual ℝ X} (hT : S ≤ S.comap T) (hφ : φ ∈ S.dualAnnihilator) :
+    T.dualMap φ ∈ S.dualAnnihilator := by
+  rw [Submodule.mem_dualAnnihilator]
+  intro x hx
+  rw [LinearMap.dualMap_apply]
+  exact (Submodule.mem_dualAnnihilator φ).mp hφ (T x) (hT hx)
+
+/-- The map induced by `T.dualMap` on the image model
+`S₁.dualAnnihilator.map S₂.dualAnnihilator.mkQ`.  It is obtained by first descending
+`T.dualMap` to `Module.Dual ℝ X ⧸ S₂.dualAnnihilator` with `mapQ`, then restricting to
+the image submodule, which is invariant because `T` leaves `S₁` and `S₂` invariant. -/
+def dualNestedQuotientMapInd (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (_hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T) :
+    DualNestedQuotient S₁ S₂ →ₗ[ℝ] DualNestedQuotient S₁ S₂ := by
+  let A1 : Submodule ℝ (Module.Dual ℝ X) := S₁.dualAnnihilator
+  let A2 : Submodule ℝ (Module.Dual ℝ X) := S₂.dualAnnihilator
+  let I : Submodule ℝ (Module.Dual ℝ X ⧸ A2) := A1.map A2.mkQ
+  have hA2 : A2 ≤ A2.comap T.dualMap := by
+    intro φ hφ
+    rw [Submodule.mem_comap]
+    rw [Submodule.mem_dualAnnihilator] at hφ ⊢
+    intro x hx
+    rw [LinearMap.dualMap_apply]
+    exact hφ (T x) (hT₂ hx)
+  have hA1 : A1 ≤ A1.comap T.dualMap := by
+    intro φ hφ
+    rw [Submodule.mem_comap]
+    rw [Submodule.mem_dualAnnihilator] at hφ ⊢
+    intro x hx
+    rw [LinearMap.dualMap_apply]
+    exact hφ (T x) (hT₁ hx)
+  let f : Module.Dual ℝ X ⧸ A2 →ₗ[ℝ] Module.Dual ℝ X ⧸ A2 :=
+    A2.mapQ A2 T.dualMap hA2
+  have hI : I ≤ I.comap f := by
+    intro q hq
+    rw [Submodule.mem_comap]
+    obtain ⟨φ, hφ, rfl⟩ := hq
+    refine ⟨T.dualMap φ, hA1 hφ, ?_⟩
+    simp [f, A2]
+  exact (f.restrict hI)
+
+omit [FiniteDimensional ℝ X] in
+lemma mem_lift_annihilator {S₁ S₂ : Submodule ℝ X} (hS₁S₂ : S₁ ≤ S₂)
+    (ψ : (S₁.submoduleOf S₂).dualAnnihilator) :
+    Subspace.dualLift S₂ (ψ : Module.Dual ℝ S₂) ∈ S₁.dualAnnihilator := by
+  rw [Submodule.mem_dualAnnihilator]
+  intro x hx
+  have hψ := (Submodule.mem_dualAnnihilator (ψ : Module.Dual ℝ S₂)).mp ψ.2
+  change Subspace.dualLift S₂ (ψ : Module.Dual ℝ S₂) x = 0
+  rw [Subspace.dualLift_of_mem (hS₁S₂ hx)]
+  exact hψ ⟨x, hS₁S₂ hx⟩ hx
+
+omit [FiniteDimensional ℝ X] in
+lemma mem_restrict_annihilator {S₁ S₂ : Submodule ℝ X}
+    {φ : Module.Dual ℝ X} (hφ : φ ∈ S₁.dualAnnihilator) :
+    S₂.dualRestrict φ ∈ (S₁.submoduleOf S₂).dualAnnihilator := by
+  rw [Submodule.mem_dualAnnihilator]
+  intro w hw
+  change φ (w : X) = 0
+  have hφ' := (Submodule.mem_dualAnnihilator (φ : Module.Dual ℝ X)).mp hφ
+  exact hφ' (w : X) hw
+
+/-- The natural equivalence
+`Module.Dual ℝ (S₂ ⧸ S₁.submoduleOf S₂) ≃ₗ[ℝ] DualNestedQuotient S₁ S₂`. -/
+def dualNestedQuotientEquiv (S₁ S₂ : Submodule ℝ X) (hS₁S₂ : S₁ ≤ S₂) :
+    Module.Dual ℝ (NestedQuotient S₁ S₂) ≃ₗ[ℝ] DualNestedQuotient S₁ S₂ := by
+  let e1 : Module.Dual ℝ (NestedQuotient S₁ S₂) ≃ₗ[ℝ]
+      (S₁.submoduleOf S₂).dualAnnihilator :=
+    (S₁.submoduleOf S₂).dualQuotEquivDualAnnihilator
+  let e2 : Module.Dual ℝ S₂ ≃ₗ[ℝ] Module.Dual ℝ X ⧸ S₂.dualAnnihilator :=
+    (Subspace.quotAnnihilatorEquiv S₂).symm
+  have hmap : ((S₁.submoduleOf S₂).dualAnnihilator.map
+        (e2 : Module.Dual ℝ S₂ →ₗ[ℝ] Module.Dual ℝ X ⧸ S₂.dualAnnihilator)) =
+      S₁.dualAnnihilator.map (S₂.dualAnnihilator).mkQ := by
+    ext q
+    constructor
+    · rintro ⟨ψ, hψ, rfl⟩
+      refine ⟨Subspace.dualLift S₂ (ψ : Module.Dual ℝ S₂),
+        mem_lift_annihilator hS₁S₂ ⟨ψ, hψ⟩, ?_⟩
+      change (S₂.dualAnnihilator).mkQ (Subspace.dualLift S₂ (ψ : Module.Dual ℝ S₂)) =
+        (Subspace.quotAnnihilatorEquiv S₂).symm ψ
+      rw [LinearEquiv.eq_symm_apply (e := Subspace.quotAnnihilatorEquiv S₂)]
+      rw [Submodule.mkQ_apply, Subspace.quotAnnihilatorEquiv_apply]
+      exact Subspace.dualRestrict_leftInverse S₂ ψ
+    · rintro ⟨φ, hφ, rfl⟩
+      refine ⟨S₂.dualRestrict φ, mem_restrict_annihilator hφ, ?_⟩
+      change (Subspace.quotAnnihilatorEquiv S₂).symm (S₂.dualRestrict φ) =
+        (S₂.dualAnnihilator).mkQ φ
+      rw [LinearEquiv.symm_apply_eq]
+      rw [Submodule.mkQ_apply, Subspace.quotAnnihilatorEquiv_apply]
+  let e3 : (S₁.submoduleOf S₂).dualAnnihilator ≃ₗ[ℝ] DualNestedQuotient S₁ S₂ :=
+    e2.ofSubmodules (S₁.submoduleOf S₂).dualAnnihilator
+      (S₁.dualAnnihilator.map (S₂.dualAnnihilator).mkQ) hmap
+  exact e1.trans e3
+
+/-- The dual map on `DualNestedQuotient S₁ S₂`, transported from
+`(nestedQuotientMap T hT₁ hT₂).dualMap` along the canonical equivalence. -/
+def dualNestedQuotientMap (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T) :
+    DualNestedQuotient S₁ S₂ →ₗ[ℝ] DualNestedQuotient S₁ S₂ :=
+  (dualNestedQuotientEquiv S₁ S₂ hS₁S₂).conj (nestedQuotientMap T hT₁ hT₂).dualMap
+
+/-! ### The transported conjugate is exactly the direct `T.dualMap` quotient -/
+
+omit [FiniteDimensional ℝ X] in
+lemma dualNestedQuotientMapInd_apply_mk
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T)
+    (φ : Module.Dual ℝ X) (hφ : φ ∈ S₁.dualAnnihilator) :
+    dualNestedQuotientMapInd T hS₁S₂ hT₁ hT₂
+      ⟨(S₂.dualAnnihilator).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ =
+      ⟨(S₂.dualAnnihilator).mkQ (T.dualMap φ),
+        Submodule.mem_map.mpr ⟨T.dualMap φ, dualMap_mem_dualAnnihilator hT₁ hφ, rfl⟩⟩ := by
+  unfold dualNestedQuotientMapInd
+  apply Subtype.ext
+  simp [Submodule.mapQ_apply]
+
+omit [FiniteDimensional ℝ X] in
+lemma dualNestedQuotientEquiv_symm_apply_mk
+    {S₁ S₂ : Submodule ℝ X} (hS₁S₂ : S₁ ≤ S₂)
+    (φ : Module.Dual ℝ X) (hφ : φ ∈ S₁.dualAnnihilator) :
+    (dualNestedQuotientEquiv S₁ S₂ hS₁S₂).symm
+      ⟨(S₂.dualAnnihilator).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ =
+      (S₁.submoduleOf S₂).dualCopairing ⟨S₂.dualRestrict φ, mem_restrict_annihilator hφ⟩ := by
+  ext w
+  rw [dualNestedQuotientEquiv]
+  simp only [LinearEquiv.trans_symm, LinearEquiv.trans_apply]
+  rw [LinearMap.comp_apply, LinearMap.comp_apply]
+  simp only [Submodule.mkQ_apply]
+  rw [Submodule.dualQuotEquivDualAnnihilator_symm_apply_mk]
+  change ((((Subspace.quotAnnihilatorEquiv S₂).symm.ofSubmodules
+        (S₁.submoduleOf S₂).dualAnnihilator
+        (Submodule.map S₂.dualAnnihilator.mkQ S₁.dualAnnihilator) _).symm
+      ⟨Submodule.Quotient.mk φ, _⟩ : Module.Dual ℝ S₂)) w =
+    ((S₁.submoduleOf S₂).dualCopairing ⟨S₂.dualRestrict φ, _⟩) (Submodule.Quotient.mk w)
+  rw [LinearEquiv.ofSubmodules_symm_apply]
+  change (Subspace.quotAnnihilatorEquiv S₂ (Submodule.Quotient.mk φ)) w = S₂.dualRestrict φ w
+  rw [Subspace.quotAnnihilatorEquiv_apply]
+
+omit [FiniteDimensional ℝ X] in
+lemma nestedQuotientMap_dualMap_dualCopairing_apply
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T)
+    (φ : Module.Dual ℝ X) (hφ : φ ∈ S₁.dualAnnihilator) :
+    (nestedQuotientMap T hT₁ hT₂).dualMap
+      ((S₁.submoduleOf S₂).dualCopairing ⟨S₂.dualRestrict φ, mem_restrict_annihilator hφ⟩) =
+      (S₁.submoduleOf S₂).dualCopairing ⟨S₂.dualRestrict (T.dualMap φ),
+        mem_restrict_annihilator (dualMap_mem_dualAnnihilator hT₁ hφ)⟩ := by
+  ext w
+  simp only [nestedQuotientMap, restrictT]
+  change (S₂.dualRestrict φ) ⟨T (w : X), _⟩ = (T.dualMap φ) (w : X)
+  simp [Submodule.dualRestrict_apply, LinearMap.dualMap_apply]
+
+omit [FiniteDimensional ℝ X] in
+lemma dualNestedQuotientEquiv_apply_dualCopairing
+    {S₁ S₂ : Submodule ℝ X} (hS₁S₂ : S₁ ≤ S₂)
+    (φ : Module.Dual ℝ X) (hφ : φ ∈ S₁.dualAnnihilator) :
+    (dualNestedQuotientEquiv S₁ S₂ hS₁S₂)
+      ((S₁.submoduleOf S₂).dualCopairing ⟨S₂.dualRestrict φ, mem_restrict_annihilator hφ⟩) =
+      ⟨(S₂.dualAnnihilator).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ := by
+  rw [← LinearEquiv.eq_symm_apply (e := dualNestedQuotientEquiv S₁ S₂ hS₁S₂)]
+  rw [dualNestedQuotientEquiv_symm_apply_mk hS₁S₂ φ hφ]
+
+omit [FiniteDimensional ℝ X] in
+lemma dualNestedQuotientMap_apply_mk
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T)
+    (φ : Module.Dual ℝ X) (hφ : φ ∈ S₁.dualAnnihilator) :
+    dualNestedQuotientMap T hS₁S₂ hT₁ hT₂
+      ⟨(S₂.dualAnnihilator).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ =
+      ⟨(S₂.dualAnnihilator).mkQ (T.dualMap φ),
+        Submodule.mem_map.mpr ⟨T.dualMap φ, dualMap_mem_dualAnnihilator hT₁ hφ, rfl⟩⟩ := by
+  rw [dualNestedQuotientMap, LinearEquiv.conj_apply]
+  rw [LinearMap.comp_apply, LinearMap.comp_apply]
+  change (dualNestedQuotientEquiv S₁ S₂ hS₁S₂)
+      ((nestedQuotientMap T hT₁ hT₂).dualMap
+        ((dualNestedQuotientEquiv S₁ S₂ hS₁S₂).symm
+          ⟨(S₂.dualAnnihilator).mkQ φ, _⟩)) =
+    ⟨(S₂.dualAnnihilator).mkQ (T.dualMap φ), _⟩
+  rw [dualNestedQuotientEquiv_symm_apply_mk hS₁S₂ φ hφ]
+  rw [nestedQuotientMap_dualMap_dualCopairing_apply T hT₁ hT₂ φ hφ]
+  exact dualNestedQuotientEquiv_apply_dualCopairing hS₁S₂ (T.dualMap φ)
+    (dualMap_mem_dualAnnihilator hT₁ hφ)
+
+omit [FiniteDimensional ℝ X] in
+/-- On the image model, the conjugate of the primal dual map along
+`dualNestedQuotientEquiv` agrees with the map induced directly by `T.dualMap`. -/
+theorem dualNestedQuotientMap_eq_ind (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T) :
+    dualNestedQuotientMap T hS₁S₂ hT₁ hT₂ = dualNestedQuotientMapInd T hS₁S₂ hT₁ hT₂ := by
+  ext q
+  obtain ⟨φ, hφ, hφq⟩ := Submodule.mem_map.mp q.2
+  have hq : q = ⟨(S₂.dualAnnihilator).mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩ := by
+    apply Subtype.ext
+    exact hφq.symm
+  rw [hq]
+  rw [dualNestedQuotientMap_apply_mk T hS₁S₂ hT₁ hT₂ φ hφ,
+    dualNestedQuotientMapInd_apply_mk T hS₁S₂ hT₁ hT₂ φ hφ]
+
+/-- **Hurwitz transport between a nested quotient and its direct dual quotient.**
+
+The induced map on `S₂ / S₁` is Hurwitz iff the map induced by `T.dualMap` on
+`S₁.dualAnnihilator / S₂.dualAnnihilator` is Hurwitz. -/
+theorem isHurwitz_nestedQuotient_iff_dualNestedQuotientMapInd
+    (T : X →ₗ[ℝ] X) {S₁ S₂ : Submodule ℝ X}
+    (hS₁S₂ : S₁ ≤ S₂) (hT₁ : S₁ ≤ S₁.comap T) (hT₂ : S₂ ≤ S₂.comap T) :
+    IsHurwitz (nestedQuotientMap T hT₁ hT₂) ↔
+      IsHurwitz (dualNestedQuotientMapInd T hS₁S₂ hT₁ hT₂) := by
+  rw [← dualNestedQuotientMap_eq_ind T hS₁S₂ hT₁ hT₂]
+  rw [dualNestedQuotientMap]
+  rw [IsHurwitz, IsHurwitz]
+  rw [LinearEquiv.charpoly_conj]
+  rw [charpoly_dualMap_ofField]
+
+/-! ### Specialization to `S*` and `T_g` with the observer gain `A + G C` -/
+
+section SstarTg
+
+variable {X' Y D : Type*}
+variable [NormedAddCommGroup X'] [NormedSpace ℝ X'] [FiniteDimensional ℝ X']
+variable [AddCommGroup Y] [Module ℝ Y]
+variable [AddCommGroup D] [Module ℝ D]
+
+/-- The smallest conditioned invariant subspace `S* = S*(im E)`. -/
+def Sstar (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    Submodule ℝ X' :=
+  conditionedInvariantSubspace C A (LinearMap.range E)
+
+/-- The subspace `T_g = S*(im E) ∩ Xdet(C, A)`. -/
+def Tg (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    Submodule ℝ X' :=
+  Sstar C A E ⊓ detectableSubspace C A
+
+/-- `A + G C` preserves the detectable subspace: on `Xdet` the injection `G C`
+vanishes and `A` preserves `Xdet`. -/
+lemma map_detectableSubspace_add_comp_le
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X') :
+    Submodule.map (A + G.comp C) (detectableSubspace C A) ≤ detectableSubspace C A := by
+  intro x hx
+  rcases hx with ⟨y, hy, rfl⟩
+  have hyu : y ∈ unobservableSubspace C A :=
+    detectableSubspace_le_unobservableSubspace C A hy
+  have hyC : C y = 0 := by
+    exact LinearMap.mem_ker.mp ((unobservableSubspace_le_ker C A) hyu)
+  have hAy : A y ∈ detectableSubspace C A :=
+    map_detectableSubspace_le C A ⟨y, hy, rfl⟩
+  have hGCy : (G.comp C) y = 0 := by
+    rw [LinearMap.comp_apply, hyC, map_zero]
+  have hsum : (A + G.comp C) y = A y := by
+    rw [LinearMap.add_apply, hGCy, add_zero]
+  rwa [hsum]
+
+/-- The inclusion `T_g ≤ S*`. -/
+lemma Tg_le_Sstar (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') :
+    Tg C A E ≤ Sstar C A E :=
+  inf_le_left
+
+omit [FiniteDimensional ℝ X'] in
+/-- Invariance of `S*` under `A + G C`, in `comap` form. -/
+lemma Sstar_comap_add_comp (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X')
+    (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    Sstar C A E ≤ (Sstar C A E).comap (A + G.comp C) := by
+  rw [← Submodule.map_le_iff_le_comap]
+  exact hG
+
+/-- Invariance of `T_g = S* ∩ Xdet` under `A + G C`, in `comap` form. -/
+lemma Tg_comap_add_comp (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X')
+    (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    Tg C A E ≤ (Tg C A E).comap (A + G.comp C) := by
+  rw [← Submodule.map_le_iff_le_comap]
+  dsimp [Tg]
+  have hdet := map_detectableSubspace_add_comp_le C A G
+  have hinf : Submodule.map (A + G.comp C) (Sstar C A E ⊓ detectableSubspace C A) ≤
+      Submodule.map (A + G.comp C) (Sstar C A E) ⊓
+        Submodule.map (A + G.comp C) (detectableSubspace C A) :=
+    Submodule.map_inf_le (A + G.comp C)
+  exact le_trans hinf (inf_le_inf hG hdet)
+
+/-- **Hurwitz transport for the observer quotient `S* / T_g`.**
+
+With `S* = S*(im E)` and `T_g = S* ∩ Xdet(C,A)`, the map induced by the observer
+error operator `A + G C` on `S* / T_g` is Hurwitz iff the map induced by its
+algebraic transpose on `T_g.dualAnnihilator / S*.dualAnnihilator` is Hurwitz. -/
+theorem isHurwitz_SstarTg_nestedQuotient_iff_dualNestedQuotientMapInd
+    (C : X' →ₗ[ℝ] Y) (A : X' →ₗ[ℝ] X') (E : D →ₗ[ℝ] X') (G : Y →ₗ[ℝ] X')
+    (hG : Submodule.map (A + G.comp C) (Sstar C A E) ≤ Sstar C A E) :
+    IsHurwitz (nestedQuotientMap (A + G.comp C)
+      (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG)) ↔
+      IsHurwitz (dualNestedQuotientMapInd (A + G.comp C)
+        (Tg_le_Sstar C A E) (Tg_comap_add_comp C A E G hG)
+        (Sstar_comap_add_comp C A E G hG)) := by
+  exact isHurwitz_nestedQuotient_iff_dualNestedQuotientMapInd (A + G.comp C)
+    (Tg_le_Sstar C A E) (Tg_comap_add_comp C A E G hG)
+    (Sstar_comap_add_comp C A E G hG)
+
+end SstarTg
+
+end
+
+end LinearMap
+
 
 /-! ## The dual output-injection (detectable) half: annihilator duality
 
