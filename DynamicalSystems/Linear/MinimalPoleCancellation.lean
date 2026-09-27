@@ -82,6 +82,46 @@ theorem nonzero_readout_adjugate_of_pbh
     simpa only [LinearMap.comp_apply, LinearMap.zero_apply] using h
   simp [hMv, hJu]
 
+/-- In a controllable and observable realization, a polynomial annihilates
+the state map if all its input-generated Markov responses vanish. This is the
+minimal-realization half of a prospective common-transfer-denominator proof. -/
+theorem aeval_eq_zero_of_markov_annihilation
+    (A : X →ₗ[ℂ] X) (B : U →ₗ[ℂ] X) (C : X →ₗ[ℂ] Y)
+    (hctrl : IsControllable A B) (hobs : IsObservable C A)
+    (q : Polynomial ℂ)
+    (hmark : ∀ (k : ℕ) (u : U), C ((A ^ k) ((aeval A q) (B u))) = 0) :
+    aeval A q = 0 := by
+  have hcomm : (aeval A q).comp A = A.comp (aeval A q) := by
+    change aeval A q * A = A * aeval A q
+    have h := congrArg (aeval A) (mul_comm q Polynomial.X)
+    simpa only [map_mul, aeval_X] using h
+  have hB : ∀ u : U, (aeval A q) (B u) = 0 := by
+    intro u
+    have hmem : (aeval A q) (B u) ∈ unobservableSubspace C A := by
+      rw [mem_unobservableSubspace]
+      exact fun k => hmark k u
+    change unobservableSubspace C A = ⊥ at hobs
+    rw [hobs, Submodule.mem_bot] at hmem
+    exact hmem
+  have hRange : range B ≤ ker (aeval A q) := by
+    rintro _ ⟨u, rfl⟩
+    exact mem_ker.mpr (hB u)
+  have hInv : Submodule.map A (ker (aeval A q)) ≤ ker (aeval A q) := by
+    rintro _ ⟨x, hx, rfl⟩
+    change (aeval A q) x = 0 at hx
+    change (aeval A q) (A x) = 0
+    have := congrArg (fun T : X →ₗ[ℂ] X => T x) hcomm
+    simp only [comp_apply] at this
+    rw [this, hx, map_zero]
+  have hReach : reachableSubspace A B ≤ ker (aeval A q) :=
+    reachableSubspace_le A B hRange hInv
+  change reachableSubspace A B = ⊤ at hctrl
+  rw [hctrl] at hReach
+  apply LinearMap.ext
+  intro x
+  have hx : x ∈ ker (aeval A q) := hReach Submodule.mem_top
+  exact mem_ker.mp hx
+
 end LinearMap
 
 namespace Matrix

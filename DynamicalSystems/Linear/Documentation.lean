@@ -1184,9 +1184,13 @@ For a controllable and observable complex realization, a characteristic root
 with nonzero evaluated adjugate survives cancellation in at least one scalar
 transfer entry. This uses local Hautus reachability and observability to show
 the Cramer numerator is nonzero. Repeated-root cases with zero evaluated
-adjugate still need a higher-order argument.
+adjugate still need a higher-order argument. A separate minimal-realization
+lemma shows that if all Markov parameters vanish after applying a polynomial
+`q` to the state map, then `q(A) = 0`; relating a common transfer denominator
+to that Markov recurrence is the remaining bridge.
 
 {docstring Matrix.exists_scalar_transfer_pole_of_minimal_rank_one_root}
+{docstring LinearMap.aeval_eq_zero_of_markov_annihilation}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
