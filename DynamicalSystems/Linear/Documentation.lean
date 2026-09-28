@@ -25,6 +25,8 @@ import DynamicalSystems.Linear.MinimalTransferPoles
 import DynamicalSystems.Linear.TransferCoordinateBridge
 import DynamicalSystems.Linear.TransferPoleDecay
 import DynamicalSystems.Linear.TransferPoleControllerCriterion
+import DynamicalSystems.Linear.TransferPoleDomains
+import DynamicalSystems.Linear.TransferPoleFeedthrough
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -291,7 +293,8 @@ is proved by
 It uses Hurwitz (left-half-plane) stability. Equivalence with the book's
 reduced transfer-pole formulation for that domain is proved by
 `LinearSystem.anyStatePoleStableExternalResponse_iff_externalStabilizationConditions`.
-Arbitrary stability domains remain separate.
+For arbitrary stability domains, only the minimal-realization pole/spectrum
+bridge is asserted; the geometric controller-existence iff remains separate.
 The controllable/observable special case is
 `LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
@@ -1258,6 +1261,34 @@ conditions, for Hurwitz stability.
 {docstring LinearSystem.anyStatePoleStableExternalResponse_iff_anyStateStableExternalResponse}
 {docstring LinearSystem.anyStatePoleStableExternalResponse_iff_externalStabilizationConditions}
 
+## `DynamicalSystems.Linear.TransferPoleDomains`
+
+The minimal-realization pole/spectrum equivalence works for any chosen set of
+complex numbers `Cg`. No decay or geometric-stabilization equivalence is
+asserted for an arbitrary domain.
+
+{docstring RatFunc.HasPolesIn}
+{docstring Matrix.all_channels_poles_in_iff_charpoly_roots_in_of_minimal}
+{docstring Matrix.real_all_channels_poles_in_iff_charpoly_roots_in_of_minimal}
+{docstring LinearSystem.MinimalRealizationAllChannelsPolesIn}
+{docstring LinearSystem.minimalRealizationAllChannelsPolesIn_iff_spectrum}
+
+## `DynamicalSystems.Linear.TransferPoleFeedthrough`
+
+For a well-posed dynamic interconnection, including nonzero plant feedthrough
+`D` and measurement disturbance feedthrough `F`, the total disturbance map
+determines the external transfer poles. Its Hurwitz pole criterion is equivalent
+to impulse-response decay. This is not a feedthrough-generalized version of the
+Corollary 6.22 geometric iff. Setting both feedthrough maps to zero recovers the
+previous transfer-pole criterion.
+
+{docstring LinearSystem.DynamicInterconnection.externalPolesIn_iff_minimalSpectrum}
+{docstring LinearSystem.DynamicInterconnection.externalPolesIn_leftHalfPlane_iff_response_tendsto}
+{docstring LinearSystem.AnyStateWellPosedExternalPolesIn}
+{docstring LinearSystem.AnyStateWellPosedStableExternalResponse}
+{docstring LinearSystem.anyStateWellPosedExternalPolesIn_leftHalfPlane_iff_stableExternalResponse}
+{docstring LinearSystem.anyStateWellPosedExternalPolesIn_zero_iff_anyStatePoleStableExternalResponse}
+
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
 * Dynamic measurement-feedback controller from a `(C, A, B)`-pair (TST Theorem 6.4): Lean
@@ -1335,12 +1366,12 @@ even when the finite-dimensional controller state is arbitrary, using the
 observer-based construction and the real-space dual necessity proof. Reduced
 rational transfer-pole stability is now identified with that decay criterion
 for the left-half-plane stability domain. Arbitrary stability domains `C_g`
-remain outside this equivalence.
+have a minimal-realization pole/spectrum bridge but no general geometric iff.
 The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
 and transpose-exponential pairing are formalized with explicit finite-dimensional and
-admissibility hypotheses. These external-stability statements assume a strictly proper plant
-(`D = 0`); the general feedthrough-well-posedness case is left to the hypotheses of
-`LinearSystem.DynamicInterconnection.IsWellPosed`.
+admissibility hypotheses. The Corollary 6.22 geometric iff assumes a strictly proper plant
+(`D = 0`). For nonzero `D` or measurement disturbance feedthrough `F`, the well-posed
+transfer-pole/response-decay bridge is formalized separately, without claiming the geometric iff.
 
 Out of scope: the nonlinear theory of Trentelman–Stoorvogel–Hautus Chapters 7–15 (system zeros and
 strong observability, distributions and system invertibility, tracking and regulation, and the
