@@ -170,6 +170,56 @@ def stabilizableSubspaceIn (Cg : Set ℂ) (A : X →ₗ[ℝ] X) (B : U →ₗ[�
     Submodule ℝ X :=
   stableSubspaceIn Cg A ⊔ reachableSubspace A B
 
+/-- The domain-relative stabilizable subspace is invariant under the plant. -/
+theorem map_stabilizableSubspaceIn_le (Cg : Set ℂ)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    Submodule.map A (stabilizableSubspaceIn Cg A B) ≤
+      stabilizableSubspaceIn Cg A B := by
+  rw [stabilizableSubspaceIn, Submodule.map_sup]
+  exact sup_le (le_trans (map_stableSubspaceIn_le Cg A) le_sup_left)
+    (le_trans (map_reachableSubspace_le A B) le_sup_right)
+
+/-- The input image lies in the domain-relative stabilizable subspace. -/
+theorem range_le_stabilizableSubspaceIn (Cg : Set ℂ)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) :
+    LinearMap.range B ≤ stabilizableSubspaceIn Cg A B :=
+  le_trans (range_le_reachableSubspace A B) le_sup_right
+
+/-- The geometric sum used to form the controller quotient is plant-invariant
+whenever `V` is controlled invariant. -/
+theorem map_sup_stabilizableSubspaceIn_le (Cg : Set ℂ)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    {V : Submodule ℝ X} (hV : Submodule.map A V ≤ V ⊔ LinearMap.range B) :
+    Submodule.map A (V ⊔ stabilizableSubspaceIn Cg A B) ≤
+      V ⊔ stabilizableSubspaceIn Cg A B := by
+  rw [Submodule.map_sup]
+  refine sup_le ?_ ?_
+  · exact le_trans hV (sup_le_sup_left (range_le_stabilizableSubspaceIn Cg A B) V)
+  · exact le_trans (map_stabilizableSubspaceIn_le Cg A B) le_sup_right
+
+/-- Every state feedback preserves the domain-relative stabilizable subspace. -/
+theorem map_add_feedback_stabilizableSubspaceIn_le (Cg : Set ℂ)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X) (F : X →ₗ[ℝ] U) :
+    Submodule.map (A + B.comp F) (stabilizableSubspaceIn Cg A B) ≤
+      stabilizableSubspaceIn Cg A B := by
+  rintro y ⟨x, hx, rfl⟩
+  simp only [LinearMap.add_apply, LinearMap.comp_apply]
+  exact (stabilizableSubspaceIn Cg A B).add_mem
+    (map_stabilizableSubspaceIn_le Cg A B ⟨x, hx, rfl⟩)
+    (range_le_stabilizableSubspaceIn Cg A B ⟨F x, rfl⟩)
+
+/-- A feedback preserving `V` also preserves the domain-relative geometric
+sum `V ⊔ Xstab,Cg(A,B)`. -/
+theorem map_add_feedback_sup_stabilizableSubspaceIn_le (Cg : Set ℂ)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    {V : Submodule ℝ X} (F : X →ₗ[ℝ] U)
+    (hFV : Submodule.map (A + B.comp F) V ≤ V) :
+    Submodule.map (A + B.comp F) (V ⊔ stabilizableSubspaceIn Cg A B) ≤
+      V ⊔ stabilizableSubspaceIn Cg A B := by
+  rw [Submodule.map_sup]
+  exact sup_le (le_trans hFV le_sup_left)
+    (le_trans (map_add_feedback_stabilizableSubspaceIn_le Cg A B F) le_sup_right)
+
 /-- The domain-relative detectable subspace is the unobservable part of the
 antistable state space. -/
 def detectableSubspaceIn (Cg : Set ℂ) (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) :

@@ -1312,6 +1312,9 @@ necessity argument remain.
 {docstring LinearMap.antistableSubspaceIn}
 {docstring LinearMap.map_stableSubspaceIn_le}
 {docstring LinearMap.stabilizableSubspaceIn}
+{docstring LinearMap.map_stabilizableSubspaceIn_le}
+{docstring LinearMap.map_sup_stabilizableSubspaceIn_le}
+{docstring LinearMap.map_add_feedback_sup_stabilizableSubspaceIn_le}
 {docstring LinearMap.detectableSubspaceIn}
 {docstring LinearSystem.ExternalStabilizationConditionsIn}
 {docstring LinearSystem.anyStateExternalPolesIn_leftHalfPlane_iff_geometricConditionsIn}
