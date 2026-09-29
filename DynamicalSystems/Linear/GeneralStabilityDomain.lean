@@ -12,8 +12,10 @@ public import DynamicalSystems.Linear.TransferPoleFeedthrough
 Book Definition 2.12 requires a stability domain to meet the real axis and to
 be invariant under complex conjugation. The stable and antistable spectral
 subspaces below use the existing generalized-eigenspace construction. This
-module identifies their Hurwitz specializations; the arbitrary-domain
-controller-existence theorem requires further spectral gain construction.
+module identifies their Hurwitz specializations. The spectral gains and
+controller-existence theorem are proved downstream in
+`GeneralDomainQuotientFeedback`, `GeneralDomainObserverGain`, and
+`GeneralDomainControllerCriterion`.
 -/
 
 @[expose] public section
@@ -291,9 +293,9 @@ theorem anyStateWellPosedExternalPolesIn_mono {Cg Ch : Set ℂ}
     (h : AnyStateWellPosedExternalPolesIn Cg sys E F H) :
     AnyStateWellPosedExternalPolesIn Ch sys E F H := by
   obtain ⟨V, hV1, hV2, hV3, ctrl, hwp, hpole⟩ := h
-  letI : NormedAddCommGroup V := hV1
-  letI : NormedSpace ℝ V := hV2
-  letI : FiniteDimensional ℝ V := hV3
+  let hVadd : NormedAddCommGroup V := hV1
+  let hVspace : NormedSpace ℝ V := hV2
+  let hVfinite : FiniteDimensional ℝ V := hV3
   exact ⟨V, hV1, hV2, hV3, ctrl, hwp,
     minimalRealizationAllChannelsPolesIn_mono hsub _ _ _ hpole⟩
 

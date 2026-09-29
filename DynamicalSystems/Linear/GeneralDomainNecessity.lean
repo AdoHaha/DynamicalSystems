@@ -628,9 +628,9 @@ theorem externalStabilizationConditionsIn_of_anyStateWellPosedExternalPolesIn
     (h : AnyStateWellPosedExternalPolesIn Cg sys E 0 H) :
     ExternalStabilizationConditionsIn Cg sys E H := by
   obtain ⟨V, hV1, hV2, hV3, ctrl, hwp, hPole⟩ := h
-  letI : NormedAddCommGroup V := hV1
-  letI : NormedSpace ℝ V := hV2
-  letI : FiniteDimensional ℝ V := hV3
+  let hVadd : NormedAddCommGroup V := hV1
+  let hVspace : NormedSpace ℝ V := hV2
+  let hVfinite : FiniteDimensional ℝ V := hV3
   let ic : DynamicInterconnection ℝ X U Y V D Z := ⟨sys, ctrl, E, 0, H⟩
   constructor
   · exact ic.range_E_le_geometricFirst_of_externalPolesIn hwp rfl Cg hCg hPole

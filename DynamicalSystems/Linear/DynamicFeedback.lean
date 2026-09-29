@@ -178,9 +178,8 @@ following is now claimed and proved here:
 For a strictly proper plant the two directions combine into the exact
 Theorem 6.6 equivalence. The extraction below only needs well-posedness, so it
 also applies to plants with a control feedthrough; the synthesis direction at
-present requires `D = 0`. The following remain the next milestones and are *not*
-claimed here, so that no unproved strengthening is read into the present
-declarations:
+present requires `D = 0`. The following distinguish proved controller and BIBO
+results from the remaining nonzero-feedthrough limitation:
 
 * the **decoupling synthesis theorem for a nonzero measurement disturbance
   channel** `F`: the channel itself, its resolved measured signal and input, the
@@ -5967,13 +5966,14 @@ subspace `X_g(A)` because the reachable subspace is trivial. Hence
 `W_g(ker H) = X_g(A) ⊔ ⟨ker H | A⟩`.
 
 The structural lemmas below record that reduction. They are the algebraic core
-of the `B = 0` *spectral stable-observability necessity*: the missing analytic
+of the `B = 0` *spectral stable-observability necessity*: the analytic
 step, isolated as the explicit `hspectral` hypothesis of
 `mem_outputStabilizableSubspace_of_decay_of_B_eq_zero`, is the statement that an
 antistable state whose readout decays must be unobservable (Trentelman–Stoorvogel–
-Hautus, Theorem 4.37 necessity for the no-input case). The reduction of the
-trajectory predicate `IsOutputStabilizable` to that spectral statement is
-`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`. -/
+Hautus, Theorem 4.37 necessity for the no-input case). It is proved by
+`LinearMap.antistable_readout_forces_unobservable` and supplied to the
+trajectory reduction by `hspectral_holds`; the unconditional statement is
+`isOutputStabilizable_iff_mem_outputStabilizableSubspace_of_B_eq_zero'`. -/
 
 omit [FiniteDimensional ℝ U] in
 /-- **The `B = 0` controlled-invariant subspace is the unobservable subspace.**
@@ -7036,20 +7036,17 @@ spectral obligation. The algebraic collapses are
 unobservable readout facts are `tendsto_readout_exp_of_mem_hurwitzSubspace` and
 `readout_exp_eq_zero_of_mem_unobservableSubspace`; the reduction is
 `mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` and its trajectory form
-`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`, both
-taking as hypothesis the *only* missing analytic statement:
+`mem_outputStabilizableSubspace_of_isOutputStabilizable_of_B_eq_zero`, which
+isolate the analytic statement:
 
 `∀ x : X, x ∈ X_b(A) → Tendsto (fun t ↦ H (e^{t A} x)) atTop (nhds 0) →
   x ∈ ⟨ker H | A⟩`.
 
-That statement is not proved here; it is the precise remaining blocker. The
-accepted stable/antistable direct sum `hurwitzSubspace_sup_unstableSubspace_eq_top`
-and the accepted trajectory bridge
-`mem_unobservableSubspace_of_forall_continuousC_expFlow_eq_zero` /
-`continuousC_expFlow_eq_zero_of_mem_unobservableSubspace` are the tools a future
-attempt needs for the unrestricted predicate. The finite-Bohl forcing-image
-decomposition is formalised later in this file, but does not remove the
-locally-integrable-input hypothesis here.
+That statement is proved by `LinearMap.antistable_readout_forces_unobservable`
+and packaged as `hspectral_holds`, giving an unconditional `B = 0`
+characterisation. The finite-Bohl forcing-image decomposition later in this
+file does not remove the locally-integrable-input hypothesis from the separate
+general-`B` open-loop necessity statement.
 
 The `B = 0` characterisation is now two-sided. The unconditional converse is
 `isOutputStabilizable_of_mem_outputStabilizableSubspace_of_B_eq_zero`, packaged
@@ -7073,9 +7070,9 @@ formalised in `Stabilization.lean`:
 
 The second lemma is the cancellation-free core of the antistable readout
 statement: it is exactly the step that isolates one character from a sum. The
-remaining reduction from this degree-zero statement to the full obligation
+proof route from this degree-zero statement to the full obligation
 `∀ x ∈ X_b(A), Tendsto (fun t ↦ H (e^{tA} x)) atTop (nhds 0) → x ∈ ⟨ker H | A⟩`
-is now a finite, precisely-scoped list:
+has three analytic and algebraic stages:
 
 1. *Polynomial-exponential reduction (basis-independent).* Prove that if
    `Σ_{i} exp (t * μ i) • q i t → 0` with `0 ≤ (μ i).re` and `q i` vector
@@ -7084,7 +7081,7 @@ is now a finite, precisely-scoped list:
    `e^{-Rt}`), discard the strictly smaller real parts (polynomial times a
    decaying exponential), divide by the top power `t^D`, apply
    `tendsto_zero_of_sum_pow_smul` to the resulting leading character sum, and
-   induct on `D`. The single missing elementary ingredient is
+   induct on `D`. One elementary ingredient is
    "a vector polynomial tending to `0` at `+∞` is identically `0`".
 2. *Complex-linear readout transport.* Complexify the real readout `H` and the
    real coordinates of `Stabilization.lean` (`ofRealPi`), or test against
@@ -7095,10 +7092,11 @@ is now a finite, precisely-scoped list:
    `0` vanish, i.e. `L (f ^ k z) = 0`; transporting back gives
    `H (A ^ k x) = 0` for all `k`, hence `x ∈ ⟨ker H | A⟩`.
 
-None of these three steps is claimed here. In particular, the `hspectral`
-hypothesis of `mem_outputStabilizableSubspace_of_decay_of_B_eq_zero` is still an
-explicit hypothesis, not a proved theorem, and the general-`B` necessity is not
-claimed. -/
+The full spectral obligation is proved in `Stabilization.lean` as
+`LinearMap.antistable_readout_forces_unobservable` and passed to the
+`B = 0` characterisation via `hspectral_holds`. The auxiliary reduction
+lemma still has an explicit `hspectral` argument; the separate general-`B`,
+unrestricted-input open-loop necessity is not claimed. -/
 
 /-! ### The state-feedback lift added by the general-`B` task
 

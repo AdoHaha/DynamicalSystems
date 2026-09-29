@@ -743,7 +743,7 @@ No local re-derivation of these adjoint facts was found. *Recommendation:* keep.
 ## Exponential, decay and convolution reasoning
 
 *F8. Repeated exponential power-series expansion — implemented.*
-`LinearSystem.clm_map_exp_smul` (`DynamicFeedback.lean`, the only `maxHeartbeats 800000` site)
+`LinearSystem.clm_map_exp_smul` (`DynamicFeedback.lean`, one of its high-heartbeat sites)
 formerly contained two nearly identical blocks, `hAtsum` and `hBtsum`, that expand
 `NormedSpace.exp (t • A) x` and `NormedSpace.exp (t • B) (L x)` as a `tsum` and then move the
 continuous linear map through it with `ContinuousLinearMap.map_tsum` and `tsum_congr`.
@@ -1442,9 +1442,9 @@ admissibility hypotheses. The Corollary 6.22 geometric iff assumes a strictly pr
 (`D = 0`). For nonzero `D` or measurement disturbance feedthrough `F`, the well-posed
 transfer-pole/response-decay bridge is formalized separately, without claiming the geometric iff.
 
-Out of scope: the nonlinear theory of Trentelman–Stoorvogel–Hautus Chapters 7–15 (system zeros and
-strong observability, distributions and system invertibility, tracking and regulation, and the
-LQ, H₂ and H∞ chapters) and the nonlinear algebraic-methods reference of Conte, Moog and Perdon.
+Out of scope: Trentelman–Stoorvogel–Hautus Chapters 7–15 (further linear-system topics such as
+system zeros, invertibility, tracking and regulation, and LQ, H₂ and H∞ control) and the separate
+nonlinear algebraic-methods reference of Conte, Moog and Perdon.
 Those chapters are not formalized and no linear declaration is claimed to represent them. Optional
 refinements not yet claimed include the sharp dimension bound for the ISA/CISA stationary index,
 the trajectory/observer reading (i) of the geometric invariance definitions as a separate bridge,

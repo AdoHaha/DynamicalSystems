@@ -13,7 +13,8 @@ public import DynamicalSystems.Linear.Hautus
 For a controllable and observable complex matrix realization, a characteristic
 root whose evaluated adjugate is nonzero is a pole of some scalar transfer-matrix
 entry. This covers the corank-one case. The general higher-order root case,
-where the evaluated adjugate can vanish, remains open.
+including a vanishing evaluated adjugate, is proved downstream in
+`MinimalTransferPoles.exists_scalar_transfer_pole_of_minimal`.
 -/
 
 @[expose] public section
