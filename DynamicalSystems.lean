@@ -51,6 +51,8 @@ import DynamicalSystems.Linear.GeneralDomainNecessity
 import DynamicalSystems.Linear.GeneralDomainExtendedPair
 import DynamicalSystems.Linear.GeneralDomainInvariantPair
 import DynamicalSystems.Linear.GeneralDomainControllerAssembly
+import DynamicalSystems.Linear.GeneralDomainObserverGain
+import DynamicalSystems.Linear.GeneralDomainControllerCriterion
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

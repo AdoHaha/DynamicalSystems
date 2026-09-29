@@ -36,6 +36,8 @@ import DynamicalSystems.Linear.GeneralDomainNecessity
 import DynamicalSystems.Linear.GeneralDomainExtendedPair
 import DynamicalSystems.Linear.GeneralDomainInvariantPair
 import DynamicalSystems.Linear.GeneralDomainControllerAssembly
+import DynamicalSystems.Linear.GeneralDomainObserverGain
+import DynamicalSystems.Linear.GeneralDomainControllerCriterion
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -302,8 +304,9 @@ is proved by
 It uses Hurwitz (left-half-plane) stability. Equivalence with the book's
 reduced transfer-pole formulation for that domain is proved by
 `LinearSystem.anyStatePoleStableExternalResponse_iff_externalStabilizationConditions`.
-For arbitrary stability domains, only the minimal-realization pole/spectrum
-bridge is asserted; the geometric controller-existence iff remains separate.
+For arbitrary book-style stability domains, the reduced transfer-pole
+geometric controller-existence iff is proved by
+`LinearSystem.anyStateWellPosedExternalPolesIn_iff_externalStabilizationConditionsIn`.
 The controllable/observable special case is
 `LinearSystem.exists_externallyStabilizing_cabPair_gains`.
 
@@ -1273,8 +1276,9 @@ conditions, for Hurwitz stability.
 ## `DynamicalSystems.Linear.TransferPoleDomains`
 
 The minimal-realization pole/spectrum equivalence works for any chosen set of
-complex numbers `Cg`. No decay or geometric-stabilization equivalence is
-asserted for an arbitrary domain.
+complex numbers `Cg`. This module alone does not assert decay or geometric
+stabilization for arbitrary domains; the book-style geometric iff is in
+`GeneralDomainControllerCriterion`.
 
 {docstring RatFunc.HasPolesIn}
 {docstring Matrix.all_channels_poles_in_iff_charpoly_roots_in_of_minimal}
@@ -1307,14 +1311,11 @@ existing Corollary 6.22 iff. Monotonicity gives a controller-existence result
 for domains containing the left half-plane and a necessary geometric condition
 for domains contained in it. General pole placement now supplies feedback for
 controllable pairs and output injection for observable pairs with all poles in
-any book-style domain. The domain-relative spectral decomposition, quotient
-feedback gain, and full necessity direction for arbitrary controller state are
-now proved. Sufficiency is proved under explicit feedback and observer quotient
-gains. The remaining step is constructing the observer quotient gain from the
-geometric condition, then packaging the arbitrary-domain iff. The book's
-Corollary 6.22 assumes zero plant and measurement disturbance feedthrough;
-the current geometric conditions do not characterize arbitrary nonzero
-measurement feedthrough.
+any book-style domain. The domain-relative spectral decomposition, both quotient
+gains, and the geometric equivalence for arbitrary finite-dimensional controller
+state are proved. The book's Corollary 6.22 assumes zero plant and measurement
+disturbance feedthrough; the current geometric conditions do not characterize
+arbitrary nonzero measurement feedthrough.
 
 {docstring IsStabilityDomain}
 {docstring leftHalfPlane_isStabilityDomain}
@@ -1340,18 +1341,22 @@ The real stable/antistable spectral splitting and restriction lemmas are in
 `GeneralDomainSpectral`. `GeneralDomainPBH` and `GeneralDomainQuotientFeedback`
 construct the state-feedback quotient gain. `GeneralDomainNecessity` proves the
 transfer-channel spectral criterion and both geometric necessity inclusions.
-`GeneralDomainExtendedPair`, `GeneralDomainInvariantPair`, and
+`GeneralDomainDuality` and `GeneralDomainObserverGain` construct the observer
+quotient gain. `GeneralDomainExtendedPair`, `GeneralDomainInvariantPair`, and
 `GeneralDomainControllerAssembly` assemble the observer-based controller and
-derive external pole inclusion from the two quotient gains.
+derive external pole inclusion from the two quotient gains. The two directions
+are packaged in `GeneralDomainControllerCriterion`.
 
 {docstring LinearMap.stableSubspaceIn_sup_antistableSubspaceIn_eq_top}
 {docstring LinearMap.exists_feedback_isStableIn_of_uncontrollableEigenvalues}
 {docstring LinearMap.exists_feedback_isStableIn_quotient_of_geometricCondition}
+{docstring LinearSystem.exists_observerErrorQuotientMapIn_isStableIn}
 {docstring LinearMap.minimalRealizationAllChannelsPolesIn_iff_reachable_inf_antistable_le}
 {docstring LinearSystem.externalStabilizationConditionsIn_of_anyStateWellPosedExternalPolesIn}
 {docstring LinearSystem.extendedPairSubspaces_of_externalStabilizationConditionsIn}
 {docstring LinearMap.minimalRealizationAllChannelsPolesIn_of_invariantPair}
 {docstring LinearSystem.externalPolesIn_of_geometricQuotientGains}
+{docstring LinearSystem.anyStateWellPosedExternalPolesIn_iff_externalStabilizationConditionsIn}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
@@ -1429,8 +1434,8 @@ impulse response is equivalent to the two Corollary 6.22 subspace conditions
 even when the finite-dimensional controller state is arbitrary, using the
 observer-based construction and the real-space dual necessity proof. Reduced
 rational transfer-pole stability is now identified with that decay criterion
-for the left-half-plane stability domain. Arbitrary stability domains `C_g`
-have a minimal-realization pole/spectrum bridge but no general geometric iff.
+for the left-half-plane stability domain. Book-style stability domains `C_g`
+have both a minimal-realization pole/spectrum bridge and a geometric controller-existence iff.
 The stabilizable/detectable spectral subspaces, state-feedback and output-injection constructions,
 and transpose-exponential pairing are formalized with explicit finite-dimensional and
 admissibility hypotheses. The Corollary 6.22 geometric iff assumes a strictly proper plant
