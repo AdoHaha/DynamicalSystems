@@ -42,6 +42,7 @@ import DynamicalSystems.Linear.TransferPoleDecay
 import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.TransferPoleDomains
 import DynamicalSystems.Linear.TransferPoleFeedthrough
+import DynamicalSystems.Linear.GeneralStabilityDomain
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory

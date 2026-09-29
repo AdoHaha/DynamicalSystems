@@ -27,6 +27,7 @@ import DynamicalSystems.Linear.TransferPoleDecay
 import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.TransferPoleDomains
 import DynamicalSystems.Linear.TransferPoleFeedthrough
+import DynamicalSystems.Linear.GeneralStabilityDomain
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -1288,6 +1289,28 @@ previous transfer-pole criterion.
 {docstring LinearSystem.AnyStateWellPosedStableExternalResponse}
 {docstring LinearSystem.anyStateWellPosedExternalPolesIn_leftHalfPlane_iff_stableExternalResponse}
 {docstring LinearSystem.anyStateWellPosedExternalPolesIn_zero_iff_anyStatePoleStableExternalResponse}
+
+## `DynamicalSystems.Linear.GeneralStabilityDomain`
+
+Book-style stability domains meet the real axis and are closed under complex
+conjugation. The stable, antistable, stabilizable, and detectable subspaces now
+have domain-parameterized definitions. The Hurwitz specialization recovers the
+existing Corollary 6.22 iff. Monotonicity gives a controller-existence result
+for domains containing the left half-plane and a necessary geometric condition
+for domains contained in it. The full arbitrary-domain geometric iff is not yet
+proved; in particular, its gain-assignment and necessity arguments remain.
+
+{docstring IsStabilityDomain}
+{docstring leftHalfPlane_isStabilityDomain}
+{docstring LinearMap.stableSubspaceIn}
+{docstring LinearMap.antistableSubspaceIn}
+{docstring LinearMap.map_stableSubspaceIn_le}
+{docstring LinearMap.stabilizableSubspaceIn}
+{docstring LinearMap.detectableSubspaceIn}
+{docstring LinearSystem.ExternalStabilizationConditionsIn}
+{docstring LinearSystem.anyStateExternalPolesIn_leftHalfPlane_iff_geometricConditionsIn}
+{docstring LinearSystem.externalPolesIn_of_geometricConditions_of_leftHalfPlane_subset}
+{docstring LinearSystem.geometricConditions_of_externalPolesIn_of_subset_leftHalfPlane}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 
