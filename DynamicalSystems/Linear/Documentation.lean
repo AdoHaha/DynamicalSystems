@@ -28,6 +28,14 @@ import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.TransferPoleDomains
 import DynamicalSystems.Linear.TransferPoleFeedthrough
 import DynamicalSystems.Linear.GeneralStabilityDomain
+import DynamicalSystems.Linear.GeneralDomainSpectral
+import DynamicalSystems.Linear.GeneralDomainSpectrum
+import DynamicalSystems.Linear.GeneralDomainPBH
+import DynamicalSystems.Linear.GeneralDomainQuotientFeedback
+import DynamicalSystems.Linear.GeneralDomainNecessity
+import DynamicalSystems.Linear.GeneralDomainExtendedPair
+import DynamicalSystems.Linear.GeneralDomainInvariantPair
+import DynamicalSystems.Linear.GeneralDomainControllerAssembly
 import DynamicalSystems.Linear.Examples.Algebra
 
 open Verso.Genre Manual
@@ -1299,9 +1307,14 @@ existing Corollary 6.22 iff. Monotonicity gives a controller-existence result
 for domains containing the left half-plane and a necessary geometric condition
 for domains contained in it. General pole placement now supplies feedback for
 controllable pairs and output injection for observable pairs with all poles in
-any book-style domain. The full arbitrary-domain geometric iff is not yet
-proved: gain assignment on the relevant geometric quotients and the converse
-necessity argument remain.
+any book-style domain. The domain-relative spectral decomposition, quotient
+feedback gain, and full necessity direction for arbitrary controller state are
+now proved. Sufficiency is proved under explicit feedback and observer quotient
+gains. The remaining step is constructing the observer quotient gain from the
+geometric condition, then packaging the arbitrary-domain iff. The book's
+Corollary 6.22 assumes zero plant and measurement disturbance feedthrough;
+the current geometric conditions do not characterize arbitrary nonzero
+measurement feedthrough.
 
 {docstring IsStabilityDomain}
 {docstring leftHalfPlane_isStabilityDomain}
@@ -1320,6 +1333,25 @@ necessity argument remain.
 {docstring LinearSystem.anyStateExternalPolesIn_leftHalfPlane_iff_geometricConditionsIn}
 {docstring LinearSystem.externalPolesIn_of_geometricConditions_of_leftHalfPlane_subset}
 {docstring LinearSystem.geometricConditions_of_externalPolesIn_of_subset_leftHalfPlane}
+
+## General-domain proof chain
+
+The real stable/antistable spectral splitting and restriction lemmas are in
+`GeneralDomainSpectral`. `GeneralDomainPBH` and `GeneralDomainQuotientFeedback`
+construct the state-feedback quotient gain. `GeneralDomainNecessity` proves the
+transfer-channel spectral criterion and both geometric necessity inclusions.
+`GeneralDomainExtendedPair`, `GeneralDomainInvariantPair`, and
+`GeneralDomainControllerAssembly` assemble the observer-based controller and
+derive external pole inclusion from the two quotient gains.
+
+{docstring LinearMap.stableSubspaceIn_sup_antistableSubspaceIn_eq_top}
+{docstring LinearMap.exists_feedback_isStableIn_of_uncontrollableEigenvalues}
+{docstring LinearMap.exists_feedback_isStableIn_quotient_of_geometricCondition}
+{docstring LinearMap.minimalRealizationAllChannelsPolesIn_iff_reachable_inf_antistable_le}
+{docstring LinearSystem.externalStabilizationConditionsIn_of_anyStateWellPosedExternalPolesIn}
+{docstring LinearSystem.extendedPairSubspaces_of_externalStabilizationConditionsIn}
+{docstring LinearMap.minimalRealizationAllChannelsPolesIn_of_invariantPair}
+{docstring LinearSystem.externalPolesIn_of_geometricQuotientGains}
 
 ## `DynamicalSystems.Linear.DynamicFeedback`
 

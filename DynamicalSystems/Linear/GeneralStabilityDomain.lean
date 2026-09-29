@@ -37,7 +37,7 @@ theorem leftHalfPlane_isStabilityDomain :
 namespace LinearMap
 
 variable {X U Y : Type*}
-variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup X] [Module ℝ X] [FiniteDimensional ℝ X]
 variable [AddCommGroup U] [Module ℝ U]
 variable [AddCommGroup Y] [Module ℝ Y]
 
@@ -105,6 +105,15 @@ theorem exists_outputInjection_isStableIn_of_isObservable
     abel
   rw [← isStableIn_dualMap_iff Cg (A - L.comp C), hdual]
   exact hF
+
+end LinearMap
+
+namespace LinearMap
+
+variable {X U Y : Type*}
+variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
+variable [AddCommGroup U] [Module ℝ U]
+variable [AddCommGroup Y] [Module ℝ Y]
 
 /-- The real stable spectral subspace selected by `Cg`. -/
 def stableSubspaceIn (Cg : Set ℂ) (A : X →ₗ[ℝ] X) : Submodule ℝ X :=
