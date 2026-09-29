@@ -41,6 +41,71 @@ variable [NormedAddCommGroup X] [NormedSpace ℝ X] [FiniteDimensional ℝ X]
 variable [AddCommGroup U] [Module ℝ U]
 variable [AddCommGroup Y] [Module ℝ Y]
 
+/-- The complex spectrum of a real endomorphism lies in `Cg`. -/
+def IsStableIn (Cg : Set ℂ) (A : X →ₗ[ℝ] X) : Prop :=
+  ∀ z : ℂ, (A.charpoly.map (algebraMap ℝ ℂ)).eval z = 0 → z ∈ Cg
+
+/-- A prescribed repeated real pole gives a spectrum inside any domain
+containing that pole. -/
+theorem isStableIn_of_charpoly_eq_pow_X_sub_C
+    (Cg : Set ℂ) (r : ℝ) (hr : (r : ℂ) ∈ Cg)
+    (T : X →ₗ[ℝ] X) (n : ℕ)
+    (hT : T.charpoly = (Polynomial.X - Polynomial.C r) ^ n) :
+    IsStableIn Cg T := by
+  intro z hz
+  rw [hT] at hz
+  rw [Polynomial.map_pow, Polynomial.map_sub, Polynomial.map_X, Polynomial.map_C,
+    Polynomial.eval_pow, Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C] at hz
+  by_cases hn : n = 0
+  · subst hn; norm_num at hz
+  · have hz0 : z - (r : ℂ) = 0 := (pow_eq_zero_iff hn).mp hz
+    have hz1 : z = (r : ℂ) := sub_eq_zero.mp hz0
+    rw [hz1]
+    exact hr
+
+/-- Multi-input pole placement puts every closed-loop pole in an arbitrary
+book-style stability domain. The real point required by Definition 2.12 is
+sufficient; conjugation closure is needed for the general geometric theory,
+but not for this particular construction. -/
+theorem exists_feedback_isStableIn_of_isControllable
+    (Cg : Set ℂ) (hCg : IsStabilityDomain Cg)
+    (A : X →ₗ[ℝ] X) (B : U →ₗ[ℝ] X)
+    (h : IsControllable A B) :
+    ∃ F : X →ₗ[ℝ] U, IsStableIn Cg (A + B.comp F) := by
+  obtain ⟨r, hr⟩ := hCg.1
+  set n : ℕ := Module.finrank ℝ X with hn
+  set p : Polynomial ℝ := (Polynomial.X - Polynomial.C r) ^ n with hp
+  have hpmonic : p.Monic := (Polynomial.monic_X_sub_C r).pow n
+  have hpdeg : p.natDegree = Module.finrank ℝ X := by
+    rw [hp, Polynomial.natDegree_pow, Polynomial.natDegree_X_sub_C, mul_one]
+  obtain ⟨F, hF⟩ := exists_feedback_charpoly_of_isControllable A B h p hpmonic hpdeg
+  exact ⟨F, isStableIn_of_charpoly_eq_pow_X_sub_C Cg r hr (A + B.comp F) n hF⟩
+
+/-- Spectral inclusion in a domain is invariant under real duality. -/
+theorem isStableIn_dualMap_iff (Cg : Set ℂ) (T : X →ₗ[ℝ] X) :
+    IsStableIn Cg T.dualMap ↔ IsStableIn Cg T := by
+  rw [IsStableIn, IsStableIn, charpoly_dualMap]
+
+/-- An observable real system admits an output-injection gain placing every
+observer-error pole inside any book-style stability domain. -/
+theorem exists_outputInjection_isStableIn_of_isObservable
+    [FiniteDimensional ℝ Y]
+    (Cg : Set ℂ) (hCg : IsStabilityDomain Cg)
+    (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X)
+    (h : IsObservable C A) :
+    ∃ L : Y →ₗ[ℝ] X, IsStableIn Cg (A - L.comp C) := by
+  have hc : IsControllable A.dualMap C.dualMap :=
+    (isObservable_iff_isControllable_dualMap C A).mp h
+  obtain ⟨F, hF⟩ := exists_feedback_isStableIn_of_isControllable
+    Cg hCg A.dualMap C.dualMap hc
+  obtain ⟨L, hL⟩ := dualMap_surjective (Y := Y) (X := X) (-F)
+  refine ⟨L, ?_⟩
+  have hdual : (A - L.comp C).dualMap = A.dualMap + C.dualMap.comp F := by
+    rw [dualMap_sub, ← LinearMap.dualMap_comp_dualMap C L, hL, LinearMap.comp_neg]
+    abel
+  rw [← isStableIn_dualMap_iff Cg (A - L.comp C), hdual]
+  exact hF
+
 /-- The real stable spectral subspace selected by `Cg`. -/
 def stableSubspaceIn (Cg : Set ℂ) (A : X →ₗ[ℝ] X) : Submodule ℝ X :=
   ((complexSpectralSubspaceOfBasis (Module.finBasis ℝ X) A

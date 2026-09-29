@@ -1297,11 +1297,17 @@ conjugation. The stable, antistable, stabilizable, and detectable subspaces now
 have domain-parameterized definitions. The Hurwitz specialization recovers the
 existing Corollary 6.22 iff. Monotonicity gives a controller-existence result
 for domains containing the left half-plane and a necessary geometric condition
-for domains contained in it. The full arbitrary-domain geometric iff is not yet
-proved; in particular, its gain-assignment and necessity arguments remain.
+for domains contained in it. General pole placement now supplies feedback for
+controllable pairs and output injection for observable pairs with all poles in
+any book-style domain. The full arbitrary-domain geometric iff is not yet
+proved: gain assignment on the relevant geometric quotients and the converse
+necessity argument remain.
 
 {docstring IsStabilityDomain}
 {docstring leftHalfPlane_isStabilityDomain}
+{docstring LinearMap.IsStableIn}
+{docstring LinearMap.exists_feedback_isStableIn_of_isControllable}
+{docstring LinearMap.exists_outputInjection_isStableIn_of_isObservable}
 {docstring LinearMap.stableSubspaceIn}
 {docstring LinearMap.antistableSubspaceIn}
 {docstring LinearMap.map_stableSubspaceIn_le}
