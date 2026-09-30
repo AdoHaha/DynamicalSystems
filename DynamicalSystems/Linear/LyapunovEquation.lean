@@ -6,10 +6,13 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Linear.Gramian
+public import DynamicalSystems.Linear.Stabilization
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Analysis.SpecialFunctions.Exponential
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
+public import Mathlib.MeasureTheory.Integral.IntegralEqImproper
+public import Mathlib.MeasureTheory.Integral.ExpDecay
 
 /-! # The finite-horizon Lyapunov integral
 
@@ -221,3 +224,102 @@ theorem lyapunovIntegral_equation (A Q : X →L[ℝ] X) (T : ℝ) :
           ((ContinuousLinearMap.adjoint A).comp (g s) + (g s).comp A) := by
     rw [hg_eq, hcomm1, hcomm2, ← intervalIntegral.integral_add hInt_A_g hInt_g_A]
   rw [hKey, hFTC, hg0]
+
+/-! ### The infinite-horizon Lyapunov integral
+
+When `A` is Hurwitz the finite-horizon Lyapunov integral has a limit as the
+horizon tends to `+∞`: the exponential decay `‖exp (s A)‖ ≤ C exp (-γ s)` makes
+the integrand `exp (s A)* Q exp (s A)` dominated by the integrable function
+`C ^ 2 * ‖Q‖ * exp (-(2 γ) s)` on `(0, ∞)`. The limit is the improper Bochner
+integral `P = ∫₀^∞ exp (s A)* Q exp (s A) ds`, the candidate solution of the
+algebraic Lyapunov equation `A* P + P A = -Q` from equation (2.40). -/
+
+/-- For a Hurwitz generator `A`, the operator-valued Lyapunov integrand
+`s ↦ exp (s A)* Q exp (s A)` is Bochner integrable on the half-line `(0, ∞)`.
+The domination uses the quantitative Hurwitz bound
+`‖exp (s A)‖ ≤ C exp (-γ s)` for `s ≥ 0`. Source: Kabziński–Mosiołek, equation
+(2.40), where the improper integral defining `P` is shown to converge. -/
+theorem integrableOn_Ioi_lyapunovIntegrand (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) :
+    IntegrableOn (fun s =>
+      (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+        (Q.comp (NormedSpace.exp (s • A)))) (Ioi (0 : ℝ)) := by
+  obtain ⟨C, hCpos, γ, hγpos, hC⟩ :=
+    LinearMap.exists_exponential_norm_bound_of_isHurwitz A.toLinearMap hA
+  have hC' : ∀ t : ℝ, 0 ≤ t →
+      ‖NormedSpace.exp (t • A)‖ ≤ C * Real.exp (-γ * t) := by
+    intro t ht
+    have h := hC t ht
+    rwa [show A.toLinearMap.toContinuousLinearMap = A from rfl] at h
+  set f : ℝ → X →L[ℝ] X := fun s =>
+    (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+      (Q.comp (NormedSpace.exp (s • A))) with hf
+  have hfcont : Continuous f := continuous_lyapunovIntegrand A Q
+  have hg : IntegrableOn
+      (fun s : ℝ => (C ^ 2 * ‖Q‖) * Real.exp (-(2 * γ) * s)) (Ioi 0) := by
+    have h : IntegrableOn (fun s : ℝ => Real.exp (-(2 * γ) * s)) (Ioi 0) :=
+      exp_neg_integrableOn_Ioi 0 (by positivity)
+    exact h.const_mul (C ^ 2 * ‖Q‖)
+  refine Integrable.mono' hg ?_ ?_
+  · exact (hfcont.aestronglyMeasurable).mono_measure Measure.restrict_le_self
+  · rw [ae_restrict_iff' measurableSet_Ioi]
+    filter_upwards with s hs
+    have hs0 : 0 ≤ s := le_of_lt hs
+    have hbound := hC' s hs0
+    have hadj : ‖ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))‖ =
+        ‖NormedSpace.exp (s • A)‖ := ContinuousLinearMap.adjoint.norm_map _
+    calc ‖f s‖
+        = ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+            (Q.comp (NormedSpace.exp (s • A)))‖ := rfl
+      _ ≤ ‖ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))‖ *
+            ‖Q.comp (NormedSpace.exp (s • A))‖ := by
+          simpa only [ContinuousLinearMap.mul_def] using norm_mul_le
+            (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A)))
+            (Q.comp (NormedSpace.exp (s • A)))
+      _ ≤ ‖NormedSpace.exp (s • A)‖ * (‖Q‖ * ‖NormedSpace.exp (s • A)‖) := by
+          rw [hadj]
+          gcongr
+          simpa only [ContinuousLinearMap.mul_def] using
+            norm_mul_le Q (NormedSpace.exp (s • A))
+      _ ≤ (C * Real.exp (-γ * s)) * (‖Q‖ * (C * Real.exp (-γ * s))) := by
+          gcongr
+      _ = (C ^ 2 * ‖Q‖) * Real.exp (-(2 * γ) * s) := by
+          rw [show -(2 * γ) * s = -γ * s + -γ * s by ring, Real.exp_add]
+          ring
+
+/-- The infinite-horizon Lyapunov integral `P = ∫₀^∞ exp (s A)* Q exp (s A) ds`,
+as a continuous endomorphism of the state space. This is the improper Bochner
+integral over `(0, ∞)` of the operator-valued integrand; when `A` is Hurwitz it
+is the limit of the finite-horizon integrals `lyapunovIntegral A Q T`. Source:
+Kabziński–Mosiołek, equation (2.40). -/
+-- The underscore in `lyapunovIntegral_limit` is mandated by the campaign's
+-- required-declaration list, so the naming linter is disabled for this def.
+@[nolint defsWithUnderscore]
+noncomputable def lyapunovIntegral_limit (A Q : X →L[ℝ] X) : X →L[ℝ] X :=
+  ∫ s in Ioi (0 : ℝ),
+    (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+      (Q.comp (NormedSpace.exp (s • A)))
+
+/-- **Existence of the infinite-horizon Lyapunov integral.** For a Hurwitz
+generator `A` the finite-horizon Lyapunov integrals `P(T) = lyapunovIntegral A Q T`
+converge, as `T → +∞`, to the improper integral `lyapunovIntegral_limit A Q`. This
+is the convergence of the improper integral of equation (2.40). -/
+theorem tendsto_lyapunovIntegral_limit (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) :
+    Tendsto (fun T => lyapunovIntegral A Q T) atTop
+      (nhds (lyapunovIntegral_limit A Q)) := by
+  have hInt := integrableOn_Ioi_lyapunovIntegrand A Q hA
+  exact intervalIntegral_tendsto_integral_Ioi (μ := volume) (a := (0 : ℝ))
+    (f := fun s =>
+      (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+        (Q.comp (NormedSpace.exp (s • A)))) hInt tendsto_id
+
+/-- **Existence of a limit of the finite-horizon Lyapunov integrals.** For a
+Hurwitz generator `A` the family `T ↦ lyapunovIntegral A Q T` converges to some
+continuous endomorphism as `T → +∞`; the witness is the infinite-horizon
+integral `lyapunovIntegral_limit A Q`. Source: Kabziński–Mosiołek, equation
+(2.40). -/
+theorem hasLyapunovIntegralLimit (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) :
+    ∃ P : X →L[ℝ] X, Tendsto (fun T => lyapunovIntegral A Q T) atTop (nhds P) :=
+  ⟨lyapunovIntegral_limit A Q, tendsto_lyapunovIntegral_limit A Q hA⟩
