@@ -463,9 +463,7 @@ theorem smallGainThm_part1₁
     {G₂ : (α → F) → α → E} (hG₂ : G₂.graph = loop.botRel)
     (hG₂' : G₂.IsFiniteGainStableWith k₂ β₂ s p μ) (hp : 1 ≤ p)
     {u₁ : α → E} {u₂ : α → F} {e₁ : α → E} {e₂ : α → F} (hu₂ : MemLpLoc u₂ p μ)
-    (he₁ : MemLpLoc e₁ p μ)
-    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι}
-    (ht : IsCompact (s t)) :
+    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι} :
     eLpNorm u₁ p (μ.restrict (s t)) ≤
       eLpNorm e₁ p (μ.restrict (s t)) + k₂ * eLpNorm u₂ p (μ.restrict (s t)) + β₂ := by
   calc
@@ -473,7 +471,7 @@ theorem smallGainThm_part1₁
       rw [eq_fst_of_mem_inputState hG₁ hG₂ h]
     _ ≤ eLpNorm e₁ p (μ.restrict (s t)) + eLpNorm (G₂ u₂) p (μ.restrict (s t)) := by
       have : MemLpLoc (G₂ u₂) p μ := hG₂'.memLpLoc hu₂
-      exact MeasureTheory.eLpNorm_sub_le (by fun_prop) (by fun_prop) hp
+      exact MeasureTheory.eLpNorm_sub_le hp
     _ ≤ _ := by
       rw [add_assoc]
       gcongr
@@ -484,9 +482,8 @@ theorem smallGainThm_part1₂
     (hG₁' : G₁.IsFiniteGainStableWith k₁ β₁ s p μ)
     {G₂ : (α → F) → α → E} (hG₂ : G₂.graph = loop.botRel) (hp : 1 ≤ p)
     {u₁ : α → E} {u₂ : α → F} {e₁ : α → E} {e₂ : α → F}
-    (hu₁ : MemLpLoc u₁ p μ) (he₂ : MemLpLoc e₂ p μ)
-    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι}
-    (ht : IsCompact (s t)) :
+    (hu₁ : MemLpLoc u₁ p μ)
+    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι} :
     eLpNorm u₂ p (μ.restrict (s t)) ≤
       eLpNorm e₂ p (μ.restrict (s t)) + k₁ * eLpNorm u₁ p (μ.restrict (s t)) + β₁ := by
   calc
@@ -494,7 +491,7 @@ theorem smallGainThm_part1₂
       rw [eq_snd_of_mem_inputState hG₁ hG₂ h]
     _ ≤ eLpNorm e₂ p (μ.restrict (s t)) + eLpNorm (G₁ u₁) p (μ.restrict (s t)) := by
       have : MemLpLoc (G₁ u₁) p μ := hG₁'.memLpLoc hu₁
-      exact MeasureTheory.eLpNorm_add_le (by fun_prop) (by fun_prop) hp
+      exact MeasureTheory.eLpNorm_add_le hp
     _ ≤ _ := by
       rw [add_assoc]
       gcongr
@@ -506,7 +503,7 @@ theorem smallGainThm_part2₁
     {G₂ : (α → F) → α → E} (hG₂ : G₂.graph = loop.botRel)
     (hG₂' : G₂.IsFiniteGainStableWith k₂ β₂ s p μ) (hp : 1 ≤ p) (hk : k₁ * k₂ < 1)
     {u₁ : α → E} {u₂ : α → F} {e₁ : α → E} {e₂ : α → F}
-    (hu₁ : MemLpLoc u₁ p μ) (hu₂ : MemLpLoc u₂ p μ) (he₁ : MemLpLoc e₁ p μ) (he₂ : MemLpLoc e₂ p μ)
+    (hu₁ : MemLpLoc u₁ p μ) (hu₂ : MemLpLoc u₂ p μ)
     (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι}
     (ht : IsCompact (s t)) :
     eLpNorm u₁ p (μ.restrict (s t)) ≤
@@ -523,9 +520,9 @@ theorem smallGainThm_part2₁
   simp only [mul_one, tsub_le_iff_right]
   calc
     _ ≤ eLpNorm e₁ p (μ.restrict (s t)) + k₂ * eLpNorm u₂ p (μ.restrict (s t)) + β₂ := by
-      exact smallGainThm_part1₁ hG₁ hG₂ hG₂' hp hu₂ he₁ h ht
+      exact smallGainThm_part1₁ hG₁ hG₂ hG₂' hp hu₂ h
     _ ≤ _ := by
-      grw [smallGainThm_part1₂ hG₁ hG₁' hG₂ hp hu₁ he₂ h ht]
+      grw [smallGainThm_part1₂ hG₁ hG₁' hG₂ hp hu₁ h]
       ring_nf
       gcongr
 
@@ -535,7 +532,7 @@ theorem smallGainThm_part2₂
     {G₂ : (α → F) → α → E} (hG₂ : G₂.graph = loop.botRel)
     (hG₂' : G₂.IsFiniteGainStableWith k₂ β₂ s p μ) (hp : 1 ≤ p) (hk : k₁ * k₂ < 1)
     {u₁ : α → E} {u₂ : α → F} {e₁ : α → E} {e₂ : α → F}
-    (hu₁ : MemLpLoc u₁ p μ) (hu₂ : MemLpLoc u₂ p μ) (he₁ : MemLpLoc e₁ p μ) (he₂ : MemLpLoc e₂ p μ)
+    (hu₁ : MemLpLoc u₁ p μ) (hu₂ : MemLpLoc u₂ p μ)
     (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (u₁ x, u₂ x)) ∈ loop.inputState) {t : ι}
     (ht : IsCompact (s t)) :
     eLpNorm u₂ p (μ.restrict (s t)) ≤
@@ -552,9 +549,9 @@ theorem smallGainThm_part2₂
   simp only [mul_one, tsub_le_iff_right]
   calc
     _ ≤ eLpNorm e₂ p (μ.restrict (s t)) + k₁ * eLpNorm u₁ p (μ.restrict (s t)) + β₁ := by
-      exact smallGainThm_part1₂ hG₁ hG₁' hG₂ hp hu₁ he₂ h ht
+      exact smallGainThm_part1₂ hG₁ hG₁' hG₂ hp hu₁ h
     _ ≤ _ := by
-      grw [smallGainThm_part1₁ hG₁ hG₂ hG₂' hp hu₂ he₁ h ht]
+      grw [smallGainThm_part1₁ hG₁ hG₂ hG₂' hp hu₂ h]
       ring_nf
       gcongr
 
@@ -583,14 +580,14 @@ theorem inputStateLp_isFiniteGainStableWith [hp : Fact (1 ≤ p)]
   have he₂ : MemLpLoc e₂ p μ := he.2
   calc
     _ ≤ eLpNorm u₁ p (μ.restrict (s t)) + eLpNorm u₂ p (μ.restrict (s t)) :=
-      eLpNorm_withLp_prod_le_add (hu₁.aestronglyMeasurable (ht t))
+      eLpNorm_withLp_prod_le_add (hu₁.aestronglyMeasurable (ht t)) (hu₂.aestronglyMeasurable (ht t))
     _ ≤ ((eLpNorm e₁ p (μ.restrict (s t)) + k₂ * eLpNorm e₂ p (μ.restrict (s t)) + β₂ + k₂ * β₁) /
         (1 - k₁ * k₂)) +
         ((eLpNorm e₂ p (μ.restrict (s t)) + k₁ * eLpNorm e₁ p (μ.restrict (s t)) + β₁ + k₁ * β₂) /
         (1 - k₁ * k₂)) := by
       gcongr
-      · apply smallGainThm_part2₁ hG₁ hG₁' hG₂ hG₂' hp.out hk hu₁ hu₂ he₁ he₂ heu (ht t)
-      · apply smallGainThm_part2₂ hG₁ hG₁' hG₂ hG₂' hp.out hk hu₁ hu₂ he₁ he₂ heu (ht t)
+      · apply smallGainThm_part2₁ hG₁ hG₁' hG₂ hG₂' hp.out hk hu₁ hu₂ heu (ht t)
+      · apply smallGainThm_part2₂ hG₁ hG₁' hG₂ hG₂' hp.out hk hu₁ hu₂ heu (ht t)
     _ = ((1 + k₁) * eLpNorm e₁ p (μ.restrict (s t)) + (1 + k₂) * eLpNorm e₂ p (μ.restrict (s t)) +
         (β₁ + β₂ + k₁ * β₂ + k₂ * β₁)) /
         (1 - k₁ * k₂) := by
@@ -608,6 +605,7 @@ theorem inputStateLp_isFiniteGainStableWith [hp : Fact (1 ≤ p)]
         (β₁ + β₂ + k₁ * β₂ + k₂ * β₁) / (1 - k₁ * k₂) := by
       gcongr
       exact add_le_eLpNorm_withLp_prod (he₁.aestronglyMeasurable (ht t))
+        (he₂.aestronglyMeasurable (ht t))
     _ = _ := by
       have hk' : 0 < 1 - k₁ * k₂ := by simp [hk]
       rw [← mul_assoc]
@@ -629,8 +627,7 @@ theorem smallGainThm_part1₁'
     (hG₁' : G₁.IsFiniteGainStableWith k₁ β₁ s p μ) (hp : 1 ≤ p)
     {y₁ : α → F} {y₂ : α → E} {e₁ : α → E} {e₂ : α → F} (hy₂ : MemLpLoc y₂ p μ)
     (he₁ : MemLpLoc e₁ p μ)
-    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (y₁ x, y₂ x)) ∈ loop.inputOutput) {t : ι}
-    (ht : IsCompact (s t)) :
+    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (y₁ x, y₂ x)) ∈ loop.inputOutput) {t : ι} :
     eLpNorm y₁ p (μ.restrict (s t)) ≤
       k₁ * eLpNorm e₁ p (μ.restrict (s t)) + k₁ * eLpNorm y₂ p (μ.restrict (s t)) + β₁ := by
   calc
@@ -640,9 +637,7 @@ theorem smallGainThm_part1₁'
     _ ≤ k₁ * (eLpNorm e₁ p (μ.restrict (s t)) + eLpNorm y₂ p (μ.restrict (s t))) + β₁ := by
       gcongr
       apply MeasureTheory.eLpNorm_sub_le
-      · apply he₁.aestronglyMeasurable ht
-      · apply hy₂.aestronglyMeasurable ht
-      · exact hp
+      exact hp
     _ = _ := by ring
 
 attribute [fun_prop] MeasureTheory.MemLp.aestronglyMeasurable
@@ -653,8 +648,7 @@ theorem smallGainThm_part1₂'
     (hG₂' : G₂.IsFiniteGainStableWith k₂ β₂ s p μ) (hp : 1 ≤ p)
     {y₁ : α → F} {y₂ : α → E} {e₁ : α → E} {e₂ : α → F} (hy₁ : MemLpLoc y₁ p μ)
     (he₂ : MemLpLoc e₂ p μ)
-    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (y₁ x, y₂ x)) ∈ loop.inputOutput) {t : ι}
-    (ht : IsCompact (s t)) :
+    (h : (fun x ↦ (e₁ x, e₂ x), fun x ↦ (y₁ x, y₂ x)) ∈ loop.inputOutput) {t : ι} :
     eLpNorm y₂ p (μ.restrict (s t)) ≤
       k₂ * eLpNorm e₂ p (μ.restrict (s t)) + k₂ * eLpNorm y₁ p (μ.restrict (s t)) + β₂ := by
   calc
@@ -663,7 +657,7 @@ theorem smallGainThm_part1₂'
       apply hG₂'.stableWith _ _ (by fun_prop)
     _ ≤ k₂ * (eLpNorm e₂ p (μ.restrict (s t)) + eLpNorm y₁ p (μ.restrict (s t))) + β₂ := by
       gcongr
-      exact eLpNorm_add_le (by fun_prop) (by fun_prop) hp
+      exact eLpNorm_add_le hp
     _ = _ := by ring
 
 theorem smallGainThm_part2₁'
@@ -682,10 +676,10 @@ theorem smallGainThm_part2₁'
     tsub_le_iff_right]
   calc
     _ ≤ k₁ * eLpNorm e₁ p _ + k₁ * eLpNorm y₂ p _ + β₁ :=
-      smallGainThm_part1₁' hG₁ hG₂ hG₁' hp hy₂ he₁ h ht
+      smallGainThm_part1₁' hG₁ hG₂ hG₁' hp hy₂ he₁ h
     _ ≤ k₁ * eLpNorm e₁ p _ + k₁ * (k₂ * eLpNorm e₂ p _ + k₂ * eLpNorm y₁ p _ + β₂) + β₁ := by
       gcongr
-      apply smallGainThm_part1₂' hG₁ hG₂ hG₂' hp hy₁ he₂ h ht
+      apply smallGainThm_part1₂' hG₁ hG₂ hG₂' hp hy₁ he₂ h
     _ = _ := by ring
 
 theorem smallGainThm_part2₂'
@@ -704,10 +698,10 @@ theorem smallGainThm_part2₂'
     tsub_le_iff_right]
   calc
     _ ≤ k₂ * eLpNorm e₂ p _ + k₂ * eLpNorm y₁ p _ + β₂ :=
-      smallGainThm_part1₂' hG₁ hG₂ hG₂' hp hy₁ he₂ h ht
+      smallGainThm_part1₂' hG₁ hG₂ hG₂' hp hy₁ he₂ h
     _ ≤ k₂ * eLpNorm e₂ p _ + k₂ * (k₁ * eLpNorm e₁ p _ + k₁ * eLpNorm y₂ p _ + β₁) + β₂ := by
       gcongr
-      apply smallGainThm_part1₁' hG₁ hG₂ hG₁' hp hy₂ he₁ h ht
+      apply smallGainThm_part1₁' hG₁ hG₂ hG₁' hp hy₂ he₁ h
     _ = _ := by ring
 
 /-- The *small-gain theorem* states that if two maps `G₁` and `G₂` are finite gain stable with
@@ -748,6 +742,7 @@ theorem inputOutputLp_isFiniteGainStableWith [hp : Fact (1 ≤ p)]
     _ ≤ (eLpNorm y₁ p (μ.restrict (s t)) + eLpNorm y₂ p (μ.restrict (s t))) * (1 - k₁ * k₂) := by
       gcongr
       · apply eLpNorm_withLp_prod_le_add (hy₁.aestronglyMeasurable (ht t))
+          (hy₂.aestronglyMeasurable (ht t))
       · norm_cast
     _ = (1 - k₁ * k₂) * eLpNorm y₁ p _ + (1 - k₁ * k₂) * eLpNorm y₂ p _ := by ring
     _ ≤ (k₁ * eLpNorm e₁ p (μ.restrict (s t)) + (k₁ * k₂) * eLpNorm e₂ p (μ.restrict (s t)) +
@@ -774,7 +769,8 @@ theorem inputOutputLp_isFiniteGainStableWith [hp : Fact (1 ≤ p)]
       rw [mul_rotate, mul_assoc]
       gcongr 2
       · rw [mul_comm]
-        grw [add_le_eLpNorm_withLp_prod (he₁.aestronglyMeasurable (ht t))]
+        grw [add_le_eLpNorm_withLp_prod (he₁.aestronglyMeasurable (ht t))
+          (he₂.aestronglyMeasurable (ht t))]
         rfl
       · apply le_of_eq
         ring
