@@ -7,6 +7,7 @@ module
 
 public import DynamicalSystems.Linear.Gramian
 public import DynamicalSystems.Linear.Stabilization
+public import Mathlib.Analysis.CStarAlgebra.Matrix
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Analysis.SpecialFunctions.Exponential
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
@@ -566,3 +567,106 @@ theorem lyapunov_equation_solution (A Q : X →L[ℝ] X)
    isPositiveDefinite_lyapunovIntegral_limit A Q hA hQ_pd,
    adjoint_lyapunovIntegral_limit A Q hA hQ_adj,
    lyapunovIntegral_limit_equation A Q hA⟩
+
+/-! ### The matrix Lyapunov equation for MRAC
+
+This final section records the matrix form of the existence theorem used by the
+model reference adaptive control construction. The bridge between matrices and
+operators is the star algebra equivalence `Matrix.toEuclideanCLM`, which sends a
+real `n × n` matrix to the continuous endomorphism of the Euclidean space
+`EuclideanSpace ℝ (Fin n)` it represents in the standard orthonormal basis. It
+has the following properties:
+
+* the endomorphism `Matrix.toEuclideanCLM A` has the same characteristic
+  polynomial as `Matrix.toLin' A`, so it is Hurwitz exactly when `A` is;
+* it intertwines the matrix transpose with the Hilbert adjoint, whence
+  `Aᵀ P + P A` is carried to `A† P + P A`;
+* `Matrix.inner_toEuclideanCLM` turns the operator quadratic form into the
+  matrix quadratic form `x ⬝ᵥ A *ᵥ x`, which lets `Matrix.PosDef` be read as
+  `LinearSystem.IsPositiveDefinite` and back.
+
+Applying the operator theorem `lyapunov_equation_solution` and pulling the
+solution back along this equivalence yields the matrix statement.
+Source: Kabziński–Mosiołek, Section 2.5, Definition 2.10 and Theorem 2.16,
+equations (2.36)–(2.40). -/
+
+namespace Matrix
+
+/-- A square real matrix is Hurwitz when the linear endomorphism `Matrix.toLin'`
+it induces on `Fin n → ℝ` is Hurwitz, i.e. when all complex eigenvalues of `A`
+have negative real part. Source: Kabziński–Mosiołek, Section 2.5 and
+Theorem 2.16. -/
+def IsHurwitz {n : Type*} [Fintype n] [DecidableEq n] (A : Matrix n n ℝ) : Prop :=
+  LinearMap.IsHurwitz (Matrix.toLin' A)
+
+end Matrix
+
+open scoped Matrix
+
+/-- **The matrix Lyapunov equation** (Kabziński–Mosiołek, Theorem 2.16): for a
+Hurwitz real square matrix `A` and a positive definite matrix `Q` there is a
+positive definite matrix `P` solving `Aᵀ * P + P * A = -Q`. -/
+theorem matrix_lyapunov_equation_solution {n : Nat} (A Q : Matrix (Fin n) (Fin n) ℝ)
+    (hA : Matrix.IsHurwitz A) (hQ : Q.PosDef) :
+    ∃ P : Matrix (Fin n) (Fin n) ℝ, P.PosDef ∧ Aᵀ * P + P * A = -Q := by
+  classical
+  set e : Matrix (Fin n) (Fin n) ℝ ≃⋆ₐ[ℝ]
+      (EuclideanSpace ℝ (Fin n) →L[ℝ] EuclideanSpace ℝ (Fin n)) :=
+    Matrix.toEuclideanCLM (n := Fin n) (𝕜 := ℝ) with he
+  have hAe : LinearMap.IsHurwitz (e A).toLinearMap := by
+    have hchar : (e A).toLinearMap.charpoly = (Matrix.toLin' A).charpoly := by
+      rw [he, Matrix.coe_toEuclideanCLM_eq_toEuclideanLin A,
+        Matrix.toEuclideanLin_eq_toLin_orthonormal, Matrix.charpoly_toLin,
+        Matrix.charpoly_toLin']
+    intro z hz
+    exact hA z (by rwa [hchar] at hz)
+  have hQe : LinearSystem.IsPositiveDefinite (e Q) := by
+    intro x hx
+    rw [he, Matrix.inner_toEuclideanCLM]
+    have hx' : x.ofLp ≠ 0 := fun h => hx (WithLp.ofLp_injective 2 h)
+    simpa using (Matrix.posDef_iff_dotProduct_mulVec.mp hQ).2 hx'
+  have hQadj : ContinuousLinearMap.adjoint (e Q) = e Q := by
+    have hstar : star Q = Q := hQ.1.star_eq
+    have hmap : e Q = star (e Q) := by
+      rw [← map_star (f := e) Q, hstar]
+    rw [ContinuousLinearMap.star_eq_adjoint] at hmap
+    exact hmap.symm
+  obtain ⟨Pe, hPe_pd, hPe_adj, hPe_eq⟩ :=
+    lyapunov_equation_solution (e A) (e Q) hAe hQe hQadj
+  set P : Matrix (Fin n) (Fin n) ℝ := e.symm Pe with hP
+  have heP : e P = Pe := by rw [hP]; exact e.apply_symm_apply Pe
+  refine ⟨P, ?_, ?_⟩
+  · rw [Matrix.posDef_iff_dotProduct_mulVec]
+    refine ⟨?_, ?_⟩
+    · change Pᴴ = P
+      rw [← Matrix.star_eq_conjTranspose]
+      have h := map_star (f := e.symm) Pe
+      have hstar_adj : star Pe = Pe := by
+        rw [ContinuousLinearMap.star_eq_adjoint, hPe_adj]
+      rw [hstar_adj] at h
+      rw [← hP] at h
+      exact h.symm
+    · intro x hx
+      have hx' : WithLp.toLp 2 x ≠ 0 := by
+        intro h0
+        apply hx
+        have := congrArg WithLp.ofLp h0
+        simpa using this
+      have hpos := hPe_pd (WithLp.toLp 2 x) hx'
+      have hinner : inner ℝ (WithLp.toLp 2 x) (Pe (WithLp.toLp 2 x)) =
+          star x ⬝ᵥ P *ᵥ x := by
+        rw [← heP, he, Matrix.inner_toEuclideanCLM]
+        simp
+      rwa [← hinner]
+  · have hPe_eq' : ContinuousLinearMap.adjoint (e A) * Pe + Pe * e A = -e Q := by
+      simpa only [← ContinuousLinearMap.mul_def] using hPe_eq
+    have h := congrArg e.symm hPe_eq'
+    simp only [map_add, map_mul, map_neg, StarAlgEquiv.symm_apply_apply] at h
+    rw [← hP] at h
+    have hsymm_adj : e.symm (ContinuousLinearMap.adjoint (e A)) = Aᵀ := by
+      rw [← ContinuousLinearMap.star_eq_adjoint, ← map_star (f := e) A,
+        e.symm_apply_apply]
+      exact (Matrix.star_eq_conjTranspose A).trans
+        (Matrix.conjTranspose_eq_transpose_of_trivial A)
+    rw [hsymm_adj] at h
+    exact h
