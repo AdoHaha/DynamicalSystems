@@ -323,3 +323,116 @@ theorem hasLyapunovIntegralLimit (A Q : X →L[ℝ] X)
     (hA : LinearMap.IsHurwitz A.toLinearMap) :
     ∃ P : X →L[ℝ] X, Tendsto (fun T => lyapunovIntegral A Q T) atTop (nhds P) :=
   ⟨lyapunovIntegral_limit A Q, tendsto_lyapunovIntegral_limit A Q hA⟩
+
+/-! ### The boundary term vanishes at infinity
+
+For a Hurwitz generator `A` the finite-horizon boundary term
+`g T = exp(T A)* Q exp(T A)` of `lyapunovIntegral_equation` tends to `0` as
+`T → +∞`: the quantitative Hurwitz bound makes it dominated by
+`‖Q‖ C ^ 2 exp (-(2 γ) T)`, which is squeezed to zero. This is what turns the
+finite-horizon equation into the algebraic Lyapunov equation in the limit. -/
+
+/-- For a Hurwitz generator `A`, the finite-horizon boundary term
+`T ↦ exp(T A)* Q exp(T A)` of the Lyapunov equation tends to `0` as `T → +∞`.
+Source: Kabziński–Mosiołek, equations (2.39)–(2.40), where the boundary term of
+the integrated equation disappears in the infinite-horizon limit. -/
+theorem tendsto_exp_adjoint_comp_comp_exp_zero (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) :
+    Tendsto (fun T : ℝ =>
+      (ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
+        (Q.comp (NormedSpace.exp (T • A)))) atTop (nhds 0) := by
+  obtain ⟨C, _hCpos, γ, hγpos, hC⟩ :=
+    LinearMap.exists_exponential_norm_bound_of_isHurwitz A.toLinearMap hA
+  have hC' : ∀ t : ℝ, 0 ≤ t →
+      ‖NormedSpace.exp (t • A)‖ ≤ C * Real.exp (-γ * t) := by
+    intro t ht
+    have h := hC t ht
+    rwa [show A.toLinearMap.toContinuousLinearMap = A from rfl] at h
+  have hbound : ∀ T : ℝ, 0 ≤ T →
+      ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
+        (Q.comp (NormedSpace.exp (T • A)))‖ ≤
+      ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
+    intro T hT
+    have hET := hC' T hT
+    have hadj : ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ =
+        ‖NormedSpace.exp (T • A)‖ := ContinuousLinearMap.adjoint.norm_map _
+    calc ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
+            (Q.comp (NormedSpace.exp (T • A)))‖
+        ≤ ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ *
+            ‖Q.comp (NormedSpace.exp (T • A))‖ := by
+          simpa only [ContinuousLinearMap.mul_def] using norm_mul_le
+            (ContinuousLinearMap.adjoint (NormedSpace.exp (T • A)))
+            (Q.comp (NormedSpace.exp (T • A)))
+      _ = ‖NormedSpace.exp (T • A)‖ * ‖Q.comp (NormedSpace.exp (T • A))‖ := by
+          rw [hadj]
+      _ ≤ ‖NormedSpace.exp (T • A)‖ * (‖Q‖ * ‖NormedSpace.exp (T • A)‖) := by
+          gcongr
+          simpa only [ContinuousLinearMap.mul_def] using
+            norm_mul_le Q (NormedSpace.exp (T • A))
+      _ ≤ (C * Real.exp (-γ * T)) * (‖Q‖ * (C * Real.exp (-γ * T))) := by
+          gcongr
+      _ = ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
+          rw [show -(2 * γ) * T = -γ * T + -γ * T by ring, Real.exp_add]
+          ring
+  have hexp : Tendsto (fun T : ℝ => Real.exp (-(2 * γ) * T)) atTop (nhds 0) := by
+    have hgamma : -(2 * γ) < 0 := by linarith
+    have h1 : Tendsto (fun T : ℝ => T * (-(2 * γ))) atTop atBot :=
+      tendsto_id.atTop_mul_const_of_neg hgamma
+    have h2 : Tendsto (fun T : ℝ => Real.exp (T * (-(2 * γ)))) atTop (nhds 0) :=
+      Real.tendsto_exp_atBot.comp h1
+    refine h2.congr' ?_
+    filter_upwards with T
+    rw [mul_comm]
+  have hg : Tendsto (fun T : ℝ => ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T))
+      atTop (nhds 0) := by
+    simpa only [mul_zero] using hexp.const_mul (‖Q‖ * C ^ 2)
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  exact squeeze_zero' (Eventually.of_forall fun T => norm_nonneg _)
+    (by filter_upwards [eventually_ge_atTop (0 : ℝ)] with T hT; exact hbound T hT) hg
+
+/-! ### The algebraic Lyapunov equation
+
+Passing to the limit `T → +∞` in the finite-horizon Lyapunov equation. The left
+side is continuous in `P(T)`, hence converges to `A* P + P A` along the limit of
+the finite-horizon integrals, while the right side converges to `-Q` because the
+boundary term `exp(T A)* Q exp(T A)` vanishes. Uniqueness of limits then yields
+the algebraic Lyapunov equation. -/
+
+/-- **Algebraic Lyapunov equation from a limit of finite-horizon integrals.** If
+the finite-horizon Lyapunov integrals `lyapunovIntegral A Q T` converge to `P` as
+`T → +∞`, then `P` solves the algebraic Lyapunov equation `A* P + P A = -Q`.
+Source: Kabziński–Mosiołek, equation (2.39). -/
+theorem lyapunov_equation_of_tendsto (A Q P : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap)
+    (hP : Tendsto (fun T => lyapunovIntegral A Q T) atTop (nhds P)) :
+    (ContinuousLinearMap.adjoint A).comp P + P.comp A = -Q := by
+  have hcont : Continuous (fun R : X →L[ℝ] X =>
+      (ContinuousLinearMap.adjoint A).comp R + R.comp A) :=
+    (ContinuousLinearMap.compL ℝ X X X (ContinuousLinearMap.adjoint A)).continuous.add
+      (((ContinuousLinearMap.compL ℝ X X X).flip A).continuous)
+  have hLHS : Tendsto (fun T : ℝ =>
+      (ContinuousLinearMap.adjoint A).comp (lyapunovIntegral A Q T)
+        + (lyapunovIntegral A Q T).comp A) atTop
+      (nhds ((ContinuousLinearMap.adjoint A).comp P + P.comp A)) :=
+    (hcont.tendsto P).comp hP
+  have hRHS : Tendsto (fun T : ℝ =>
+      (ContinuousLinearMap.adjoint A).comp (lyapunovIntegral A Q T)
+        + (lyapunovIntegral A Q T).comp A) atTop (nhds (-Q)) := by
+    have h := (tendsto_exp_adjoint_comp_comp_exp_zero A Q hA).sub
+      (tendsto_const_nhds (x := Q))
+    rw [zero_sub] at h
+    refine h.congr' ?_
+    filter_upwards with T
+    exact (lyapunovIntegral_equation A Q T).symm
+  exact tendsto_nhds_unique hLHS hRHS
+
+/-- **The infinite-horizon Lyapunov equation.** For a Hurwitz generator `A`,
+the infinite-horizon Lyapunov integral `P = lyapunovIntegral_limit A Q` solves the
+algebraic Lyapunov equation `A* P + P A = -Q`. Source: Kabziński–Mosiołek,
+equation (2.39) with the integral representation (2.40). -/
+theorem lyapunovIntegral_limit_equation (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) :
+    (ContinuousLinearMap.adjoint A).comp (lyapunovIntegral_limit A Q)
+      + (lyapunovIntegral_limit A Q).comp A = -Q :=
+  lyapunov_equation_of_tendsto A Q (lyapunovIntegral_limit A Q) hA
+    (tendsto_lyapunovIntegral_limit A Q hA)
