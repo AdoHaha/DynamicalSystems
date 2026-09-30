@@ -298,19 +298,8 @@ theorem isGraph_inputOutput (_h_topRel : loop.topRel.IsGraph) (_h_botRel : loop.
   · intro y' hy'
     have hu' := mem_inputState_of_mem_inputOutput hy'
     have heq := hu_uniq _ hu'
-    ext a
-    · have h2 : (e - (fun x ↦ (x.2, -x.1)) ∘ y') a = u a := by rw [heq]
-      simp only [Pi.sub_apply, Function.comp_apply] at h2
-      have h2_snd := congr_arg Prod.snd h2
-      dsimp at h2_snd
-      rw [← h2_snd]
-      simp
-    · have h1 : (e - (fun x ↦ (x.2, -x.1)) ∘ y') a = u a := by rw [heq]
-      simp only [Pi.sub_apply, Function.comp_apply] at h1
-      have h1_fst := congr_arg Prod.fst h1
-      dsimp at h1_fst
-      rw [← h1_fst]
-      simp
+    rw [← heq]
+    ext a <;> simp
 
 /-- If the map from inputs to outputs is a graph, then the map from inputs to states is also a
 graph. -/
@@ -330,17 +319,8 @@ theorem isGraph_inputState (_h_topRel : loop.topRel.IsGraph) (_h_botRel : loop.b
       · ext a; simp
       · ext a; simp
   have heq := hy_uniq _ hy'
-  ext a
-  · have h1 := congr_arg Prod.snd (congr_fun heq a)
-    dsimp at h1
-    simp only [Pi.sub_apply, Function.comp_apply, Prod.fst_sub]
-    rw [← h1]
-    simp
-  · have h2 := congr_arg Prod.fst (congr_fun heq a)
-    dsimp at h2
-    simp only [Pi.sub_apply, Function.comp_apply, Prod.snd_sub]
-    rw [← h2]
-    simp
+  rw [← heq]
+  ext a <;> simp
 
 variable [MeasurableSpace α] {μ : Measure α}
 
