@@ -234,6 +234,41 @@ the integrand `exp (s A)* Q exp (s A)` dominated by the integrable function
 integral `P = ∫₀^∞ exp (s A)* Q exp (s A) ds`, the candidate solution of the
 algebraic Lyapunov equation `A* P + P A = -Q` from equation (2.40). -/
 
+/-- Pointwise operator-norm bound for the Lyapunov integrand
+`exp (T A)* Q exp (T A)`, assuming the quantitative decay bound
+`‖exp (t A)‖ ≤ C exp (-γ t)` for all `t ≥ 0`. The conclusion is
+`‖exp (T A)* Q exp (T A)‖ ≤ ‖Q‖ C² exp (-(2 γ) T)`. -/
+theorem norm_exp_adjoint_comp_comp_exp_le (A Q : X →L[ℝ] X) (C γ : ℝ)
+    (hC : ∀ t, 0 ≤ t → ‖NormedSpace.exp (t • A)‖ ≤ C * Real.exp (-γ * t))
+    {T : ℝ} (hT : 0 ≤ T) :
+    ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
+        (Q.comp (NormedSpace.exp (T • A)))‖ ≤
+      ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
+  have hET := hC T hT
+  have hadj : ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ =
+      ‖NormedSpace.exp (T • A)‖ := ContinuousLinearMap.adjoint.norm_map _
+  calc ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
+          (Q.comp (NormedSpace.exp (T • A)))‖
+      ≤ ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ *
+          ‖Q.comp (NormedSpace.exp (T • A))‖ := by
+        simpa only [ContinuousLinearMap.mul_def] using norm_mul_le
+          (ContinuousLinearMap.adjoint (NormedSpace.exp (T • A)))
+          (Q.comp (NormedSpace.exp (T • A)))
+    _ = ‖NormedSpace.exp (T • A)‖ * ‖Q.comp (NormedSpace.exp (T • A))‖ := by
+        rw [hadj]
+    _ ≤ ‖NormedSpace.exp (T • A)‖ * (‖Q‖ * ‖NormedSpace.exp (T • A)‖) := by
+        gcongr
+        simpa only [ContinuousLinearMap.mul_def] using
+          norm_mul_le Q (NormedSpace.exp (T • A))
+    _ ≤ (C * Real.exp (-γ * T)) * (‖Q‖ * (C * Real.exp (-γ * T))) := by
+        have hCnonneg : 0 ≤ C * Real.exp (-γ * T) := le_trans (norm_nonneg _) hET
+        have hQnonneg : 0 ≤ ‖Q‖ := norm_nonneg _
+        exact mul_le_mul hET (mul_le_mul_of_nonneg_left hET hQnonneg)
+          (mul_nonneg hQnonneg (norm_nonneg _)) hCnonneg
+    _ = ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
+        rw [show -(2 * γ) * T = -γ * T + -γ * T by ring, Real.exp_add]
+        ring
+
 /-- For a Hurwitz generator `A`, the operator-valued Lyapunov integrand
 `s ↦ exp (s A)* Q exp (s A)` is Bochner integrable on the half-line `(0, ∞)`.
 The domination uses the quantitative Hurwitz bound
@@ -264,28 +299,12 @@ theorem integrableOn_Ioi_lyapunovIntegrand (A Q : X →L[ℝ] X)
   · exact (hfcont.aestronglyMeasurable).mono_measure Measure.restrict_le_self
   · rw [ae_restrict_iff' measurableSet_Ioi]
     filter_upwards with s hs
-    have hs0 : 0 ≤ s := le_of_lt hs
-    have hbound := hC' s hs0
-    have hadj : ‖ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))‖ =
-        ‖NormedSpace.exp (s • A)‖ := ContinuousLinearMap.adjoint.norm_map _
+    have hb := norm_exp_adjoint_comp_comp_exp_le A Q C γ hC' (le_of_lt hs)
     calc ‖f s‖
         = ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
             (Q.comp (NormedSpace.exp (s • A)))‖ := rfl
-      _ ≤ ‖ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))‖ *
-            ‖Q.comp (NormedSpace.exp (s • A))‖ := by
-          simpa only [ContinuousLinearMap.mul_def] using norm_mul_le
-            (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A)))
-            (Q.comp (NormedSpace.exp (s • A)))
-      _ ≤ ‖NormedSpace.exp (s • A)‖ * (‖Q‖ * ‖NormedSpace.exp (s • A)‖) := by
-          rw [hadj]
-          gcongr
-          simpa only [ContinuousLinearMap.mul_def] using
-            norm_mul_le Q (NormedSpace.exp (s • A))
-      _ ≤ (C * Real.exp (-γ * s)) * (‖Q‖ * (C * Real.exp (-γ * s))) := by
-          gcongr
-      _ = (C ^ 2 * ‖Q‖) * Real.exp (-(2 * γ) * s) := by
-          rw [show -(2 * γ) * s = -γ * s + -γ * s by ring, Real.exp_add]
-          ring
+      _ ≤ ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * s) := hb
+      _ = (C ^ 2 * ‖Q‖) * Real.exp (-(2 * γ) * s) := by ring
 
 /-- The infinite-horizon Lyapunov integral `P = ∫₀^∞ exp (s A)* Q exp (s A) ds`,
 as a continuous endomorphism of the state space. This is the improper Bochner
@@ -351,29 +370,8 @@ theorem tendsto_exp_adjoint_comp_comp_exp_zero (A Q : X →L[ℝ] X)
   have hbound : ∀ T : ℝ, 0 ≤ T →
       ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
         (Q.comp (NormedSpace.exp (T • A)))‖ ≤
-      ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
-    intro T hT
-    have hET := hC' T hT
-    have hadj : ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ =
-        ‖NormedSpace.exp (T • A)‖ := ContinuousLinearMap.adjoint.norm_map _
-    calc ‖(ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))).comp
-            (Q.comp (NormedSpace.exp (T • A)))‖
-        ≤ ‖ContinuousLinearMap.adjoint (NormedSpace.exp (T • A))‖ *
-            ‖Q.comp (NormedSpace.exp (T • A))‖ := by
-          simpa only [ContinuousLinearMap.mul_def] using norm_mul_le
-            (ContinuousLinearMap.adjoint (NormedSpace.exp (T • A)))
-            (Q.comp (NormedSpace.exp (T • A)))
-      _ = ‖NormedSpace.exp (T • A)‖ * ‖Q.comp (NormedSpace.exp (T • A))‖ := by
-          rw [hadj]
-      _ ≤ ‖NormedSpace.exp (T • A)‖ * (‖Q‖ * ‖NormedSpace.exp (T • A)‖) := by
-          gcongr
-          simpa only [ContinuousLinearMap.mul_def] using
-            norm_mul_le Q (NormedSpace.exp (T • A))
-      _ ≤ (C * Real.exp (-γ * T)) * (‖Q‖ * (C * Real.exp (-γ * T))) := by
-          gcongr
-      _ = ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) := by
-          rw [show -(2 * γ) * T = -γ * T + -γ * T by ring, Real.exp_add]
-          ring
+      ‖Q‖ * C ^ 2 * Real.exp (-(2 * γ) * T) :=
+    fun T hT => norm_exp_adjoint_comp_comp_exp_le A Q C γ hC' hT
   have hexp : Tendsto (fun T : ℝ => Real.exp (-(2 * γ) * T)) atTop (nhds 0) := by
     have hgamma : -(2 * γ) < 0 := by linarith
     have h1 : Tendsto (fun T : ℝ => T * (-(2 * γ))) atTop atBot :=
@@ -436,3 +434,17 @@ theorem lyapunovIntegral_limit_equation (A Q : X →L[ℝ] X)
       + (lyapunovIntegral_limit A Q).comp A = -Q :=
   lyapunov_equation_of_tendsto A Q (lyapunovIntegral_limit A Q) hA
     (tendsto_lyapunovIntegral_limit A Q hA)
+
+/-- **Pointwise form of the infinite-horizon Lyapunov equation.** Applying the
+operator equation `A* P + P A = -Q` to a state `x` gives
+`A* (P x) + P (A x) = -Q x`. This is the identity used downstream to compute
+the system derivative `V̇(x) = ⟪x, (A* P + P A) x⟫ = -⟪x, Q x⟫` of the quadratic
+Lyapunov function `V(x) = ⟪x, P x⟫`. Source: Kabziński–Mosiołek, equations
+(2.36)–(2.39). -/
+theorem lyapunovIntegral_limit_equation_apply (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) (x : X) :
+    ContinuousLinearMap.adjoint A (lyapunovIntegral_limit A Q x)
+      + lyapunovIntegral_limit A Q (A x) = -Q x := by
+  have h := lyapunovIntegral_limit_equation A Q hA
+  simpa only [add_apply, ContinuousLinearMap.comp_apply, neg_apply]
+    using congrArg (fun L : X →L[ℝ] X => L x) h
