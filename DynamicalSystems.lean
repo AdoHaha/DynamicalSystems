@@ -54,6 +54,7 @@ import DynamicalSystems.Linear.GeneralDomainInvariantPair
 import DynamicalSystems.Linear.GeneralDomainControllerAssembly
 import DynamicalSystems.Linear.GeneralDomainObserverGain
 import DynamicalSystems.Linear.GeneralDomainControllerCriterion
+import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
@@ -68,6 +69,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
+import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
 import DynamicalSystems.Stability.Example
 import DynamicalSystems.Stability.Floquet

@@ -1,0 +1,63 @@
+Barbalat integration review — 2026-09-30
+
+Reviewed branch: barbalat-ralph at 3e5fdd8
+Target: dev at a98e772 (Lean/mathlib v4.35.0-rc2)
+Source: Farkas and Wegner, Variations on Barbalat's Lemma,
+arXiv:1411.1611v3, locally cached from papers/barbalats_lemma_1411.1611v3.pdf.
+
+Verdict: suitable for integration after the compatibility fixes below.
+No mathematical or proof-trust blocker found in the reviewed declarations.
+
+Source correspondence
+
+Theorems 1 and 4 preserve convergence of the improper integral, rather than
+requiring absolute integrability. The Banach-valued conclusion is obtained
+from a tail-average estimate and uniform continuity on the half-line.
+Theorems 5 and Lemma 6 have scalar absolute-continuity/a.e.-derivative forms,
+including the finite-q and infinity cases; the everywhere-differentiable
+Banach-valued variants are separate. Corollary 9 has both the scalar AC
+finite-q rate and the Lipschitz infinity endpoint. The adaptive-control
+example derives V' = -2 e^2 and convergence of e, assuming the trajectory
+equations. The additional Lyapunov bridge uses global nonnegativity supplied
+by IsLyapunovOn.pos; its trajectory-invariance argument is intentionally
+unused and retained for API compatibility.
+
+Changes made during integration
+
+- Fixed four infinity-norm rewrites to supply AEStronglyMeasurable explicitly,
+  as required by the newer mathlib API.
+- Shared the finite-q quantitative estimate between the everywhere-derivative
+  and AC versions through a private Holder-bound helper.
+- Replaced the adaptive-control example's manual epsilon/delta estimate with
+  mathlib's derivative-bound-to-Lipschitz theorem.
+- Preserved all existing public declaration signatures and docstrings.
+- Resolved the root import conflict by retaining both dev's imports and the
+  Barbalat imports. Preserved dev's toolchain and dependency manifest.
+- Added the Lyapunov bridge to the manual and clarified coverage boundaries.
+
+Coverage boundaries
+
+Example 7 is omitted. Lemma 2 uses a general modulus instead of the explicit
+local oscillation supremum construction. The same-exponent Sobolev corollary
+requires p > 1 and does not cover p = q = 1. AC results are scalar-valued.
+Rates use the supremum of finite tail integrals; its equality with the
+infinite tail integral of |f|^p is not packaged as a separate theorem.
+The adaptive-control example assumes classical trajectory derivatives;
+existence, uniqueness, and a general Caratheodory-to-AC bridge are outside
+this implementation. No parameter convergence claim for theta is made.
+
+Validation on the final integrated sources
+
+lake build DynamicalSystems DynamicalSystems.Documentation
+  Passed (4144 jobs). Existing warnings elsewhere in dev remain.
+lake lint -- DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
+             DynamicalSystems.Stability.Barbalat
+  Both passed.
+lake exe axiom-audit --root DynamicalSystems
+  --modules DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat,DynamicalSystems.Stability.Barbalat
+  --json
+  Passed: 287 declarations including imported project dependencies;
+  only propext, Classical.choice, Quot.sound; zero violations.
+Public-signature comparison against the reviewed branch: passed.
+Forbidden proof-token scan and 100-character source-width checks: passed.
+git diff --check: passed.

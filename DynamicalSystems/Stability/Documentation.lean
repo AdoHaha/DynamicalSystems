@@ -2,6 +2,7 @@ import VersoManual
 import Lean
 
 import DynamicalSystems.Stability.Basic
+import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Example
 import DynamicalSystems.Stability.LaSalle
 import DynamicalSystems.Stability.Lyapunov
@@ -149,3 +150,26 @@ From this it follows that the origin is globally asymptotic stable:
 
 {docstring isStableOn_smulFlow}
 {docstring tendsto_smulFlow}
+
+# Barbălat's lemma and adaptive control
+
+A different route to asymptotic convergence applies when a Lyapunov function is only known
+to be non-increasing, with no strict decrease at the origin: the classical Barbălat lemma.
+The main analysis results are proved in `DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat`
+and documented in the corresponding chapter of this manual. Here we record the
+control-theoretic application, namely the adaptive control system of Hou, Duan and Guo,
+which is Example 10 in Farkas and Wegner's *Variations on Barbălat's Lemma*.
+
+The general bridge identifies the limit of the nonnegative decay rate when that rate is
+uniformly continuous along the trajectory.
+
+{docstring Barbalat.tendsto_zero_of_isLyapunovOn_of_hasDerivAt_neg}
+
+{docstring Barbalat.adaptiveControl_error_tendsto_zero}
+
+The ordinary differential equations are hypotheses of this statement: it formalizes the
+asymptotic behaviour of a trajectory, not existence or uniqueness of trajectories. The
+proof uses the Lyapunov function $`V = e ^ 2 + θ ^ 2`, for which
+$`V' = -2 e ^ 2 ≤ 0`. Hence `V` is bounded by its initial value, which bounds `e` and
+`θ`, makes the primitive of `e ^ 2` convergent, and makes `e ^ 2` uniformly continuous;
+Barbălat's lemma then yields `e ^ 2 → 0` and therefore `e → 0`.

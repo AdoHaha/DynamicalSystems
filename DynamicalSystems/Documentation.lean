@@ -3,6 +3,7 @@ import DynamicalSystems.Basic.Documentation
 import DynamicalSystems.InputOutput.Documentation
 import DynamicalSystems.Linear.Documentation
 import DynamicalSystems.Stability.Documentation
+import DynamicalSystems.Mathlib.Analysis.Calculus.Documentation
 import DynamicalSystems.Mathlib.Analysis.ODE.Documentation
 
 open Verso.Genre
@@ -34,6 +35,7 @@ The code is hosted on [Github](https://github.com/mcdoll/DynamicalSystems) and c
 Lean {leanVersion}[].
 
 {include 1 DynamicalSystems.Mathlib.Analysis.ODE.Documentation}
+{include 1 DynamicalSystems.Mathlib.Analysis.Calculus.Documentation}
 {include 1 DynamicalSystems.Basic.Documentation}
 {include 1 DynamicalSystems.Stability.Documentation}
 {include 1 DynamicalSystems.InputOutput.Documentation}
