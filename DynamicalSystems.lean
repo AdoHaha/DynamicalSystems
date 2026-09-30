@@ -71,6 +71,7 @@ import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
+import DynamicalSystems.Stability.Comparison
 import DynamicalSystems.Stability.Definitions
 import DynamicalSystems.Stability.Equilibrium
 import DynamicalSystems.Stability.Example
