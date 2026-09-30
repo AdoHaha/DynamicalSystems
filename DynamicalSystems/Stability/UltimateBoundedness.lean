@@ -35,6 +35,10 @@ unbounded, this yields `IsUniformlyBoundedAt Φ`.
   `max v₀ (d / c)`, since it is a convex combination of `v₀` and `d / c`.
 * `gronwall_isUniformlyBoundedAt`: Grönwall dissipation with radially unbounded sandwich
   bounds implies `IsUniformlyBoundedAt Φ`.
+* `gronwall_decay_lt_of_tau`: the affine Grönwall bound drops below any level `L > d / c`
+  after an explicitly computed uniform time `τ`, independent of the initial value `v₀ ≤ Vmax`.
+* `gronwall_isUltimatelyUniformlyBoundedAt`: Grönwall dissipation with a sandwich
+  `g₁ ‖x‖ ≤ V x ≤ g₂ ‖x‖` and `d / c < g₁ B` implies `IsUltimatelyUniformlyBoundedAt Φ B`.
 -/
 
 open Set Filter Real
@@ -123,3 +127,116 @@ theorem gronwall_isUniformlyBoundedAt
     simp only [Set.mem_Ici]
     linarith
   exact (hg1_mono.lt_iff_lt hnorm hβmem).mp hlt
+
+/-- Uniform decay time threshold for the affine Grönwall bound.
+
+Given `c > 0` and a target level `L > d / c`, there is a single time `τ > 0` such that the
+Grönwall comparison solution `v₀ * exp (-c * s) + d / c * (1 - exp (-c * s))` is below `L` for
+every elapsed time `s ≥ τ` and every initial value `v₀ ≤ Vmax`.
+
+If `Vmax ≤ d / c` the bound is a convex combination of `v₀ ≤ Vmax` and `d / c`, hence at most
+`d / c < L` for *every* `s ≥ 0`, and `τ := 1` works. Otherwise `Vmax - d / c > 0` and
+`L - d / c > 0`, and we take
+`τ := max 1 ((log ((Vmax - d / c) / (L - d / c)) + 1) / c)`, so that for `s ≥ τ`
+`exp (-c * s) < (L - d / c) / (Vmax - d / c)`, whence
+`(Vmax - d / c) * exp (-c * s) < L - d / c`. -/
+theorem gronwall_decay_lt_of_tau (c d L Vmax : ℝ) (hc : 0 < c) (hL : d / c < L) :
+    ∃ τ > 0, ∀ v₀ ≤ Vmax, ∀ s ≥ τ,
+      v₀ * Real.exp (-c * s) + d / c * (1 - Real.exp (-c * s)) < L := by
+  by_cases hV : Vmax ≤ d / c
+  · refine ⟨1, one_pos, ?_⟩
+    intro v₀ hv₀ s _
+    have hb := gronwall_bound_le_max v₀ c d s hc (by linarith)
+    have hv : v₀ ≤ d / c := hv₀.trans hV
+    have hmax : max v₀ (d / c) ≤ d / c := max_le hv le_rfl
+    linarith
+  · refine ⟨max 1 ((Real.log ((Vmax - d / c) / (L - d / c)) + 1) / c), ?_, ?_⟩
+    · exact lt_of_lt_of_le one_pos (le_max_left _ _)
+    · intro v₀ hv₀ s hs
+      have hV' : d / c < Vmax := lt_of_not_ge hV
+      have hA : 0 < Vmax - d / c := by linarith
+      have hE : 0 < L - d / c := by linarith
+      have hdiv : 0 < (Vmax - d / c) / (L - d / c) := div_pos hA hE
+      have hτle : (Real.log ((Vmax - d / c) / (L - d / c)) + 1) / c ≤ s :=
+        (le_max_right _ _).trans hs
+      have hmulc : Real.log ((Vmax - d / c) / (L - d / c)) + 1 ≤ c * s := by
+        have h := (div_le_iff₀ hc).mp hτle
+        rwa [mul_comm s c] at h
+      have hlog_lt : Real.log ((Vmax - d / c) / (L - d / c)) < c * s := by linarith
+      have hexp_lt : Real.exp (-c * s) < (L - d / c) / (Vmax - d / c) := by
+        have h1 : Real.exp (-c * s) <
+            Real.exp (-(Real.log ((Vmax - d / c) / (L - d / c)))) :=
+          Real.exp_lt_exp.mpr (by linarith)
+        rwa [Real.exp_neg, Real.exp_log hdiv, inv_div] at h1
+      have h2 : (Vmax - d / c) * Real.exp (-c * s) < L - d / c := by
+        have hthis := mul_lt_mul_of_pos_left hexp_lt hA
+        have hcancel : (Vmax - d / c) * ((L - d / c) / (Vmax - d / c)) = L - d / c := by
+          rw [← mul_div_assoc]
+          exact mul_div_cancel_left₀ _ (ne_of_gt hA)
+        linarith [hthis, hcancel]
+      have hle : v₀ - d / c ≤ Vmax - d / c := by linarith
+      have hpos : 0 < Real.exp (-c * s) := Real.exp_pos _
+      have h3 : (v₀ - d / c) * Real.exp (-c * s) < L - d / c :=
+        lt_of_le_of_lt (mul_le_mul_of_nonneg_right hle hpos.le) h2
+      have hrewrite : v₀ * Real.exp (-c * s) + d / c * (1 - Real.exp (-c * s))
+          = d / c + (v₀ - d / c) * Real.exp (-c * s) := by ring
+      rw [hrewrite]
+      linarith
+
+/-- Ultimate uniform boundedness of a non-autonomous flow from a Lyapunov sandwich and
+Grönwall dissipation.
+
+Let `Φ` be a non-autonomous flow and `V : E → ℝ` an energy function satisfying the dissipative
+differential inequality `deriv (V ∘ Φ) t ≤ -(c * V (Φ t₀ x t)) + d` along every trajectory with
+`c > 0`, with a two-sided derivative at every `t ≥ t₀ ≥ 0`. Suppose further that `V` is
+sandwiched between comparison functions `g₁ ‖x‖ ≤ V x ≤ g₂ ‖x‖`, where `g₁` is strictly monotone
+on `[0, ∞)` and `g₂` is monotone on `[0, ∞)`. If the ultimate bound `B > 0` satisfies
+`d / c < g₁ B`, then the trajectories of `Φ` are ultimately uniformly bounded with ultimate bound
+`B`, i.e. `IsUltimatelyUniformlyBoundedAt Φ B`.
+
+Given a radius `α > 0` the intermediate energy level `L := (d / c + g₁ B) / 2` lies strictly
+between `d / c` and `g₁ B`. The uniform decay time `τ` produced by `gronwall_decay_lt_of_tau`
+for `Vmax := g₂ α` depends only on `α, B, c, d, g₁, g₂`, not on the initial time `t₀` or the
+initial state `x`, which is what makes the bound uniform. -/
+theorem gronwall_isUltimatelyUniformlyBoundedAt
+    (Φ : NonautonomousFlow ℝ E) (V : E → ℝ)
+    (c d : ℝ) (hc : 0 < c)
+    (B : ℝ) (hB_pos : 0 < B)
+    (g1 g2 : ℝ → ℝ)
+    (hg1_mono : StrictMonoOn g1 (Set.Ici 0))
+    (hg2_mono : MonotoneOn g2 (Set.Ici 0))
+    (hg1 : ∀ x, g1 ‖x‖ ≤ V x)
+    (hg2 : ∀ x, V x ≤ g2 ‖x‖)
+    (hB : d / c < g1 B)
+    (hderiv : ∀ t0 ≥ 0, ∀ x, ∀ t ≥ t0,
+      HasDerivAt (fun s ↦ V (Φ t0 x s)) (deriv (fun s ↦ V (Φ t0 x s)) t) t)
+    (hineq : ∀ t0 ≥ 0, ∀ x, ∀ t ≥ t0,
+      deriv (fun s ↦ V (Φ t0 x s)) t ≤ -(c * V (Φ t0 x t)) + d) :
+    IsUltimatelyUniformlyBoundedAt Φ B := by
+  intro α hα
+  have hL_lt : d / c < (d / c + g1 B) / 2 := by linarith
+  obtain ⟨τ, hτ_pos, hτ⟩ :=
+    gronwall_decay_lt_of_tau c d ((d / c + g1 B) / 2) (g2 α) hc hL_lt
+  refine ⟨τ, hτ_pos, ?_⟩
+  intro t0 ht0 x hx t ht
+  have hVx : V x ≤ g2 α := by
+    have h1 : g2 ‖x‖ ≤ g2 α := hg2_mono (norm_nonneg x) hα.le (le_of_lt hx)
+    linarith [hg2 x, h1]
+  have hs : t - t0 ≥ τ := by linarith
+  have hv0 : V (Φ t0 x t0) ≤ g2 α := by
+    simpa only [NonautonomousFlow.map_id] using hVx
+  have hdecay := hτ (V (Φ t0 x t0)) hv0 (t - t0) hs
+  have hbound : V (Φ t0 x t) ≤
+      V (Φ t0 x t0) * Real.exp (-c * (t - t0))
+        + d / c * (1 - Real.exp (-c * (t - t0))) :=
+    le_gronwallBound_of_hasDerivAt_le_Ici (v := fun s ↦ V (Φ t0 x s)) (t₀ := t0) hc
+      (fun s hs' ↦ hderiv t0 ht0 x s hs') (fun s hs' ↦ hineq t0 ht0 x s hs') t (by linarith)
+  have hVt_lt : V (Φ t0 x t) < (d / c + g1 B) / 2 := lt_of_le_of_lt hbound hdecay
+  have hmid_lt : (d / c + g1 B) / 2 < g1 B := by linarith
+  have hg1_lt : g1 ‖Φ t0 x t‖ < g1 B :=
+    lt_of_le_of_lt (hg1 _) (lt_trans hVt_lt hmid_lt)
+  have hnorm : ‖Φ t0 x t‖ ∈ Set.Ici (0 : ℝ) := norm_nonneg _
+  have hBmem : B ∈ Set.Ici (0 : ℝ) := by
+    simp only [Set.mem_Ici]
+    linarith
+  exact (hg1_mono.lt_iff_lt hnorm hBmem).mp hg1_lt
