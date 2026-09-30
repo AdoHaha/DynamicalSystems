@@ -4,6 +4,7 @@ import DynamicalSystems.Basic.LpLoc
 import DynamicalSystems.Basic.NonAutonomous
 import DynamicalSystems.Control.Adaptive.MRAC
 import DynamicalSystems.Control.Adaptive.RobustMRAC
+import DynamicalSystems.Control.Backstepping.Barrier
 import DynamicalSystems.Control.Backstepping.Basic
 import DynamicalSystems.Control.Backstepping.Filtered
 import DynamicalSystems.Control.Backstepping.Robust
