@@ -41,6 +41,7 @@ import DynamicalSystems.Linear.TransferCoordinateBridge
 import DynamicalSystems.Linear.TransferPoleDecay
 import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.TransferPoleDomains
+import DynamicalSystems.Linear.TransferRealizationEquality
 import DynamicalSystems.Linear.TransferPoleFeedthrough
 import DynamicalSystems.Linear.GeneralStabilityDomain
 import DynamicalSystems.Linear.GeneralDomainSpectral

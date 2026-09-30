@@ -26,6 +26,7 @@ import DynamicalSystems.Linear.TransferCoordinateBridge
 import DynamicalSystems.Linear.TransferPoleDecay
 import DynamicalSystems.Linear.TransferPoleControllerCriterion
 import DynamicalSystems.Linear.TransferPoleDomains
+import DynamicalSystems.Linear.TransferRealizationEquality
 import DynamicalSystems.Linear.TransferPoleFeedthrough
 import DynamicalSystems.Linear.GeneralStabilityDomain
 import DynamicalSystems.Linear.GeneralDomainSpectral
@@ -1285,6 +1286,21 @@ stabilization for arbitrary domains; the book-style geometric iff is in
 {docstring Matrix.real_all_channels_poles_in_iff_charpoly_roots_in_of_minimal}
 {docstring LinearSystem.MinimalRealizationAllChannelsPolesIn}
 {docstring LinearSystem.minimalRealizationAllChannelsPolesIn_iff_spectrum}
+
+## `DynamicalSystems.Linear.TransferRealizationEquality`
+
+The original realization and its controllable-observable reduction have equal
+rational transfer entries. Their state dimensions and state bases may differ;
+the input and output coordinates are shared. The proof combines preservation
+of `H A^k E` with the adjugate numerator recurrence and a polynomial degree bound.
+Consequently, the minimal-realization pole predicate used by the controller
+criterion describes the reduced-denominator poles of the original transfer
+matrix as well. Unreachable and unobservable state poles are removed by
+rational cancellation.
+
+{docstring Matrix.channelTransferRatFunc_eq_of_markov_eq}
+{docstring LinearMap.controllableObservableRealization_channelTransferRatFunc_eq}
+{docstring LinearSystem.minimalRealizationAllChannelsPolesIn_iff_original_channels}
 
 ## `DynamicalSystems.Linear.TransferPoleFeedthrough`
 
