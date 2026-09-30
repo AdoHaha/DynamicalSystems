@@ -71,6 +71,8 @@ import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
+import DynamicalSystems.Stability.Definitions
+import DynamicalSystems.Stability.Equilibrium
 import DynamicalSystems.Stability.Example
 import DynamicalSystems.Stability.Floquet
 import DynamicalSystems.Stability.Hamiltonian
