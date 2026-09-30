@@ -229,4 +229,44 @@ theorem adaptiveControl_error_tendsto_zero
   filter_upwards [habs ε hε] with t ht
   simpa only [Real.dist_eq, sub_zero, abs_abs] using ht
 
+/-- **The Slotine–Li theorem** (Kabziński–Mosiołek, Theorem 3.6, scalar trajectory form).
+Let `V : ℝ → ℝ` be bounded below, differentiable on `[0, ∞)` with nonpositive derivative
+`deriv V` there, and suppose that the decay rate `deriv V` is uniformly continuous on
+`[0, ∞)`. Then `deriv V t → 0` as `t → ∞`.
+
+The book's assumption is only that the candidate `V` is bounded below (forward in time, on
+`[0, ∞)`), whereas the core Barbălat lemma
+`tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn` requires it to be
+nonnegative. Subtracting a lower bound `c` from `V` produces the nonnegative
+`V' = V - c` with the same derivative `deriv V`, and the decay rate `w = -deriv V` is
+nonnegative, uniformly continuous, and has `V'` as an antiderivative there; applying the core
+lemma to `V'` and `w` and negating the conclusion gives the result. -/
+theorem tendsto_deriv_zero_of_boundedBelow_of_uniformContinuousOn
+    {V : ℝ → ℝ} (hV : BddBelow (V '' Set.Ici 0))
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt V (deriv V t) t)
+    (hmono : ∀ t, 0 ≤ t → deriv V t ≤ 0)
+    (huc : UniformContinuousOn (deriv V) (Set.Ici 0)) :
+    Tendsto (deriv V) atTop (𝓝 0) := by
+  obtain ⟨c, hc⟩ := hV
+  have hc' : ∀ t : ℝ, 0 ≤ t → c ≤ V t :=
+    fun t ht ↦ hc (mem_image_of_mem V ht)
+  let V' : ℝ → ℝ := fun t ↦ V t - c
+  let w : ℝ → ℝ := fun t ↦ -(deriv V t)
+  have hV'nonneg : ∀ t : ℝ, 0 ≤ t → 0 ≤ V' t := fun t ht ↦ sub_nonneg.mpr (hc' t ht)
+  have hw_nonneg : ∀ t : ℝ, 0 ≤ t → 0 ≤ w t := fun t ht ↦ neg_nonneg.mpr (hmono t ht)
+  have hV'deriv : ∀ t : ℝ, 0 ≤ t → HasDerivAt V' (-(w t)) t := by
+    intro t ht
+    simpa only [V', w, neg_neg] using (hderiv t ht).sub_const c
+  have hw_uc : UniformContinuousOn w (Set.Ici 0) :=
+    Real.uniformContinuous_neg.comp_uniformContinuousOn huc
+  have hw_tend : Tendsto w atTop (𝓝 0) :=
+    tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn
+      hV'nonneg hw_nonneg hV'deriv hw_uc
+  have hneg : Tendsto (fun t : ℝ ↦ -w t) atTop (𝓝 0) := by
+    simpa using hw_tend.neg
+  have hfun : (fun t : ℝ ↦ -w t) = deriv V := by
+    funext t
+    simp only [w, neg_neg]
+  rwa [hfun] at hneg
+
 end Barbalat
