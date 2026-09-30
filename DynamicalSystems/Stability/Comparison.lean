@@ -24,6 +24,10 @@ here.
   `v t ≤ v 0 * exp (-c * t) + d / c * (1 - exp (-c * t))`.
 * `exponential_decay_of_hasDerivAt_le`: the specialization `d = 0`, giving the
   exponential decay bound `v t ≤ v 0 * exp (-c * t)`.
+* `le_gronwallBound_of_hasDerivAt_le`: the same bound phrased for a two-sided
+  derivative `HasDerivAt`.
+* `eventually_lt_of_hasDerivAt_le_neg_mul_add`: the asymptotic form, that the
+  solution eventually drops below any bound larger than `d / c`.
 -/
 
 @[expose] public section
@@ -79,3 +83,56 @@ theorem exponential_decay_of_hasDerivAt_le
   have h0 : ∀ t, 0 ≤ t → deriv v t ≤ -(c * v t) + 0 := fun t ht ↦ by
     simpa using hineq t ht
   simpa using le_gronwallBound_of_hasDerivAt_le_neg_mul_add hc hv hderiv h0 t ht
+
+/-- Scalar comparison (Grönwall) estimate for a two-sided derivative.
+
+This is the convenience form of `le_gronwallBound_of_hasDerivAt_le_neg_mul_add` for a function
+`v` whose *two-sided* derivative `deriv v t` exists at every `t ≥ 0` (rather than merely a right
+derivative on `[0, ∞)`). Continuity of `v` on `[0, ∞)` is derived automatically from
+`HasDerivAt`. The hypothesis `HasDerivAt v (deriv v t) t` is converted to the
+within-set form `HasDerivWithinAt v (deriv v t) (Set.Ici t) t` used by the right-derivative
+statement. -/
+theorem le_gronwallBound_of_hasDerivAt_le {v : ℝ → ℝ} {c d : ℝ} (hc : 0 < c)
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt v (deriv v t) t)
+    (hineq : ∀ t, 0 ≤ t → deriv v t ≤ -(c * v t) + d) :
+    ∀ t, 0 ≤ t → v t ≤ v 0 * Real.exp (-c * t) + d / c * (1 - Real.exp (-c * t)) := by
+  have hv : ContinuousOn v (Set.Ici 0) :=
+    fun t ht ↦ (hderiv t ht).continuousAt.continuousWithinAt
+  exact le_gronwallBound_of_hasDerivAt_le_neg_mul_add hc hv
+    (fun t ht ↦ (hderiv t ht).hasDerivWithinAt) hineq
+
+/-- Asymptotic form of the scalar comparison estimate.
+
+If `v` satisfies the dissipative differential inequality `deriv v t ≤ -(c * v t) + d` for
+`t ≥ 0` (with a two-sided derivative), then `v t` eventually drops below any number `B` that is
+strictly larger than the equilibrium value `d / c`: the Grönwall bound
+`v t ≤ v 0 * exp (-c * t) + d / c * (1 - exp (-c * t))` has right-hand side tending to `d / c` as
+`t → ∞`. -/
+theorem eventually_lt_of_hasDerivAt_le_neg_mul_add {v : ℝ → ℝ} {c d B : ℝ}
+    (hc : 0 < c) (hB : d / c < B)
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt v (deriv v t) t)
+    (hineq : ∀ t, 0 ≤ t → deriv v t ≤ -(c * v t) + d) :
+    ∀ᶠ t in atTop, v t < B := by
+  have hbound := le_gronwallBound_of_hasDerivAt_le hc hderiv hineq
+  have hexp : Tendsto (fun t : ℝ ↦ Real.exp (-c * t)) atTop (𝓝 0) := by
+    have hneg : -c < 0 := by linarith
+    have h1 : Tendsto (fun t : ℝ ↦ t * (-c)) atTop atBot :=
+      tendsto_id.atTop_mul_const_of_neg hneg
+    have h2 : Tendsto (fun t : ℝ ↦ Real.exp (t * (-c))) atTop (𝓝 0) :=
+      Real.tendsto_exp_atBot.comp h1
+    refine h2.congr' ?_
+    filter_upwards with t
+    rw [mul_comm]
+  have hlim : Tendsto
+      (fun t : ℝ ↦ v 0 * Real.exp (-c * t) + d / c * (1 - Real.exp (-c * t)))
+      atTop (𝓝 (d / c)) := by
+    have h1 : Tendsto (fun t : ℝ ↦ v 0 * Real.exp (-c * t)) atTop (𝓝 0) := by
+      simpa using hexp.const_mul (v 0)
+    have h2 : Tendsto (fun t : ℝ ↦ d / c * (1 - Real.exp (-c * t))) atTop (𝓝 (d / c)) := by
+      have hsub : Tendsto (fun t : ℝ ↦ (1 : ℝ) - Real.exp (-c * t)) atTop (𝓝 ((1 : ℝ) - 0)) :=
+        tendsto_const_nhds.sub hexp
+      simpa using hsub.const_mul (d / c)
+    simpa using h1.add h2
+  filter_upwards [hlim.eventually_lt tendsto_const_nhds hB, eventually_ge_atTop (0 : ℝ)]
+    with t hlt ht
+  exact lt_of_le_of_lt (hbound t ht) hlt

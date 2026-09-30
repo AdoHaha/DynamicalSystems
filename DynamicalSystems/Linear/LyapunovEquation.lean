@@ -670,3 +670,22 @@ theorem matrix_lyapunov_equation_solution {n : Nat} (A Q : Matrix (Fin n) (Fin n
         (Matrix.conjTranspose_eq_transpose_of_trivial A)
     rw [hsymm_adj] at h
     exact h
+
+/-- **Matrix quadratic form of the Lyapunov equation.** If `Aᵀ * P + P * A = -Q`, then for
+every `x : Fin n → ℝ` the quadratic form of `P` along `A *ᵥ x` satisfies
+`(A *ᵥ x) ⬝ᵥ (P *ᵥ x) + x ⬝ᵥ (P *ᵥ (A *ᵥ x)) = -(x ⬝ᵥ (Q *ᵥ x))`.
+
+This is the matrix form of the system-derivative identity
+`V̇(x) = ⟪x, (Aᵀ P + P A) x⟫ = -⟪x, Q x⟫` for the quadratic Lyapunov function
+`V(x) = x ⬝ᵥ P *ᵥ x`. No positive-definiteness hypothesis is needed: the identity is purely
+algebraic and follows from bilinearity of the dot product together with the transpose identity
+`x ⬝ᵥ Aᵀ *ᵥ y = (A *ᵥ x) ⬝ᵥ y`. Source: Kabziński–Mosiołek, equations (2.36)–(2.39). -/
+theorem matrix_lyapunov_equation_quadratic_form {n : Nat} {A Q P : Matrix (Fin n) (Fin n) ℝ}
+    (h : Aᵀ * P + P * A = -Q) (x : Fin n → ℝ) :
+    (A *ᵥ x) ⬝ᵥ (P *ᵥ x) + x ⬝ᵥ (P *ᵥ (A *ᵥ x)) = -(x ⬝ᵥ (Q *ᵥ x)) := by
+  have h1 : (A *ᵥ x) ⬝ᵥ (P *ᵥ x) = x ⬝ᵥ ((Aᵀ * P) *ᵥ x) := by
+    rw [dotProduct_comm, ← Matrix.dotProduct_transpose_mulVec, Matrix.mulVec_mulVec]
+  have h2 : x ⬝ᵥ (P *ᵥ (A *ᵥ x)) = x ⬝ᵥ ((P * A) *ᵥ x) := by
+    rw [Matrix.mulVec_mulVec]
+  rw [h1, h2, ← dotProduct_add, ← Matrix.add_mulVec, h, Matrix.neg_mulVec,
+    dotProduct_neg]

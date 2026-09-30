@@ -269,4 +269,30 @@ theorem tendsto_deriv_zero_of_boundedBelow_of_uniformContinuousOn
     simp only [w, neg_neg]
   rwa [hfun] at hneg
 
+/-- **Quadratic squeeze.** If `w → 0` and `c * (e t) ^ 2 ≤ w t` for all `t ≥ 0` with `c > 0`,
+then `e → 0`.
+
+This is the form in which Barbălat-type conclusions are consumed: a Lyapunov argument
+establishes `V̇ ≤ -(c * ‖e‖ ^ 2)` and hence `c * (e t) ^ 2 ≤ w t` for the decay rate `w`, and this
+lemma turns `w → 0` into `e → 0`. On `t ≥ 0` the hypothesis gives
+`0 ≤ (e t) ^ 2 ≤ w t / c`, so `(e t) ^ 2 → 0` by squeezing against the convergent `w t / c`; taking
+square roots via `Real.sqrt_sq_eq_abs` yields `|e t| → 0`, hence `e t → 0`. -/
+theorem tendsto_zero_of_tendsto_zero_of_sq_le {e w : ℝ → ℝ} {c : ℝ} (hc : 0 < c)
+    (hw : Tendsto w atTop (𝓝 0)) (hle : ∀ t, 0 ≤ t → c * (e t) ^ 2 ≤ w t) :
+    Tendsto e atTop (𝓝 0) := by
+  have hsq : Tendsto (fun t : ℝ ↦ (e t) ^ 2) atTop (𝓝 0) := by
+    have hwdiv : Tendsto (fun t : ℝ ↦ w t / c) atTop (𝓝 0) := by
+      simpa using hw.div_const c
+    refine squeeze_zero' (Eventually.of_forall fun t ↦ sq_nonneg (e t)) ?_ hwdiv
+    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+    rw [le_div_iff₀ hc]
+    simpa only [mul_comm] using hle t ht
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  have habs : Tendsto (fun t : ℝ ↦ |e t|) atTop (𝓝 0) := by
+    have hsqrt : Tendsto (fun t : ℝ ↦ Real.sqrt ((e t) ^ 2)) atTop (𝓝 0) := by
+      have h := (Real.continuous_sqrt.tendsto 0).comp hsq
+      rwa [Real.sqrt_zero] at h
+    simpa only [Real.sqrt_sq_eq_abs] using hsqrt
+  simpa only [Real.norm_eq_abs] using habs
+
 end Barbalat

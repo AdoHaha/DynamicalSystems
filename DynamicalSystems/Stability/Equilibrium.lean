@@ -43,7 +43,7 @@ def IsEquilibriumAt (f : ℝ → E → E) (x : E) : Prop := ∀ t, f t x = 0
 
 /-- `x` is an isolated equilibrium of `f`: it is an equilibrium and some neighbourhood of `x`
 contains no other equilibrium. -/
-def IsIsolatedEquilibrium [TopologicalSpace E] (f : E → E) (x : E) : Prop :=
+def IsIsolatedEquilibrium (f : E → E) (x : E) : Prop :=
   IsEquilibrium f x ∧ ∃ U ∈ 𝓝 x, ∀ y ∈ U, IsEquilibrium f y → y = x
 
 /-- A limit cycle of `f`: a periodic orbit of `f` with some positive period. Following the
