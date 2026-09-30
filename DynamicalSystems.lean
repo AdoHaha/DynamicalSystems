@@ -20,6 +20,7 @@ import DynamicalSystems.Linear.ControlledInvariant
 import DynamicalSystems.Linear.ConditionedInvariant
 import DynamicalSystems.Linear.Reachability
 import DynamicalSystems.Linear.Gramian
+import DynamicalSystems.Linear.LyapunovEquation
 import DynamicalSystems.Linear.PolePlacement
 import DynamicalSystems.Linear.Stabilization
 import DynamicalSystems.Linear.Observer
