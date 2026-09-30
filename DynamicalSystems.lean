@@ -2,6 +2,7 @@ import DynamicalSystems.Basic.Autonomous
 import DynamicalSystems.Basic.ComparisonFunctions
 import DynamicalSystems.Basic.LpLoc
 import DynamicalSystems.Basic.NonAutonomous
+import DynamicalSystems.Control.Adaptive.MRAC
 import DynamicalSystems.Control.Backstepping.Basic
 import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.InputOutput.Causal
