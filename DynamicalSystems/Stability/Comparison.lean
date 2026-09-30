@@ -26,6 +26,10 @@ here.
   exponential decay bound `v t ≤ v 0 * exp (-c * t)`.
 * `le_gronwallBound_of_hasDerivAt_le`: the same bound phrased for a two-sided
   derivative `HasDerivAt`.
+* `le_gronwallBound_of_hasDerivAt_le_neg_mul_add_Ici`: the time-shifted form of the
+  right-derivative estimate, with initial time `t₀` in place of `0`.
+* `le_gronwallBound_of_hasDerivAt_le_Ici`: the time-shifted form of the two-sided
+  derivative estimate.
 * `eventually_lt_of_hasDerivAt_le_neg_mul_add`: the asymptotic form, that the
   solution eventually drops below any bound larger than `d / c`.
 -/
@@ -99,6 +103,53 @@ theorem le_gronwallBound_of_hasDerivAt_le {v : ℝ → ℝ} {c d : ℝ} (hc : 0 
   have hv : ContinuousOn v (Set.Ici 0) :=
     fun t ht ↦ (hderiv t ht).continuousAt.continuousWithinAt
   exact le_gronwallBound_of_hasDerivAt_le_neg_mul_add hc hv
+    (fun t ht ↦ (hderiv t ht).hasDerivWithinAt) hineq
+
+/-- Time-shifted scalar comparison (Grönwall) estimate for a right derivative.
+
+This is the time-shifted form of `le_gronwallBound_of_hasDerivAt_le_neg_mul_add`, with the
+initial time `t₀ ∈ ℝ` in place of `0` and the half-line `Set.Ici t₀` in place of `Set.Ici 0`.
+If `v : ℝ → ℝ` is continuous on `[t₀, ∞)`, has a right derivative `deriv v t` at every
+`t ≥ t₀`, and satisfies the differential *inequality* `deriv v t ≤ -(c * v t) + d` for all
+`t ≥ t₀`, with `c > 0`, then for every `t ≥ t₀`
+
+`v t ≤ v t₀ * exp (-c * (t - t₀)) + d / c * (1 - exp (-c * (t - t₀)))`.
+
+This is a direct corollary of `le_gronwallBound_of_liminf_deriv_right_le` with `a := t₀`. -/
+theorem le_gronwallBound_of_hasDerivAt_le_neg_mul_add_Ici
+    {v : ℝ → ℝ} {t₀ c d : ℝ} (hc : 0 < c)
+    (hv : ContinuousOn v (Set.Ici t₀))
+    (hderiv : ∀ t, t₀ ≤ t → HasDerivWithinAt v (deriv v t) (Set.Ici t) t)
+    (hineq : ∀ t, t₀ ≤ t → deriv v t ≤ -(c * v t) + d) :
+    ∀ t, t₀ ≤ t →
+      v t ≤ v t₀ * Real.exp (-c * (t - t₀)) + d / c * (1 - Real.exp (-c * (t - t₀))) := by
+  intro t ht
+  have hK : (-c : ℝ) ≠ 0 := by linarith
+  have hmain : v t ≤ gronwallBound (v t₀) (-c) d (t - t₀) :=
+    le_gronwallBound_of_liminf_deriv_right_le (a := t₀) (b := t) (f := v) (f' := deriv v)
+      (δ := v t₀) (K := -c) (ε := d) (hv.mono fun _ hx ↦ hx.1)
+      (fun x hx r hr ↦ (hderiv x hx.1).liminf_right_slope_le hr)
+      (le_refl _) (fun x hx ↦ by simpa only [neg_mul] using hineq x hx.1) t ⟨ht, le_refl t⟩
+  rw [gronwallBound_of_K_ne_0 hK] at hmain
+  refine hmain.trans_eq ?_
+  field_simp
+  ring
+
+/-- Time-shifted scalar comparison (Grönwall) estimate for a two-sided derivative.
+
+This is the convenience form of `le_gronwallBound_of_hasDerivAt_le_neg_mul_add_Ici` for a
+function `v` whose *two-sided* derivative `deriv v t` exists at every `t ≥ t₀` (rather than
+merely a right derivative on `[t₀, ∞)`). Continuity of `v` on `[t₀, ∞)` is derived automatically
+from `HasDerivAt`. -/
+theorem le_gronwallBound_of_hasDerivAt_le_Ici
+    {v : ℝ → ℝ} {t₀ c d : ℝ} (hc : 0 < c)
+    (hderiv : ∀ t, t₀ ≤ t → HasDerivAt v (deriv v t) t)
+    (hineq : ∀ t, t₀ ≤ t → deriv v t ≤ -(c * v t) + d) :
+    ∀ t, t₀ ≤ t →
+      v t ≤ v t₀ * Real.exp (-c * (t - t₀)) + d / c * (1 - Real.exp (-c * (t - t₀))) := by
+  have hv : ContinuousOn v (Set.Ici t₀) :=
+    fun t ht ↦ (hderiv t ht).continuousAt.continuousWithinAt
+  exact le_gronwallBound_of_hasDerivAt_le_neg_mul_add_Ici hc hv
     (fun t ht ↦ (hderiv t ht).hasDerivWithinAt) hineq
 
 /-- Asymptotic form of the scalar comparison estimate.
