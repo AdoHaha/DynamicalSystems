@@ -6,7 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Linear.Duality
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.Real.Basic
 public import Mathlib.LinearAlgebra.Charpoly.Basic
 public import Mathlib.LinearAlgebra.Charpoly.ToMatrix
 public import Mathlib.LinearAlgebra.Matrix.Charpoly.Minpoly

@@ -5072,8 +5072,7 @@ theorem toDualBaseChange_comp_dualMap_baseChange (A : X →ₗ[ℝ] X) :
         ((A.dualMap).baseChange ℂ) := by
   apply LinearMap.ext
   intro w
-  induction w using TensorProduct.induction_on with
-  | zero => simp
+  induction w using TensorProduct.inductionOn with
   | add x y hx hy => simp [map_add, hx, hy]
   | tmul a φ =>
       apply IsBaseChange.algHom_ext (TensorProduct.isBaseChange ℝ X ℂ)

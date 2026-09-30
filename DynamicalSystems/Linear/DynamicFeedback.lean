@@ -3853,8 +3853,7 @@ theorem isUncontrollableEigenvalue_stable_of_sup_stabilizableSubspace
     apply hη
     refine LinearMap.ext fun z => ?_
     change η z = 0
-    induction z using TensorProduct.induction_on with
-    | zero => simp
+    induction z using TensorProduct.inductionOn with
     | tmul c w =>
         have hcw : c ⊗ₜ[ℝ] w = c • ((1 : ℂ) ⊗ₜ[ℝ] w) := by
           rw [TensorProduct.smul_tmul']
@@ -8932,11 +8931,11 @@ lemma hasDerivAt_exp_mul_sum_pow_smul (a : ℕ → X) (D : ℕ) (μ : ℂ) (t : 
         ∑ k ∈ Finset.range D, ((((k + 1 : ℕ) : ℂ) * (t : ℂ) ^ k) • a (k + 1)) by
           rw [Finset.sum_range_succ]
           have hlast : ¬ D < D := Nat.lt_irrefl D
-          simp only [hlast, if_false, smul_zero, add_zero]
+          simp only [hlast, ite_false, smul_zero, add_zero]
           apply Finset.sum_congr rfl
           intro k hk
           have hlt : k < D := Finset.mem_range.mp hk
-          rw [if_pos hlt]
+          rw [ite_eq_left hlt]
           simp [smul_smul, mul_comm]]
   have hExp : HasDerivAt (fun r : ℝ => Complex.exp ((r : ℂ) * μ))
       (μ * Complex.exp ((t : ℂ) * μ)) t := by
@@ -8954,15 +8953,13 @@ lemma hasDerivAt_exp_mul_sum_pow_smul (a : ℕ → X) (D : ℕ) (μ : ℂ) (t : 
     simp [Nat.cast_succ, add_comm]
   have h := hExp.smul hpoly
   convert h using 1
-  · funext r
-    rfl
-  · rw [hcoef]
-    simp only [smul_add]
-    rw [add_comm]
-    congr 1
-    rw [smul_smul]
-    congr 1
-    ring
+  rw [hcoef]
+  simp only [smul_add]
+  rw [add_comm]
+  congr 1
+  rw [smul_smul]
+  congr 1
+  ring
 
 /-- Differentiate a finite exponential-polynomial representation, preserving
 its frequency support and degree bound. -/
