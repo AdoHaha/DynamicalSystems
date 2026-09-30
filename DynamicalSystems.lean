@@ -2,6 +2,7 @@ import DynamicalSystems.Basic.Autonomous
 import DynamicalSystems.Basic.ComparisonFunctions
 import DynamicalSystems.Basic.LpLoc
 import DynamicalSystems.Basic.NonAutonomous
+import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.InputOutput.Causal
 import DynamicalSystems.InputOutput.ClosedLoop
 import DynamicalSystems.InputOutput.Dissipative
