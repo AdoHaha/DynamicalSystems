@@ -5,6 +5,7 @@ import DynamicalSystems.Basic.NonAutonomous
 import DynamicalSystems.Control.Adaptive.MRAC
 import DynamicalSystems.Control.Adaptive.RobustMRAC
 import DynamicalSystems.Control.Backstepping.Basic
+import DynamicalSystems.Control.Backstepping.Filtered
 import DynamicalSystems.Control.Backstepping.Robust
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.ControlLyapunov
