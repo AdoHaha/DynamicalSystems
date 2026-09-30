@@ -438,7 +438,9 @@ variable [NormedAddCommGroup E] [NormedSpace ℝ E]
 variable {Φ : Flow ℝ E} {s : Set E} {x₀ : E}
 
 /-- LaSalle's invariance principle: if no trajectory is fully contained in the zero set of the
-derivative of the Lyapunov function, then `Φ · y` converges to the fixed point. -/
+derivative of the Lyapunov function, then `Φ · y` converges to the fixed point.
+
+This is the Barbashin–Krasovskiĭ theorem. -/
 theorem IsLyapunov.tendsto_of_forall_exists_nonMem (hs : IsCompact s)
     (h_lya : IsLyapunov v Φ) (hs' : ∀ ⦃x⦄ (_hx : v x ≤ v y), x ∈ s)
     (hv_diff : Differentiable ℝ v) (hΦ_diff : ∀ x ∈ s, DifferentiableAt ℝ (Φ · x) 0)
