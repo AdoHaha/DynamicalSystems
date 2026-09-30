@@ -448,3 +448,121 @@ theorem lyapunovIntegral_limit_equation_apply (A Q : X →L[ℝ] X)
   have h := lyapunovIntegral_limit_equation A Q hA
   simpa only [add_apply, ContinuousLinearMap.comp_apply, neg_apply]
     using congrArg (fun L : X →L[ℝ] X => L x) h
+
+/-! ### Positive definiteness, self-adjointness and the assembled solution
+
+With the algebraic Lyapunov equation in hand, this section records that the
+solution `P = ∫₀^∞ exp (s A)* Q exp (s A) ds` is positive definite whenever `Q`
+is, that `P` is self-adjoint whenever `Q` is, and assembles the existence
+theorem of Kabziński–Mosiołek, Theorem 2.16. -/
+
+/-- The finite-horizon Lyapunov integral at horizon `T = 1` is strictly positive
+on every nonzero state when `Q` is positive definite: the quadratic form
+`⟪x, P(1) x⟫ = ∫₀¹ ⟪e^{s A} x, Q (e^{s A} x)⟫ ds` integrates a continuous
+nonnegative integrand that is positive at `s = 0`. Source: Kabziński–Mosiołek,
+Theorem 2.16 and equation (2.40). -/
+theorem inner_lyapunovIntegral_one_pos (A Q : X →L[ℝ] X)
+    (hQ : LinearSystem.IsPositiveDefinite Q) {x : X} (hx : x ≠ 0) :
+    0 < inner ℝ x (lyapunovIntegral A Q 1 x) := by
+  have hQnonneg : ∀ y : X, 0 ≤ inner ℝ y (Q y) := by
+    intro y
+    by_cases hy : y = 0
+    · subst hy
+      simp
+    · exact le_of_lt (hQ y hy)
+  have hcont : Continuous (fun s : ℝ =>
+      inner ℝ (NormedSpace.exp (s • A) x) (Q (NormedSpace.exp (s • A) x))) := by
+    have hE : Continuous (fun s : ℝ => NormedSpace.exp (s • A) x) :=
+      (differentiable_exp_smul_const ℝ A).continuous.clm_apply continuous_const
+    exact hE.inner (Q.continuous.comp hE)
+  rw [inner_lyapunovIntegral]
+  refine intervalIntegral.integral_pos (by norm_num) hcont.continuousOn
+    (fun s _ => hQnonneg _) ⟨0, ⟨le_refl 0, by norm_num⟩, ?_⟩
+  simpa only [zero_smul, NormedSpace.exp_zero, one_apply_eq_self]
+    using hQ x hx
+
+/-- The infinite-horizon Lyapunov integral is positive definite when `Q` is. For
+`x ≠ 0` the quadratic form is estimated from below by its value at horizon
+`1`, which is positive, and the estimate passes to the limit because the
+finite-horizon quadratic forms are eventually bounded below by this value and
+converge to the quadratic form of `lyapunovIntegral_limit`. Source:
+Kabziński–Mosiołek, Theorem 2.16 and equation (2.40). -/
+theorem isPositiveDefinite_lyapunovIntegral_limit (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap) (hQ : LinearSystem.IsPositiveDefinite Q) :
+    LinearSystem.IsPositiveDefinite (lyapunovIntegral_limit A Q) := by
+  intro x hx
+  have hQnonneg : ∀ y : X, 0 ≤ inner ℝ y (Q y) := by
+    intro y
+    by_cases hy : y = 0
+    · subst hy
+      simp
+    · exact le_of_lt (hQ y hy)
+  have hcont : Continuous (fun s : ℝ =>
+      inner ℝ (NormedSpace.exp (s • A) x) (Q (NormedSpace.exp (s • A) x))) := by
+    have hE : Continuous (fun s : ℝ => NormedSpace.exp (s • A) x) :=
+      (differentiable_exp_smul_const ℝ A).continuous.clm_apply continuous_const
+    exact hE.inner (Q.continuous.comp hE)
+  have htend : Tendsto (fun T : ℝ => inner ℝ x (lyapunovIntegral A Q T x)) atTop
+      (nhds (inner ℝ x (lyapunovIntegral_limit A Q x))) := by
+    have heval : Continuous (fun L : X →L[ℝ] X => inner ℝ x (L x)) :=
+      continuous_const.inner (ContinuousLinearMap.apply ℝ X x).continuous
+    exact (heval.tendsto (lyapunovIntegral_limit A Q)).comp
+      (tendsto_lyapunovIntegral_limit A Q hA)
+  have hmono : ∀ᶠ T in atTop,
+      inner ℝ x (lyapunovIntegral A Q 1 x) ≤ inner ℝ x (lyapunovIntegral A Q T x) := by
+    filter_upwards [eventually_ge_atTop (1 : ℝ)] with T hT
+    simp only [inner_lyapunovIntegral]
+    exact intervalIntegral.integral_mono_interval (le_refl (0 : ℝ)) zero_le_one hT
+      (Eventually.of_forall fun s : ℝ => hQnonneg _) (hcont.intervalIntegrable _ _)
+  exact lt_of_lt_of_le (inner_lyapunovIntegral_one_pos A Q hQ hx)
+    (ge_of_tendsto htend hmono)
+
+/-- The infinite-horizon Lyapunov integral is self-adjoint when `Q` is. The
+integrand `exp (s A)* Q exp (s A)` is self-adjoint at every time `s` when
+`adjoint Q = Q`, and `adjoint` commutes with the Bochner integral. Source:
+Kabziński–Mosiołek, equation (2.40). -/
+theorem adjoint_lyapunovIntegral_limit (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap)
+    (hQ : ContinuousLinearMap.adjoint Q = Q) :
+    ContinuousLinearMap.adjoint (lyapunovIntegral_limit A Q) =
+      lyapunovIntegral_limit A Q := by
+  have hg : ∀ s : ℝ,
+      ContinuousLinearMap.adjoint
+        ((ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+          (Q.comp (NormedSpace.exp (s • A))))
+        = (ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+            (Q.comp (NormedSpace.exp (s • A))) := by
+    intro s
+    simp only [ContinuousLinearMap.adjoint_comp, ContinuousLinearMap.adjoint_adjoint,
+      ContinuousLinearMap.comp_assoc, hQ]
+  have hcomm : ContinuousLinearMap.adjoint (lyapunovIntegral_limit A Q)
+      = ∫ s in Ioi (0 : ℝ),
+          ContinuousLinearMap.adjoint
+            ((ContinuousLinearMap.adjoint (NormedSpace.exp (s • A))).comp
+              (Q.comp (NormedSpace.exp (s • A)))) := by
+    rw [lyapunovIntegral_limit]
+    exact (ContinuousLinearMap.integral_comp_commSL
+      (σ := starRingEnd ℝ) (by intro r x; simp)
+      ((ContinuousLinearMap.adjoint (E := X) (F := X)).toLinearIsometry.toContinuousLinearMap)
+      (μ := volume.restrict (Ioi (0 : ℝ)))
+      (integrableOn_Ioi_lyapunovIntegrand A Q hA)).symm
+  rw [hcomm, lyapunovIntegral_limit]
+  exact setIntegral_congr_fun measurableSet_Ioi (fun s _ => hg s)
+
+/-- **Existence of a positive definite self-adjoint solution of the Lyapunov
+equation** (Kabziński–Mosiołek, Theorem 2.16, equation (2.40)): for a Hurwitz
+generator `A` and a positive definite self-adjoint `Q` there is a positive
+definite self-adjoint `P` with `A* P + P A = -Q`. The solution is the
+infinite-horizon Lyapunov integral `P = ∫₀^∞ exp (s A)* Q exp (s A) ds`. -/
+theorem lyapunov_equation_solution (A Q : X →L[ℝ] X)
+    (hA : LinearMap.IsHurwitz A.toLinearMap)
+    (hQ_pd : LinearSystem.IsPositiveDefinite Q)
+    (hQ_adj : ContinuousLinearMap.adjoint Q = Q) :
+    ∃ P : X →L[ℝ] X,
+      LinearSystem.IsPositiveDefinite P ∧
+      ContinuousLinearMap.adjoint P = P ∧
+      (ContinuousLinearMap.adjoint A).comp P + P.comp A = -Q :=
+  ⟨lyapunovIntegral_limit A Q,
+   isPositiveDefinite_lyapunovIntegral_limit A Q hA hQ_pd,
+   adjoint_lyapunovIntegral_limit A Q hA hQ_adj,
+   lyapunovIntegral_limit_equation A Q hA⟩
