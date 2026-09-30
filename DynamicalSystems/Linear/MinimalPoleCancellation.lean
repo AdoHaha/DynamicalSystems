@@ -160,6 +160,7 @@ theorem channelTransferNumerator_eval_eq_adjugate_channel
   intro j hj
   ring
 
+omit [Fintype m] [DecidableEq m] [Fintype p] [DecidableEq p] in
 theorem channelTransferNumerator_eval_eq_transfer_matrix_entry
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (z : ℂ) (i : p) (j : m) :
@@ -168,6 +169,7 @@ theorem channelTransferNumerator_eval_eq_transfer_matrix_entry
   rw [channelTransferNumerator_eval_eq_adjugate_channel, Matrix.mul_assoc]
   simp only [Matrix.mul_apply, Matrix.mulVec, dotProduct]
 
+omit [Fintype m] [DecidableEq m] [Fintype p] [DecidableEq p] in
 theorem exists_scalar_transfer_pole_of_nonzero_cramer_numerator
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (z : ℂ) (hz : A.charpoly.IsRoot z)
@@ -177,6 +179,7 @@ theorem exists_scalar_transfer_pole_of_nonzero_cramer_numerator
   exact RatFunc.isRoot_denom_mk_of_isRoot_of_not_isRoot
     _ _ z A.charpoly_monic.ne_zero hz hnum
 
+omit [DecidableEq m] [Fintype p] [DecidableEq p] in
 theorem transfer_matrix_nonzero_of_pbh_and_adjugate_nonzero
     (M : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (hdet : M.det = 0)
@@ -206,6 +209,7 @@ theorem transfer_matrix_nonzero_of_pbh_and_adjugate_nonzero
   rw [← Matrix.mulVecLin_mul, ← Matrix.mulVecLin_mul, ← Matrix.mul_assoc,
     hzero, Matrix.mulVecLin_zero]
 
+omit [DecidableEq m] [DecidableEq p] in
 theorem exists_scalar_transfer_pole_of_pbh_and_adjugate_nonzero
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (z : ℂ) (hz : A.charpoly.IsRoot z)
@@ -234,6 +238,7 @@ theorem exists_scalar_transfer_pole_of_pbh_and_adjugate_nonzero
     A B C z hz i j hnum
   exact hnone i j hpole
 
+omit [DecidableEq m] [DecidableEq p] in
 /-- For a controllable and observable realization, any characteristic root
 where the evaluated adjugate is nonzero is a pole of at least one reduced
 scalar transfer-matrix entry. -/

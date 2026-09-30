@@ -79,6 +79,7 @@ variable {X Y : Type*} [AddCommGroup X] [Module ℝ X]
 variable [AddCommGroup Y] [Module ℝ Y]
 variable [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y]
 
+omit [DecidableEq κ] [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y] in
 theorem toMatrix_mulVecLin_eq_equivFun_conj
     (bX : Module.Basis ι ℝ X) (bY : Module.Basis κ ℝ Y) (f : X →ₗ[ℝ] Y) :
   (LinearMap.toMatrix bX bY f).mulVecLin =

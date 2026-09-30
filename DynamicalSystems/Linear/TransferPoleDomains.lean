@@ -31,6 +31,7 @@ namespace Matrix
 variable {n m p : Type*} [Fintype n] [DecidableEq n]
 variable [Fintype m] [DecidableEq m] [Fintype p] [DecidableEq p]
 
+omit [DecidableEq p] in
 /-- A minimal complex realization has all transfer poles in `Cg` precisely
 when all roots of its state characteristic polynomial lie in `Cg`. -/
 theorem all_channels_poles_in_iff_charpoly_roots_in_of_minimal
@@ -49,6 +50,7 @@ theorem all_channels_poles_in_iff_charpoly_roots_in_of_minimal
     exact h z (hz.dvd (channelTransferRatFunc_denom_dvd_charpoly A (C i)
       (fun k ↦ B k j)))
 
+omit [DecidableEq p] in
 /-- Real minimal realizations satisfy the same correspondence after
 coefficient-wise complexification. -/
 theorem real_all_channels_poles_in_iff_charpoly_roots_in_of_minimal

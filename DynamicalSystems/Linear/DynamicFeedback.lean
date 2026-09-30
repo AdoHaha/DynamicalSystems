@@ -5777,7 +5777,7 @@ theorem conditionedInvariantSubspace_le_outputStabilizableSubspace
 
 /-- The subspace `T_g = S*(im E) ∩ Xdet` is `A`-invariant. -/
 theorem map_conditionedInvariant_inf_detectable_le
-    {Y D : Type*} [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
+    {Y D : Type*} [AddCommGroup Y] [Module ℝ Y]
     [AddCommGroup D] [Module ℝ D]
     (C : X →ₗ[ℝ] Y) (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) :
     Submodule.map A
@@ -5804,8 +5804,8 @@ nested invariant subspaces `Vₑ,₁ = Vₑ(T_g,V*)` and
 `Vₑ,₂ = Vₑ(S*,W_g)`, with the disturbance image in the latter and the former
 inside the output kernel. The quotient-Hurwitz assertion is separate. -/
 theorem extendedPairSubspaces_of_externalStabilizationConditions
-    {Y : Type*} [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
-    {D : Type*} [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
+    {Y : Type*} [AddCommGroup Y] [Module ℝ Y]
+    {D : Type*} [NormedAddCommGroup D] [NormedSpace ℝ D]
     (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
     (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (h : ExternalStabilizationConditions sys E H)
@@ -6894,7 +6894,7 @@ variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
 variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
 
-omit [FiniteDimensional ℝ U] [FiniteDimensional ℝ D] in
+omit [FiniteDimensional ℝ U] [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 /-- **The six component-invariance inputs of the observer-error block operator.**
 
 For the block operator `(x, y) ↦ ((A + B F) x - (G C) y, (A + G C) y)` with
@@ -10407,7 +10407,7 @@ theorem IsAntistableBohlSignal.map_antilinear' {M : X →ₗ[ℝ] Y}
 map into its complex-linear and antilinear parts preserves the support half-plane:
 the first keeps each frequency, while the second conjugates frequencies, which
 does not change their real parts. -/
-theorem IsAntistableBohlSignal.map_realLinear [FiniteDimensional ℂ X]
+theorem IsAntistableBohlSignal.map_realLinear
     (T : X →L[ℝ] Y) {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
     IsAntistableBohlSignal (fun t ↦ T (f t)) := by
   have hcl : IsAntistableBohlSignal
@@ -10428,7 +10428,6 @@ polynomial-exponential uniqueness. This is the output-side step needed before
 turning the antistable part of a real-system trajectory into an unobservable
 state component. -/
 theorem tendsto_zero_of_antistable_realLinear_readout
-    [FiniteDimensional ℂ X]
     {Z : Type*} [NormedAddCommGroup Z] [NormedSpace ℝ Z]
     (H : X →L[ℝ] Z) {b : ℝ → X}
     (hb : IsAntistableBohlSignal b)
@@ -11272,7 +11271,6 @@ its real-linear readout tends to zero, it splits into a decaying stable state
 part and an antistable state part whose readout vanishes identically. This
 packages the stable/antistable frequency split with real-output scalarization. -/
 theorem IsExponentialPolynomial.exists_stable_add_antistable_of_tendsto_realLinear
-    [FiniteDimensional ℂ X]
     {Z : Type*} [NormedAddCommGroup Z] [NormedSpace ℝ Z]
     {f : ℝ → X} (hf : IsExponentialPolynomial f) (H : X →L[ℝ] Z)
     (hlim : Filter.Tendsto (fun t => H (f t)) Filter.atTop (nhds 0)) :
@@ -11501,6 +11499,7 @@ variable [FiniteDimensional ℝ X] [FiniteDimensional ℂ X]
 variable [NormedAddCommGroup U] [NormedSpace ℝ U] [FiniteDimensional ℝ U]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 
+omit [FiniteDimensional ℂ X] in
 /-- A finite-Bohl forcing image upgrades the variation-of-constants ODE from
 almost-everywhere to pointwise, even when the input itself is only locally
 integrable. -/
@@ -11528,6 +11527,7 @@ theorem variationOfConstants_hasDerivAt_of_finiteBohl_forcing
   rw [hderiv] at hd'
   exact hd'.congr_of_eventuallyEq (Filter.Eventually.of_forall fun s => heq s)
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem stable_sub_bohl {f g : ℝ → X}
     (hf : IsStableExponentialPolynomial f) (hg : IsStableExponentialPolynomial g) :
     IsStableExponentialPolynomial (f - g) := by
@@ -11544,6 +11544,7 @@ private theorem stable_sub_bohl {f g : ℝ → X}
   rw [hfun]
   exact hsum.of_tendsto_zero (by simpa [hfun] using hlim)
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem antistable_neg_bohl {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
     IsAntistableBohlSignal (-f) := by
   obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
@@ -11551,12 +11552,14 @@ private theorem antistable_neg_bohl {f : ℝ → X} (hf : IsAntistableBohlSignal
   rw [Pi.neg_apply, hrepr t]
   simp only [Finset.sum_neg_distrib, smul_neg]
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem antistable_sub_bohl {f g : ℝ → X}
     (hf : IsAntistableBohlSignal f) (hg : IsAntistableBohlSignal g) :
     IsAntistableBohlSignal (f - g) := by
   have h := hf.add (antistable_neg_bohl hg)
   simpa [sub_eq_add_neg] using h
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem hasDerivAt_deriv_exponentialPolynomial {f : ℝ → X}
     (hf : IsExponentialPolynomial f) (t : ℝ) : HasDerivAt f (deriv f t) t := by
   obtain ⟨s, D, a, hrepr⟩ := hf
@@ -11564,6 +11567,7 @@ private theorem hasDerivAt_deriv_exponentialPolynomial {f : ℝ → X}
   have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
   exact h'.congr_deriv h'.deriv.symm
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem stable_deriv_bohl {f : ℝ → X} (hf : IsStableExponentialPolynomial f) :
     IsStableExponentialPolynomial (fun t => deriv f t) := by
   obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
@@ -11574,6 +11578,7 @@ private theorem stable_deriv_bohl {f : ℝ → X} (hf : IsStableExponentialPolyn
   have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
   simpa [d] using h'.deriv
 
+omit [FiniteDimensional ℝ X] [FiniteDimensional ℂ X] in
 private theorem antistable_deriv_bohl {f : ℝ → X} (hf : IsAntistableBohlSignal f) :
     IsAntistableBohlSignal (fun t => deriv f t) := by
   obtain ⟨s, D, a, hfreq, hrepr⟩ := hf
@@ -11584,6 +11589,7 @@ private theorem antistable_deriv_bohl {f : ℝ → X} (hf : IsAntistableBohlSign
   have h' := h.congr_of_eventuallyEq (Filter.Eventually.of_forall fun r => hrepr r)
   simpa [d] using h'.deriv
 
+omit [FiniteDimensional ℝ X] in
 /-- For a real-linear forced ODE, the stable and antistable state components
 have range-valued ODE residuals separately whenever the full forcing takes
 values in a complex subspace. Quotienting by that subspace and using
@@ -11692,6 +11698,7 @@ theorem stable_antistable_ode_residuals_mem_submodule
       abel
     exact (hderivB t).congr_deriv heq
 
+omit [FiniteDimensional ℂ X] [FiniteDimensional ℝ U] in
 /-- The two projected forced ODEs are sufficient for the finite-Bohl `W_g`
 necessity conclusion: the stable initial component is stabilizable, while the
 zero-readout antistable component lies in a controlled invariant subspace. -/
@@ -11879,6 +11886,8 @@ This is a finite-Bohl forcing-image restriction of
 complexification map `Bℂ : U →ₗ[ℂ] X` records the representation hypothesis of
 the accepted transport layer. Source: Trentelman–Stoorvogel–Hautus, equation
 (4.28) together with Definition 2.5 (Bohl functions). -/
+-- The proof argument restricts the predicate to complexifications of the plant input map.
+@[nolint unusedArguments]
 def IsBohlOutputStabilizable (sys : LinearSystem ℝ X U Z) (Bℂ : U →ₗ[ℂ] X)
     (hB : Bℂ.restrictScalars ℝ = sys.B) (H : X →ₗ[ℝ] Z) (x : X) : Prop :=
   ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧
@@ -12297,15 +12306,19 @@ variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
 
+/-- The largest controlled-invariant subspace in the controlled-output kernel. -/
 abbrev Vstar (sys : LinearSystem ℝ X U Y) (H : X →ₗ[ℝ] Z) : Submodule ℝ X :=
   LinearMap.controlledInvariantSubspace sys.A sys.B (LinearMap.ker H)
 
+/-- The output-stabilizable subspace `V* + Xstab` for the Hurwitz domain. -/
 abbrev Wg (sys : LinearSystem ℝ X U Y) (H : X →ₗ[ℝ] Z) : Submodule ℝ X :=
   outputStabilizableSubspace sys.A sys.B H
 
+/-- The smallest conditioned-invariant subspace containing the disturbance range. -/
 abbrev Sstar (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) : Submodule ℝ X :=
   LinearMap.conditionedInvariantSubspace sys.C sys.A (LinearMap.range E)
 
+/-- The intersection of `S*` with the detectable spectral subspace. -/
 abbrev Tg (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) : Submodule ℝ X :=
   Sstar sys E ⊓ LinearMap.detectableSubspace sys.C sys.A
 
@@ -12313,6 +12326,7 @@ abbrev Tg (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) : Submodule ℝ X
 `LinearMap.isHurwitz_mapQ_prod_restrict_of_isHurwitz`, extracted from the
 accepted `LinearSystem.geometricBlockInputs`. -/
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_AW (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12321,6 +12335,7 @@ theorem componentInputs_AW (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     ∀ x ∈ Wg sys H, (sys.A + sys.B.comp F) x ∈ Wg sys H := by
   simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).1
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_AS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12329,6 +12344,7 @@ theorem componentInputs_AS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     ∀ y ∈ Sstar sys E, (sys.A + G.comp sys.C) y ∈ Sstar sys E := by
   simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.1
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_BS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12337,6 +12353,7 @@ theorem componentInputs_BS (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     ∀ y ∈ Sstar sys E, (-(G.comp sys.C)) y ∈ Wg sys H := by
   simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.1
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_AV (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12345,6 +12362,7 @@ theorem componentInputs_AV (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     ∀ x ∈ Vstar sys H, (sys.A + sys.B.comp F) x ∈ Vstar sys H := by
   simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.2.1
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_AT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12353,6 +12371,7 @@ theorem componentInputs_AT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     ∀ y ∈ Tg sys E, (sys.A + G.comp sys.C) y ∈ Tg sys E := by
   simpa [Vstar, Wg, Sstar, Tg] using (geometricBlockInputs sys E H F G h hF hG).2.2.2.2.1
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem componentInputs_BT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12365,6 +12384,7 @@ theorem componentInputs_BT (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
 closed-loop map, extracted from
 `LinearSystem.extendedPairSubspaces_of_externalStabilizationConditions`. -/
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem extendedPairSubspace_closedLoopMap_inv_den (sys : LinearSystem ℝ X U Y)
     (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
@@ -12379,6 +12399,7 @@ theorem extendedPairSubspace_closedLoopMap_inv_den (sys : LinearSystem ℝ X U Y
   intro z hz
   exact hmain.2.1 ⟨z, hz, rfl⟩
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem extendedPairSubspace_closedLoopMap_inv_num (sys : LinearSystem ℝ X U Y)
     (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
@@ -12393,6 +12414,7 @@ theorem extendedPairSubspace_closedLoopMap_inv_num (sys : LinearSystem ℝ X U Y
   intro z hz
   exact hmain.2.2.1 ⟨z, hz, rfl⟩
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 theorem extendedPairSubspace_mono_of_externalStabilizationConditions
     (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
@@ -12408,6 +12430,7 @@ theorem extendedPairSubspace_mono_of_externalStabilizationConditions
 
 /-! Abbreviations for the three quotient maps occurring in the statement. -/
 
+/-- The feedback state map induced on the geometric quotient `Wg / V*`. -/
 abbrev stateFeedbackQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12421,6 +12444,7 @@ abbrev stateFeedbackQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ
     ((sys.A + sys.B.comp F).restrict (componentInputs_AW sys E H F G h hF hG))
     (fun x hx => componentInputs_AV sys E H F G h hF hG x.1 hx)
 
+/-- The observer-error map induced on the geometric quotient `S* / Tg`. -/
 abbrev observerErrorQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (h : sys.ExternalStabilizationConditions E H)
@@ -12434,6 +12458,7 @@ abbrev observerErrorQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ
     ((sys.A + G.comp sys.C).restrict (componentInputs_AS sys E H F G h hF hG))
     (fun y hy => componentInputs_AT sys E H F G h hF hG y.1 hy)
 
+/-- The closed-loop state map induced on the nested extended-pair quotient. -/
 abbrev closedLoopMapQuotientMap (sys : LinearSystem ℝ X U Y) (E : D →ₗ[ℝ] X)
     (H : X →ₗ[ℝ] Z) (F : X →ₗ[ℝ] U) (G : Y →ₗ[ℝ] X)
     (hD : sys.D = 0) (h : sys.ExternalStabilizationConditions E H)
@@ -12463,6 +12488,7 @@ conditions, gains `F`, `G` preserving `V*(ker H)` and `S*(im E)`, and with the
 two quotient blocks Hurwitz, the quotient of the `N = 0` closed-loop map on
 `Vₑ₂ = Vₑ(S*, W_g)` modulo `Vₑ₁ = Vₑ(T_g, V*)` is Hurwitz. -/
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 set_option maxHeartbeats 1000000 in
 -- Quotient conjugacy unfolds several nested subtype and mapQ equivalences.
 theorem isHurwitz_closedLoopMap_quotient_extendedPairSubspaces
@@ -12559,6 +12585,7 @@ theorem isHurwitz_closedLoopMap_quotient_extendedPairSubspaces
     (Submodule.prod (Wg sys H) (Sstar sys E))
     hP2Q2 hQ2 hP2 hPmap hQmap).mpr hTarget
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Y] in
 /-- **Stable-nonzero external response from the two geometric quotients.**
 For a strictly proper plant with the Corollary 6.22 conditions, gains `F`, `G`
 preserving `V*(ker H)` and `S*(im E)`, and with the state-feedback quotient and
@@ -12662,7 +12689,7 @@ lemma imageQuotientEquiv_apply_mk {P Q : Submodule ℝ M} (hPQ : P ≤ Q) (q : Q
 lemma imageQuotientEquiv_symm_apply_mk {P Q : Submodule ℝ M} (hPQ : P ≤ Q)
     (m : M) (hm : m ∈ Q) :
     (imageQuotientEquiv hPQ).symm
-      ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
+      ⟨Submodule.Quotient.mk m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
       Submodule.Quotient.mk ⟨m, hm⟩ := by
   rw [LinearEquiv.symm_apply_eq]
   exact imageQuotientEquiv_apply_mk hPQ ⟨m, hm⟩
@@ -12684,7 +12711,8 @@ def imageMapInd (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M}
 @[simp]
 lemma imageMapInd_apply_mk (T : M →ₗ[ℝ] M) {P Q : Submodule ℝ M}
     (hTP : P ≤ P.comap T) (hTQ : Q ≤ Q.comap T) (m : M) (hm : m ∈ Q) :
-    imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
+    imageMapInd T hTP hTQ
+      ⟨Submodule.Quotient.mk m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩ =
       ⟨P.mkQ (T m), Submodule.mem_map.mpr ⟨T m, hTQ hm, rfl⟩⟩ := by
   apply Subtype.ext
   simp [imageMapInd, Submodule.mapQ_apply]
@@ -12717,7 +12745,7 @@ theorem imageQuotientEquiv_conj_nestedQuotientMap_eq_imageMapInd
       ((nestedQuotientMap T hTP hTQ : (Q ⧸ P.comap Q.subtype) →ₗ[ℝ] (Q ⧸ P.comap Q.subtype))
         ((imageQuotientEquiv hPQ).symm ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩)) =
     imageMapInd T hTP hTQ ⟨P.mkQ m, Submodule.mem_map.mpr ⟨m, hm, rfl⟩⟩
-  rw [imageQuotientEquiv_symm_apply_mk hPQ m hm]
+  erw [imageQuotientEquiv_symm_apply_mk hPQ m hm]
   change (imageQuotientEquiv hPQ).toLinearMap
       ((nestedQuotientMap T hTP hTQ : (Q ⧸ P.comap Q.subtype) →ₗ[ℝ] (Q ⧸ P.comap Q.subtype))
         (Submodule.Quotient.mk ⟨m, hm⟩)) =
@@ -12850,14 +12878,10 @@ theorem dualAnnihilatorImageMapInd_eq_dualNestedQuotientMapInd
       (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG)
       ⟨(Sstar C A E).dualAnnihilator.mkQ φ, Submodule.mem_map.mpr ⟨φ, hφ, rfl⟩⟩
   unfold dualAnnihilatorImageMapInd
-  rw [imageMapInd_apply_mk (A + G.comp C).dualMap
+  erw [imageMapInd_apply_mk (A + G.comp C).dualMap
       (P := SstarDualAnnihilator C A E) (Q := TgDualAnnihilator C A E)
       (SstarDualAnnihilator_comap_dualMap C A E G hG)
       (TgDualAnnihilator_comap_dualMap C A E G hG) φ hφ]
-  rw [dualNestedQuotientMapInd_apply_mk (A + G.comp C) (Tg_le_Sstar C A E)
-      (Tg_comap_add_comp C A E G hG) (Sstar_comap_add_comp C A E G hG) φ hφ]
-  apply Subtype.ext
-  rfl
 
 end
 
@@ -12876,6 +12900,7 @@ variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z]
 variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
 
+omit [FiniteDimensional ℝ Y] [FiniteDimensional ℝ D] in
 /-- **Final sufficiency reduction.** Given the geometric Corollary 6.22
 conditions `h`, the state-feedback quotient gain is constructed by
 `exists_feedback_isHurwitz_quotient_of_geometricCondition`, and the observer
@@ -13165,7 +13190,7 @@ variable [AddCommGroup Y] [Module ℝ Y] [FiniteDimensional ℝ Y]
 variable [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
 variable [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
 
-omit [FiniteDimensional ℝ Z] in
+omit [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D] in
 /-- **Primal `observerErrorQuotientMap` Hurwitzness from the Corollary 6.22
 output-injection condition.**
 
@@ -13231,7 +13256,7 @@ theorem exists_observerErrorQuotientMap_isHurwitz_of_externalStabilizationCondit
     rfl
   simpa [hObsEq] using hMap
 
-omit [FiniteDimensional ℝ Z] in
+omit [FiniteDimensional ℝ Z] [FiniteDimensional ℝ D] in
 /-- The geometric conditions of Corollary 6.22 suffice for a stable-nonzero
 external response, realized by the observer-based controller. -/
 theorem stableNonzeroExternalResponse_of_externalStabilizationConditions
@@ -13404,11 +13429,16 @@ noncomputable def dual (sys : LinearSystem ℝ X U Y) :
   C := sys.B.dualMap
   D := sys.D.dualMap
 
+omit [FiniteDimensional ℝ X] in
 @[simp] theorem dual_A (sys : LinearSystem ℝ X U Y) : sys.dual.A = sys.A.dualMap := rfl
+omit [FiniteDimensional ℝ X] in
 @[simp] theorem dual_B (sys : LinearSystem ℝ X U Y) : sys.dual.B = sys.C.dualMap := rfl
+omit [FiniteDimensional ℝ X] in
 @[simp] theorem dual_C (sys : LinearSystem ℝ X U Y) : sys.dual.C = sys.B.dualMap := rfl
+omit [FiniteDimensional ℝ X] in
 @[simp] theorem dual_D (sys : LinearSystem ℝ X U Y) : sys.dual.D = sys.D.dualMap := rfl
 
+omit [FiniteDimensional ℝ X] in
 /-- The dual system is strictly proper when the primal one is. -/
 theorem dual_D_eq_zero (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) :
     sys.dual.D = 0 := by
@@ -13417,7 +13447,7 @@ theorem dual_D_eq_zero (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0) :
   exact map_zero _
 
 /-- The transpose of the cab-pair interconnection. -/
-noncomputable def cabPairInterconnection_dual (sys : LinearSystem ℝ X U Y)
+noncomputable def cabPairInterconnectionDual (sys : LinearSystem ℝ X U Y)
     (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z) :
     DynamicInterconnection ℝ (Module.Dual ℝ X) (Module.Dual ℝ Y) (Module.Dual ℝ U)
       (Module.Dual ℝ X) (Module.Dual ℝ Z) (Module.Dual ℝ D) :=
@@ -13428,6 +13458,7 @@ noncomputable def prodDualEquiv :
     (Module.Dual ℝ X × Module.Dual ℝ X) ≃ₗ[ℝ] Module.Dual ℝ (X × X) :=
   Module.dualProdDualEquivDual ℝ X X
 
+omit [FiniteDimensional ℝ X] in
 /-- **The dual closed loop is the transpose of the primal closed loop.** Under
 the product/dual equivalence `X* × X* ≃ (X × X)*`, the closed-loop map of the
 dual (transposed) cab-pair interconnection is the algebraic transpose of the
@@ -13437,14 +13468,14 @@ theorem prodDualEquiv_closedLoopMap_apply
     (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (p : Module.Dual ℝ X × Module.Dual ℝ X) :
     prodDualEquiv (X := X)
-        ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
-          ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+        ((cabPairInterconnectionDual sys ctrl E H).closedLoopMap
+          ((cabPairInterconnectionDual sys ctrl E H).isWellPosed_of_D_eq_zero
             (dual_D_eq_zero sys hD)) p) =
       ((cabPairInterconnection sys ctrl E H).closedLoopMap
           ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap
         (prodDualEquiv (X := X) p) := by
   let ic := cabPairInterconnection sys ctrl E H
-  let icD := cabPairInterconnection_dual sys ctrl E H
+  let icD := cabPairInterconnectionDual sys ctrl E H
   let hD' : icD.plant.D = 0 := dual_D_eq_zero sys hD
   let h : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
   let h' : icD.IsWellPosed := icD.isWellPosed_of_D_eq_zero hD'
@@ -13459,7 +13490,7 @@ theorem prodDualEquiv_closedLoopMap_apply
     DynamicController.dual_K, DynamicController.dual_L, DynamicController.dual_M,
     DynamicController.dual_N, LinearMap.dualMap_add, LinearMap.dualMap_comp_dualMap,
     LinearMap.dualMap_apply,
-    map_add, icD, ic, cabPairInterconnection_dual, cabPairInterconnection, dual,
+    map_add, icD, ic, cabPairInterconnectionDual, cabPairInterconnection, dual,
     LinearMap.add_apply, LinearMap.comp_apply]
   abel
 
@@ -13476,15 +13507,15 @@ theorem prodDualEquiv_closedLoop_exp_apply
     (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (t : ℝ) (p : Module.Dual ℝ X × Module.Dual ℝ X) :
     prodDualEquiv (X := X)
-      (NormedSpace.exp (t • ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
-        ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+      (NormedSpace.exp (t • ((cabPairInterconnectionDual sys ctrl E H).closedLoopMap
+        ((cabPairInterconnectionDual sys ctrl E H).isWellPosed_of_D_eq_zero
           (dual_D_eq_zero sys hD))).toContinuousLinearMap) p) =
       NormedSpace.exp (t • (((cabPairInterconnection sys ctrl E H).closedLoopMap
         ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap).toContinuousLinearMap)
         (prodDualEquiv (X := X) p) := by
   let L := (prodDualEquiv (X := X)).toContinuousLinearEquiv
-  let A := ((cabPairInterconnection_dual sys ctrl E H).closedLoopMap
-        ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+  let A := ((cabPairInterconnectionDual sys ctrl E H).closedLoopMap
+        ((cabPairInterconnectionDual sys ctrl E H).isWellPosed_of_D_eq_zero
           (dual_D_eq_zero sys hD))).toContinuousLinearMap
   let B := (((cabPairInterconnection sys ctrl E H).closedLoopMap
         ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap).toContinuousLinearMap

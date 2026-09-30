@@ -102,6 +102,7 @@ theorem anyStateStableExternalResponse_iff_externalStabilizationConditions
   · exact externalStabilizationConditions_of_anyStateStableExternalResponse sys hD E H
   · exact anyStateStableExternalResponse_of_externalStabilizationConditions sys hD E H
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 /-- A finite-dimensional channel has a decaying impulse readout in every input
 direction exactly when its input range is contained in the sum of the
 unobservable and Hurwitz spectral subspaces. This is a time-domain spectral
@@ -147,6 +148,7 @@ theorem channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz
     rw [heq]
     exact hvdec
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 /-- A Hurwitz controllable–observable realization gives a decaying impulse
 readout for the original channel, even when the original state map has
 unreachable or unobservable non-Hurwitz modes. -/
@@ -168,6 +170,7 @@ theorem channelReadout_tendsto_of_isHurwitz_minimalRealization
   apply tendsto_readout_exp_of_isHurwitz_mapQ_on A H E V W hW hV hVH hE
   exact h
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 private theorem channel_decay_imp_reachable_le_unobservable_sup_hurwitz
     (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (hdec : ∀ d : D, Tendsto
@@ -184,6 +187,7 @@ private theorem channel_decay_imp_reachable_le_unobservable_sup_hurwitz
     ((LinearMap.map_unobservableSubspace_le H A).trans le_sup_left)
     ((LinearMap.map_hurwitzSubspace_le A).trans le_sup_right)
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 private theorem channel_decay_on_reachable
     (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (hdec : ∀ d : D, Tendsto
@@ -200,6 +204,7 @@ private theorem channel_decay_on_reachable
   exact (channelReadout_tendsto_iff_range_le_unobservable_sup_hurwitz
     A (LinearMap.reachableSubspace A E).subtype H).mpr hSub w
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 /-- Decay of every channel impulse response forces the controllable–observable
 realization to be Hurwitz. The converse to
 `channelReadout_tendsto_of_isHurwitz_minimalRealization` relies on observability
@@ -263,6 +268,7 @@ theorem isHurwitz_minimalRealization_of_channelReadout_tendsto
     exact hyN
   exact LinearMap.isHurwitz_of_unstableSubspace_eq_bot M.A hU
 
+omit [FiniteDimensional ℝ D] [FiniteDimensional ℝ Z] in
 /-- For a finite-dimensional real channel, the controllable–observable
 realization is Hurwitz exactly when every impulse-response direction decays.
 Unlike Hurwitzness of the original state map, this criterion allows unstable

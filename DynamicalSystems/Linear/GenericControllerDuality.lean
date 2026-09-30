@@ -45,7 +45,7 @@ noncomputable def genericDualInterconnection (sys : LinearSystem ℝ X U Y)
     F := 0
     H := E.dualMap }
 
-omit [FiniteDimensional ℝ W] in
+omit [FiniteDimensional ℝ W] [FiniteDimensional ℝ X] in
 /-- The dual closed-loop map is conjugate to the transpose of the primal
 closed-loop map under the product-dual equivalence. -/
 theorem genericW_closedLoopMap_apply

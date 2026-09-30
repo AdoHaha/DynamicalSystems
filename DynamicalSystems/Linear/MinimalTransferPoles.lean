@@ -46,11 +46,13 @@ namespace Matrix
 variable {n m p : Type*} [Fintype n] [DecidableEq n]
 variable [Fintype m] [DecidableEq m] [Fintype p] [DecidableEq p]
 
+/-- The product of the reduced denominators of all scalar transfer entries. -/
 def commonChannelDenominator (A : Matrix n n ℂ) (B : Matrix n m ℂ)
     (C : Matrix p n ℂ) : Polynomial ℂ :=
   ∏ ij : p × m,
     (channelTransferRatFunc A (C ij.1) (fun k ↦ B k ij.2)).denom
 
+omit [DecidableEq m] [DecidableEq p] in
 theorem channel_denom_dvd_commonChannelDenominator
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
   (i : p) (j : m) :
@@ -62,6 +64,7 @@ theorem channel_denom_dvd_commonChannelDenominator
     Finset.dvd_prod_of_mem f (Finset.mem_univ (i, j))
   exact hf
 
+omit [DecidableEq m] [DecidableEq p] in
 theorem exists_channel_denom_root_of_common_root
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (z : ℂ) (hz : (commonChannelDenominator A B C).IsRoot z) :
@@ -76,6 +79,7 @@ theorem mulVecLin_aeval (A : Matrix n n ℂ) (q : Polynomial ℂ) :
     (aeval A q).mulVecLin = aeval A.mulVecLin q := by
   exact (Polynomial.aeval_algHom_apply Matrix.toLinAlgEquiv' A q).symm
 
+omit [Fintype m] [DecidableEq m] [Fintype p] [DecidableEq p] in
 theorem matrix_markov_zero_of_channel_denoms
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (q : Polynomial ℂ)
@@ -88,6 +92,7 @@ theorem matrix_markov_zero_of_channel_denoms
     (fun l ↦ B l j) q (hden i j) k
   simpa [Matrix.mul_apply, Matrix.mulVec, dotProduct, Matrix.mul_assoc] using h
 
+omit [Fintype p] [DecidableEq p] in
 theorem aeval_eq_zero_of_channel_denoms
     (A : Matrix n n ℂ) (B : Matrix n m ℂ) (C : Matrix p n ℂ)
     (hctrl : LinearMap.IsControllable A.mulVecLin B.mulVecLin)
@@ -111,6 +116,7 @@ theorem aeval_eq_zero_of_channel_denoms
   change C *ᵥ ((A ^ k) *ᵥ ((aeval A q) *ᵥ (B *ᵥ u))) = 0
   simpa only [Matrix.mulVec_mulVec, Matrix.mul_assoc, Matrix.zero_mulVec] using hv
 
+omit [DecidableEq p] in
 /-- Every characteristic root of a controllable and observable realization
 survives pole cancellation in at least one scalar transfer-matrix entry. -/
 theorem exists_scalar_transfer_pole_of_minimal
@@ -130,6 +136,7 @@ theorem exists_scalar_transfer_pole_of_minimal
   have hzq : q.IsRoot z := LinearMap.isRoot_of_aeval_eq_zero A.mulVecLin q hq z hzlin
   exact exists_channel_denom_root_of_common_root A B C z hzq
 
+omit [DecidableEq p] in
 /-- For a controllable and observable complex realization, all scalar transfer
 entries have left-half-plane poles exactly when the state spectrum is Hurwitz. -/
 theorem all_channels_pole_stable_iff_charpoly_hurwitz_of_minimal
@@ -147,6 +154,7 @@ theorem all_channels_pole_stable_iff_charpoly_hurwitz_of_minimal
   · intro h i j
     exact channelTransferRatFunc_isPoleStable A (C i) (fun k ↦ B k j) h
 
+omit [DecidableEq p] in
 /-- For a controllable and observable real matrix realization, all entries of
 the complexified rational transfer matrix are pole-stable exactly when the
 complex roots of the real state characteristic polynomial lie in the open

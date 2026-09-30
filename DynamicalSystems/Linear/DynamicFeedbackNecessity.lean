@@ -47,8 +47,8 @@ lemma dualExternalResponse_eq_transposedReadout
     (sys : LinearSystem ℝ X U Y) (hD : sys.D = 0)
     (ctrl : DynamicController ℝ X Y U) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (t : ℝ) (z : Module.Dual ℝ Z) :
-    (cabPairInterconnection_dual sys ctrl E H).externalResponse
-      ((cabPairInterconnection_dual sys ctrl E H).isWellPosed_of_D_eq_zero
+    (cabPairInterconnectionDual sys ctrl E H).externalResponse
+      ((cabPairInterconnectionDual sys ctrl E H).isWellPosed_of_D_eq_zero
         (dual_D_eq_zero sys hD)) t z =
       ((cabPairInterconnection sys ctrl E H).disturbanceMapWithF
           ((cabPairInterconnection sys ctrl E H).isWellPosed_of_D_eq_zero hD)).dualMap
@@ -57,7 +57,7 @@ lemma dualExternalResponse_eq_transposedReadout
             hD)).dualMap.toContinuousLinearMap)
           ((cabPairInterconnection sys ctrl E H).outputMap.dualMap z)) := by
   let ic := cabPairInterconnection sys ctrl E H
-  let icD := cabPairInterconnection_dual sys ctrl E H
+  let icD := cabPairInterconnectionDual sys ctrl E H
   let hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
   let hwpD : icD.IsWellPosed := icD.isWellPosed_of_D_eq_zero (dual_D_eq_zero sys hD)
   let T := ic.closedLoopMap hwp
@@ -91,7 +91,7 @@ lemma dualExternalResponse_eq_transposedReadout
         _ = icD.outputMap (NormedSpace.exp (t • (icD.closedLoopMap hwpD).toContinuousLinearMap)
             (icD.disturbanceMap z)) := by
               rw [icD.disturbanceMapWithF_of_F_eq_zero hwpD
-                (by simp [icD, cabPairInterconnection_dual])]
+                (by simp [icD, cabPairInterconnectionDual])]
         _ = icD.outputMap
             (NormedSpace.exp (t • (icD.closedLoopMap hwpD).toContinuousLinearMap) q) := by
               rw [icD.disturbanceMap_apply]
@@ -119,7 +119,7 @@ theorem stableNonzeroExternalResponse_dual
   refine ⟨ctrl.dual, ?_⟩
   intro z
   let ic := cabPairInterconnection sys ctrl E H
-  let icD := cabPairInterconnection_dual sys ctrl E H
+  let icD := cabPairInterconnectionDual sys ctrl E H
   let hwp : ic.IsWellPosed := ic.isWellPosed_of_D_eq_zero hD
   let hwpD : icD.IsWellPosed := icD.isWellPosed_of_D_eq_zero (dual_D_eq_zero sys hD)
   change Filter.Tendsto (fun t : ℝ => icD.externalResponse hwpD t z) Filter.atTop (nhds 0)

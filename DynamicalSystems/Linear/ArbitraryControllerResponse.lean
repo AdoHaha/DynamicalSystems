@@ -70,7 +70,7 @@ theorem anyStateStableExternalResponse_of_stableNonzeroExternalResponse
 
 section ExternalStabilizationConditionsToAnyState
 
-variable [FiniteDimensional ℝ Y] [FiniteDimensional ℝ D]
+variable [FiniteDimensional ℝ Y]
 
 /-- The Corollary 6.22 geometric subspace conditions imply the arbitrary-state
 stable external response, by composing the existing fixed-state sufficiency

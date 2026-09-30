@@ -177,8 +177,8 @@ theorem mem_sup_stableSubspaceIn_of_stable_quotient
 state is the sum of a stable and an unobservable state. -/
 theorem reachable_le_stableSubspaceIn_sup_unobservable_of_antistable_le
     {D Z : Type*}
-    [NormedAddCommGroup D] [NormedSpace ℝ D] [FiniteDimensional ℝ D]
-    [NormedAddCommGroup Z] [NormedSpace ℝ Z] [FiniteDimensional ℝ Z]
+    [NormedAddCommGroup D] [NormedSpace ℝ D]
+    [NormedAddCommGroup Z] [NormedSpace ℝ Z]
     (Cg : Set ℂ) (hCg : IsStabilityDomain Cg)
     (A : X →ₗ[ℝ] X) (E : D →ₗ[ℝ] X) (H : X →ₗ[ℝ] Z)
     (hbad : reachableSubspace A E ⊓ antistableSubspaceIn Cg A ≤

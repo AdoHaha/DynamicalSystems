@@ -113,6 +113,7 @@ theorem realCoordEquiv_symm_mulVec (A : X →ₗ[ℝ] X)
   rw [hrepr]
   rfl
 
+omit [FiniteDimensional ℝ X] in
 /-- Real-part projection of a complexified real matrix-vector product. -/
 theorem rePi_map_mulVec (M : Matrix (Fin (Module.finrank ℝ X)) (Fin (Module.finrank ℝ X)) ℝ)
     (z : Fin (Module.finrank ℝ X) → ℂ) :
@@ -167,10 +168,12 @@ noncomputable def coordSystem (sys : LinearSystem ℝ X U Z) :
   C := 0
   D := 0
 
+omit [FiniteDimensional ℝ U] in
 @[simp]
 theorem coordSystem_A (sys : LinearSystem ℝ X U Z) :
     (coordSystem sys).A = (coordComplexA sys.A).restrictScalars ℝ := rfl
 
+omit [FiniteDimensional ℝ U] in
 @[simp]
 theorem coordSystem_B (sys : LinearSystem ℝ X U Z) :
     (coordSystem sys).B = coordComplexify.comp sys.B := rfl
@@ -367,6 +370,7 @@ theorem coordRealify_pow_coordComplexA (A : X →ₗ[ℝ] X) (k : ℕ)
       (((coordComplexA A) ^ k) w)) = A ((A ^ k) (coordRealify w))
     rw [h, ih]
 
+omit [FiniteDimensional ℝ U] in
 /-- `coordRealify` maps the reachable subspace of the coordinate system into the
 reachable subspace of the original system. -/
 theorem coordRealify_map_reachableSubspace_le (sys : LinearSystem ℝ X U Z) :
@@ -534,6 +538,8 @@ the real Bohl class `IsRealBohl`; the spectral content is transported through
 the coordinate complexification `coordComplexify : X → (Fin n → ℂ)` and the
 real-linear projection `coordRealify`. -/
 
+/-- An output-decaying trajectory driven by a locally integrable input whose
+state forcing is a real finite Bohl signal. -/
 def IsRealBohlOutputStabilizable (sys : LinearSystem ℝ X U Z) (H : X →ₗ[ℝ] Z)
     (x : X) : Prop :=
   ∃ u : ℝ → U, MeasureTheory.LocallyIntegrable u MeasureTheory.volume ∧

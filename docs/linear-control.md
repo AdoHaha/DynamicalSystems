@@ -49,8 +49,9 @@ Import `DynamicalSystems.Linear.KalmanDecomposition` for the combined four-block
 form: a genuine coordinate equivalence, seven zero A blocks, two zero B rows and
 two zero C columns. The controllable–observable quotient is constructed from the
 reachable restriction and its unobservable subspace; both pair properties and
-preservation of D and every Markov parameter `C A^k B` are proved. Continuous-time
-behavior equivalence and minimal-dimension results are not asserted here.
+preservation of D and every Markov parameter `C A^k B` are proved. The later
+realization and transfer modules supply minimal-dimension results and equality
+of the original and reduced rational transfer matrices.
 
 Import `DynamicalSystems.Linear.Hautus` for PBH eigenvector, kernel/range and
 matrix-rank criteria over algebraically closed fields. Both real-matrix
@@ -89,6 +90,31 @@ observability Gramians, energy identities, nonnegativity, reachable-set equality
 and positive-definiteness criteria. These results require strictly positive
 horizons; sharper dimension and matrix basis-change refinements remain future work.
 
+Pole placement, stabilization, observers, spectral decay, and geometric
+disturbance decoupling are also available. `Linear.PolePlacement` supplies
+constructive single- and multi-input pole assignment; `Linear.Stabilization`
+and `Linear.Observer` connect feedback and output injection to stable dynamics.
+See `Linear.Documentation` for the module-by-module API map and book references.
+
+The dynamic-controller development proves the book's Corollary 6.22 geometric
+existence equivalence for strictly proper plant and measurement channels.
+`Linear.GeneralStabilityDomain` and `Linear.GeneralDomainControllerCriterion`
+with their supporting modules treat arbitrary conjugation-invariant stability
+domains containing a real point. Controller
+state dimension is not fixed in advance. `Linear.ArbitraryControllerCriterion`
+supplies the Hurwitz external-response criterion; the general-domain necessity
+proof does not restrict the original plant's forcing to finite Bohl signals.
+Some intermediate output-stabilizability APIs do explicitly impose that
+restriction, and should not be confused with the final controller-existence iff.
+
+The transfer modules connect minimal-realization spectral stability to poles of
+the reduced rational transfer entries and, in the Hurwitz case, impulse-response
+decay. `Linear.TransferRealizationEquality` proves equality with the original
+channel transfer matrix, so this is not merely a criterion for a replacement
+system. `Linear.TransferPoleFeedthrough` separately handles feedthrough for the
+pole/decay bridge; it does not extend the geometric Corollary 6.22 iff to
+nonzero plant or measurement feedthrough.
+
 The generated Verso manual includes a **Linear systems** chapter with these
 conventions and linked theorem statements. Run `lake exe generate-docs` to build it.
 
@@ -102,11 +128,13 @@ conventions and linked theorem statements. Run `lake exe generate-docs` to build
 - Integral and almost-everywhere trajectory semantics should use the existing
   Carathéodory and input/output relation definitions.
 
-## Roadmap
+## Scope and further work
 
-Next are pole placement, stabilization and observers, disturbance decoupling,
-and release examples. Each addition requires source/statement review, actual Lean
-proofs, and the standard-axiom audit. Missing results are not available assumptions.
+The linear-control foundations and geometric controller-existence campaign are
+complete within the hypotheses documented above. This is not the full book:
+later chapters, nonlinear control, and a feedthrough-generalized geometric iff
+are separate extensions. Each addition requires source/statement review, actual
+Lean proofs, and the standard-axiom audit. Missing results are not assumptions.
 
 The surrounding research workspace contains the restartable Pi campaign at
 `automation/linear_control/`; the formal library does not depend on that harness
