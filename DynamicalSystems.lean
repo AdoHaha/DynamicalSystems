@@ -10,6 +10,7 @@ import DynamicalSystems.Control.Backstepping.Filtered
 import DynamicalSystems.Control.Backstepping.Robust
 import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
+import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.InputOutput.Causal
 import DynamicalSystems.InputOutput.ClosedLoop
