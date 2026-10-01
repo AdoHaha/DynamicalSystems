@@ -15,6 +15,7 @@ import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.AdaptiveControl.Switching
 import DynamicalSystems.AdaptiveControl.BoundedGrowth
 import DynamicalSystems.AdaptiveControl.Direct
+import DynamicalSystems.AdaptiveControl.RobustDirect
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
 import DynamicalSystems.DiscreteTime.Lyapunov
@@ -22,6 +23,7 @@ import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
 import DynamicalSystems.Estimation.Normalization
 import DynamicalSystems.Estimation.Projection
+import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
 import DynamicalSystems.ParameterAdaptation.LyapunovAlgebra
 import DynamicalSystems.ParameterAdaptation.Stability
