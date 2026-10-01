@@ -29,6 +29,8 @@ errors below the disturbance bound `Δ`, which prevents parameter drift.
   non-negative Lyapunov dissipation rate.
 * `abs_deadZone_le`: the dead zone does not increase the error magnitude,
   `|deadZone Δ x| ≤ |x|`.
+* `alpha_mul_sub_sq_nonneg`: the hard-switch dissipation rate `α · (ν ^ 2 - Δ ^ 2)`
+  is non-negative for `Δ ≥ 0`.
 * `deadZone_error_tendsto_zero`: the dead-zoned error of a Lyapunov sequence
   descending by `ν t · deadZone Δ (ν t)` tends to `0`.
 -/
@@ -113,20 +115,38 @@ theorem deadZone_error_tendsto_zero {V ν : ℕ → ℝ} {Δ : ℝ} (hΔ : 0 ≤
       (fun t ↦ Real.le_sqrt_of_sq_le (sq_abs_deadZone_le hΔ (ν t))) hsqrt
   rwa [tendsto_zero_iff_abs_tendsto_zero]
 
+/-- Positivity of the hard-switch dead-zone dissipation rate: if the switching
+signal is active (`alpha = 1`) exactly when the error exceeds the dead-zone level
+(`Δ < |ν| → alpha = 1`) and is off (`alpha = 0`) otherwise
+(`|ν| ≤ Δ → alpha = 0`), then `alpha · (ν ^ 2 - Δ ^ 2) ≥ 0` for `Δ ≥ 0`. This is
+the non-negativity needed to feed the scalar dissipation bridge with the dead-zoned
+rate of Theorem 10.2 (eq. 10.53). The hypothesis `0 ≤ Δ` is essential: without it
+the statement is false (for example `ν = 0`, `Δ = -10`, `alpha = 1`). -/
+theorem alpha_mul_sub_sq_nonneg {nu Delta alpha : ℝ} (hΔ : 0 ≤ Delta)
+    (hcond : Delta < |nu| → alpha = 1) (hzero : |nu| ≤ Delta → alpha = 0) :
+    0 ≤ alpha * (nu ^ 2 - Delta ^ 2) := by
+  by_cases h : |nu| ≤ Delta
+  · rw [hzero h]; simp
+  · rw [not_le] at h
+    rw [hcond h]
+    have hsq : Delta ^ 2 < nu ^ 2 := by
+      rw [sq_lt_sq]
+      rwa [abs_of_nonneg hΔ]
+    nlinarith
+
 /-- Book-faithful dead-zone stopping-rule result (Theorem 10.2, eqs. 10.45-10.48).
-The switching signal `α` takes only the values `0` and `1`; `hcond` encodes the
-stopping rule (the PAA is active, `α t = 1`, whenever the adaptation error exceeds
-the disturbance bound `Δ`); and the driving term `α t · (ν t ^ 2 - Δ ^ 2)` converges
-to `0`. Then `|ν|` is eventually bounded by `Δ + ε` for every `ε > 0`, i.e.
-`limsup |ν| ≤ Δ`. Note this is the sharp conclusion: `ν` itself need not tend to
-`0`, only its limsup is bounded by the disturbance level. -/
+In the intended application the switching signal `α` takes only the values `0` and
+`1`; `hcond` encodes the stopping rule (the PAA is active, `α t = 1`, whenever the
+adaptation error exceeds the disturbance bound `Δ`); and the driving term
+`α t · (ν t ^ 2 - Δ ^ 2)` converges to `0`. Then `|ν|` is eventually bounded by
+`Δ + ε` for every `ε > 0`, i.e. `limsup |ν| ≤ Δ`. Note this is the sharp
+conclusion: `ν` itself need not tend to `0`, only its limsup is bounded by the
+disturbance level. -/
 theorem deadzone_eventually_le {ν : ℕ → ℝ} {Δ : ℝ} (hΔ : 0 ≤ Δ) (alpha : ℕ → ℝ)
-    (halpha : ∀ t, alpha t = 0 ∨ alpha t = 1)
     (hcond : ∀ t, Δ < |ν t| → alpha t = 1)
     (htend : Filter.Tendsto (fun t ↦ alpha t * (ν t ^ 2 - Δ ^ 2)) Filter.atTop (𝓝 0)) :
     ∀ ε > 0, ∀ᶠ t in Filter.atTop, |ν t| ≤ Δ + ε := by
   intro ε hε
-  have _hα := halpha
   have hε2 : 0 < ε ^ 2 := by positivity
   have hlt : ∀ᶠ t in Filter.atTop, alpha t * (ν t ^ 2 - Δ ^ 2) < ε ^ 2 :=
     (tendsto_order.1 htend).2 (ε ^ 2) hε2
