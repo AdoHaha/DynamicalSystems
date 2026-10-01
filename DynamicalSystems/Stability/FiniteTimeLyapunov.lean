@@ -20,7 +20,7 @@ G. Bartolini, L. Fridman, A. Pisano and E. Usai (eds.), *Modern Sliding Mode Con
 New Perspectives and Applications*, LNCIS 375, Springer 2008 (printed pp. 72–73, PDF pp. 88–89).
 
 The finite-time Lyapunov condition for a positive-definite function `V` is
-`V̇ ≤ -c V ^ α` with `0 ≤ α < 1` and `c > 0`; the book's definition 1° (printed p. 72)
+`V̇ ≤ -c V ^ α` with `α < 1` and `c > 0`; the book's definition 1° (printed p. 72)
 is the resulting finite-time stability property. The present file isolates the
 one-dimensional comparison step: along such an inequality a non-negative scalar `z` cannot
 stay positive past the settling time `z 0 ^ (1 - α) / (c * (1 - α))`.
@@ -28,7 +28,7 @@ stay positive past the settling time `z 0 ^ (1 - α) / (c * (1 - α))`.
 ## Main statements
 
 * `eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow`: a non-negative continuous `z` whose right
-  derivative satisfies `z' ≤ -c * z ^ α` (`0 ≤ α < 1`, `c > 0`) reaches zero by time
+  derivative satisfies `z' ≤ -c * z ^ α` (`α < 1`, `c > 0`) reaches zero by time
   `z 0 ^ (1 - α) / (c * (1 - α))`.
 * `isFiniteTimeAttractiveAt_of_deriv_le_neg_mul_rpow`: the Lyapunov sufficient condition
   `V̇ ≤ -c V ^ α` for a positive-definite `V` makes `x₀` finite-time attractive.
@@ -45,9 +45,8 @@ open Filter Set
 
 @[expose] public section
 
-set_option linter.unusedVariables false in
 /-- Scalar finite-time comparison: a non-negative continuous `z` with right derivative
-`z' ≤ -c z ^ α` (`0 ≤ α < 1`, `c > 0`) reaches zero by time
+`z' ≤ -c z ^ α` (`α < 1`, `c > 0`) reaches zero by time
 `z 0 ^ (1 - α) / (c * (1 - α))`.
 
 The proof sets `p = 1 - α > 0`. Since `z' ≤ -c z ^ α ≤ 0`, the function `z` is non-increasing
@@ -57,14 +56,10 @@ because `z ^ (p - 1) * z ^ α = z ^ 0 = 1`; the one-sided fencing theorem
 `image_le_of_deriv_right_le_deriv_boundary` therefore gives `z t ^ p + c * p * t ≤ z 0 ^ p`, and
 the assumed lower bound on `t` forces `z t ^ p = 0`, hence `z t = 0`.
 
-The hypothesis `0 ≤ α` is part of the stated range `0 ≤ α < 1` of the comparison condition; the
-argument only needs `α < 1` (through `p = 1 - α > 0`), so it is kept for compatibility with the
-Lyapunov theorem that consumes this estimate. The unused-variable linter is disabled locally
-for this binder rather than dropping it from the required statement; both the compiler's
-`unusedVariables` warning and the `unusedArguments` linter are disabled locally. -/
-@[nolint unusedArguments]
+Only `α < 1` (through `p = 1 - α > 0`) is needed; no lower bound on `α` is required, so the
+comparison holds for any `α < 1`. -/
 theorem eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow {z : ℝ → ℝ} {c α : ℝ}
-    (hc : 0 < c) (hα0 : 0 ≤ α) (hα1 : α < 1)
+    (hc : 0 < c) (hα1 : α < 1)
     (hzcont : ContinuousOn z (Set.Ici 0)) (hnonneg : ∀ t, 0 ≤ t → 0 ≤ z t)
     (hderiv : ∀ t, 0 ≤ t → HasDerivWithinAt z (deriv z t) (Set.Ici t) t)
     (hineq : ∀ t, 0 ≤ t → deriv z t ≤ -c * z t ^ α) :
@@ -152,12 +147,14 @@ theorem eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow {z : ℝ → ℝ} {c α : �
   have hpos : 0 < z t ^ (1 - α) := Real.rpow_pos_of_pos hztpos _
   linarith
 
+namespace AutonomousFlow
+
 /-- The orbital derivative is translation invariant along an autonomous flow: the derivative of
 `t ↦ V (Φ t x)` at time `t` equals the orbital derivative at the state `Φ t x`. Unlike
 `AutonomousFlow.deriv_comp_flow` this only needs the *composition* `V ∘ (Φ · x)` to be
 considered; it is in fact an unconditional identity on the shift of the differentiation variable
 `deriv_comp_const_add`, combined with the semigroup law `Φ (t + s) x = Φ s (Φ t x)`. -/
-private theorem deriv_comp_flow_translate {E : Type*}
+theorem deriv_comp_flow_translate {E : Type*}
     {Φ : AutonomousFlow ℝ E} {V : E → ℝ} (x : E) (t : ℝ) :
     deriv (V <| Φ · x) t = deriv (V <| Φ · (Φ t x)) 0 := by
   have h1 : deriv (fun s ↦ V (Φ (t + s) x)) 0 = deriv (V <| Φ · x) t := by
@@ -167,22 +164,20 @@ private theorem deriv_comp_flow_translate {E : Type*}
     funext s
     rw [Φ.map_comp s t x, add_comm t s]]
 
-set_option linter.unusedVariables false in
-/-- **Finite-time Lyapunov theorem.** A non-negative, positive-definite continuous `V` whose
-orbital derivative along an autonomous flow satisfies `V̇ ≤ -c V ^ α` (`0 ≤ α < 1`, `c > 0`)
-drives every state to `x₀` in finite time: for every `x` the trajectory reaches the zero set of `V`
-by time `V x ^ (1 - α) / (c * (1 - α))`, hence equals `x₀` from then on.
+end AutonomousFlow
 
-The continuity hypothesis `hVcont` is retained for uniformity with
-`isFiniteTimeStableAt_of_deriv_le_neg_mul_rpow`, where it is consumed by `IsLyapunov`; here it is
-redundant because `hdiff` already makes `t ↦ V (Φ t x)` continuous. The `unusedArguments` linter
-is therefore disabled locally, matching the treatment of `hα0` in the scalar comparison above. -/
-@[nolint unusedArguments]
+/-- **Finite-time Lyapunov theorem.** A non-negative, positive-definite `V` whose orbital
+derivative along an autonomous flow satisfies `V̇ ≤ -c V ^ α` (`α < 1`, `c > 0`) drives every
+state to `x₀` in finite time: for every `x` the trajectory reaches the zero set of `V` by time
+`V x ^ (1 - α) / (c * (1 - α))`, hence equals `x₀` from then on.
+
+Continuity of `V` is not assumed separately here: `hdiff` already makes `t ↦ V (Φ t x)`
+continuous, which is all the scalar comparison below needs. -/
 theorem isFiniteTimeAttractiveAt_of_deriv_le_neg_mul_rpow
     {E : Type*} [NormedAddCommGroup E] {Φ : AutonomousFlow ℝ E} {V : E → ℝ} {x₀ : E}
-    {c α : ℝ} (hc : 0 < c) (hα0 : 0 ≤ α) (hα1 : α < 1)
+    {c α : ℝ} (hc : 0 < c) (hα1 : α < 1)
     (hVpos : ∀ x, 0 ≤ V x) (hVx₀ : ∀ x, V x = 0 ↔ x = x₀)
-    (hVcont : Continuous V) (hdiff : ∀ x, Differentiable ℝ (V <| Φ · x))
+    (hdiff : ∀ x, Differentiable ℝ (V <| Φ · x))
     (hderiv : ∀ x, deriv (V <| Φ · x) 0 ≤ -c * (V x) ^ α) :
     IsFiniteTimeAttractiveAt Φ x₀ := by
   refine Eventually.of_forall fun x ↦ ?_
@@ -191,11 +186,13 @@ theorem isFiniteTimeAttractiveAt_of_deriv_le_neg_mul_rpow
     exact div_nonneg (Real.rpow_nonneg (hVpos x) _) hc'.le
   · intro t ht
     exact (hVx₀ (Φ t x)).mp
-      (eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow hc hα0 hα1
+      (eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow hc hα1
         (hdiff x).continuous.continuousOn
         (fun t _ ↦ hVpos _)
         (fun t _ ↦ (hdiff x t).hasDerivAt.hasDerivWithinAt)
-        (fun t _ ↦ by rw [deriv_comp_flow_translate x t]; exact hderiv (Φ t x))
+        (fun t _ ↦ by
+          rw [AutonomousFlow.deriv_comp_flow_translate x t]
+          exact hderiv (Φ t x))
         t (by simpa using ht))
 
 /-- **Finite-time stability from the Lyapunov condition.** Under the same hypotheses as
@@ -208,19 +205,19 @@ The Lyapunov function is `V` itself: the assumed bound `V̇ ≤ -c V ^ α` is no
 required by `IsLyapunov`. -/
 theorem isFiniteTimeStableAt_of_deriv_le_neg_mul_rpow
     {E : Type*} [NormedAddCommGroup E] {Φ : AutonomousFlow ℝ E} {V : E → ℝ} {x₀ : E}
-    {c α δ₀ : ℝ} (hc : 0 < c) (hα0 : 0 ≤ α) (hα1 : α < 1) (hδ₀ : 0 < δ₀)
+    {c α δ₀ : ℝ} (hc : 0 < c) (hα1 : α < 1) (hδ₀ : 0 < δ₀)
     (hVpos : ∀ x, 0 ≤ V x) (hVx₀ : ∀ x, V x = 0 ↔ x = x₀)
     (hVcont : Continuous V) (hdiff : ∀ x, Differentiable ℝ (V <| Φ · x))
     (hderiv : ∀ x, deriv (V <| Φ · x) 0 ≤ -c * (V x) ^ α)
     (hcpt : IsCompact {p | V p ≤ δ₀}) :
     IsFiniteTimeStableAt Φ x₀ := by
-  refine ⟨?_, isFiniteTimeAttractiveAt_of_deriv_le_neg_mul_rpow hc hα0 hα1 hVpos hVx₀
-    hVcont hdiff hderiv⟩
+  refine ⟨?_, isFiniteTimeAttractiveAt_of_deriv_le_neg_mul_rpow hc hα1 hVpos hVx₀
+    hdiff hderiv⟩
   have hlya : IsLyapunov V (Φ : ℝ → E → E) := by
     refine isLyapunov_of_deriv hVpos hVcont hdiff ?_
     intro x t
     change deriv (V <| Φ · x) t ≤ 0
-    rw [deriv_comp_flow_translate x t]
+    rw [AutonomousFlow.deriv_comp_flow_translate x t]
     have hz := hderiv (Φ t x)
     have hzα : 0 ≤ (V (Φ t x)) ^ α := Real.rpow_nonneg (hVpos _) α
     have hprod : 0 ≤ c * (V (Φ t x)) ^ α := mul_nonneg hc.le hzα
