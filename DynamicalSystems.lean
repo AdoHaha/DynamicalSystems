@@ -86,6 +86,7 @@ import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.ParameterAdaptation.Basic
+import DynamicalSystems.ParameterAdaptation.RLS
 import DynamicalSystems.Stability.Attraction
 import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
