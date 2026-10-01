@@ -6,6 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Stability.Lyapunov
+public import Mathlib.Topology.Algebra.InfiniteSum.Real
 
 /-! # Discrete-time Lyapunov stability
 
@@ -21,6 +22,9 @@ discrete-time notions, so no parallel predicates are introduced here.
   function for the discrete flow.
 * `isStableOn_discreteFlow`: the discrete Lyapunov stability theorem, obtained by
   instantiating `IsLyapunov.isStableOn_nhds` at `ι = ℕ` and `t₀ = 0`.
+* `sum_le_of_succ_le_sub`, `summable_of_succ_le_sub`, `tendsto_zero_of_succ_le_sub`,
+  `le_of_succ_le_sub`: the scalar dissipation / telescoping bridge turning the rate
+  inequality `v (t + 1) ≤ v t − w t` into `Summable w` and `w → 0`.
 -/
 
 @[expose] public section
@@ -59,13 +63,11 @@ discrete flow `fun n x ↦ f^[n] x`.
 This is `IsLyapunov.isStableOn_nhds` instantiated at `ι = ℕ` and `t₀ = 0`, using
 `Set.Ici (0 : ℕ) = Set.univ`.
 
-`NormedSpace ℝ E` and `ProperSpace E` are kept in the signature to match the
-discrete-time stability statement (and to place the result in the standard setting
-for the campaign); the proof itself only needs `NormedAddCommGroup E` and the
-compactness hypothesis `hcpt`. -/
-@[nolint unusedArguments]
-theorem isStableOn_discreteFlow {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [ProperSpace E] {f : E → E} {V : E → ℝ} {x₀ : E}
+Only `TopologicalSpace E` and `FirstCountableTopology E` are needed, exactly as in
+`IsLyapunov.isStableOn_nhds`; the compactness of the sublevel set is an explicit
+hypothesis `hcpt`. -/
+theorem isStableOn_discreteFlow {E : Type*} [TopologicalSpace E] [FirstCountableTopology E]
+    {f : E → E} {V : E → ℝ} {x₀ : E}
     (hVcont : Continuous V) (hpos : ∀ x, 0 ≤ V x) (hmono : ∀ x, V (f x) ≤ V x)
     (hVx₀ : ∀ x, V x = 0 ↔ x = x₀) {δ₀ : ℝ} (hδ₀ : 0 < δ₀)
     (hcpt : IsCompact {p | V p ≤ δ₀}) :
@@ -75,3 +77,47 @@ theorem isStableOn_discreteFlow {E : Type*} [NormedAddCommGroup E] [NormedSpace 
   have hstab := hlyap.isStableOn_nhds hVx₀ (t₀ := 0)
     (fun x ↦ Function.iterate_zero_apply f x) hδ₀ hcpt
   simpa using hstab
+
+/-! ## Scalar dissipation / telescoping bridge
+
+`IsLyapunov` only gives the monotonicity `V (t + 1) ≤ V t`. The parameter adaptation and
+direct adaptive control convergence theorems need the *rate* form
+`V (t + 1) ≤ V t − W t` summed to `W ∈ ℓ¹`, hence `W → 0`. The lemmas below provide that
+scalar telescoping bridge. -/
+
+/-- Partial-sum bound for a non-negative sequence with a telescoping decrease: if
+`v` is non-negative and `v (t + 1) ≤ v t − w t` for all `t`, then the partial sums of
+`w` up to `n` are bounded by `v 0`. -/
+theorem sum_le_of_succ_le_sub {v w : ℕ → ℝ} (hv : ∀ t, 0 ≤ v t)
+    (h : ∀ t, v (t + 1) ≤ v t - w t) (n : ℕ) :
+    (Finset.sum (Finset.range n) w) ≤ v 0 := by
+  have key : ∀ n, (Finset.sum (Finset.range n) w) ≤ v 0 - v n := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        rw [Finset.sum_range_succ]
+        have ht : w n ≤ v n - v (n + 1) := by linarith [h n]
+        linarith
+  exact (key n).trans (by linarith [hv n])
+
+/-- A non-negative decay rate that decreases a non-negative Lyapunov sequence is
+summable. -/
+theorem summable_of_succ_le_sub {v w : ℕ → ℝ} (hv : ∀ t, 0 ≤ v t) (hw : ∀ t, 0 ≤ w t)
+    (h : ∀ t, v (t + 1) ≤ v t - w t) : Summable w :=
+  summable_of_sum_range_le hw (fun n ↦ sum_le_of_succ_le_sub hv h n)
+
+/-- The discrete dissipation bridge (discrete analogue of Barbălat): the decay rate
+of a non-negative Lyapunov sequence with a telescoping decrease tends to `0`. -/
+theorem tendsto_zero_of_succ_le_sub {v w : ℕ → ℝ} (hv : ∀ t, 0 ≤ v t) (hw : ∀ t, 0 ≤ w t)
+    (h : ∀ t, v (t + 1) ≤ v t - w t) : Filter.Tendsto w Filter.atTop (𝓝 0) :=
+  (summable_of_succ_le_sub hv hw h).tendsto_atTop_zero
+
+/-- The Lyapunov sequence is bounded by its initial value: if `w` is non-negative and
+`v (t + 1) ≤ v t − w t`, then `v t ≤ v 0` for all `t`. -/
+theorem le_of_succ_le_sub {v w : ℕ → ℝ} (hw : ∀ t, 0 ≤ w t)
+    (h : ∀ t, v (t + 1) ≤ v t - w t) (t : ℕ) : v t ≤ v 0 := by
+  have hmono : ∀ t, v (t + 1) ≤ v t := fun t ↦ by linarith [h t, hw t]
+  induction t with
+  | zero => exact le_refl _
+  | succ t ih => exact (hmono t).trans ih
