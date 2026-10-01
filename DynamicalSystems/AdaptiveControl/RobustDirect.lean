@@ -8,6 +8,7 @@ module
 public import DynamicalSystems.Estimation.DeadZone
 public import DynamicalSystems.AdaptiveControl.BoundedGrowth
 public import DynamicalSystems.AdaptiveControl.Direct
+public import DynamicalSystems.ParameterAdaptation.Convergence
 
 /-! # Robust direct adaptive control with bounded disturbances
 
@@ -39,6 +40,13 @@ identity by at most the dead-zone level: `|e| ≤ Δ + |deadZone Δ e|`.
 * `robust_direct_adaptive_stability`: Theorem 11.5 at statement level — the
   regressor is bounded (11.185), the dead-zoned error tends to `0`, and
   `limsup |ε⁰| ≤ Δ` (11.182).
+* `robust_direct_lyapunov_bounded`: a non-increasing Lyapunov sequence is bounded
+  by its initial value.
+* `robust_direct_param_step_tendsto_zero`: the parameter increments of the
+  dead-zone PAA tend to `0` (the scalar content of (11.184)).
+* `robust_direct_pe_parameter_convergence`: with persistent excitation, a bounded
+  regressor, a vanishing dead-zoned prediction error and the PAA step bound, the
+  parameter-error norm `θ̃(t)` tends to `0`.
 -/
 
 @[expose] public section
@@ -187,3 +195,93 @@ theorem robust_direct_adaptive_stability {V x e : ℕ → ℝ} {Delta C1 C2 : �
   filter_upwards [hev] with t ht
   have hle := abs_le_add_abs_deadZone (e := e (t + D + 1)) hDelta
   linarith
+
+/-- **Boundedness of a non-increasing Lyapunov sequence.** If `V` does not increase
+at any step, `V (t + 1) ≤ V t`, then by induction it stays below its initial value,
+`V t ≤ V 0` for every `t`. This is the monotonicity half of the Lyapunov argument
+of Theorem 11.5: the positive sequence `‖θ̃_C(t)‖²_{F⁻¹}` is non-increasing, hence
+bounded (11.183). -/
+theorem robust_direct_lyapunov_bounded {V : ℕ → ℝ} (hdiss : ∀ t, V (t + 1) ≤ V t) :
+    ∀ t, V t ≤ V 0 := by
+  intro t
+  induction t with
+  | zero => exact le_refl _
+  | succ n ih => exact le_trans (hdiss n) ih
+
+/-- **The parameter increments of the dead-zone PAA tend to `0`.** Assume the step
+bound
+`∑ k, (θ̂(t+1) k − θ̂(t) k)² ≤ K · (deadZone Δ (e (t+1)))²`
+of the dead-zone PAA, and that the dead-zoned error itself tends to `0`. Then the
+squared parameter increment tends to `0`. The lower bound `0` and the upper bound
+`K · (deadZone Δ (e (t+1)))² → 0` squeeze the non-negative increment sum. This is
+the scalar content of the parameter-update convergence (11.184). -/
+theorem robust_direct_param_step_tendsto_zero {n : ℕ} (thetaHat : ℕ → Fin n → ℝ)
+    (e : ℕ → ℝ) (Delta K : ℝ)
+    (hstep_le : ∀ t, ∑ k, (thetaHat (t + 1) k - thetaHat t k) ^ 2 ≤
+      K * (deadZone Delta (e (t + 1))) ^ 2)
+    (herr : Filter.Tendsto (fun t ↦ deadZone Delta (e (t + 1))) Filter.atTop (𝓝 0)) :
+    Filter.Tendsto (fun t ↦ ∑ k, (thetaHat (t + 1) k - thetaHat t k) ^ 2)
+      Filter.atTop (𝓝 0) := by
+  have hg : Filter.Tendsto (fun t ↦ K * (deadZone Delta (e (t + 1))) ^ 2)
+      Filter.atTop (𝓝 0) :=
+    by simpa using (herr.pow 2).const_mul K
+  exact squeeze_zero (fun t ↦ Finset.sum_nonneg (fun k _ ↦ sq_nonneg _)) hstep_le hg
+
+/-- **Robust parametric convergence under persistent excitation.** Assume the
+dead-zone PAA step bound
+`∑ k, (θ̂(t+1) k − θ̂(t) k)² ≤ K · (deadZone Δ (φ(t)ᵀθ̃(t)))²`,
+that the dead-zoned prediction error `deadZone Δ (φ(t)ᵀθ̃(t))` tends to `0` along
+with the prediction error `φ(t)ᵀθ̃(t)`, that the regressor is bounded,
+`‖φ(t)‖² ≤ Mphi`, and that `φ` is persistently exciting with level `alpha > 0`.
+Then the parameter-error norm tends to `0`, `‖θ(t) − θ̂(t)‖² → 0`.
+
+The step bound and the dead-zoned-error limit give, through
+`robust_direct_param_step_tendsto_zero` (applied to the shifted error sequence
+`e`), the vanishing increments `‖θ̃(t+1) − θ̃(t)‖² → 0` required by Landau
+Theorem 3.5. Persistent excitation, the bounded regressor and the vanishing
+prediction error then feed `pe_parameter_convergence_dynamic` with
+`θ̃(t) = θ − θ̂(t)`, yielding the conclusion. -/
+theorem robust_direct_pe_parameter_convergence {n N : ℕ} (phi : ℕ → Fin n → ℝ)
+    (theta : Fin n → ℝ) (thetaHat : ℕ → Fin n → ℝ) {alpha Delta K : ℝ}
+    (halpha : 0 < alpha)
+    (hPE : ∀ t, ∀ v : Fin n → ℝ,
+      alpha * ∑ k, v k ^ 2 ≤ ∑ j : Fin N, (∑ k, phi (t + j.val) k * v k) ^ 2)
+    (hphi : ∃ Mphi, ∀ t, ∑ k, (phi t k) ^ 2 ≤ Mphi)
+    (herr : Filter.Tendsto (fun t ↦ ∑ k, phi t k * (theta k - thetaHat t k))
+      Filter.atTop (𝓝 0))
+    (hstep_le : ∀ t, ∑ k, (thetaHat (t + 1) k - thetaHat t k) ^ 2 ≤
+      K * (deadZone Delta (∑ k, phi t k * (theta k - thetaHat t k))) ^ 2)
+    (hdz_err : Filter.Tendsto
+      (fun t ↦ deadZone Delta (∑ k, phi t k * (theta k - thetaHat t k)))
+      Filter.atTop (𝓝 0)) :
+    Filter.Tendsto (fun t ↦ ∑ k, (theta k - thetaHat t k) ^ 2) Filter.atTop (𝓝 0) := by
+  let e : ℕ → ℝ := fun t ↦ ∑ k, phi (t - 1) k * (theta k - thetaHat (t - 1) k)
+  have he : ∀ t, e (t + 1) = ∑ k, phi t k * (theta k - thetaHat t k) := by
+    intro t
+    simp only [e, Nat.add_sub_cancel]
+  have hstep_le' : ∀ t, ∑ k, (thetaHat (t + 1) k - thetaHat t k) ^ 2 ≤
+      K * (deadZone Delta (e (t + 1))) ^ 2 := by
+    intro t
+    rw [he t]
+    exact hstep_le t
+  have hdz : Filter.Tendsto (fun t ↦ deadZone Delta (e (t + 1))) Filter.atTop (𝓝 0) :=
+    Filter.Tendsto.congr' (Filter.Eventually.of_forall (fun t ↦ by
+      change deadZone Delta (∑ k, phi t k * (theta k - thetaHat t k)) =
+        deadZone Delta (e (t + 1))
+      rw [he t])) hdz_err
+  have hstep := robust_direct_param_step_tendsto_zero thetaHat e Delta K hstep_le' hdz
+  let thetaTilde : ℕ → Fin n → ℝ := fun t k ↦ theta k - thetaHat t k
+  have hstepTilde : Filter.Tendsto
+      (fun t ↦ ∑ k, (thetaTilde (t + 1) k - thetaTilde t k) ^ 2) Filter.atTop (𝓝 0) :=
+    Filter.Tendsto.congr' (Filter.Eventually.of_forall (fun t ↦ by
+      apply Finset.sum_congr rfl
+      intro k _
+      simp only [thetaTilde]
+      ring)) hstep
+  have hherr' : Filter.Tendsto (fun t ↦ ∑ k, phi t k * thetaTilde t k) Filter.atTop (𝓝 0) :=
+    Filter.Tendsto.congr' (Filter.Eventually.of_forall (fun t ↦ by
+      apply Finset.sum_congr rfl
+      intro k _
+      simp only [thetaTilde])) herr
+  have hconv := pe_parameter_convergence_dynamic phi thetaTilde halpha hPE hherr' hstepTilde hphi
+  simpa only [thetaTilde] using hconv
