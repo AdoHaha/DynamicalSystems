@@ -6,6 +6,8 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.AdaptiveControl.BoundedGrowth
+public import DynamicalSystems.DiscreteTime.Lyapunov
+public import DynamicalSystems.Estimation.Normalization
 
 /-! # Direct adaptive control: the normalized performance error and Theorem 11.1
 
@@ -94,3 +96,51 @@ theorem direct_adaptive_stability {x e : ℕ → ℝ} (hx : ∀ t, 0 ≤ x t) (h
       exact div_le_self (sq_nonneg _) (by nlinarith [sq_nonneg (x t)])
     · exact hsq
   exact bounded_growth hx he hC1 hC2 D hbound hlim
+
+/-- **The dissipation lemma behind (11.25).** If the Lyapunov sequence `V` is
+non-negative and decreases at each step by the normalized squared performance error,
+`V (t + 1) ≤ V t − (e (t+D+1))² / (1 + (x t)²)`, then that decay rate is summable
+and hence tends to `0`: `(e (t+D+1))² / (1 + (x t)²) → 0`.
+
+This is the non-circular bridge from the PAA dissipation to the Bounded Growth
+Lemma: the rate `w t = (e (t+D+1))² / (1 + (x t)²)` is non-negative, so
+`tendsto_zero_of_succ_le_sub` applies directly. -/
+theorem normalized_error_tendsto_zero_of_lyapunov {V e x : ℕ → ℝ} (D : ℕ)
+    (hV : ∀ t, 0 ≤ V t)
+    (hstep : ∀ t, V (t + 1) ≤ V t - (e (t + D + 1)) ^ 2 / (1 + (x t) ^ 2)) :
+    Filter.Tendsto (fun t ↦ (e (t + D + 1)) ^ 2 / (1 + (x t) ^ 2)) Filter.atTop (𝓝 0) :=
+  tendsto_zero_of_succ_le_sub hV
+    (fun t ↦ div_nonneg (sq_nonneg _) (by positivity)) hstep
+
+/-- **Theorem 11.1 (direct adaptive control) from the PAA dissipation.** Assume the
+growth bound (11.24) `x t ≤ C₁ + C₂ · max_{k ≤ t+D+1} e k` and the PAA dissipation
+`V (t + 1) ≤ V t − (e (t+D+1))² / (1 + (x t)²)` with `V ≥ 0`. Then `x` is bounded
+(11.26) and the a priori performance error tends to `0`, `e (t+D+1) → 0` (11.27).
+
+The normalized error limit (11.25) is supplied by
+`normalized_error_tendsto_zero_of_lyapunov`, and the Bounded Growth Lemma
+`bounded_growth` then yields both conclusions. -/
+theorem direct_adaptive_stability_of_dissipation {V x e : ℕ → ℝ} (hV : ∀ t, 0 ≤ V t)
+    (hx : ∀ t, 0 ≤ x t) (he : ∀ t, 0 ≤ e t) {C1 C2 : ℝ} (hC1 : 0 < C1) (hC2 : 0 < C2)
+    (D : ℕ)
+    (hbound : ∀ t, x t ≤ C1 + C2 * (Finset.range (t + D + 2)).sup' (by simp) e)
+    (hstep : ∀ t, V (t + 1) ≤ V t - (e (t + D + 1)) ^ 2 / (1 + (x t) ^ 2)) :
+    (∃ M, ∀ t, x t ≤ M) ∧ Filter.Tendsto (fun t ↦ e (t + D + 1)) Filter.atTop (𝓝 0) :=
+  bounded_growth hx he hC1 hC2 D hbound
+    (normalized_error_tendsto_zero_of_lyapunov D hV hstep)
+
+/-- **Normalized-error square identity (data normalization).** Dividing a scalar by
+the normalizing signal `normalizer phi = √(1 + ∑ k, (phi k)²)` squares to division
+by `1 + ∑ k, (phi k)²`:
+`(ν / normalizer φ)² = ν² / (1 + ∑ k, (φ k)²)`.
+
+This rewrites the normalized squared error of the robust direct adaptive control
+scheme (Sect. 11.5.3) into the denominator `1 + ‖φ‖²` used by (11.25). -/
+theorem normalized_error_sq_eq {n : ℕ} (nu : ℝ) (phi : Fin n → ℝ) :
+    (nu / normalizer phi) ^ 2 = nu ^ 2 / (1 + ∑ k, (phi k) ^ 2) := by
+  have hnn : 0 ≤ 1 + ∑ k, (phi k) ^ 2 := by
+    have hsum : 0 ≤ ∑ k, (phi k) ^ 2 := Finset.sum_nonneg fun k _ ↦ sq_nonneg (phi k)
+    linarith
+  have hsq : normalizer phi ^ 2 = 1 + ∑ k, (phi k) ^ 2 := by
+    rw [normalizer, Real.sq_sqrt hnn]
+  rw [div_pow, hsq]
