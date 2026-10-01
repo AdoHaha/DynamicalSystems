@@ -23,6 +23,8 @@ unrelated notion.
 ## Main definitions
 
 * `weightedDilation`: the weighted dilation `d_λ x = fun i ↦ λ ^ (r i) * x i`.
+* `IsHomogeneousFunction`: degree-`q` homogeneity of a scalar function.
+* `IsHomogeneousVectorField`: degree-`q` homogeneity of a vector field.
 
 ## Main results
 
@@ -30,6 +32,10 @@ unrelated notion.
 * `weightedDilation_mul`: `d_{λμ} = d_λ ∘ d_μ` for `λ, μ > 0`.
 * `weightedDilation_add`: `d_λ` is additive.
 * `weightedDilation_smul`: `d_λ` is homogeneous over scalar multiplication.
+* `IsHomogeneousFunction.add`, `.const_mul`, `.mul`: the homogeneous scalar functions
+  of a fixed degree (of degrees adding, for `.mul`) form a graded algebra.
+* `IsHomogeneousVectorField.add`, `.const_smul`: homogeneous vector fields of a fixed
+  degree form a module.
 -/
 
 @[expose] public section
@@ -71,3 +77,60 @@ theorem weightedDilation_smul (r : ι → ℝ) (l c : ℝ) (x : ι → ℝ) :
   funext i
   simp only [weightedDilation, Pi.smul_apply, smul_eq_mul]
   ring
+
+/-- A scalar function `g` is **homogeneous of degree `q`** with respect to the weights
+`r` if `g (d_λ x) = λ ^ q * g x` for every `λ > 0`. -/
+def IsHomogeneousFunction (g : (ι → ℝ) → ℝ) (r : ι → ℝ) (q : ℝ) : Prop :=
+  ∀ l, 0 < l → ∀ x, g (weightedDilation r l x) = l ^ q * g x
+
+/-- A vector field `f` is **homogeneous of degree `q`** with respect to the weights `r`
+if `f (d_λ x) = λ ^ q • d_λ (f x)` for every `λ > 0`. -/
+def IsHomogeneousVectorField (f : (ι → ℝ) → (ι → ℝ)) (r : ι → ℝ) (q : ℝ) : Prop :=
+  ∀ l, 0 < l → ∀ x, f (weightedDilation r l x) = l ^ q • weightedDilation r l (f x)
+
+/-- The sum of two functions homogeneous of the same degree is homogeneous of that
+degree. -/
+theorem IsHomogeneousFunction.add {g h : (ι → ℝ) → ℝ} {r : ι → ℝ} {q : ℝ}
+    (hg : IsHomogeneousFunction g r q) (hh : IsHomogeneousFunction h r q) :
+    IsHomogeneousFunction (fun x ↦ g x + h x) r q := by
+  intro l hl x
+  change g (weightedDilation r l x) + h (weightedDilation r l x) = l ^ q * (g x + h x)
+  rw [hg l hl x, hh l hl x]
+  ring
+
+/-- A constant multiple of a homogeneous function is homogeneous of the same degree. -/
+theorem IsHomogeneousFunction.const_mul (c : ℝ) {g : (ι → ℝ) → ℝ} {r : ι → ℝ} {q : ℝ}
+    (hg : IsHomogeneousFunction g r q) :
+    IsHomogeneousFunction (fun x ↦ c * g x) r q := by
+  intro l hl x
+  change c * g (weightedDilation r l x) = l ^ q * (c * g x)
+  rw [hg l hl x]
+  ring
+
+/-- The pointwise product of homogeneous functions of degrees `p` and `q` is homogeneous
+of degree `p + q`. -/
+theorem IsHomogeneousFunction.mul {g h : (ι → ℝ) → ℝ} {r : ι → ℝ} {p q : ℝ}
+    (hg : IsHomogeneousFunction g r p) (hh : IsHomogeneousFunction h r q) :
+    IsHomogeneousFunction (fun x ↦ g x * h x) r (p + q) := by
+  intro l hl x
+  change g (weightedDilation r l x) * h (weightedDilation r l x) = l ^ (p + q) * (g x * h x)
+  rw [hg l hl x, hh l hl x, Real.rpow_add hl]
+  ring
+
+/-- The sum of two vector fields homogeneous of the same degree is homogeneous of that
+degree. -/
+theorem IsHomogeneousVectorField.add {f F : (ι → ℝ) → (ι → ℝ)} {r : ι → ℝ} {q : ℝ}
+    (hf : IsHomogeneousVectorField f r q) (hF : IsHomogeneousVectorField F r q) :
+    IsHomogeneousVectorField (fun x ↦ f x + F x) r q := by
+  intro l hl x
+  change f (weightedDilation r l x) + F (weightedDilation r l x)
+    = l ^ q • weightedDilation r l (f x + F x)
+  rw [hf l hl x, hF l hl x, weightedDilation_add, smul_add]
+
+/-- A constant multiple of a homogeneous vector field is homogeneous of the same degree. -/
+theorem IsHomogeneousVectorField.const_smul (c : ℝ) {f : (ι → ℝ) → (ι → ℝ)}
+    {r : ι → ℝ} {q : ℝ} (hf : IsHomogeneousVectorField f r q) :
+    IsHomogeneousVectorField (fun x ↦ c • f x) r q := by
+  intro l hl x
+  change c • f (weightedDilation r l x) = l ^ q • weightedDilation r l (c • f x)
+  rw [hf l hl x, weightedDilation_smul, smul_comm]
