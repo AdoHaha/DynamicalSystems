@@ -11,6 +11,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.Calculus.Deriv.Add
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pi
+public import DynamicalSystems.Control.Calculus
 public import DynamicalSystems.Control.Adaptive.MRAC
 public import DynamicalSystems.Linear.LyapunovEquation
 public import DynamicalSystems.Stability.Projection
@@ -106,57 +107,6 @@ The calculus and algebra helpers below are compact private copies of the ones
 used by `DynamicalSystems.Control.Adaptive.MRAC`; they are generalized to an
 arbitrary finite index type so that they serve both the state space `Fin n` and
 the parameter space `Fin p`. -/
-
-/-- Product rule for the dot product of two vector trajectories. -/
-private theorem hasDerivAt_dotProduct
-    {ι : Type*} [Fintype ι]
-    {u v : ℝ → (ι → ℝ)} {u' v' : ι → ℝ} {t : ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ (u s) ⬝ᵥ (v s)) (u' ⬝ᵥ (v t) + (u t) ⬝ᵥ v') t := by
-  simp only [dotProduct]
-  have h : HasDerivAt (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i)
-      (∑ i ∈ (Finset.univ : Finset ι), (u' i * v t i + u t i * v' i)) t :=
-    HasDerivAt.sum (fun i _ ↦ (hu i).mul (hv i))
-  have hfun : (fun s ↦ ∑ i, u s i * v s i) =
-      (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h.congr_deriv Finset.sum_add_distrib
-
-/-- Differentiating a constant matrix product `s ↦ M *ᵥ u s` coordinate-wise. -/
-private theorem hasDerivAt_mulVec {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) (i : ι) :
-    HasDerivAt (fun s ↦ (M *ᵥ (u s)) i) ((M *ᵥ u') i) t := by
-  simp only [Matrix.mulVec, dotProduct]
-  have h : HasDerivAt (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j)
-      (∑ j ∈ (Finset.univ : Finset ι), M i j * u' j) t :=
-    HasDerivAt.sum (fun j _ ↦ (hu j).const_mul (M i j))
-  have hfun : (fun s ↦ ∑ x, M i x * u s x) =
-      (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h
-
-/-- Derivative of a quadratic form `s ↦ (1/2) * (u s ⬝ᵥ (M *ᵥ u s))` along a
-vector trajectory for a symmetric matrix `M`. -/
-private theorem hasDerivAt_half_quadratic_form {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) (hM_symm : Mᵀ = M)
-    {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) :
-    HasDerivAt (fun s ↦ (1 / 2 : ℝ) * ((u s) ⬝ᵥ (M *ᵥ (u s)))) ((u t) ⬝ᵥ (M *ᵥ u')) t := by
-  have hw : ∀ j, HasDerivAt (fun s ↦ (M *ᵥ (u s)) j) ((M *ᵥ u') j) t :=
-    fun j ↦ hasDerivAt_mulVec M hu j
-  have hdp := hasDerivAt_dotProduct hu hw
-  have hsym : u' ⬝ᵥ (M *ᵥ (u t)) = (u t) ⬝ᵥ (M *ᵥ u') := by
-    have h := Matrix.dotProduct_transpose_mulVec M u' (u t)
-    rwa [hM_symm] at h
-  refine (hdp.const_mul (1 / 2 : ℝ)).congr_deriv ?_
-  rw [hsym]
-  ring
 
 /-- Transpose swap identity for the state-error coupling with parameter
 uncertainty: for symmetric `P`, the scalar

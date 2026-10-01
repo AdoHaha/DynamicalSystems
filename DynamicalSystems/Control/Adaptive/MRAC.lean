@@ -11,6 +11,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.Calculus.Deriv.Add
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pi
+public import DynamicalSystems.Control.Calculus
 public import DynamicalSystems.Linear.LyapunovEquation
 public import DynamicalSystems.Stability.Barbalat
 
@@ -161,56 +162,6 @@ private theorem mrac_adaptation_cancellation
   congr 1
   rw [Matrix.mulVec_mulVec, hGamma_inv, Matrix.one_mulVec]
 
-/-- Product rule for the dot product of two vector trajectories. -/
-private theorem hasDerivAt_dotProduct
-    {u v : ℝ → (Fin n → ℝ)} {u' v' : Fin n → ℝ} {t : ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ (u s) ⬝ᵥ (v s)) (u' ⬝ᵥ (v t) + (u t) ⬝ᵥ v') t := by
-  simp only [dotProduct]
-  have h : HasDerivAt (∑ i ∈ (Finset.univ : Finset (Fin n)), fun s ↦ u s i * v s i)
-      (∑ i ∈ (Finset.univ : Finset (Fin n)), (u' i * v t i + u t i * v' i)) t :=
-    HasDerivAt.sum (fun i _ ↦ (hu i).mul (hv i))
-  have hfun : (fun s ↦ ∑ i, u s i * v s i) =
-      (∑ i ∈ (Finset.univ : Finset (Fin n)), fun s ↦ u s i * v s i) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h.congr_deriv Finset.sum_add_distrib
-
-/-- Differentiating a constant matrix product `s ↦ M *ᵥ u s` coordinate-wise. -/
-private theorem hasDerivAt_mulVec
-    (M : Matrix (Fin n) (Fin n) ℝ) {u : ℝ → (Fin n → ℝ)} {u' : Fin n → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) (i : Fin n) :
-    HasDerivAt (fun s ↦ (M *ᵥ (u s)) i) ((M *ᵥ u') i) t := by
-  simp only [Matrix.mulVec, dotProduct]
-  have h : HasDerivAt (∑ j ∈ (Finset.univ : Finset (Fin n)), fun s ↦ M i j * u s j)
-      (∑ j ∈ (Finset.univ : Finset (Fin n)), M i j * u' j) t :=
-    HasDerivAt.sum (fun j _ ↦ (hu j).const_mul (M i j))
-  have hfun : (fun s ↦ ∑ x, M i x * u s x) =
-      (∑ j ∈ (Finset.univ : Finset (Fin n)), fun s ↦ M i j * u s j) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h
-
-/-- Derivative of a quadratic form `s ↦ (1/2) * (u s ⬝ᵥ (M *ᵥ u s))` along a
-vector trajectory for a symmetric matrix `M`. -/
-private theorem hasDerivAt_half_quadratic_form
-    (M : Matrix (Fin n) (Fin n) ℝ) (hM_symm : Mᵀ = M)
-    {u : ℝ → (Fin n → ℝ)} {u' : Fin n → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) :
-    HasDerivAt (fun s ↦ (1 / 2 : ℝ) * ((u s) ⬝ᵥ (M *ᵥ (u s)))) ((u t) ⬝ᵥ (M *ᵥ u')) t := by
-  have hw : ∀ j, HasDerivAt (fun s ↦ (M *ᵥ (u s)) j) ((M *ᵥ u') j) t :=
-    fun j ↦ hasDerivAt_mulVec M hu j
-  have hdp := hasDerivAt_dotProduct hu hw
-  have hsym : u' ⬝ᵥ (M *ᵥ (u t)) = (u t) ⬝ᵥ (M *ᵥ u') := by
-    have h := Matrix.dotProduct_transpose_mulVec M u' (u t)
-    rwa [hM_symm] at h
-  refine (hdp.const_mul (1 / 2 : ℝ)).congr_deriv ?_
-  rw [hsym]
-  ring
-
 /-- Bridge from the matrix Lyapunov equation to the Lyapunov derivative: if
 `Aₘᵀ * P + P * Aₘ = -(2 • Q)` and `P` is symmetric, then
 `e ⬝ᵥ (P *ᵥ (Aₘ *ᵥ e)) = -(e ⬝ᵥ (Q *ᵥ e))`
@@ -273,17 +224,6 @@ theorem mrac_lyapunov_hasDerivAt
   rw [mrac_lyapunov_derivative_algebra hlyap hP_symm (e t)]
   ring
 
-/-- Positive semidefiniteness of a quadratic form for a positive definite real
-matrix. -/
-private theorem posDef_dotProduct_nonneg {M : Matrix (Fin n) (Fin n) ℝ}
-    (hM : M.PosDef) (x : Fin n → ℝ) : 0 ≤ x ⬝ᵥ (M *ᵥ x) := by
-  rcases eq_or_ne x 0 with hx | hx
-  · subst hx
-    simp
-  · exact le_of_lt (by
-      have h := (Matrix.posDef_iff_dotProduct_mulVec.mp hM).2 hx
-      simpa only [Pi.star_apply, star_trivial] using h)
-
 /-- The composite Lyapunov candidate is nonnegative when `P` and `Γ⁻¹` are
 positive definite. -/
 private theorem mrac_V_nonneg {P : Matrix (Fin n) (Fin n) ℝ}
@@ -293,12 +233,6 @@ private theorem mrac_V_nonneg {P : Matrix (Fin n) (Fin n) ℝ}
   have h2 := posDef_dotProduct_nonneg hG theta_tilde
   simp only [mrac_V]
   nlinarith [h1, h2]
-
-/-- Hermitian parts of positive definite real matrices are symmetric. -/
-private theorem posDef_transpose_eq {M : Matrix (Fin n) (Fin n) ℝ} (hM : M.PosDef) :
-    Mᵀ = M := by
-  have h := hM.1.eq
-  rwa [Matrix.conjTranspose_eq_transpose_of_trivial] at h
 
 /-- Convergence of the dissipation rate `e(t) ⬝ᵥ (Q *ᵥ e(t)) → 0` as `t → ∞`
 via the LaSalle–Yoshizawa / Barbălat bridge (Kabziński–Mosiołek, equation 5.52).

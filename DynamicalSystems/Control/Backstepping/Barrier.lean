@@ -16,6 +16,7 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.Real.Sqrt
 public import Mathlib.Topology.Order.IntermediateValue
+public import DynamicalSystems.Control.Calculus
 public import DynamicalSystems.Stability.Barbalat
 public import DynamicalSystems.Stability.Comparison
 
@@ -286,74 +287,6 @@ noncomputable def barrier_V2
 The calculus and algebra helpers below follow the compact private copies used by
 `DynamicalSystems.Control.Backstepping.Tuning`. -/
 
-/-- Product rule for the dot product of two vector trajectories. -/
-private theorem hasDerivAt_dotProduct {ι : Type*} [Fintype ι]
-    {u v : ℝ → (ι → ℝ)} {u' v' : ι → ℝ} {t : ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ (u s) ⬝ᵥ (v s)) (u' ⬝ᵥ (v t) + (u t) ⬝ᵥ v') t := by
-  simp only [dotProduct]
-  have h : HasDerivAt (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i)
-      (∑ i ∈ (Finset.univ : Finset ι), (u' i * v t i + u t i * v' i)) t :=
-    HasDerivAt.sum (fun i _ ↦ (hu i).mul (hv i))
-  have hfun : (fun s ↦ ∑ i, u s i * v s i) =
-      (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h.congr_deriv Finset.sum_add_distrib
-
-/-- Differentiating a constant matrix-vector product `s ↦ M *ᵥ u s`
-coordinate-wise. -/
-private theorem hasDerivAt_mulVec {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) (i : ι) :
-    HasDerivAt (fun s ↦ (M *ᵥ (u s)) i) ((M *ᵥ u') i) t := by
-  simp only [Matrix.mulVec, dotProduct]
-  have h : HasDerivAt (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j)
-      (∑ j ∈ (Finset.univ : Finset ι), M i j * u' j) t :=
-    HasDerivAt.sum (fun j _ ↦ (hu j).const_mul (M i j))
-  have hfun : (fun s ↦ ∑ x, M i x * u s x) =
-      (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h
-
-/-- Derivative of a quadratic form `s ↦ (1/2) * (u s ⬝ᵥ (M *ᵥ u s))` along a
-vector trajectory for a symmetric matrix `M`. -/
-private theorem hasDerivAt_half_quadratic_form {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) (hM_symm : Mᵀ = M)
-    {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) :
-    HasDerivAt (fun s ↦ (1 / 2 : ℝ) * ((u s) ⬝ᵥ (M *ᵥ (u s)))) ((u t) ⬝ᵥ (M *ᵥ u')) t := by
-  have hw : ∀ j, HasDerivAt (fun s ↦ (M *ᵥ (u s)) j) ((M *ᵥ u') j) t :=
-    fun j ↦ hasDerivAt_mulVec M hu j
-  have hdp := hasDerivAt_dotProduct hu hw
-  have hsym : u' ⬝ᵥ (M *ᵥ (u t)) = (u t) ⬝ᵥ (M *ᵥ u') := by
-    have h := Matrix.dotProduct_transpose_mulVec M u' (u t)
-    rwa [hM_symm] at h
-  refine (hdp.const_mul (1 / 2 : ℝ)).congr_deriv ?_
-  rw [hsym]
-  ring
-
-/-- Positive semidefiniteness of a quadratic form for a positive definite real
-matrix. -/
-private theorem posDef_dotProduct_nonneg {M : Matrix (Fin p) (Fin p) ℝ}
-    (hM : M.PosDef) (x : Fin p → ℝ) : 0 ≤ x ⬝ᵥ (M *ᵥ x) := by
-  rcases eq_or_ne x 0 with hx | hx
-  · subst hx
-    simp
-  · exact le_of_lt (by
-      have h := (Matrix.posDef_iff_dotProduct_mulVec.mp hM).2 hx
-      simpa only [Pi.star_apply, star_trivial] using h)
-
-/-- Hermitian parts of positive definite real matrices are symmetric. -/
-private theorem posDef_transpose_eq {M : Matrix (Fin p) (Fin p) ℝ} (hM : M.PosDef) :
-    Mᵀ = M := by
-  have h := hM.1.eq
-  rwa [Matrix.conjTranspose_eq_transpose_of_trivial] at h
-
 /-- The logarithmic BLF is dominated by the composite candidate `barrier_V2`. -/
 private theorem barrier_V1_le_V2 {Gamma_inv : Matrix (Fin p) (Fin p) ℝ}
     (hG : Gamma_inv.PosDef) (kb e1 e2 : ℝ) (theta_tilde : Fin p → ℝ) :
@@ -373,24 +306,10 @@ private theorem barrier_V2_nonneg {Gamma_inv : Matrix (Fin p) (Fin p) ℝ}
     0 ≤ barrier_V2 Gamma_inv kb e1 e2 theta_tilde :=
   (barrier_V1_nonneg kb e1 hkb he1).trans (barrier_V1_le_V2 hG kb e1 e2 theta_tilde)
 
-/-- Exact parameter-adaptation cancellation: with the adaptation law
-`θ̂' = Γ *ᵥ (e₂ • ϕ)` and `Γ⁻¹ * Γ = 1`, the parameter-error derivative term
-`θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals `-(e₂ * (θ̃ ⬝ᵥ ϕ))`
-(Kabziński–Mosiołek, equations 12.37 and 12.39). -/
-private theorem barrier_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (e2 : ℝ) (phi theta_tilde : Fin p → ℝ)
-    (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ (Gamma_inv *ᵥ (-(barrier_adaptation_law Gamma e2 phi))) =
-      -(e2 * (theta_tilde ⬝ᵥ phi)) := by
-  rw [barrier_adaptation_law, Matrix.mulVec_neg, dotProduct_neg]
-  congr 1
-  simp only [Matrix.mulVec_smul, Matrix.mulVec_mulVec, hGamma_inv, Matrix.one_mulVec,
-    dotProduct_smul, smul_eq_mul]
-
 /-- Exact non-quadratic cross-term cancellation between `V̇₁` and `e₂ ė₂`:
 `e₁ e₂ / (k_b² - e₁²) + e₂ (-e₁ / (k_b² - e₁²)) = 0`
 (Kabziński–Mosiołek, equation 12.40). -/
-theorem barrier_cross_term_cancel (kb e1 e2 : ℝ) :
+private theorem barrier_cross_term_cancel (kb e1 e2 : ℝ) :
     (e1 * e2) / (kb ^ 2 - e1 ^ 2) + e2 * (-(e1 / (kb ^ 2 - e1 ^ 2))) = 0 := by
   ring
 
@@ -471,8 +390,10 @@ theorem barrier_V2_hasDerivAt
       (1 / 2 : ℝ) * ((theta - theta_hat s) ⬝ᵥ (Gamma_inv *ᵥ (theta - theta_hat s))))
     (-k1 * (e1 t) ^ 2 / (kb ^ 2 - (e1 t) ^ 2) - k2 * (e2 t) ^ 2) t
   refine ((h1.add h2).add h3).congr_deriv ?_
-  rw [barrier_adaptation_cancellation Gamma Gamma_inv (e2 t) (phi t) (theta - theta_hat t)
-    hGamma_inv]
+  rw [barrier_adaptation_law,
+    adaptation_cancellation Gamma Gamma_inv ((e2 t) • (phi t)) (theta - theta_hat t)
+      hGamma_inv]
+  simp only [dotProduct_smul, smul_eq_mul]
   ring
 
 /-- Negative semidefiniteness and dissipation bound: along closed-loop

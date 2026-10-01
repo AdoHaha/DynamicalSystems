@@ -12,6 +12,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Add
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pow
 public import Mathlib.Analysis.Calculus.Deriv.Pi
+public import DynamicalSystems.Control.Calculus
 public import DynamicalSystems.Control.Backstepping.Tuning
 public import DynamicalSystems.Control.Adaptive.RobustMRAC
 public import DynamicalSystems.Stability.Projection
@@ -121,57 +122,6 @@ The calculus and algebra helpers below follow the compact private copies used by
 `DynamicalSystems.Control.Adaptive.RobustMRAC` and
 `DynamicalSystems.Control.Backstepping.Tuning`. -/
 
-/-- Product rule for the dot product of two vector trajectories. -/
-private theorem hasDerivAt_dotProduct {ι : Type*} [Fintype ι]
-    {u v : ℝ → (ι → ℝ)} {u' v' : ι → ℝ} {t : ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ (u s) ⬝ᵥ (v s)) (u' ⬝ᵥ (v t) + (u t) ⬝ᵥ v') t := by
-  simp only [dotProduct]
-  have h : HasDerivAt (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i)
-      (∑ i ∈ (Finset.univ : Finset ι), (u' i * v t i + u t i * v' i)) t :=
-    HasDerivAt.sum (fun i _ ↦ (hu i).mul (hv i))
-  have hfun : (fun s ↦ ∑ i, u s i * v s i) =
-      (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h.congr_deriv Finset.sum_add_distrib
-
-/-- Differentiating a constant matrix-vector product `s ↦ M *ᵥ u s`
-coordinate-wise. -/
-private theorem hasDerivAt_mulVec {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) (i : ι) :
-    HasDerivAt (fun s ↦ (M *ᵥ (u s)) i) ((M *ᵥ u') i) t := by
-  simp only [Matrix.mulVec, dotProduct]
-  have h : HasDerivAt (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j)
-      (∑ j ∈ (Finset.univ : Finset ι), M i j * u' j) t :=
-    HasDerivAt.sum (fun j _ ↦ (hu j).const_mul (M i j))
-  have hfun : (fun s ↦ ∑ x, M i x * u s x) =
-      (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h
-
-/-- Derivative of a quadratic form `s ↦ (1/2) * (u s ⬝ᵥ (M *ᵥ u s))` along a
-vector trajectory for a symmetric matrix `M`. -/
-private theorem hasDerivAt_half_quadratic_form {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) (hM_symm : Mᵀ = M)
-    {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) :
-    HasDerivAt (fun s ↦ (1 / 2 : ℝ) * ((u s) ⬝ᵥ (M *ᵥ (u s)))) ((u t) ⬝ᵥ (M *ᵥ u')) t := by
-  have hw : ∀ j, HasDerivAt (fun s ↦ (M *ᵥ (u s)) j) ((M *ᵥ u') j) t :=
-    fun j ↦ hasDerivAt_mulVec M hu j
-  have hdp := hasDerivAt_dotProduct hu hw
-  have hsym : u' ⬝ᵥ (M *ᵥ (u t)) = (u t) ⬝ᵥ (M *ᵥ u') := by
-    have h := Matrix.dotProduct_transpose_mulVec M u' (u t)
-    rwa [hM_symm] at h
-  refine (hdp.const_mul (1 / 2 : ℝ)).congr_deriv ?_
-  rw [hsym]
-  ring
-
 /-- Bilinear expansion of the second tuning function:
 `θ̃ ⬝ᵥ τ₂ = e₁ (θ̃ ⬝ᵥ ϕ₁) + e₂ (θ̃ ⬝ᵥ z₂)`
 (Kabziński–Mosiołek, equations 7.40 and 7.59). -/
@@ -180,35 +130,6 @@ private theorem tuning_cross_cancellation
     theta_tilde ⬝ᵥ (tuning_tau2 (tuning_tau1 e1 phi1) e2 z2) =
       e1 * (theta_tilde ⬝ᵥ phi1) + e2 * (theta_tilde ⬝ᵥ z2) := by
   simp only [tuning_tau2, tuning_tau1, dotProduct_add, dotProduct_smul, smul_eq_mul]
-
-/-- Exact parameter-adaptation cancellation for σ-modified tuning functions:
-with `θ̂' = robust_tuning_sigma_adaptation_law Γ τ σ θ̂` and `Γ⁻¹ * Γ = 1`, the
-parameter-error derivative term `θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals
-`-(θ̃ ⬝ᵥ τ) + σ * (θ̃ ⬝ᵥ θ̂)` (Kabziński–Mosiołek, equation 7.137). -/
-private theorem robust_tuning_sigma_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (tau : Fin p → ℝ) (sigma : ℝ)
-    (theta_tilde theta_hat : Fin p → ℝ) (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ
-        (Gamma_inv *ᵥ (-(robust_tuning_sigma_adaptation_law Gamma tau sigma theta_hat))) =
-      -(theta_tilde ⬝ᵥ tau) + sigma * (theta_tilde ⬝ᵥ theta_hat) := by
-  rw [robust_tuning_sigma_adaptation_law, Matrix.mulVec_neg, dotProduct_neg,
-    Matrix.mulVec_mulVec, hGamma_inv, Matrix.one_mulVec]
-  rw [dotProduct_sub, dotProduct_smul, smul_eq_mul]
-  ring
-
-/-- Exact parameter-adaptation cancellation for projected tuning functions: with
-`θ̂' = robust_tuning_proj_adaptation_law Γ θᵐ θᴹ τ θ̂` and `Γ⁻¹ * Γ = 1`, the
-parameter-error derivative term `θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals
-`-(θ̃ ⬝ᵥ Proj θᵐ θᴹ τ θ̂)` (Kabziński–Mosiołek, equation 7.167). -/
-private theorem robust_tuning_proj_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (mlo Mhi : Fin p → ℝ)
-    (tau : Fin p → ℝ) (theta_tilde theta_hat : Fin p → ℝ)
-    (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ
-        (Gamma_inv *ᵥ (-(robust_tuning_proj_adaptation_law Gamma mlo Mhi tau theta_hat))) =
-      -(theta_tilde ⬝ᵥ Proj mlo Mhi tau theta_hat) := by
-  rw [robust_tuning_proj_adaptation_law, Matrix.mulVec_neg, dotProduct_neg,
-    Matrix.mulVec_mulVec, hGamma_inv, Matrix.one_mulVec]
 
 /-! ### σ-modification theorems -/
 
@@ -253,9 +174,10 @@ theorem robust_tuning_sigma_lyapunov_hasDerivAt
       -(robust_tuning_sigma_adaptation_law Gamma
         (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) sigma
           (theta_hat t)) from rfl]
-  rw [robust_tuning_sigma_adaptation_cancellation Gamma Gamma_inv
-    (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) sigma
-    (theta - theta_hat t) (theta_hat t) hGamma_inv]
+  rw [robust_tuning_sigma_adaptation_law,
+    adaptation_sigma_cancellation Gamma Gamma_inv
+      (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t))
+      (theta - theta_hat t) (theta_hat t) sigma hGamma_inv]
   rw [tuning_cross_cancellation (e1 t) (e2 t) (phi1 t) (z2 t) (theta - theta_hat t)]
   ring
 
@@ -447,9 +369,10 @@ theorem robust_tuning_proj_lyapunov_hasDerivAt
       (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) (theta_hat t)) j) =
       -(robust_tuning_proj_adaptation_law Gamma mlo Mhi
         (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) (theta_hat t)) from rfl]
-  rw [robust_tuning_proj_adaptation_cancellation Gamma Gamma_inv mlo Mhi
-    (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) (theta - theta_hat t)
-    (theta_hat t) hGamma_inv]
+  rw [robust_tuning_proj_adaptation_law,
+    adaptation_proj_cancellation Gamma Gamma_inv mlo Mhi
+      (tuning_tau2 (tuning_tau1 (e1 t) (phi1 t)) (e2 t) (z2 t)) (theta - theta_hat t)
+      (theta_hat t) hGamma_inv]
   rw [dotProduct_sub, tuning_cross_cancellation (e1 t) (e2 t) (phi1 t) (z2 t)
     (theta - theta_hat t)]
   ring

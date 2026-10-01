@@ -12,6 +12,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Add
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pow
 public import Mathlib.Analysis.Calculus.Deriv.Pi
+public import DynamicalSystems.Control.Calculus
 public import DynamicalSystems.Control.Backstepping.Tuning
 public import DynamicalSystems.Stability.Comparison
 public import DynamicalSystems.Stability.Barbalat

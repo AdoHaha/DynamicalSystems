@@ -12,6 +12,8 @@ public import Mathlib.Analysis.Calculus.Deriv.Add
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pow
 public import Mathlib.Analysis.Calculus.Deriv.Pi
+public import DynamicalSystems.Control.Calculus
+public import DynamicalSystems.Control.Backstepping.Tuning
 public import DynamicalSystems.Stability.Barbalat
 public import DynamicalSystems.Stability.Comparison
 public import DynamicalSystems.Stability.UltimateBoundedness
@@ -224,8 +226,7 @@ def saturated_sigma_adaptation_law
 noncomputable def saturated_Vz
     (Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (z1 z2 : ℝ)
     (theta_tilde : Fin p → ℝ) : ℝ :=
-  (1 / 2 : ℝ) * z1 ^ 2 + (1 / 2 : ℝ) * z2 ^ 2 +
-    (1 / 2 : ℝ) * (theta_tilde ⬝ᵥ (Gamma_inv *ᵥ theta_tilde))
+  tuning_V2 Gamma_inv z1 z2 theta_tilde
 
 /-! ### Internal calculus and algebra helpers
 
@@ -235,72 +236,6 @@ The calculus and algebra helpers below follow the compact private copies used by
 `DynamicalSystems.Control.Backstepping.Tuning` and
 `DynamicalSystems.Control.Backstepping.Robust`. -/
 
-/-- Product rule for the dot product of two vector trajectories. -/
-private theorem hasDerivAt_dotProduct {ι : Type*} [Fintype ι]
-    {u v : ℝ → (ι → ℝ)} {u' v' : ι → ℝ} {t : ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ (u s) ⬝ᵥ (v s)) (u' ⬝ᵥ (v t) + (u t) ⬝ᵥ v') t := by
-  simp only [dotProduct]
-  have h : HasDerivAt (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i)
-      (∑ i ∈ (Finset.univ : Finset ι), (u' i * v t i + u t i * v' i)) t :=
-    HasDerivAt.sum (fun i _ ↦ (hu i).mul (hv i))
-  have hfun : (fun s ↦ ∑ i, u s i * v s i) =
-      (∑ i ∈ (Finset.univ : Finset ι), fun s ↦ u s i * v s i) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h.congr_deriv Finset.sum_add_distrib
-
-/-- Differentiating a constant matrix-vector product `s ↦ M *ᵥ u s` coordinate-wise. -/
-private theorem hasDerivAt_mulVec {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) (i : ι) :
-    HasDerivAt (fun s ↦ (M *ᵥ (u s)) i) ((M *ᵥ u') i) t := by
-  simp only [Matrix.mulVec, dotProduct]
-  have h : HasDerivAt (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j)
-      (∑ j ∈ (Finset.univ : Finset ι), M i j * u' j) t :=
-    HasDerivAt.sum (fun j _ ↦ (hu j).const_mul (M i j))
-  have hfun : (fun s ↦ ∑ x, M i x * u s x) =
-      (∑ j ∈ (Finset.univ : Finset ι), fun s ↦ M i j * u s j) := by
-    funext s
-    rw [Finset.sum_apply]
-  rw [hfun]
-  exact h
-
-/-- Derivative of a quadratic form `s ↦ (1/2) * (u s ⬝ᵥ (M *ᵥ u s))` along a vector
-trajectory for a symmetric matrix `M`. -/
-private theorem hasDerivAt_half_quadratic_form {ι : Type*} [Fintype ι]
-    (M : Matrix ι ι ℝ) (hM_symm : Mᵀ = M)
-    {u : ℝ → (ι → ℝ)} {u' : ι → ℝ} {t : ℝ}
-    (hu : ∀ j, HasDerivAt (fun s ↦ u s j) (u' j) t) :
-    HasDerivAt (fun s ↦ (1 / 2 : ℝ) * ((u s) ⬝ᵥ (M *ᵥ (u s)))) ((u t) ⬝ᵥ (M *ᵥ u')) t := by
-  have hw : ∀ j, HasDerivAt (fun s ↦ (M *ᵥ (u s)) j) ((M *ᵥ u') j) t :=
-    fun j ↦ hasDerivAt_mulVec M hu j
-  have hdp := hasDerivAt_dotProduct hu hw
-  have hsym : u' ⬝ᵥ (M *ᵥ (u t)) = (u t) ⬝ᵥ (M *ᵥ u') := by
-    have h := Matrix.dotProduct_transpose_mulVec M u' (u t)
-    rwa [hM_symm] at h
-  refine (hdp.const_mul (1 / 2 : ℝ)).congr_deriv ?_
-  rw [hsym]
-  ring
-
-/-- Positive semidefiniteness of a quadratic form for a positive definite real matrix. -/
-private theorem posDef_dotProduct_nonneg {M : Matrix (Fin p) (Fin p) ℝ}
-    (hM : M.PosDef) (x : Fin p → ℝ) : 0 ≤ x ⬝ᵥ (M *ᵥ x) := by
-  rcases eq_or_ne x 0 with hx | hx
-  · subst hx
-    simp
-  · exact le_of_lt (by
-      have h := (Matrix.posDef_iff_dotProduct_mulVec.mp hM).2 hx
-      simpa only [Pi.star_apply, star_trivial] using h)
-
-/-- Hermitian parts of positive definite real matrices are symmetric. -/
-private theorem posDef_transpose_eq {M : Matrix (Fin p) (Fin p) ℝ} (hM : M.PosDef) :
-    Mᵀ = M := by
-  have h := hM.1.eq
-  rwa [Matrix.conjTranspose_eq_transpose_of_trivial] at h
-
 /-- The composite Lyapunov candidate `saturated_Vz` is nonnegative when `Γ⁻¹` is positive
 definite. -/
 private theorem saturated_Vz_nonneg {Gamma_inv : Matrix (Fin p) (Fin p) ℝ}
@@ -309,47 +244,8 @@ private theorem saturated_Vz_nonneg {Gamma_inv : Matrix (Fin p) (Fin p) ℝ}
   have h1 : 0 ≤ z1 ^ 2 := sq_nonneg z1
   have h2 : 0 ≤ z2 ^ 2 := sq_nonneg z2
   have h3 := posDef_dotProduct_nonneg hG theta_tilde
-  simp only [saturated_Vz]
+  simp only [saturated_Vz, tuning_V2]
   nlinarith [h1, h2, h3]
-
-/-- Exact parameter-adaptation cancellation for the nominal saturated backstepping law:
-with `θ̂' = Γ *ᵥ (z₂ • ϕ)` and `Γ⁻¹ * Γ = 1`, the parameter-error derivative term
-`θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals `-(θ̃ ⬝ᵥ (z₂ • ϕ))`
-(Kabziński–Mosiołek, equation 10.42). -/
-private theorem saturated_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (z2 : ℝ) (phi theta_tilde : Fin p → ℝ)
-    (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ (Gamma_inv *ᵥ (-(saturated_adaptation_law Gamma z2 phi))) =
-      -(theta_tilde ⬝ᵥ (z2 • phi)) := by
-  rw [saturated_adaptation_law, Matrix.mulVec_neg, dotProduct_neg, Matrix.mulVec_mulVec,
-    hGamma_inv, Matrix.one_mulVec]
-
-/-- Exact parameter-adaptation cancellation for the projected saturated backstepping law:
-with `θ̂' = Γ *ᵥ Proj θᵐ θᴹ (z₂ • ϕ) θ̂` and `Γ⁻¹ * Γ = 1`, the parameter-error derivative
-term `θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals `-(θ̃ ⬝ᵥ Proj θᵐ θᴹ (z₂ • ϕ) θ̂)`. -/
-private theorem saturated_proj_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (mlo Mhi : Fin p → ℝ)
-    (z2 : ℝ) (phi theta_tilde theta_hat : Fin p → ℝ)
-    (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ
-        (Gamma_inv *ᵥ (-(saturated_proj_adaptation_law Gamma mlo Mhi z2 phi theta_hat))) =
-      -(theta_tilde ⬝ᵥ Proj mlo Mhi (z2 • phi) theta_hat) := by
-  rw [saturated_proj_adaptation_law, Matrix.mulVec_neg, dotProduct_neg, Matrix.mulVec_mulVec,
-    hGamma_inv, Matrix.one_mulVec]
-
-/-- Exact parameter-adaptation cancellation for the σ-modified saturated backstepping law:
-with `θ̂' = Γ *ᵥ (z₂ • ϕ - σ • θ̂)` and `Γ⁻¹ * Γ = 1`, the parameter-error derivative term
-`θ̃ ⬝ᵥ (Γ⁻¹ *ᵥ (-θ̂'))` equals `-(θ̃ ⬝ᵥ (z₂ • ϕ)) + σ * (θ̃ ⬝ᵥ θ̂)`. -/
-private theorem saturated_sigma_adaptation_cancellation
-    (Gamma Gamma_inv : Matrix (Fin p) (Fin p) ℝ) (z2 : ℝ) (phi : Fin p → ℝ) (sigma : ℝ)
-    (theta_tilde theta_hat : Fin p → ℝ) (hGamma_inv : Gamma_inv * Gamma = 1) :
-    theta_tilde ⬝ᵥ
-        (Gamma_inv *ᵥ (-(saturated_sigma_adaptation_law Gamma z2 phi sigma theta_hat))) =
-      -(theta_tilde ⬝ᵥ (z2 • phi)) + sigma * (theta_tilde ⬝ᵥ theta_hat) := by
-  rw [saturated_sigma_adaptation_law, Matrix.mulVec_neg, dotProduct_neg, Matrix.mulVec_mulVec,
-    hGamma_inv, Matrix.one_mulVec]
-  simp only [dotProduct_sub, dotProduct_smul, smul_eq_mul]
-  ring
 
 /-- Common core of the closed-loop Lyapunov derivative identities: for any vector field
 `w` representing the derivative of the parameter error `θ̃ = θ - θ̂`, the derivative of the
@@ -451,8 +347,9 @@ theorem saturated_Vz_hasDerivAt
     (w := -(saturated_adaptation_law Gamma (z2 t) (phi t)))
     hGamma_inv_symm hz1 hz2 hdiff
   refine h.congr_deriv ?_
-  rw [saturated_adaptation_cancellation Gamma Gamma_inv (z2 t) (phi t)
-    (theta - theta_hat t) hGamma_inv]
+  rw [saturated_adaptation_law,
+    adaptation_cancellation Gamma Gamma_inv ((z2 t) • (phi t))
+      (theta - theta_hat t) hGamma_inv]
   simp only [dotProduct_smul, smul_eq_mul]
   ring
 
@@ -574,8 +471,9 @@ private theorem saturated_Vz_proj_hasDerivAt
     (w := -(saturated_proj_adaptation_law Gamma mlo Mhi (z2 t) (phi t) (theta_hat t)))
     hGamma_inv_symm hz1 hz2 hdiff
   refine h.congr_deriv ?_
-  rw [saturated_proj_adaptation_cancellation Gamma Gamma_inv mlo Mhi (z2 t) (phi t)
-    (theta - theta_hat t) (theta_hat t) hGamma_inv]
+  rw [saturated_proj_adaptation_law,
+    adaptation_proj_cancellation Gamma Gamma_inv mlo Mhi ((z2 t) • (phi t))
+      (theta - theta_hat t) (theta_hat t) hGamma_inv]
   rw [dotProduct_sub, dotProduct_smul, smul_eq_mul]
   ring
 
@@ -635,8 +533,9 @@ private theorem saturated_Vz_sigma_hasDerivAt
     (w := -(saturated_sigma_adaptation_law Gamma (z2 t) (phi t) sigma (theta_hat t)))
     hGamma_inv_symm hz1 hz2 hdiff
   refine h.congr_deriv ?_
-  rw [saturated_sigma_adaptation_cancellation Gamma Gamma_inv (z2 t) (phi t) sigma
-    (theta - theta_hat t) (theta_hat t) hGamma_inv]
+  rw [saturated_sigma_adaptation_law,
+    adaptation_sigma_cancellation Gamma Gamma_inv ((z2 t) • (phi t))
+      (theta - theta_hat t) (theta_hat t) sigma hGamma_inv]
   simp only [dotProduct_smul, smul_eq_mul]
   ring
 
