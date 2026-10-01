@@ -37,6 +37,14 @@ differentiability they assert; no existence or uniqueness of trajectories is for
 * `Barbalat.adaptiveControl_error_tendsto_zero`: for any trajectory `(e, θ)` of the
   Hou–Duan–Guo system with `ω` continuous and bounded on `[0, ∞)`, the error `e t`
   tends to `0` as `t → ∞`.
+* `Barbalat.tendsto_deriv_zero_of_boundedBelow_of_uniformContinuousOn`: the Slotine–Li
+  theorem (Kabziński–Mosiołek, Theorem 3.6, scalar form).
+* `Barbalat.tendsto_zero_of_hasDerivAt_le_neg_of_boundedBelow_of_uniformContinuousOn`:
+  the inequality Lyapunov/Barbălat bridge (Kabziński–Mosiołek, Theorem 3.7, scalar form),
+  with `V' ≤ -w` and `V` bounded below forward in time.
+* `Barbalat.lasalle_yoshizawa_trajectory`: the LaSalle–Yoshizawa theorem
+  (Kabziński–Mosiołek, Theorem 3.7, trajectory form), a flow-level specialisation of the
+  scalar bridge.
 
 ## References
 
@@ -228,5 +236,172 @@ theorem adaptiveControl_error_tendsto_zero
   intro ε hε
   filter_upwards [habs ε hε] with t ht
   simpa only [Real.dist_eq, sub_zero, abs_abs] using ht
+
+/-- **The Slotine–Li theorem** (Kabziński–Mosiołek, Theorem 3.6, scalar trajectory form).
+Let `V : ℝ → ℝ` be bounded below, differentiable on `[0, ∞)` with nonpositive derivative
+`deriv V` there, and suppose that the decay rate `deriv V` is uniformly continuous on
+`[0, ∞)`. Then `deriv V t → 0` as `t → ∞`.
+
+The book's assumption is only that the candidate `V` is bounded below (forward in time, on
+`[0, ∞)`), whereas the core Barbălat lemma
+`tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn` requires it to be
+nonnegative. Subtracting a lower bound `c` from `V` produces the nonnegative
+`V' = V - c` with the same derivative `deriv V`, and the decay rate `w = -deriv V` is
+nonnegative, uniformly continuous, and has `V'` as an antiderivative there; applying the core
+lemma to `V'` and `w` and negating the conclusion gives the result. -/
+theorem tendsto_deriv_zero_of_boundedBelow_of_uniformContinuousOn
+    {V : ℝ → ℝ} (hV : BddBelow (V '' Set.Ici 0))
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt V (deriv V t) t)
+    (hmono : ∀ t, 0 ≤ t → deriv V t ≤ 0)
+    (huc : UniformContinuousOn (deriv V) (Set.Ici 0)) :
+    Tendsto (deriv V) atTop (𝓝 0) := by
+  obtain ⟨c, hc⟩ := hV
+  have hc' : ∀ t : ℝ, 0 ≤ t → c ≤ V t :=
+    fun t ht ↦ hc (mem_image_of_mem V ht)
+  let V' : ℝ → ℝ := fun t ↦ V t - c
+  let w : ℝ → ℝ := fun t ↦ -(deriv V t)
+  have hV'nonneg : ∀ t : ℝ, 0 ≤ t → 0 ≤ V' t := fun t ht ↦ sub_nonneg.mpr (hc' t ht)
+  have hw_nonneg : ∀ t : ℝ, 0 ≤ t → 0 ≤ w t := fun t ht ↦ neg_nonneg.mpr (hmono t ht)
+  have hV'deriv : ∀ t : ℝ, 0 ≤ t → HasDerivAt V' (-(w t)) t := by
+    intro t ht
+    simpa only [V', w, neg_neg] using (hderiv t ht).sub_const c
+  have hw_uc : UniformContinuousOn w (Set.Ici 0) :=
+    Real.uniformContinuous_neg.comp_uniformContinuousOn huc
+  have hw_tend : Tendsto w atTop (𝓝 0) :=
+    tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn
+      hV'nonneg hw_nonneg hV'deriv hw_uc
+  have hneg : Tendsto (fun t : ℝ ↦ -w t) atTop (𝓝 0) := by
+    simpa using hw_tend.neg
+  have hfun : (fun t : ℝ ↦ -w t) = deriv V := by
+    funext t
+    simp only [w, neg_neg]
+  rwa [hfun] at hneg
+
+/-- **Quadratic squeeze.** If `w → 0` and `c * (e t) ^ 2 ≤ w t` for all `t ≥ 0` with `c > 0`,
+then `e → 0`.
+
+This is the form in which Barbălat-type conclusions are consumed: a Lyapunov argument
+establishes `V̇ ≤ -(c * ‖e‖ ^ 2)` and hence `c * (e t) ^ 2 ≤ w t` for the decay rate `w`, and this
+lemma turns `w → 0` into `e → 0`. On `t ≥ 0` the hypothesis gives
+`0 ≤ (e t) ^ 2 ≤ w t / c`, so `(e t) ^ 2 → 0` by squeezing against the convergent `w t / c`; taking
+square roots via `Real.sqrt_sq_eq_abs` yields `|e t| → 0`, hence `e t → 0`. -/
+theorem tendsto_zero_of_tendsto_zero_of_sq_le {e w : ℝ → ℝ} {c : ℝ} (hc : 0 < c)
+    (hw : Tendsto w atTop (𝓝 0)) (hle : ∀ t, 0 ≤ t → c * (e t) ^ 2 ≤ w t) :
+    Tendsto e atTop (𝓝 0) := by
+  have hsq : Tendsto (fun t : ℝ ↦ (e t) ^ 2) atTop (𝓝 0) := by
+    have hwdiv : Tendsto (fun t : ℝ ↦ w t / c) atTop (𝓝 0) := by
+      simpa using hw.div_const c
+    refine squeeze_zero' (Eventually.of_forall fun t ↦ sq_nonneg (e t)) ?_ hwdiv
+    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+    rw [le_div_iff₀ hc]
+    simpa only [mul_comm] using hle t ht
+  rw [tendsto_zero_iff_norm_tendsto_zero]
+  have habs : Tendsto (fun t : ℝ ↦ |e t|) atTop (𝓝 0) := by
+    have hsqrt : Tendsto (fun t : ℝ ↦ Real.sqrt ((e t) ^ 2)) atTop (𝓝 0) := by
+      have h := (Real.continuous_sqrt.tendsto 0).comp hsq
+      rwa [Real.sqrt_zero] at h
+    simpa only [Real.sqrt_sq_eq_abs] using hsqrt
+  simpa only [Real.norm_eq_abs] using habs
+
+/-- **The inequality Lyapunov/Barbălat bridge** (Kabziński–Mosiołek, Theorem 3.7, scalar form;
+Krstić et al., Theorem A.8). Let `V w : ℝ → ℝ` be such that `V` is bounded below on `[0, ∞)`
+and `w` is nonnegative on `[0, ∞)`, with `V` differentiable on `[0, ∞)` and satisfying the
+differential inequality `deriv V t ≤ -(w t)` there. If `w` is uniformly continuous on `[0, ∞)`,
+then `w t → 0` as `t → ∞`.
+
+This generalizes the equality bridge
+`Barbalat.tendsto_zero_of_hasDerivAt_neg_of_nonneg_of_uniformContinuousOn` in two directions: it
+replaces the exact derivative `V' = -w` by the *inequality* `V' ≤ -w`, and it relaxes the
+nonnegativity assumption `0 ≤ V t` to forward-time boundedness from below
+`BddBelow (V '' Set.Ici 0)`. The inequality is what actually occurs in adaptive control, where
+parameter-adaptation cancellations and Cauchy–Schwarz bounds leave nonnegative slack.
+
+The proof extracts a lower bound `c ≤ V t` for `t ≥ 0`, forms the primitive
+`F t = ∫ x in 0..t, w x`, and bounds it above by `V 0 - c` using the fundamental-theorem-of-calculus
+inequality `intervalIntegral.sub_le_integral_of_hasDeriv_right_of_le_Ico`. Since `w ≥ 0`, `F` is
+nondecreasing and bounded above, hence convergent, and Barbălat's lemma
+`tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral_real` gives `w t → 0`. -/
+theorem tendsto_zero_of_hasDerivAt_le_neg_of_boundedBelow_of_uniformContinuousOn
+    {V w : ℝ → ℝ} (hV : BddBelow (V '' Set.Ici 0))
+    (hw : ∀ t, 0 ≤ t → 0 ≤ w t)
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt V (deriv V t) t)
+    (hineq : ∀ t, 0 ≤ t → deriv V t ≤ -(w t))
+    (huc : UniformContinuousOn w (Set.Ici 0)) :
+    Tendsto w atTop (𝓝 0) := by
+  obtain ⟨c, hc⟩ := hV
+  have hc' : ∀ t : ℝ, 0 ≤ t → c ≤ V t := fun t ht ↦ hc (mem_image_of_mem V ht)
+  have hcont : ContinuousOn w (Set.Ici 0) := huc.continuousOn
+  let F : ℝ → ℝ := fun t ↦ ∫ x in (0 : ℝ)..t, w x
+  -- The primitive `F` of the nonnegative `w` is nondecreasing on `[0, ∞)`.
+  have hFmono : ∀ {a b : ℝ}, 0 ≤ a → a ≤ b → F a ≤ F b := by
+    intro a b ha hab
+    have hInt1 : IntervalIntegrable w volume (0 : ℝ) a :=
+      ContinuousOn.intervalIntegrable_of_Icc ha (hcont.mono fun x hx ↦ hx.1)
+    have hInt2 : IntervalIntegrable w volume a b :=
+      ContinuousOn.intervalIntegrable_of_Icc hab (hcont.mono fun x hx ↦ le_trans ha hx.1)
+    have hadd := intervalIntegral.integral_add_adjacent_intervals hInt1 hInt2
+    have hnn : 0 ≤ ∫ x in a..b, w x := by
+      have hzero : (∫ x in a..b, (0 : ℝ)) = 0 := by simp
+      rw [← hzero]
+      exact intervalIntegral.integral_mono_on hab intervalIntegrable_const hInt2
+        fun x hx ↦ hw x (le_trans ha hx.1)
+    change (∫ x in (0 : ℝ)..a, w x) ≤ ∫ x in (0 : ℝ)..b, w x
+    linarith
+  -- The fundamental-theorem-of-calculus inequality bounds `F` by the drop in `V`.
+  have hFle : ∀ t : ℝ, 0 ≤ t → F t ≤ V 0 - c := by
+    intro t ht
+    have hcontV : ContinuousOn V (Set.Icc 0 t) :=
+      fun x hx ↦ (hderiv x hx.1).continuousAt.continuousWithinAt
+    have hderivV : ∀ x ∈ Set.Ico (0 : ℝ) t, HasDerivWithinAt V (deriv V x) (Set.Ioi x) x :=
+      fun x hx ↦ (hderiv x hx.1).hasDerivWithinAt
+    have hφcont : ContinuousOn (fun y : ℝ ↦ -(w y)) (Set.Icc 0 t) :=
+      (hcont.mono fun x hx ↦ hx.1).neg
+    have hφint : IntegrableOn (fun y : ℝ ↦ -(w y)) (Set.Icc 0 t) := hφcont.integrableOn_Icc
+    have hφg : ∀ x ∈ Set.Ico (0 : ℝ) t, deriv V x ≤ -(w x) := fun x hx ↦ hineq x hx.1
+    have h := intervalIntegral.sub_le_integral_of_hasDeriv_right_of_le_Ico
+      ht hcontV hderivV hφint hφg
+    rw [intervalIntegral.integral_neg] at h
+    change (∫ x in (0 : ℝ)..t, w x) ≤ V 0 - c
+    linarith [hc' t ht]
+  -- Clamp at `0` so that `tendsto_atTop_ciSup` applies to a globally monotone function.
+  let G : ℝ → ℝ := fun t ↦ F (max t 0)
+  have hGmono : Monotone G := by
+    intro a b hab
+    change F (max a 0) ≤ F (max b 0)
+    exact hFmono (le_max_right a 0) (max_le_max hab le_rfl)
+  have hGbdd : BddAbove (Set.range G) := by
+    refine ⟨V 0 - c, ?_⟩
+    rintro y ⟨t, rfl⟩
+    exact hFle (max t 0) (le_max_right t 0)
+  have hGtend : Tendsto G atTop (𝓝 (⨆ t, G t)) := tendsto_atTop_ciSup hGmono hGbdd
+  have hFeq : G =ᶠ[atTop] F := by
+    filter_upwards [eventually_ge_atTop (0 : ℝ)] with t ht
+    change F (max t 0) = F t
+    rw [max_eq_left ht]
+  have hconv : ∃ L, Tendsto F atTop (𝓝 L) := ⟨_, hGtend.congr' hFeq⟩
+  exact tendsto_zero_of_uniformContinuousOn_of_tendsto_intervalIntegral_real huc hconv
+
+/-- **The LaSalle–Yoshizawa theorem** (Kabziński–Mosiołek, Theorem 3.7, trajectory form).
+Let `Φ : ℝ → E → E` be a flow, `V : E → ℝ` a Lyapunov candidate whose forward evaluation
+`t ↦ V (Φ t x)` is bounded below on `[0, ∞)` and differentiable, and let `W : E → ℝ` be a
+state-space decay rate with `0 ≤ W (Φ t x)` and `deriv (fun s ↦ V (Φ s x)) t ≤ -(W (Φ t x))`
+for all `t ≥ 0`. If the decay signal `t ↦ W (Φ t x)` is uniformly continuous on `[0, ∞)`, then
+`W (Φ t x) → 0` as `t → ∞`.
+
+This is the direct flow-level specialisation of the scalar inequality bridge
+`tendsto_zero_of_hasDerivAt_le_neg_of_boundedBelow_of_uniformContinuousOn`, matching the
+convergence conclusion (3.18) of Theorem 3.7. The textbook sandwich `γ₁ ‖x‖ ≤ V x ≤ γ₂ ‖x‖` with
+`γ₁, γ₂ ∈ K∞` is used only to make `t ↦ V (Φ t x)` bounded below, so it is replaced here by the
+strictly weaker hypothesis `BddBelow ((fun t ↦ V (Φ t x)) '' Set.Ici 0)`. -/
+theorem lasalle_yoshizawa_trajectory
+    {E : Type*} {V : E → ℝ} {Φ : ℝ → E → E} {x : E}
+    (hV : BddBelow ((fun t ↦ V (Φ t x)) '' Set.Ici 0))
+    (hderiv : ∀ t, 0 ≤ t → HasDerivAt (fun s ↦ V (Φ s x)) (deriv (fun s ↦ V (Φ s x)) t) t)
+    {W : E → ℝ} (hw : ∀ t, 0 ≤ t → 0 ≤ W (Φ t x))
+    (hineq : ∀ t, 0 ≤ t → deriv (fun s ↦ V (Φ s x)) t ≤ -(W (Φ t x)))
+    (huc : UniformContinuousOn (fun t ↦ W (Φ t x)) (Set.Ici 0)) :
+    Tendsto (fun t ↦ W (Φ t x)) atTop (𝓝 0) :=
+  tendsto_zero_of_hasDerivAt_le_neg_of_boundedBelow_of_uniformContinuousOn
+    hV hw hderiv hineq huc
 
 end Barbalat
