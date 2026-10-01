@@ -107,6 +107,7 @@ import DynamicalSystems.Stability.Definitions
 import DynamicalSystems.Stability.Equilibrium
 import DynamicalSystems.Stability.Example
 import DynamicalSystems.Stability.FiniteTime
+import DynamicalSystems.Stability.FiniteTimeLyapunov
 import DynamicalSystems.Stability.Floquet
 import DynamicalSystems.Stability.Hamiltonian
 import DynamicalSystems.Stability.LaSalle
