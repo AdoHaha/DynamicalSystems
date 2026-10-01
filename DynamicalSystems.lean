@@ -16,8 +16,10 @@ import DynamicalSystems.AdaptiveControl.Switching
 import DynamicalSystems.AdaptiveControl.BoundedGrowth
 import DynamicalSystems.AdaptiveControl.Direct
 import DynamicalSystems.AdaptiveControl.RobustDirect
+import DynamicalSystems.AdaptiveControl.PlantSynthesis
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
+import DynamicalSystems.DiscreteTime.Convolution
 import DynamicalSystems.DiscreteTime.Lyapunov
 import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
