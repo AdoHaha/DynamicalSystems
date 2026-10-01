@@ -12,6 +12,8 @@ import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
+import DynamicalSystems.Control.SlidingMode.Basic
+import DynamicalSystems.Control.SlidingMode.Reaching
 import DynamicalSystems.AdaptiveControl.Switching
 import DynamicalSystems.AdaptiveControl.BoundedGrowth
 import DynamicalSystems.AdaptiveControl.Direct
