@@ -112,3 +112,33 @@ theorem deadZone_error_tendsto_zero {V ν : ℕ → ℝ} {Δ : ℝ} (hΔ : 0 ≤
     squeeze_zero (fun _ ↦ abs_nonneg _)
       (fun t ↦ Real.le_sqrt_of_sq_le (sq_abs_deadZone_le hΔ (ν t))) hsqrt
   rwa [tendsto_zero_iff_abs_tendsto_zero]
+
+/-- Book-faithful dead-zone stopping-rule result (Theorem 10.2, eqs. 10.45-10.48).
+The switching signal `α` takes only the values `0` and `1`; `hcond` encodes the
+stopping rule (the PAA is active, `α t = 1`, whenever the adaptation error exceeds
+the disturbance bound `Δ`); and the driving term `α t · (ν t ^ 2 - Δ ^ 2)` converges
+to `0`. Then `|ν|` is eventually bounded by `Δ + ε` for every `ε > 0`, i.e.
+`limsup |ν| ≤ Δ`. Note this is the sharp conclusion: `ν` itself need not tend to
+`0`, only its limsup is bounded by the disturbance level. -/
+theorem deadzone_eventually_le {ν : ℕ → ℝ} {Δ : ℝ} (hΔ : 0 ≤ Δ) (alpha : ℕ → ℝ)
+    (halpha : ∀ t, alpha t = 0 ∨ alpha t = 1)
+    (hcond : ∀ t, Δ < |ν t| → alpha t = 1)
+    (htend : Filter.Tendsto (fun t ↦ alpha t * (ν t ^ 2 - Δ ^ 2)) Filter.atTop (𝓝 0)) :
+    ∀ ε > 0, ∀ᶠ t in Filter.atTop, |ν t| ≤ Δ + ε := by
+  intro ε hε
+  have _hα := halpha
+  have hε2 : 0 < ε ^ 2 := by positivity
+  have hlt : ∀ᶠ t in Filter.atTop, alpha t * (ν t ^ 2 - Δ ^ 2) < ε ^ 2 :=
+    (tendsto_order.1 htend).2 (ε ^ 2) hε2
+  filter_upwards [hlt] with t ht
+  by_contra h
+  rw [not_le] at h
+  have hcond_t : alpha t = 1 := hcond t (by linarith)
+  have hkey : ε ^ 2 < ν t ^ 2 - Δ ^ 2 := by
+    have hsq : (Δ + ε) ^ 2 < ν t ^ 2 := by
+      have hltabs : |Δ + ε| < |ν t| := by
+        rwa [abs_of_nonneg (by linarith : (0 : ℝ) ≤ Δ + ε)]
+      simpa only [sq_abs] using sq_lt_sq.mpr hltabs
+    nlinarith [hΔ, hε.le]
+  rw [hcond_t, one_mul] at ht
+  linarith
