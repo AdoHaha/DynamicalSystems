@@ -139,6 +139,16 @@ noncomputable def tuning_V2
   (1 / 2 : ℝ) * e1 ^ 2 + (1 / 2 : ℝ) * e2 ^ 2 +
     (1 / 2 : ℝ) * (theta_tilde ⬝ᵥ (Gamma_inv *ᵥ theta_tilde))
 
+/-- Explicit Chapter 7 feedback law for the second error coordinate:
+`u = -k₂ e₂ - e₁ - θ̂ ⬝ᵥ ϕ₂ + α₁'` (Kabziński–Mosiołek, the tuning-functions version of the
+control law (7.42) specialised to full nonlinearity compensation, equation (7.27) with the
+adaptation and feedforward terms grouped). -/
+-- The underscore in `tuning_u` is mandated by the campaign's
+-- required-declaration list, so the naming linter is disabled for this def.
+@[nolint defsWithUnderscore]
+def tuning_u (k2 e1 e2 : ℝ) (theta_hat phi2 : Fin p → ℝ) (alpha1' : ℝ) : ℝ :=
+  -k2 * e2 - e1 - (theta_hat ⬝ᵥ phi2) + alpha1'
+
 /-! ### Internal calculus and algebra helpers
 
 The calculus and algebra helpers below follow the compact private copies used by
@@ -303,3 +313,33 @@ theorem tuning_tracking_tendsto_zero
     intro t _
     have h1 : 0 ≤ k1 * (e1 t) ^ 2 := mul_nonneg (le_of_lt hk1) (sq_nonneg _)
     linarith
+
+/-! ### Explicit feedback law and its reduction
+
+The second error coordinate `e₂ = x₂ - α₁` has derivative `e₂' = x₂' - α₁'`. With the plant
+`x₂' = u + θ ⬝ᵥ ϕ₂` and the explicit feedback law `u = tuning_u k₂ e₁ e₂ θ̂ ϕ₂ α₁'`, the
+compensation of the known and estimated regressor terms reduces `e₂'` to
+`-e₁ - k₂ e₂ + (θ - θ̂) ⬝ᵥ ϕ₂`, matching the tuning-functions error dynamics (7.28). -/
+
+/-- Reduction of the second error-coordinate dynamics under the explicit Chapter 7 feedback
+law: when `u t = tuning_u k₂ e₁ (x₂ t - α₁ t) θ̂ ϕ₂ (α₁' t)`, the derivative of
+`s ↦ x₂ s - α₁ s` is `-e₁ - k₂ (x₂ t - α₁ t) + (θ - θ̂) ⬝ᵥ ϕ₂`. This mirrors
+`backstepping_e2_hasDerivAt` and makes the tuning-functions design symmetric with the
+nominal, saturated, and filtered variants. -/
+theorem tuning_e2_hasDerivAt
+    {x2 u : ℝ → ℝ} {alpha1 alpha1' : ℝ → ℝ} {theta theta_hat : Fin p → ℝ}
+    {phi2 : Fin p → ℝ} {k2 e1 : ℝ} {t : ℝ}
+    (hx2 : HasDerivAt x2 (u t + (theta ⬝ᵥ phi2)) t)
+    (halpha1 : HasDerivAt alpha1 (alpha1' t) t)
+    (hu : u t = tuning_u k2 e1 (x2 t - alpha1 t) theta_hat phi2 (alpha1' t)) :
+    HasDerivAt (fun s ↦ x2 s - alpha1 s)
+      (-e1 - k2 * (x2 t - alpha1 t) + ((theta - theta_hat) ⬝ᵥ phi2)) t := by
+  have h := hx2.sub halpha1
+  rw [hu] at h
+  have halg : (tuning_u k2 e1 (x2 t - alpha1 t) theta_hat phi2 (alpha1' t) +
+      (theta ⬝ᵥ phi2)) - alpha1' t =
+      -e1 - k2 * (x2 t - alpha1 t) + ((theta - theta_hat) ⬝ᵥ phi2) := by
+    simp only [tuning_u, sub_dotProduct]
+    ring
+  rw [halg] at h
+  exact h

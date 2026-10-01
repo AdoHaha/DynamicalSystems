@@ -443,3 +443,37 @@ theorem filtered_tracking_tendsto_zero
     (hw : Filter.Tendsto (fun t ↦ k1 * (ec1 t) ^ 2 + k2 * (ec2 t) ^ 2) Filter.atTop (nhds 0)) :
     Filter.Tendsto ec1 Filter.atTop (nhds 0) ∧ Filter.Tendsto ec2 Filter.atTop (nhds 0) :=
   tuning_tracking_tendsto_zero hk1 hk2 hw
+
+/-! ### Chapter 8 time-domain tracking bridge
+
+The command-filtered design proves convergence of the *compensated* errors `e_{c,i}`, while
+the quantities of physical interest are the raw filter tracking errors `e_{f,i}`. Their relation
+`e_{f,i} = e_{c,i} + p_i` (Kabziński–Mosiołek, equation 8.11) turns the compensated convergence
+and the ultimate boundedness of the compensating signals `p_i` (Lemma 8.2) into an eventual bound
+and, when `p_i → 0`, into a genuine convergence statement for the raw error. -/
+
+/-- Time-domain reconstruction bound for one coordinate of the Chapter 8 filtered design:
+from `e_c = e_f - p` it follows that `|e_f| ≤ |e_c| + |p|` (Kabziński–Mosiołek, equation 8.11).
+This is the Chapter 8 analogue of `saturated_error_le`. -/
+theorem filtered_error_le (ef1 ec1 p1 : ℝ) (h : ec1 = ef1 - p1) :
+    |ef1| ≤ |ec1| + |p1| := by
+  have hef1 : ef1 = ec1 + p1 := by linarith
+  rw [hef1]
+  exact abs_add_le ec1 p1
+
+/-- Recovery of nominal asymptotic tracking for the Chapter 8 filtered design: when the
+compensated tracking error satisfies `e_c(t) → 0` and the compensating signal satisfies
+`p(t) → 0`, the raw filter tracking error converges to zero, `e_f(t) → 0` as `t → ∞`
+(Kabziński–Mosiołek, equation 8.11). This is the Chapter 8 analogue of
+`saturated_nominal_tracking_tendsto_zero` and relies on the relation `e_f = e_c + p`. -/
+theorem filtered_nominal_tracking_tendsto_zero
+    {ef1 ec1 p1 : ℝ → ℝ} (h : ∀ t, ec1 t = ef1 t - p1 t)
+    (hec1 : Filter.Tendsto ec1 Filter.atTop (nhds 0))
+    (hp1 : Filter.Tendsto p1 Filter.atTop (nhds 0)) :
+    Filter.Tendsto ef1 Filter.atTop (nhds 0) := by
+  have hef1 : ef1 = fun t ↦ ec1 t + p1 t := by
+    funext t
+    have := h t
+    linarith
+  rw [hef1]
+  simpa using hec1.add hp1

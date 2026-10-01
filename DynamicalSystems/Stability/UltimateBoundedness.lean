@@ -10,6 +10,7 @@ public import DynamicalSystems.Stability.Equilibrium
 public import DynamicalSystems.Stability.Comparison
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 public import Mathlib.Analysis.SpecialFunctions.Log.Basic
+public import Mathlib.Analysis.Real.Sqrt
 public import Mathlib.Analysis.ODE.Gronwall
 
 /-!
@@ -240,3 +241,23 @@ theorem gronwall_isUltimatelyUniformlyBoundedAt
     simp only [Set.mem_Ici]
     linarith
   exact (hg1_mono.lt_iff_lt hnorm hBmem).mp hg1_lt
+
+/-- State-norm bridge for a Lyapunov-level eventual bound.
+
+Suppose the Lyapunov function `V` is eventually bounded by `B` along the trajectory
+`t ↦ x t`, and `V` dominates `k₁ ‖x t‖²` with `k₁ > 0`. Then the state norm is eventually
+bounded by `√(B / k₁)`. This is the quantitative final step of the Kabziński–Mosiołek
+ultimate-boundedness arguments (Theorems 7.4–7.6): the Lyapunov sublevel set
+`{x | V x < B}` is contained in the ball of radius `√(B / k₁)`. -/
+theorem eventually_norm_lt_sqrt_of_lyapunov_le
+    {E : Type*} [NormedAddCommGroup E] {V : E → ℝ} {x : ℝ → E} {B k1 : ℝ}
+    (hk1 : 0 < k1)
+    (hV : ∀ᶠ t in Filter.atTop, V (x t) < B)
+    (hle : ∀ t, k1 * ‖x t‖ ^ 2 ≤ V (x t)) :
+    ∀ᶠ t in Filter.atTop, ‖x t‖ < Real.sqrt (B / k1) := by
+  filter_upwards [hV] with t ht
+  have hsq : ‖x t‖ ^ 2 < B / k1 := by
+    rw [lt_div_iff₀ hk1]
+    calc ‖x t‖ ^ 2 * k1 = k1 * ‖x t‖ ^ 2 := by ring
+      _ < B := lt_of_le_of_lt (hle t) ht
+  exact (Real.lt_sqrt (norm_nonneg (x t))).mpr hsq
