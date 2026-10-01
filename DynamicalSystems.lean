@@ -25,9 +25,11 @@ import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
 import DynamicalSystems.Estimation.Normalization
 import DynamicalSystems.Estimation.Projection
+import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
 import DynamicalSystems.ParameterAdaptation.LyapunovAlgebra
+import DynamicalSystems.ParameterAdaptation.RLS
 import DynamicalSystems.ParameterAdaptation.Stability
 import DynamicalSystems.InputOutput.Causal
 import DynamicalSystems.InputOutput.ClosedLoop
@@ -97,8 +99,6 @@ import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
-import DynamicalSystems.ParameterAdaptation.Basic
-import DynamicalSystems.ParameterAdaptation.RLS
 import DynamicalSystems.Stability.Attraction
 import DynamicalSystems.Stability.Barbalat
 import DynamicalSystems.Stability.Basic
