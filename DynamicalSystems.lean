@@ -22,6 +22,7 @@ import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
 import DynamicalSystems.Estimation.Normalization
 import DynamicalSystems.Estimation.Projection
+import DynamicalSystems.ParameterAdaptation.Excitation
 import DynamicalSystems.ParameterAdaptation.LyapunovAlgebra
 import DynamicalSystems.ParameterAdaptation.Stability
 import DynamicalSystems.InputOutput.Causal
