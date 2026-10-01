@@ -12,7 +12,11 @@ import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
+import DynamicalSystems.AdaptiveControl.Switching
 import DynamicalSystems.DiscreteTime.Basic
+import DynamicalSystems.DiscreteTime.Comparison
+import DynamicalSystems.DiscreteTime.Lyapunov
+import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.InputOutput.Causal
 import DynamicalSystems.InputOutput.ClosedLoop
 import DynamicalSystems.InputOutput.Dissipative
