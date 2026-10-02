@@ -7,8 +7,12 @@ module
 
 public import DynamicalSystems.Control.SlidingMode.Filippov
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
+public import Mathlib.Topology.ContinuousMap.Bounded.ArzelaAscoli
 public import Mathlib.Topology.MetricSpace.Bounded
+public import Mathlib.Topology.MetricSpace.UniformConvergence
+public import Mathlib.Topology.Sequences
 public import Mathlib.Topology.UniformSpace.Ascoli
+public import Mathlib.Topology.UniformSpace.UniformConvergence
 
 /-! # Local existence of Filippov solutions
 
@@ -576,22 +580,160 @@ theorem IsFilippovInclusion.eulerCurve_lipschitzOn {F : E → Set E} (hF : IsFil
     rw [hd, dist_comm]
     exact key t s ht.1 hs.2 hts
 
+/-- **The Euler polygonal curve stays in the ball of local boundedness.** If `T * M ≤ r` and
+`t ∈ [0, T]`, then the polygonal curve at time `t` lies within distance `r` of `x₀`. This is the
+`n`-uniform range estimate: every Euler approximation takes its values on `[0, T]` in the
+compact ball `closedBall x₀ r`, which is the compactness input for Arzelà–Ascoli. -/
+theorem IsFilippovInclusion.dist_eulerCurve_le {F : E → Set E} (hF : IsFilippovInclusion F)
+    {x₀ : E} {r M h : ℝ} (hh : 0 < h) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M)
+    {t T : ℝ} (ht0 : 0 ≤ t) (htT : t ≤ T) (hTM : T * M ≤ r) :
+    dist (eulerCurve hF h x₀ t) x₀ ≤ r := by
+  have hk : (⌊t / h⌋₊ : ℝ) * h * M ≤ r := by
+    have hle : (⌊t / h⌋₊ : ℝ) * h ≤ t :=
+      (le_div_iff₀ hh).mp (Nat.floor_le (div_nonneg ht0 hh.le))
+    have hmono : (⌊t / h⌋₊ : ℝ) * h * M ≤ T * M := by nlinarith [hle, htT, hM0]
+    linarith
+  calc dist (eulerCurve hF h x₀ t) x₀
+      ≤ dist (eulerCurve hF h x₀ t) (eulerNode hF h x₀ ⌊t / h⌋₊) +
+        dist (eulerNode hF h x₀ ⌊t / h⌋₊) x₀ := dist_triangle _ _ _
+    _ ≤ M * (t - (⌊t / h⌋₊ : ℝ) * h) + (⌊t / h⌋₊ : ℝ) * h * M := by
+        gcongr
+        · exact hF.dist_eulerCurve_node_le hh hM0 hM ht0 hk
+        · exact hF.dist_eulerNode_le hh.le hM0 hM ⌊t / h⌋₊ hk
+    _ = t * M := by ring
+    _ ≤ T * M := by nlinarith
+    _ ≤ r := hTM
+
 end Euler
 
-/-! ## The remaining target
+/-! ## Extraction of a uniformly convergent subsequence
 
-The statement the existence theory has to establish is
+The Euler polygonal curves are `M`-Lipschitz on `[0, T]` (`eulerCurve_lipschitzOn`) and stay in
+the compact ball `closedBall x₀ r` (`dist_eulerCurve_le`). Viewing them as bounded continuous
+functions on the compact interval `Icc 0 T`, Arzelà–Ascoli
+(`BoundedContinuousFunction.arzela_ascoli`) provides a uniformly convergent subsequence. The
+limit, extended to all of `ℝ`, inherits the `M`-Lipschitz bound and the initial condition
+`γ 0 = x₀`. This is the extraction half of the local existence theorem; the remaining half is
+the almost-everywhere identification of the limit derivative with the inclusion `F`. -/
 
-```
-  exists_filippovSolution_local [NormedAddCommGroup E] [NormedSpace ℝ E]
-      [FiniteDimensional ℝ E] {F : E → Set E} (hF : IsFilippovInclusion F) (x₀ : E) :
-      ∃ (T : ℝ) (_ : 0 < T) (γ : ℝ → E), γ 0 = x₀ ∧
-        IsFilippovSolutionOn γ F (Set.Icc 0 T)
-```
+section Extraction
 
-The build-up above supplies `exists_local_bound` (the slope bound `M`), `isCompact_value`
-(compact values), `mem_of_tendsto` and `eventually_mem_add_ball` (the two limit forms of
-upper semicontinuity), and the Lipschitz-to-absolutely-continuous transfers. What is still
-missing is the a.e. inclusion of the limit derivative, obtained by averaging the polygonal
-derivatives over a shrinking window and using convexity of `F (γ t)`. -/
+variable [FiniteDimensional ℝ E]
+
+open scoped BoundedContinuousFunction
+
+/-- **Extraction of a uniformly convergent subsequence of Euler polygonal curves.** Given a slope
+bound `M` on the values of the inclusion in the ball of radius `r` about `x₀` and step sizes
+`h n > 0` with `h n * M ≤ r`, there is a strictly monotone subsequence `φ` of the Euler curves
+`t ↦ eulerCurve hF (h (φ n)) x₀ t` converging uniformly on `Icc 0 (r / max M 1)` to a limit curve
+`γlim` that is `M`-Lipschitz there and starts at `x₀`.
+
+The compactness input is Arzelà–Ascoli: the curves are uniformly `M`-Lipschitz and take values in
+the compact ball `closedBall x₀ r`. The hypotheses `Tendsto h atTop (𝓝 0)` and `h n * M ≤ r` belong
+to the surrounding existence contract; the extraction itself only needs a uniform step bound, which
+is implied by the choice `T = r / max M 1`.
+
+The proof is the standard diagonal/compactness argument: the images of the Euler curves in the
+space `Icc 0 T →ᵇ E` of bounded continuous functions form an equicontinuous family with values in a
+compact set, so their closure is compact and a subsequence converges in the uniform topology; the
+limit is extended to `ℝ` by `x₀` off `Icc 0 T`.
+
+We mark the lemma `@[nolint unusedArguments]` because the two hypotheses `Tendsto h atTop (𝓝 0)`
+and `h n * M ≤ r` are part of the campaign interface but are not needed for this half of the
+argument: the range estimate only uses the derived uniform bound `T * M ≤ r`. -/
+@[nolint unusedArguments] -- `hh0` and `hhr` are contract hypotheses not needed in the extraction
+theorem IsFilippovInclusion.exists_eulerCurve_tendsto_subseq {F : E → Set E}
+    (hF : IsFilippovInclusion F) (x₀ : E) {r M : ℝ} (hr : 0 < r) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M)
+    (h : ℕ → ℝ) (hh : ∀ n, 0 < h n) (_hh0 : Tendsto h atTop (𝓝 0))
+    (_hhr : ∀ n, h n * M ≤ r) :
+    ∃ (φ : ℕ → ℕ) (γlim : ℝ → E),
+      StrictMono φ ∧
+      TendstoUniformlyOn (fun n t ↦ eulerCurve hF (h (φ n)) x₀ t) γlim atTop
+        (Set.Icc 0 (r / max M 1)) ∧
+      LipschitzOnWith ⟨M, hM0⟩ γlim (Set.Icc 0 (r / max M 1)) ∧
+      γlim 0 = x₀ := by
+  set T : ℝ := r / max M 1 with hTdef
+  have hMmax : M ≤ max M 1 := le_max_left _ _
+  have hmaxpos : 0 < max M 1 := lt_of_lt_of_le zero_lt_one (le_max_right _ _)
+  have hTpos : 0 < T := div_pos hr hmaxpos
+  have hTM : T * M ≤ r := by
+    rw [hTdef]
+    calc r / max M 1 * M ≤ r / max M 1 * max M 1 :=
+          mul_le_mul_of_nonneg_left hMmax (div_nonneg hr.le hmaxpos.le)
+      _ = r := by field_simp
+  set s : Set ℝ := Set.Icc 0 T with hsdef
+  have hcompact : IsCompact s := by rw [hsdef]; exact isCompact_Icc
+  have : CompactSpace s := isCompact_iff_compactSpace.1 hcompact
+  set K : ℝ≥0 := ⟨M, hM0⟩ with hKdef
+  have hLip : ∀ n, LipschitzOnWith K (eulerCurve hF (h n) x₀) s :=
+    fun n => hF.eulerCurve_lipschitzOn (hh n) hM0 hTM hM
+  let u : ℕ → s →ᵇ E := fun n =>
+    BoundedContinuousFunction.mkOfCompact
+      { toFun := s.domRestrict (eulerCurve hF (h n) x₀)
+        continuous_toFun := (hLip n).to_restrict.continuous }
+  have hu_coe : ∀ n, (u n : s → E) = s.domRestrict (eulerCurve hF (h n) x₀) := fun _ => rfl
+  have hu_apply : ∀ n (x : s), u n x = eulerCurve hF (h n) x₀ x := fun _ _ => rfl
+  set A : Set (s →ᵇ E) := Set.range u with hAdef
+  have hRange : ∀ (f : s →ᵇ E) (x : s), f ∈ A → f x ∈ Metric.closedBall x₀ r := by
+    rintro f x ⟨n, rfl⟩
+    rw [Metric.mem_closedBall, hu_apply n x]
+    exact hF.dist_eulerCurve_le (hh n) hM0 hM x.2.1 x.2.2 hTM
+  have hEquicont : Equicontinuous ((↑) : A → s → E) := by
+    refine UniformEquicontinuous.equicontinuous ?_
+    refine LipschitzWith.uniformEquicontinuous (fun f : A => (f : s → E)) K ?_
+    rintro ⟨f, ⟨n, rfl⟩⟩
+    rw [hu_coe n]
+    exact (hLip n).to_restrict
+  have hCompact : IsCompact (closure A) :=
+    BoundedContinuousFunction.arzela_ascoli (Metric.closedBall x₀ r)
+      (isCompact_closedBall x₀ r) A hRange hEquicont
+  obtain ⟨a, -, φ, hφ, hconv⟩ :=
+    IsCompact.tendsto_subseq (s := closure A) (x := u) hCompact
+      (fun n => subset_closure (Set.mem_range_self n))
+  have hunif : TendstoUniformly (fun n => u (φ n)) a atTop :=
+    BoundedContinuousFunction.tendsto_iff_tendstoUniformly.mp hconv
+  let γlim : ℝ → E := fun t => if ht : t ∈ s then a ⟨t, ht⟩ else x₀
+  have hγlim_eq : ∀ (x : ℝ) (hx : x ∈ s), γlim x = a ⟨x, hx⟩ := fun x hx => by
+    simp only [γlim, dite_eq_left hx]
+  have hγlim_coe : ∀ x : s, γlim x = a x := fun x => hγlim_eq x x.2
+  refine ⟨φ, γlim, hφ, ?_, ?_, ?_⟩
+  · rw [tendstoUniformlyOn_iff_restrict]
+    have hleft : (fun n : ℕ => s.domRestrict (fun t => eulerCurve hF (h (φ n)) x₀ t)) =
+        fun n => (u (φ n) : s → E) := by
+      funext n x
+      exact (hu_apply (φ n) x).symm
+    have hright : s.domRestrict γlim = a := by
+      funext x
+      exact hγlim_coe x
+    rw [hleft, hright]
+    exact hunif
+  · rw [lipschitzOnWith_iff_dist_le_mul]
+    intro x hx y hy
+    have ha_lip : LipschitzWith K a := by
+      refine LipschitzWith.of_tendsto (f := fun n => (u (φ n) : s → E)) (g := a) ?_ ?_
+      · intro n
+        rw [hu_coe (φ n)]
+        exact (hLip (φ n)).to_restrict
+      · intro z
+        simpa using hunif.tendsto_at z
+    calc dist (γlim x) (γlim y)
+        = dist (a ⟨x, hx⟩) (a ⟨y, hy⟩) := by rw [hγlim_eq x hx, hγlim_eq y hy]
+      _ ≤ K * dist (⟨x, hx⟩ : s) (⟨y, hy⟩) := ha_lip.dist_le_mul _ _
+      _ = K * dist x y := by rfl
+  · have h0s : (0 : ℝ) ∈ s := by
+      rw [hsdef, Set.mem_Icc]
+      exact ⟨le_refl 0, hTpos.le⟩
+    have hpt : Tendsto (fun n : ℕ => u (φ n) ⟨0, h0s⟩) atTop (𝓝 (a ⟨0, h0s⟩)) :=
+      hunif.tendsto_at ⟨0, h0s⟩
+    have hconst : (fun n : ℕ => u (φ n) ⟨0, h0s⟩) = fun _ => x₀ := by
+      funext n
+      rw [hu_apply]
+      exact hF.eulerCurve_zero (h (φ n)) x₀
+    rw [hconst] at hpt
+    have ha0 : a ⟨0, h0s⟩ = x₀ := tendsto_nhds_unique hpt tendsto_const_nhds
+    simp only [γlim, dite_eq_left h0s, ha0]
+
+end Extraction
 
