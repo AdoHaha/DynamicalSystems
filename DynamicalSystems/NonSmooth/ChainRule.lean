@@ -27,10 +27,16 @@ with the derivative of `V` lying in its Clarke gradient by
 `fderiv_mem_clarkeGradient`.
 
 The chain rule is stated under the honest hypothesis `hV_diff`, that `V` is differentiable
-at `γ t` for almost every `t`. This is the Lusin (N) property of the absolutely continuous
-curve `γ`, equivalently `γ_# volume ≪ volume`: the preimage under `γ` of the Lebesgue-null
-non-differentiability set of the locally Lipschitz `V` is null. Mathlib does not currently
-provide this property, so it is assumed rather than proved.
+at `γ t` for almost every `t`. This is **not** a consequence of the absolute continuity of
+`γ`: for `n ≥ 2` the image of an absolutely continuous curve is Lebesgue-null, and a null
+image contained in the non-differentiability set of `V` defeats the hypothesis. For example,
+with `E = ℝ²`, `V (x₁, x₂) = |x₂|` and `γ t = (t, 0)`, the locally Lipschitz `V` is
+non-differentiable at every `γ t`, while `V ∘ γ` is absolutely continuous. The hypothesis is
+instead forced by the Fréchet-derivative route taken here: the reduction rewrites the
+derivative of `V ∘ γ` through `fderiv ℝ V (γ t)` (via `fderiv_mem_clarkeGradient`), which
+requires `V` to be differentiable at `γ t`. Clarke's theorem avoids Fréchet derivatives and
+needs no such hypothesis; Mathlib does not currently provide the Clarke-derivative machinery
+that would remove it, so it is assumed rather than proved.
 
 ## Main statements
 
@@ -110,8 +116,10 @@ theorem exists_bound_clarkeGradient_apply {V : E → ℝ} (hV : LocallyLipschitz
 and an absolutely continuous curve `γ`, the composition `V ∘ γ` is differentiable for
 almost every `t` and its derivative is bounded by the support function of the Clarke
 generalized gradient of `V` at `γ t`, written as the supremum of `ξ (deriv γ t)` over
-`ξ ∈ clarkeGradient V (γ t)`. The hypothesis `hV_diff` records the Lusin (N)
-property of `γ`, that `V` is differentiable at `γ t` for almost every `t`. -/
+`ξ ∈ clarkeGradient V (γ t)`. The hypothesis `hV_diff` records that `V` is
+differentiable at `γ t` for almost every `t`; it is forced by the Fréchet-derivative route
+taken here (`fderiv_mem_clarkeGradient`) and does not follow from absolute continuity of `γ`
+for `n ≥ 2`, whereas Clarke's theorem avoids Fréchet derivatives. -/
 theorem clarke_chain_rule_ae {V : E → ℝ} (hV : LocallyLipschitz V) {γ : ℝ → E} {a b : ℝ}
     (hγ : AbsolutelyContinuousOnInterval γ a b)
     (hV_diff : ∀ᵐ t ∂volume.restrict (Set.uIcc a b), DifferentiableAt ℝ V (γ t)) :

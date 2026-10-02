@@ -35,14 +35,18 @@ curve `t ↦ V (γ t)`.
 * `nonsmooth_lyapunov_finite_time`: finite-time convergence of a Filippov solution under a
   Clarke Lyapunov-decay inequality.
 
-## The Lusin (N) hypothesis
+## The differentiability hypothesis
 
 The trajectory-level theorem carries the hypothesis `hV_diff`, that `V` is differentiable at
-`γ t` for almost every `t ∈ [0, T]`. This is the Lusin (N) property of the absolutely continuous
-curve `γ`, equivalently `γ_# volume ≪ volume`; it is **genuinely not derivable** from the
-remaining data (for `E = ℝ²`, `V (x, y) = |x|` and `γ t = (0, t)` the non-differentiability set
-`{x = 0}` of the locally Lipschitz `V` is Lebesgue-null while its preimage under the absolutely
-continuous curve is `[0, T]`), and Mathlib does not provide it.
+`γ t` for almost every `t ∈ [0, T]`. This is **not** the Lusin (N) property of the absolutely
+continuous curve `γ`, and it does not follow from absolute continuity: for `n ≥ 2` the image of
+an absolutely continuous curve `γ : ℝ → ℝⁿ` is Lebesgue-null, and if that image lies inside the
+non-differentiability set of the locally Lipschitz `V` the hypothesis fails. For instance, with
+`E = ℝ²`, `V (x₁, x₂) = |x₂|` and `γ t = (t, 0)`, the function `V` is non-differentiable at
+every `γ t`, while `V ∘ γ` is absolutely continuous. The hypothesis is instead forced by the
+Fréchet-derivative route taken here: the reduction expresses `deriv (V ∘ γ) t` through
+`fderiv ℝ V (γ t)` and then invokes `fderiv_mem_clarkeGradient`, which needs `V` differentiable
+at `γ t`. Clarke's theorem avoids Fréchet derivatives and requires no such hypothesis.
 
 Under that hypothesis the reduction is elementary: `t ↦ V (γ t)` is absolutely continuous
 (`absolutelyContinuousOnInterval_comp_locallyLipschitz`), non-negative by `hV_pos`, and at
@@ -189,23 +193,17 @@ theorem eq_zero_of_ae_deriv_le_neg_mul_rpow {z : ℝ → ℝ} {c α : ℝ} {T : 
 `V : E → ℝ` be a non-negative locally Lipschitz Lyapunov function and `γ` a Filippov solution of
 `ẋ ∈ F x` on `[0, T]`, differentiable into `F` almost everywhere. Suppose that for every `x`,
 every `v ∈ F x` and every `ξ` in the Clarke generalized gradient of `V` at `x` one has
-`ξ v ≤ -c * (V x) ^ α`, with `c > 0` and `α < 1`. Assume moreover that `V` is differentiable at
-`γ t` for almost every `t` (the Lusin (N) hypothesis on the curve). Then `V (γ t) = 0` for all
-`t ∈ [0, T]` past the settling time `V (γ 0) ^ (1 - α) / (c * (1 - α))`.
+`ξ v ≤ -c * (V x) ^ α`, with `c > 0` and `α < 1`. Assume moreover that `V` is differentiable
+at `γ t` for almost every `t` (the differentiability hypothesis on the curve). Then
+`V (γ t) = 0` for all `t ∈ [0, T]` past the settling time `V (γ 0) ^ (1 - α) / (c * (1 - α))`.
 
 The proof applies the scalar comparison `eq_zero_of_ae_deriv_le_neg_mul_rpow` to the absolutely
 continuous, non-negative function `t ↦ V (γ t)`. At almost every `t` the ordinary chain rule
 (`hV_diff` together with the almost-everywhere differentiability in `hsol`) gives
 `deriv (V ∘ γ) t = fderiv ℝ V (γ t) (deriv γ t)`; the Fréchet derivative belongs to the Clarke
 gradient (`fderiv_mem_clarkeGradient`), and `deriv γ t ∈ F (γ t)` (`hsol.2`), so the decay
-hypothesis bounds the derivative by `-c * (V (γ t)) ^ α`.
-
-The finite-dimensionality of `E` is part of the intended non-smooth interface (it is the setting
-of the Clarke gradient and Rademacher's theorem), but this particular direct chain-rule reduction
-does not consume it, hence the `nolint unusedArguments`. -/
-@[nolint unusedArguments]
+hypothesis bounds the derivative by `-c * (V (γ t)) ^ α`. -/
 theorem nonsmooth_lyapunov_finite_time {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    [FiniteDimensional ℝ E]
     {V : E → ℝ} (hV_pos : ∀ x, 0 ≤ V x) (hV_lip : LocallyLipschitz V)
     {F : E → Set E} {γ : ℝ → E} {T : ℝ} (hT : 0 < T)
     (hsol : IsFilippovSolutionOn γ F (Set.Icc 0 T)) {c α : ℝ} (hc : 0 < c) (hα1 : α < 1)
