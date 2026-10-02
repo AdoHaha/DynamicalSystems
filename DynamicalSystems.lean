@@ -18,6 +18,7 @@ import DynamicalSystems.Control.SlidingMode.Discrete
 import DynamicalSystems.Control.SlidingMode.DiscreteMatrix
 import DynamicalSystems.Control.SlidingMode.Filippov
 import DynamicalSystems.Control.SlidingMode.FilippovExistence
+import DynamicalSystems.Control.SlidingMode.LMI
 import DynamicalSystems.Control.SlidingMode.Observer
 import DynamicalSystems.Control.SlidingMode.Reaching
 import DynamicalSystems.Control.SlidingMode.Regularization
