@@ -5,8 +5,9 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.Control.SlidingMode.DiscreteMatrix
+public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 public import Mathlib.LinearAlgebra.Matrix.Vec
+public import Mathlib.Tactic
 
 /-! # Two-dimensional (Fornasini–Marchesini) discrete-time systems
 
@@ -76,10 +77,8 @@ p. 165, is *not* formalized: it requires inverting the block bi-diagonal matrix
 `J` and the explicit formula (8.8), printed p. 165. The descriptor form (8.4) is
 the algebraic content of §8.2.1 and is what this file proves.
 
-The scalar/matrix reaching-law and Lyapunov machinery of the campaign is not
-duplicated: the DSMC design of §8.3 (printed pp. 165–167) acts on the stacked 1D
-model and is provided by `DynamicalSystems.Control.SlidingMode.DiscreteMatrix`
-and `DynamicalSystems.Control.SlidingMode.LMI`.
+The DSMC design of §8.3 (printed pp. 165–167) acts on the stacked 1D model and is
+not formalized in this file.
 -/
 
 @[expose] public section
@@ -321,26 +320,32 @@ directional minimum-energy control input of A. Argha, S. W. Su, L. Li and
 H. T. Nguyen, *Advances in Discrete-Time Sliding Mode Control: Theory and
 Applications*, CRC Press 2018, Chapter 9, §9.3.2–§9.3.4 (printed pp. 180–183).
 
-Directional controllability considers the 2D system evolving along a fixed
-spatial horizon `v` in the `{j}`-direction, advancing along the `{i}`-direction.
-Under zero boundary conditions (from the origin), the stacked state transitions
-according to the directional step relation `dsmcDirectionalStep`.
+Directional controllability here is with respect to the `{j}`-direction: the
+locally finite spatial direction `{j}` is the horizon `v` over which the local
+states are stacked, while the resulting 1D recursion advances in the
+`{i}`-direction. Under zero boundary conditions (from the origin), the stacked
+state transitions according to the directional step relation `dsmcDirectionalStep`.
 
 * `dsmcDirectionalStep`: the one-step transition relation of the stacked 1D model
   with zero boundary data (8.4), printed p. 163.
 * `dsmcDirectionalReachable`: the set of stacked states reachable from the origin
-  in finitely many directional steps (Ch. 9 §9.3.2, printed pp. 180–182).
+  in finitely many directional steps advancing in `{i}` (Ch. 9 §9.3.2, printed
+  pp. 180–182).
 * `dsmcDirectionalReachable_zero`: the origin is directionally reachable.
 * `dsmcDirectionalReachable_step`: directional reachability is closed under
   allowed directional steps.
+* `dsmcDirectionalReachable_smul`: directional reachability is closed under
+  scalar scaling.
 * `dsmcTwoDModel_stackState_mem_directionalReachable`: any 2D trajectory with
   zero boundary conditions reaches states in `dsmcDirectionalReachable`.
-* `dsmcDirectionalMinEnergyInput`: the minimum-energy control input sequence (9.35),
-  printed p. 183.
+* `dsmcDirectionalMinEnergyInput`: the least-squares control input of §9.3.4,
+  printed p. 183, stated for an abstract reachability matrix `C` as the corrected
+  (least-squares, `+`) form of (9.35); the identification of `C` with the book's
+  controllability matrix (9.31) is not formalized here.
 * `dsmc_directional_energy_decomposition`: the exact Pythagorean / least-squares
   identity for the control energy.
-* `dsmc_directional_minimum_energy`: the variational optimality of the
-  minimum-energy control input achieving a reachability target (eq. 9.35).
+* `dsmc_directional_minimum_energy`: the variational least-squares optimality of
+  the min-energy control input achieving a reachability target.
 * `dsmc_directional_minimum_energy_unique`: uniqueness of the minimum-energy
   minimizer.
 * `dsmc_directional_minimum_energy_normal_equations`: the normal equations
@@ -474,7 +479,8 @@ inductive dsmcDirectionalReachableRel (v : ℕ) (A1 A2 A0 : Matrix (Fin n) (Fin 
 
 /-- The **directional reachable set** along the `{j}`-direction (Ch. 9 §9.3.2,
 printed pp. 180–182): the set of stacked states reachable from the origin in
-finitely many directional `{i}`-steps under control inputs. -/
+finitely many directional steps advancing in `{i}` within the finite `{j}`-horizon
+under control inputs. -/
 def dsmcDirectionalReachable (v : ℕ) (A1 A2 A0 : Matrix (Fin n) (Fin n) ℝ)
     (B : Matrix (Fin n) (Fin m) ℝ) : Set (Matrix (Fin v) (Fin n) ℝ) :=
   { X | dsmcDirectionalReachableRel v A1 A2 A0 B X }
@@ -543,95 +549,82 @@ theorem dsmc_dotProduct_self_nonneg (v : Fin k → ℝ) : 0 ≤ v ⬝ᵥ v := by
   exact mul_self_nonneg (v i)
 
 /-- The **discrete controllability Gramian** matrix `W = C Cᵀ` (Ch. 9 §9.3.2,
-printed p. 181, and §9.3.4, printed p. 183). -/
+printed p. 181, and §9.3.4, printed p. 183). It is the matrix inverted in the
+minimum-energy control input `dsmcDirectionalMinEnergyInput`. -/
 def dsmcControllabilityGramian (C : Matrix (Fin d) (Fin k) ℝ) :
     Matrix (Fin d) (Fin d) ℝ :=
   C * Cᵀ
 
-/-- The controllability Gramian is symmetric. -/
-theorem dsmcControllabilityGramian_transpose (C : Matrix (Fin d) (Fin k) ℝ) :
-    (dsmcControllabilityGramian C)ᵀ = dsmcControllabilityGramian C := by
-  dsimp [dsmcControllabilityGramian]
-  rw [Matrix.transpose_mul, transpose_transpose]
+/-- The **directional minimum-energy control input**, in the corrected
+least-squares form of eq. (9.35), printed p. 183: for a reachability matrix
+`C : Matrix (Fin d) (Fin k) ℝ` and net displacement vector `y : Fin d → ℝ`, the
+minimum-norm input solving `C *ᵥ U = y` is `U* = Cᵀ (C Cᵀ)⁻¹ y`. This is the
+abstract linear-algebraic core of (9.35); the identification of `C` with the
+book's controllability matrix (9.31) and of `y` with the net displacement
+`X(i_f) − K̂^{i_f} X(0) − Ĉ_{i_f} V(i_f)` is not formalized here.
 
-/-- The quadratic form of the controllability Gramian is the squared norm `‖Cᵀ x‖²`. -/
-theorem dsmcControllabilityGramian_dotProduct (C : Matrix (Fin d) (Fin k) ℝ) (x : Fin d → ℝ) :
-    x ⬝ᵥ (dsmcControllabilityGramian C *ᵥ x) = (Cᵀ *ᵥ x) ⬝ᵥ (Cᵀ *ᵥ x) := by
-  dsimp [dsmcControllabilityGramian]
-  rw [← mulVec_mulVec, ← dsmc_dotProduct_mulVec_transpose]
-
-/-- The quadratic form of the controllability Gramian is non-negative. -/
-theorem dsmcControllabilityGramian_nonneg (C : Matrix (Fin d) (Fin k) ℝ) (x : Fin d → ℝ) :
-    0 ≤ x ⬝ᵥ (dsmcControllabilityGramian C *ᵥ x) := by
-  rw [dsmcControllabilityGramian_dotProduct]
-  exact dsmc_dotProduct_self_nonneg _
-
-/-- The quadratic form of the controllability Gramian vanishes if and only if
-`x` lies in the kernel of `Cᵀ`. -/
-theorem dsmcControllabilityGramian_dotProduct_eq_zero_iff (C : Matrix (Fin d) (Fin k) ℝ)
-    (x : Fin d → ℝ) :
-    x ⬝ᵥ (dsmcControllabilityGramian C *ᵥ x) = 0 ↔ Cᵀ *ᵥ x = 0 := by
-  rw [dsmcControllabilityGramian_dotProduct, dotProduct_self_eq_zero]
-
-/-- The **directional minimum-energy control input** vector (9.35), printed p. 183:
-for a reachability matrix `C : Matrix (Fin d) (Fin k) ℝ` and net displacement vector
-`y : Fin d → ℝ`, the input sequence is `U* = Cᵀ (C Cᵀ)⁻¹ y`.
-
-Note on sign: eq. (9.35) of the text carries a negative sign, which corresponds
-to steering the state to zero (regulation). For steering from the origin to a target
-displacement `y`, the correct least-squares / Moore–Penrose pseudoinverse solution
-is `+ Cᵀ (C Cᵀ)⁻¹ y`. -/
+Note on sign: eq. (9.35) carries a leading minus that is inconsistent with the
+least-squares normal equations implied by its own (9.32),
+`C_u^i U(i) = X(i) − K̂^i X(0) − C_v^i V(i)` (printed p. 181); the corrected
+least-squares input therefore has the `+` sign. -/
 noncomputable def dsmcDirectionalMinEnergyInput (C : Matrix (Fin d) (Fin k) ℝ)
     (y : Fin d → ℝ) : Fin k → ℝ :=
-  Cᵀ *ᵥ ((C * Cᵀ)⁻¹ *ᵥ y)
+  Cᵀ *ᵥ ((dsmcControllabilityGramian C)⁻¹ *ᵥ y)
 
-/-- The minimum-energy control input achieves the reachability target `C *ᵥ U = y`
-whenever `C Cᵀ` has a right inverse. -/
+/-- The least-squares control input achieves the reachability target `C *ᵥ U = y`
+whenever `C Cᵀ` is invertible, expressed by the idiomatic hypothesis
+`hb : IsUnit (C * Cᵀ).det` (the directional-controllability rank condition of
+Lemma 9.5, printed p. 181). -/
 theorem dsmcDirectionalMinEnergyInput_achieves (C : Matrix (Fin d) (Fin k) ℝ)
-    (y : Fin d → ℝ) (hinv : (C * Cᵀ) * (C * Cᵀ)⁻¹ = 1) :
+    (y : Fin d → ℝ) (hb : IsUnit (C * Cᵀ).det) :
     C *ᵥ dsmcDirectionalMinEnergyInput C y = y := by
-  change C *ᵥ (Cᵀ *ᵥ ((C * Cᵀ)⁻¹ *ᵥ y)) = y
-  rw [mulVec_mulVec, mulVec_mulVec, hinv, Matrix.one_mulVec]
+  dsimp only [dsmcDirectionalMinEnergyInput, dsmcControllabilityGramian]
+  rw [mulVec_mulVec, mulVec_mulVec, Matrix.mul_nonsing_inv _ hb, Matrix.one_mulVec]
 
-/-- The **directional energy decomposition** (Pythagorean identity): for any control
-input sequence `U` achieving the directional reachability target `C *ᵥ U = y`, the total
-energy `U ⬝ᵥ U` splits into the optimal energy plus the energy of the deviation `U - U*`. -/
+/-- The **directional energy decomposition** (Pythagorean identity): provided
+`C Cᵀ` is invertible (`hb`), for any control input sequence `U` achieving the
+directional reachability target `C *ᵥ U = y`, the total energy `U ⬝ᵥ U` splits into
+the optimal energy plus the energy of the deviation `U - U*`. -/
 theorem dsmc_directional_energy_decomposition (C : Matrix (Fin d) (Fin k) ℝ) (y : Fin d → ℝ)
-    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hinv : (C * Cᵀ) * (C * Cᵀ)⁻¹ = 1) :
+    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hb : IsUnit (C * Cᵀ).det) :
     U ⬝ᵥ U = (dsmcDirectionalMinEnergyInput C y) ⬝ᵥ (dsmcDirectionalMinEnergyInput C y) +
       (U - dsmcDirectionalMinEnergyInput C y) ⬝ᵥ (U - dsmcDirectionalMinEnergyInput C y) := by
   set U_opt := dsmcDirectionalMinEnergyInput C y
   have hdiff : U = U_opt + (U - U_opt) := by abel
-  have hreach_opt : C *ᵥ U_opt = y := dsmcDirectionalMinEnergyInput_achieves C y hinv
+  have hreach_opt : C *ᵥ U_opt = y := dsmcDirectionalMinEnergyInput_achieves C y hb
   have hC_diff : C *ᵥ (U - U_opt) = 0 := by
     rw [Matrix.mulVec_sub, hU, hreach_opt, sub_self]
   have horth : U_opt ⬝ᵥ (U - U_opt) = 0 := by
-    change (Cᵀ *ᵥ ((C * Cᵀ)⁻¹ *ᵥ y)) ⬝ᵥ (U - U_opt) = 0
+    change (Cᵀ *ᵥ ((dsmcControllabilityGramian C)⁻¹ *ᵥ y)) ⬝ᵥ (U - U_opt) = 0
     rw [dsmc_dotProduct_mulVec_transpose, hC_diff, dotProduct_zero]
   conv_lhs => rw [hdiff]
   rw [dotProduct_add, add_dotProduct, add_dotProduct, horth]
   rw [dotProduct_comm (U - U_opt) U_opt, horth]
   ring
 
-/-- The **directional minimum-energy theorem** (Ch. 9 §9.3.4, printed p. 183):
-among all control input sequences achieving the directional reachability target `C *ᵥ U = y`,
-the input sequence `dsmcDirectionalMinEnergyInput C y` minimizes the control energy `U ⬝ᵥ U`. -/
+/-- The **directional minimum-energy theorem**, in the abstract least-squares form
+of Ch. 9 §9.3.4 (printed p. 183): provided `C Cᵀ` is invertible — the
+directional-controllability rank condition `hb : IsUnit (C * Cᵀ).det` of Lemma 9.5
+(printed p. 181) — among all control input sequences achieving the reachability
+target `C *ᵥ U = y`, the input sequence `dsmcDirectionalMinEnergyInput C y`
+minimizes the control energy `U ⬝ᵥ U`. -/
 theorem dsmc_directional_minimum_energy (C : Matrix (Fin d) (Fin k) ℝ) (y : Fin d → ℝ)
-    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hinv : (C * Cᵀ) * (C * Cᵀ)⁻¹ = 1) :
+    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hb : IsUnit (C * Cᵀ).det) :
     (dsmcDirectionalMinEnergyInput C y) ⬝ᵥ (dsmcDirectionalMinEnergyInput C y) ≤ U ⬝ᵥ U := by
-  rw [dsmc_directional_energy_decomposition C y U hU hinv]
+  rw [dsmc_directional_energy_decomposition C y U hU hb]
   have hsq : 0 ≤ (U - dsmcDirectionalMinEnergyInput C y) ⬝ᵥ
       (U - dsmcDirectionalMinEnergyInput C y) :=
     dsmc_dotProduct_self_nonneg _
   linarith
 
-/-- **Uniqueness of the directional minimum-energy control input**: equality in energy
-holds if and only if `U` is identical to the minimum-energy input sequence. -/
+/-- **Uniqueness of the directional minimum-energy control input**: provided
+`C Cᵀ` is invertible (`hb`), equality in energy holds if and only if `U` is
+identical to the minimum-energy input sequence. -/
 theorem dsmc_directional_minimum_energy_unique (C : Matrix (Fin d) (Fin k) ℝ) (y : Fin d → ℝ)
-    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hinv : (C * Cᵀ) * (C * Cᵀ)⁻¹ = 1) :
+    (U : Fin k → ℝ) (hU : C *ᵥ U = y) (hb : IsUnit (C * Cᵀ).det) :
     U ⬝ᵥ U = (dsmcDirectionalMinEnergyInput C y) ⬝ᵥ (dsmcDirectionalMinEnergyInput C y) ↔
       U = dsmcDirectionalMinEnergyInput C y := by
-  rw [dsmc_directional_energy_decomposition C y U hU hinv]
+  rw [dsmc_directional_energy_decomposition C y U hU hb]
   constructor
   · intro h
     have hzero : (U - dsmcDirectionalMinEnergyInput C y) ⬝ᵥ
@@ -642,11 +635,12 @@ theorem dsmc_directional_minimum_energy_unique (C : Matrix (Fin d) (Fin k) ℝ) 
     simp
 
 /-- **Normal equations characterization** (Euler–Lagrange / multiplier form):
-an input achieving the reachability target has the minimum energy if and only if
-it lies in the subspace spanned by the rows of `C` (the range of `Cᵀ`). -/
+provided `C Cᵀ` is invertible (`hb`), an input achieving the reachability target
+has the minimum energy if and only if it lies in the subspace spanned by the rows
+of `C` (the range of `Cᵀ`). -/
 theorem dsmc_directional_minimum_energy_normal_equations (C : Matrix (Fin d) (Fin k) ℝ)
     (y : Fin d → ℝ) (U : Fin k → ℝ) (hU : C *ᵥ U = y)
-    (hinv_left : (C * Cᵀ)⁻¹ * (C * Cᵀ) = 1) :
+    (hb : IsUnit (C * Cᵀ).det) :
     U = dsmcDirectionalMinEnergyInput C y ↔ ∃ lam_mult : Fin d → ℝ, U = Cᵀ *ᵥ lam_mult := by
   constructor
   · rintro rfl
@@ -656,9 +650,9 @@ theorem dsmc_directional_minimum_energy_normal_equations (C : Matrix (Fin d) (Fi
     rw [mulVec_mulVec] at hClam
     have hlam : lam_mult = (C * Cᵀ)⁻¹ *ᵥ y := by
       calc lam_mult = 1 *ᵥ lam_mult := (Matrix.one_mulVec _).symm
-      _ = ((C * Cᵀ)⁻¹ * (C * Cᵀ)) *ᵥ lam_mult := by rw [hinv_left]
+      _ = ((C * Cᵀ)⁻¹ * (C * Cᵀ)) *ᵥ lam_mult := by rw [Matrix.nonsing_inv_mul _ hb]
       _ = (C * Cᵀ)⁻¹ *ᵥ ((C * Cᵀ) *ᵥ lam_mult) := by rw [mulVec_mulVec]
       _ = (C * Cᵀ)⁻¹ *ᵥ y := by rw [hClam]
-    dsimp [dsmcDirectionalMinEnergyInput]
+    dsimp [dsmcDirectionalMinEnergyInput, dsmcControllabilityGramian]
     rw [← hlam]
 
