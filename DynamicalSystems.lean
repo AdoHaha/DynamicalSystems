@@ -113,6 +113,8 @@ import DynamicalSystems.Stability.FiniteTimeLyapunov
 import DynamicalSystems.Stability.Floquet
 import DynamicalSystems.Stability.Hamiltonian
 import DynamicalSystems.Stability.Homogeneity
+import DynamicalSystems.Stability.HomogeneityContraction
+import DynamicalSystems.Stability.HomogeneityFiniteTime
 import DynamicalSystems.Stability.LaSalle
 import DynamicalSystems.Stability.Linearization
 import DynamicalSystems.Stability.Lyapunov
