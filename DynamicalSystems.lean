@@ -38,6 +38,9 @@ import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
 import DynamicalSystems.Estimation.Normalization
 import DynamicalSystems.Estimation.Projection
+import DynamicalSystems.NonSmooth.Clarke
+import DynamicalSystems.NonSmooth.ChainRule
+import DynamicalSystems.NonSmooth.Lyapunov
 import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
