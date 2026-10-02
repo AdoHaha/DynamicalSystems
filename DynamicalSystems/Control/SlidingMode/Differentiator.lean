@@ -44,6 +44,14 @@ On `Fin 3 → ℝ` the unperturbed error dynamics with weights `(3, 2, 1)` is
 
 which is homogeneous of degree `-1` with respect to `secondOrderDifferentiatorWeights`.
 
+## Arbitrary-order differentiator
+
+On `Fin (p + 1) → ℝ` the unperturbed error dynamics with the Levant weights
+`r i = p + 1 - i` is the direct fractional form
+`ė_i = -k_i |e₀|^{(p-i)/(p+1)} sign e₀ + e_{i+1}` for `i < p` and
+`ė_p = -k_p sign e₀`, which is homogeneous of degree `-1` with respect to the Levant
+weighted dilation.  This is the degree under which Levant's finite-time theorem applies.
+
 ## Main definitions
 
 * `superTwistingDifferentiatorField`: the order-one super-twisting differentiator.
@@ -54,6 +62,8 @@ which is homogeneous of degree `-1` with respect to `secondOrderDifferentiatorWe
 * `secondOrderDifferentiatorWeights`: the order-two weights `(3, 2, 1)`.
 * `secondOrderDifferentiatorDilation`: the associated weighted dilation.
 * `order2DifferentiatorVectorField`: the order-two unperturbed error field.
+* `levantDifferentiatorWeights`: the arbitrary-order Levant weights `p + 1 - i`.
+* `levantDifferentiatorVectorField`: the arbitrary-order exact differentiator field.
 
 ## Main statements
 
@@ -65,6 +75,10 @@ which is homogeneous of degree `-1` with respect to `secondOrderDifferentiatorWe
   definite under the corrected gain condition.
 * `order2DifferentiatorVectorField_homogeneous`: the order-two field is homogeneous of
   degree `-1` with respect to `secondOrderDifferentiatorWeights`.
+* `levantDifferentiatorVectorField_homogeneous`: the arbitrary-order field is homogeneous
+  of degree `-1` with respect to `levantDifferentiatorWeights`.
+* `levantDifferentiator_finiteTime_of_contractive`: Levant's arbitrary-order finite-time
+  bridge via `eventually_eq_zero_of_isHomogeneousFlow_of_contractive`.
 
 ## Scope
 
@@ -298,3 +312,131 @@ theorem order2DifferentiatorVectorField_homogeneous (k₀ k₁ k₂ : ℝ) :
       Matrix.cons_val_two, Matrix.tail_cons, Matrix.head_cons, Fin.reduceFinMk,
       weightedDilation_diffWeights_zero, weightedDilation_diffWeights_two,
       sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 3), rpow_neg_one_mul_one hl]
+
+/-! ## Arbitrary-order Levant differentiator -/
+
+/-- The **Levant differentiator weights** `r i = p + 1 - i` for the `(p + 1)`-dimensional
+state `(e₀, …, e_p)` of an estimate of `(f, f', …, f^{(p)})`.  The weight of the `i`-th
+error component is `p + 1 - i` (so component `i` scales as `λ ^ (p + 1 - i)`), which is
+the value that makes the arbitrary-order differentiator field homogeneous of degree `-1`.
+The book's printed `p - i` (Levant, Chapter 4, printed p. 80) is a typo. -/
+def levantDifferentiatorWeights (p : ℕ) : Fin (p + 1) → ℝ :=
+  fun i ↦ (p + 1 : ℝ) - (i : ℝ)
+
+/-- The **arbitrary-order Levant exact differentiator** in direct fractional form on the
+error coordinates `x = (e₀, …, e_p)`:
+`f_i(x) = -k_i |x₀|^{(p-i)/(p+1)} sign x₀ + x_{i+1}` for `i < p`, while the last component
+is `f_p(x) = -k_p sign x₀` (the `i = p` case of the same formula, since `|x₀|^0 = 1`).
+This is Levant, Chapter 4, printed p. 80, Eq. 10 with `p` derivatives and the fractional
+exponents `(p - i)/(p + 1)`; see Chapter 14, printed p. 302 for the observation use. -/
+noncomputable def levantDifferentiatorVectorField (p : ℕ) (k : Fin (p + 1) → ℝ)
+    (x : Fin (p + 1) → ℝ) : Fin (p + 1) → ℝ :=
+  fun i ↦ -k i * |x 0| ^ (((p : ℝ) - (i : ℝ)) / ((p : ℝ) + 1)) * Real.sign (x 0) +
+    if h : (i : ℕ) < p then x ⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ else 0
+
+/-- The `i`-th weight of `levantDifferentiatorWeights p` is `p + 1 - i`. -/
+theorem levantDifferentiatorWeights_apply (p : ℕ) (i : Fin (p + 1)) :
+    levantDifferentiatorWeights p i = (p + 1 : ℝ) - (i : ℝ) := rfl
+
+/-- Componentwise evaluation of the weighted dilation with the Levant weights:
+`(d_λ x) i = λ ^ (p + 1 - i) * x i`. -/
+private theorem levantDifferentiatorDilation_apply (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
+    (i : Fin (p + 1)) :
+    weightedDilation (levantDifferentiatorWeights p) l x i =
+      l ^ ((p + 1 : ℝ) - (i : ℝ)) * x i := rfl
+
+/-- The successor coordinate of the Levant dilation: for `i < p`,
+`(d_λ x) (i+1) = λ ^ (p - i) * x (i+1)`. -/
+private theorem levantDifferentiatorDilation_succ (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
+    (i : Fin (p + 1)) (h : (i : ℕ) < p) :
+    weightedDilation (levantDifferentiatorWeights p) l x ⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ =
+      l ^ ((p : ℝ) - (i : ℝ)) * x ⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ := by
+  rw [levantDifferentiatorDilation_apply]
+  have he : ((p + 1 : ℝ) -
+      (↑(⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ : Fin (p + 1)) : ℝ)) =
+      (p : ℝ) - (i : ℝ) := by
+    push_cast
+    ring
+  rw [he]
+
+/-- The fractional power of the Levant dilation: for `l > 0` and `i : Fin (p + 1)`,
+`|l ^ (p + 1) * a| ^ ((p - i)/(p + 1)) = l ^ (p - i) * |a| ^ ((p - i)/(p + 1))`. -/
+private theorem abs_rpow_levantDifferentiator (p : ℕ) {l : ℝ} (hl : 0 < l) (a : ℝ)
+    (i : Fin (p + 1)) :
+    |l ^ (p + 1 : ℝ) * a| ^ (((p : ℝ) - (i : ℝ)) / ((p : ℝ) + 1)) =
+      l ^ ((p : ℝ) - (i : ℝ)) * |a| ^ (((p : ℝ) - (i : ℝ)) / ((p : ℝ) + 1)) := by
+  rw [abs_mul, abs_of_nonneg (Real.rpow_nonneg hl.le _),
+    Real.mul_rpow (Real.rpow_nonneg hl.le _) (abs_nonneg a)]
+  congr 1
+  rw [← Real.rpow_mul hl.le]
+  congr 1
+  field_simp
+
+/-- Componentwise scaling of the Levant differentiator field under its dilation: for
+`l > 0`, `d_λ` maps component `i` to `λ ^ (p - i) = λ ^ (r i - 1)` times component `i`. -/
+private theorem levantDifferentiatorVectorField_scales (p : ℕ) (k : Fin (p + 1) → ℝ)
+    {l : ℝ} (hl : 0 < l) (x : Fin (p + 1) → ℝ) (i : Fin (p + 1)) :
+    levantDifferentiatorVectorField p k
+        (weightedDilation (levantDifferentiatorWeights p) l x) i =
+      l ^ ((p : ℝ) - (i : ℝ)) * levantDifferentiatorVectorField p k x i := by
+  have h0 : weightedDilation (levantDifferentiatorWeights p) l x 0 = l ^ (p + 1 : ℝ) * x 0 := by
+    rw [levantDifferentiatorDilation_apply]
+    congr 1
+    simp
+  by_cases h : (i : ℕ) < p
+  · simp only [levantDifferentiatorVectorField]
+    rw [dite_eq_left h, dite_eq_left h]
+    rw [h0, abs_rpow_levantDifferentiator p hl (x 0) i,
+      sign_mul_of_pos_left (Real.rpow_pos_of_pos hl _),
+      levantDifferentiatorDilation_succ p l x i h]
+    ring
+  · simp only [levantDifferentiatorVectorField]
+    rw [dite_eq_right h, dite_eq_right h]
+    rw [h0, abs_rpow_levantDifferentiator p hl (x 0) i,
+      sign_mul_of_pos_left (Real.rpow_pos_of_pos hl _)]
+    ring
+
+/-- The **arbitrary-order Levant differentiator field is homogeneous of degree `-1`** with
+respect to the weights `levantDifferentiatorWeights p = (p + 1, p, …, 1)`: under
+`d_λ (e₀, …, e_p) = (λ^{p+1} e₀, …, λ e_p)` every component scales by `λ ^ (r i - 1)`.
+This is the degree-`-1` condition under which Levant's Theorem 1/3 applies. -/
+theorem levantDifferentiatorVectorField_homogeneous (p : ℕ) (k : Fin (p + 1) → ℝ) :
+    IsHomogeneousVectorField (levantDifferentiatorVectorField p k)
+      (levantDifferentiatorWeights p) (-1) := by
+  intro l hl x
+  funext i
+  rw [Pi.smul_apply, smul_eq_mul]
+  rw [levantDifferentiatorVectorField_scales p k hl x i]
+  rw [levantDifferentiatorDilation_apply, ← mul_assoc, ← Real.rpow_add hl]
+  congr 1
+  ring_nf
+
+/-- **Levant's arbitrary-order finite-time bridge (Chapter 4).** A flow on the `(p + 1)`-
+dimensional error space that is homogeneous of time exponent `1` with respect to the Levant
+weighted dilation, and that maps a dilation-retractable set `D ∋ x` into `d_l D` in time
+`T`, reaches the origin by time `T / (1 - l)`.  This is
+`eventually_eq_zero_of_isHomogeneousFlow_of_contractive` instantiated with `p = 1`, the
+Levant dilation and `weightedDilation_isDilationAction`, using `Real.rpow_one`. -/
+theorem levantDifferentiator_finiteTime_of_contractive (p : ℕ)
+    {Φ : ℝ → (Fin (p + 1) → ℝ) → (Fin (p + 1) → ℝ)}
+    (hΦ : IsHomogeneousFlow Φ (weightedDilation (levantDifferentiatorWeights p)) 1)
+    (hcomp : ∀ s t, 0 ≤ s → 0 ≤ t → ∀ y, Φ (s + t) y = Φ s (Φ t y))
+    {D : Set (Fin (p + 1) → ℝ)}
+    (hD : ∀ κ, 0 < κ → κ ≤ 1 → ∀ y ∈ D,
+      weightedDilation (levantDifferentiatorWeights p) κ y ∈ D)
+    {l : ℝ} (hl0 : 0 < l) (hl1 : l < 1) {T : ℝ} (hT : 0 < T)
+    (hcontract : ∀ y ∈ D,
+      Φ T y ∈ weightedDilation (levantDifferentiatorWeights p) l '' D)
+    {x : Fin (p + 1) → ℝ} (hx : x ∈ D)
+    (hcont : ContinuousAt (Φ · x) (T / (1 - l)))
+    (hfix : ∀ s, 0 ≤ s → Φ s 0 = 0)
+    (hshrink : ∀ y, (∀ N : ℕ, y ∈ closure
+      (weightedDilation (levantDifferentiatorWeights p) (l ^ N) '' D)) → y = 0) :
+    ∀ t, T / (1 - l) ≤ t → Φ t x = 0 := by
+  have key : ∀ t, T / (1 - l ^ (1 : ℝ)) ≤ t → Φ t x = 0 :=
+    eventually_eq_zero_of_isHomogeneousFlow_of_contractive
+      (weightedDilation_isDilationAction (levantDifferentiatorWeights p)) hΦ
+      (by norm_num : (0 : ℝ) < 1) hcomp hD hl0 hl1 hT hcontract hx
+      (by simpa only [Real.rpow_one] using hcont) hfix hshrink
+  intro t ht
+  exact key t (by simpa only [Real.rpow_one] using ht)
