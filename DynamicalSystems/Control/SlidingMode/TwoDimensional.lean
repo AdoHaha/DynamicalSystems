@@ -5,6 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import Mathlib.Algebra.Order.Star.Real
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 public import Mathlib.LinearAlgebra.Matrix.Vec
 public import Mathlib.Tactic
@@ -535,19 +536,6 @@ theorem dsmcTwoDModel_stackState_mem_directionalReachable (A1 A2 A0 : Matrix (Fi
 
 variable {d k : ℕ}
 
-/-- Transpose dot product identity: `(Cᵀ *ᵥ lam) ⬝ᵥ v = lam ⬝ᵥ (C *ᵥ v)`. -/
-theorem dsmc_dotProduct_mulVec_transpose (C : Matrix (Fin d) (Fin k) ℝ)
-    (lam : Fin d → ℝ) (v : Fin k → ℝ) :
-    (Cᵀ *ᵥ lam) ⬝ᵥ v = lam ⬝ᵥ (C *ᵥ v) := by
-  rw [← vecMul_transpose Cᵀ lam, transpose_transpose, dotProduct_comm,
-    dotProduct_mulVec, dotProduct_comm]
-
-/-- The Euclidean dot product of a real vector with itself is non-negative. -/
-theorem dsmc_dotProduct_self_nonneg (v : Fin k → ℝ) : 0 ≤ v ⬝ᵥ v := by
-  apply Finset.sum_nonneg
-  intro i _
-  exact mul_self_nonneg (v i)
-
 /-- The **discrete controllability Gramian** matrix `W = C Cᵀ` (Ch. 9 §9.3.2,
 printed p. 181, and §9.3.4, printed p. 183). It is the matrix inverted in the
 minimum-energy control input `dsmcDirectionalMinEnergyInput`. -/
@@ -596,7 +584,8 @@ theorem dsmc_directional_energy_decomposition (C : Matrix (Fin d) (Fin k) ℝ) (
     rw [Matrix.mulVec_sub, hU, hreach_opt, sub_self]
   have horth : U_opt ⬝ᵥ (U - U_opt) = 0 := by
     change (Cᵀ *ᵥ ((dsmcControllabilityGramian C)⁻¹ *ᵥ y)) ⬝ᵥ (U - U_opt) = 0
-    rw [dsmc_dotProduct_mulVec_transpose, hC_diff, dotProduct_zero]
+    rw [dotProduct_comm, dotProduct_mulVec, vecMul_transpose, dotProduct_comm, hC_diff,
+      dotProduct_zero]
   conv_lhs => rw [hdiff]
   rw [dotProduct_add, add_dotProduct, add_dotProduct, horth]
   rw [dotProduct_comm (U - U_opt) U_opt, horth]
@@ -613,8 +602,9 @@ theorem dsmc_directional_minimum_energy (C : Matrix (Fin d) (Fin k) ℝ) (y : Fi
     (dsmcDirectionalMinEnergyInput C y) ⬝ᵥ (dsmcDirectionalMinEnergyInput C y) ≤ U ⬝ᵥ U := by
   rw [dsmc_directional_energy_decomposition C y U hU hb]
   have hsq : 0 ≤ (U - dsmcDirectionalMinEnergyInput C y) ⬝ᵥ
-      (U - dsmcDirectionalMinEnergyInput C y) :=
-    dsmc_dotProduct_self_nonneg _
+      (U - dsmcDirectionalMinEnergyInput C y) := by
+    simpa only [star_trivial] using
+      dotProduct_self_star_nonneg (U - dsmcDirectionalMinEnergyInput C y)
   linarith
 
 /-- **Uniqueness of the directional minimum-energy control input**: provided
