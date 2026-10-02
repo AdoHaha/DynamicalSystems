@@ -15,6 +15,7 @@ import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Discrete
+import DynamicalSystems.Control.SlidingMode.DiscreteMatrix
 import DynamicalSystems.Control.SlidingMode.Filippov
 import DynamicalSystems.Control.SlidingMode.FilippovExistence
 import DynamicalSystems.Control.SlidingMode.Observer
