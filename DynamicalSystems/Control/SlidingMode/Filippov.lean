@@ -8,6 +8,7 @@ module
 public import Mathlib.Analysis.Convex.Hull
 public import Mathlib.Analysis.Normed.Module.Convex
 public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.MeasureTheory.Function.AbsolutelyContinuous
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.Topology.Bornology.Basic
 public import Mathlib.Topology.MetricSpace.Basic
@@ -45,8 +46,10 @@ level (see `DynamicalSystems.Control.SlidingMode.Relay`).
   characterises exactly the outer/Vietoris condition that every open set
   containing `F x` contains `F y` for `y` near `x`.
 * `filippovSet f x`: the Filippov convexification of the field `f` at `x`.
-* `IsFilippovSolutionOn γ F s`: a curve `γ` that is continuous on `s` and whose
-  derivative lies in `F (γ t)` for almost every `t ∈ s`.
+* `IsLocallyAbsolutelyContinuousOn γ s`: `γ` is absolutely continuous on every
+  closed interval `uIcc a b` contained in `s`.
+* `IsFilippovSolutionOn γ F s`: a curve `γ` that is locally absolutely continuous
+  on `s` and whose derivative lies in `F (γ t)` for almost every `t ∈ s`.
 
 ## Main statements
 
@@ -70,10 +73,10 @@ field are studied.
 This structure is a **definitional stub**: it records the standard Filippov
 regularity of the right-hand side, but it is not yet wired to an existence theorem
 for solutions (and the library does not yet prove that `filippovSet f` has these
-properties).  The associated scoped solution concept `IsFilippovSolutionOn` also
-uses `ContinuousOn` plus almost-everywhere differentiability rather than absolute
-continuity, so singular continuous curves such as the Cantor staircase are not
-excluded, unlike in the full Filippov theory. -/
+properties).  The associated scoped solution concept `IsFilippovSolutionOn` is
+built on absolute continuity, so — unlike bare continuity together with
+almost-everywhere differentiability — it excludes singular continuous curves
+such as the Cantor staircase, in line with the full Filippov theory. -/
 structure IsFilippovInclusion (F : E → Set E) : Prop where
   /-- Every value `F x` is nonempty. -/
   nonempty : ∀ x, (F x).Nonempty
@@ -133,21 +136,29 @@ theorem filippovSet_of_continuous {f : E → E} (hf : Continuous f) (x : E) :
     filippovSet f x = {f x} :=
   filippovSet_of_continuousAt hf.continuousAt
 
+/-- Local absolute continuity on a set: `γ` is absolutely continuous on every
+closed interval `uIcc a b` contained in `s`. This is the curve regularity
+required of a Filippov solution; it is stronger than continuity (it excludes the
+Cantor staircase) and is exactly the class for which the fundamental theorem of
+calculus holds. -/
+def IsLocallyAbsolutelyContinuousOn (γ : ℝ → E) (s : Set ℝ) : Prop :=
+  ∀ a b, Set.uIcc a b ⊆ s → AbsolutelyContinuousOnInterval γ a b
+
 /-- A Filippov solution of the differential inclusion `ẋ ∈ F x` on the set `s`:
-a curve `γ` that is continuous on `s` and whose derivative lies in `F (γ t)` for
-almost every `t ∈ s`. This is the solution concept for a state-discontinuous
-feedback, whose closed-loop field is replaced by its Filippov convexification.
+a curve `γ` that is locally absolutely continuous on `s` and whose derivative
+lies in `F (γ t)` for almost every `t ∈ s`. This is the solution concept for a
+state-discontinuous feedback, whose closed-loop field is replaced by its Filippov
+convexification.
 
-This scoped definition uses `ContinuousOn` together with almost-everywhere
-differentiability, whereas the full Filippov theory asks for *absolute
-continuity* of `γ` (equivalently, `γ` is the integral of an integrable function,
-as in the Carathéodory existence theory for differential inclusions). The two
-agree for the locally Lipschitz curves produced by existence theorems, but they
-are not equivalent in general: the Cantor staircase is continuous with
-zero derivative almost everywhere, yet is not absolutely continuous and so must
-not count as a solution of `ẋ ∈ F x` when `0 ∈ F x`.
+The absolute-continuity requirement (rather than mere continuity together with
+almost-everywhere differentiability) is what makes the concept match the full
+Filippov theory: it excludes singular continuous curves such as the Cantor
+staircase, which is continuous with zero derivative almost everywhere but is not
+absolutely continuous, and so must not count as a solution of `ẋ ∈ F x` when
+`0 ∈ F x`.
 
-This is likewise a **definitional stub**: it is not yet connected to an existence
-theorem for Filippov solutions, nor to `IsFilippovInclusion`. -/
+This is a **definitional stub**: it is not yet connected to an existence theorem
+for Filippov solutions, nor to `IsFilippovInclusion`. -/
 def IsFilippovSolutionOn (γ : ℝ → E) (F : E → Set E) (s : Set ℝ) : Prop :=
-  ContinuousOn γ s ∧ ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)
+  IsLocallyAbsolutelyContinuousOn γ s ∧
+    ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)
