@@ -73,6 +73,56 @@ theorem posDef_fromBlocks_zero_iff [Finite m] [Finite n] (A : Matrix m m ℝ) (D
     ext i j; simp [fromBlocks_apply₂₂]
   exact ⟨hA_sub ▸ h.submatrix Sum.inl_injective, hD_sub ▸ h.submatrix Sum.inr_injective⟩
 
+/-- The strict positive definiteness of a block matrix `[A, B; Bᵀ, D]` with invertible
+bottom-right block `D` is equivalent to that of the block-diagonal matrix
+`[A - B * ⅟D * Bᵀ, 0; 0, D]` obtained by the LDU congruence that eliminates the off-diagonal
+block. This is the congruence underlying `posDef_fromBlocks₂₂_iff`. -/
+private theorem posDef_fromBlocks_congr₂₂ [Finite m] [Fintype n] [DecidableEq n]
+    (A : Matrix m m ℝ) (B : Matrix m n ℝ) (D : Matrix n n ℝ) [Invertible D] (hD : D.PosDef) :
+    (fromBlocks A B Bᵀ D).PosDef ↔ (fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D).PosDef := by
+  have := Fintype.ofFinite m
+  classical
+  have hU : IsUnit (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
+    rw [isUnit_fromBlocks_zero₂₁]
+    exact ⟨isUnit_one, isUnit_one⟩
+  have h_star : star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
+      fromBlocks 1 0 (⅟D * Bᵀ) 1 := by
+    rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
+    simp only [conjTranspose_one, conjTranspose_zero]
+    congr 1
+    rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hD.isHermitian.eq,
+      ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial]
+  have h_fac : fromBlocks 1 (B * ⅟D) 0 1 * fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D *
+      star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
+    rw [h_star, ← fromBlocks_eq_of_invertible₂₂]
+  rw [← h_fac]
+  exact IsUnit.posDef_star_right_conjugate_iff hU
+
+/-- The strict positive definiteness of a block matrix `[A, B; Bᵀ, D]` with invertible
+top-left block `A` is equivalent to that of the block-diagonal matrix
+`[A, 0; 0, D - Bᵀ * ⅟A * B]` obtained by the LDU congruence that eliminates the off-diagonal
+block. This is the congruence underlying `posDef_fromBlocks₁₁_iff`. -/
+private theorem posDef_fromBlocks_congr₁₁ [Fintype m] [DecidableEq m] [Finite n]
+    (A : Matrix m m ℝ) (B : Matrix m n ℝ) (D : Matrix n n ℝ) [Invertible A] (hA : A.PosDef) :
+    (fromBlocks A B Bᵀ D).PosDef ↔ (fromBlocks A 0 0 (D - Bᵀ * ⅟A * B)).PosDef := by
+  have := Fintype.ofFinite n
+  classical
+  have hU : IsUnit (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
+    rw [isUnit_fromBlocks_zero₁₂]
+    exact ⟨isUnit_one, isUnit_one⟩
+  have h_star : star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
+      fromBlocks 1 (⅟A * B) 0 1 := by
+    rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
+    simp only [conjTranspose_one, conjTranspose_zero]
+    congr 1
+    rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hA.isHermitian.eq,
+      ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial, transpose_transpose]
+  have h_fac : fromBlocks 1 0 (Bᵀ * ⅟A) 1 * fromBlocks A 0 0 (D - Bᵀ * ⅟A * B) *
+      star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
+    rw [h_star, ← fromBlocks_eq_of_invertible₁₁]
+  rw [← h_fac]
+  exact IsUnit.posDef_star_right_conjugate_iff hU
+
 /-- A 2×2 block matrix `[A, B; Bᵀ, D]` with invertible bottom-right block `D` is positive
 definite if and only if `D` is positive definite and the Schur complement `A - B * ⅟D * Bᵀ`
 is positive definite. -/
@@ -86,40 +136,14 @@ theorem posDef_fromBlocks₂₂_iff [Finite m] [Fintype n] [DecidableEq n]
     have hD_sub : (fromBlocks A B Bᵀ D).submatrix Sum.inr Sum.inr = D := by
       ext i j; simp [fromBlocks_apply₂₂]
     have hD : D.PosDef := hD_sub ▸ h.submatrix Sum.inr_injective
-    have hU : IsUnit (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
-      rw [isUnit_fromBlocks_zero₂₁]
-      exact ⟨isUnit_one, isUnit_one⟩
-    have h_star : star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
-        fromBlocks 1 0 (⅟D * Bᵀ) 1 := by
-      rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
-      simp only [conjTranspose_one, conjTranspose_zero]
-      congr 1
-      rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hD.isHermitian.eq,
-        ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial]
-    have h_fac : fromBlocks 1 (B * ⅟D) 0 1 * fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D *
-        star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
-      rw [h_star, ← fromBlocks_eq_of_invertible₂₂]
-    have h_block : (fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D).PosDef := by
-      rwa [← IsUnit.posDef_star_right_conjugate_iff hU, h_fac]
+    have h_block : (fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D).PosDef :=
+      (posDef_fromBlocks_congr₂₂ A B D hD).mp h
     rw [posDef_fromBlocks_zero_iff] at h_block
     exact ⟨hD, h_block.1⟩
   · rintro ⟨hD, hS⟩
-    have hU : IsUnit (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
-      rw [isUnit_fromBlocks_zero₂₁]
-      exact ⟨isUnit_one, isUnit_one⟩
-    have h_star : star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
-        fromBlocks 1 0 (⅟D * Bᵀ) 1 := by
-      rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
-      simp only [conjTranspose_one, conjTranspose_zero]
-      congr 1
-      rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hD.isHermitian.eq,
-        ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial]
-    have h_fac : fromBlocks 1 (B * ⅟D) 0 1 * fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D *
-        star (fromBlocks 1 (B * ⅟D) 0 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
-      rw [h_star, ← fromBlocks_eq_of_invertible₂₂]
     have h_block : (fromBlocks (A - B * ⅟D * Bᵀ) 0 0 D).PosDef :=
       (posDef_fromBlocks_zero_iff _ _).2 ⟨hS, hD⟩
-    rwa [← h_fac, IsUnit.posDef_star_right_conjugate_iff hU]
+    exact (posDef_fromBlocks_congr₂₂ A B D hD).mpr h_block
 
 /-- A 2×2 block matrix `[A, B; Bᵀ, D]` with invertible top-left block `A` is positive
 definite if and only if `A` is positive definite and the Schur complement `D - Bᵀ * ⅟A * B`
@@ -134,39 +158,17 @@ theorem posDef_fromBlocks₁₁_iff [Fintype m] [DecidableEq m] [Finite n]
     have hA_sub : (fromBlocks A B Bᵀ D).submatrix Sum.inl Sum.inl = A := by
       ext i j; simp [fromBlocks_apply₁₁]
     have hA : A.PosDef := hA_sub ▸ h.submatrix Sum.inl_injective
-    have hU : IsUnit (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
-      rw [isUnit_fromBlocks_zero₁₂]
-      exact ⟨isUnit_one, isUnit_one⟩
-    have h_star : star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
-        fromBlocks 1 (⅟A * B) 0 1 := by
-      rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
-      simp only [conjTranspose_one, conjTranspose_zero]
-      congr 1
-      rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hA.isHermitian.eq,
-        ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial, transpose_transpose]
-    have h_fac : fromBlocks 1 0 (Bᵀ * ⅟A) 1 * fromBlocks A 0 0 (D - Bᵀ * ⅟A * B) *
-        star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
-      rw [h_star, ← fromBlocks_eq_of_invertible₁₁]
-    have h_block : (fromBlocks A 0 0 (D - Bᵀ * ⅟A * B)).PosDef := by
-      rwa [← IsUnit.posDef_star_right_conjugate_iff hU, h_fac]
+    have h_block : (fromBlocks A 0 0 (D - Bᵀ * ⅟A * B)).PosDef :=
+      (posDef_fromBlocks_congr₁₁ A B D hA).mp h
     rw [posDef_fromBlocks_zero_iff] at h_block
     exact ⟨hA, h_block.2⟩
   · rintro ⟨hA, hS⟩
-    have hU : IsUnit (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) := by
-      rw [isUnit_fromBlocks_zero₁₂]
-      exact ⟨isUnit_one, isUnit_one⟩
-    have h_star : star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) =
-        fromBlocks 1 (⅟A * B) 0 1 := by
-      rw [star_eq_conjTranspose, fromBlocks_conjTranspose]
-      simp only [conjTranspose_one, conjTranspose_zero]
-      congr 1
-      rw [conjTranspose_mul, invOf_eq_nonsing_inv, conjTranspose_nonsing_inv, hA.isHermitian.eq,
-        ← invOf_eq_nonsing_inv, conjTranspose_eq_transpose_of_trivial, transpose_transpose]
-    have h_fac : fromBlocks 1 0 (Bᵀ * ⅟A) 1 * fromBlocks A 0 0 (D - Bᵀ * ⅟A * B) *
-        star (fromBlocks 1 0 (Bᵀ * ⅟A) 1 : Matrix (m ⊕ n) (m ⊕ n) ℝ) = fromBlocks A B Bᵀ D := by
-      rw [h_star, ← fromBlocks_eq_of_invertible₁₁]
     have h_block : (fromBlocks A 0 0 (D - Bᵀ * ⅟A * B)).PosDef :=
       (posDef_fromBlocks_zero_iff _ _).2 ⟨hA, hS⟩
-    rwa [← h_fac, IsUnit.posDef_star_right_conjugate_iff hU]
+    exact (posDef_fromBlocks_congr₁₁ A B D hA).mpr h_block
 
 end Matrix
+
+/-! The campaign gate refers to the two main results by their unqualified names, so expose them at
+root level in addition to the `Matrix.`-qualified forms above (matching Mathlib's block API). -/
+export Matrix (posDef_fromBlocks₂₂_iff posDef_fromBlocks₁₁_iff)
