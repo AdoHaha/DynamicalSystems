@@ -65,7 +65,15 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 /-- A Filippov differential inclusion `ẋ ∈ F x`: a set-valued map with nonempty,
 closed and convex values which is locally bounded and upper semicontinuous. This
 is the precise setting in which Filippov solutions of a discontinuous vector
-field are studied. -/
+field are studied.
+
+This structure is a **definitional stub**: it records the standard Filippov
+regularity of the right-hand side, but it is not yet wired to an existence theorem
+for solutions (and the library does not yet prove that `filippovSet f` has these
+properties).  The associated scoped solution concept `IsFilippovSolutionOn` also
+uses `ContinuousOn` plus almost-everywhere differentiability rather than absolute
+continuity, so singular continuous curves such as the Cantor staircase are not
+excluded, unlike in the full Filippov theory. -/
 structure IsFilippovInclusion (F : E → Set E) : Prop where
   /-- Every value `F x` is nonempty. -/
   nonempty : ∀ x, (F x).Nonempty
@@ -137,6 +145,9 @@ as in the Carathéodory existence theory for differential inclusions). The two
 agree for the locally Lipschitz curves produced by existence theorems, but they
 are not equivalent in general: the Cantor staircase is continuous with
 zero derivative almost everywhere, yet is not absolutely continuous and so must
-not count as a solution of `ẋ ∈ F x` when `0 ∈ F x`. -/
+not count as a solution of `ẋ ∈ F x` when `0 ∈ F x`.
+
+This is likewise a **definitional stub**: it is not yet connected to an existence
+theorem for Filippov solutions, nor to `IsFilippovInclusion`. -/
 def IsFilippovSolutionOn (γ : ℝ → E) (F : E → Set E) (s : Set ℝ) : Prop :=
   ContinuousOn γ s ∧ ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)

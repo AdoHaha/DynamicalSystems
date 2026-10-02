@@ -211,9 +211,9 @@ theorem unitSat_div_eq_sign_of_abs_ge {δ : ℝ} (hδ : 0 < δ) {ε : ℝ} (hε0
 
 /-- **S6 bridge.** The regularized relay value always lies in the Filippov
 convexification of the ideal relay at the switching level,
-`filippovSet (relay k) 0 = Set.Icc (-k) k`. The hypothesis `0 < ε` is retained to
-match the frozen signature; the inclusion holds for every `ε`. -/
-theorem boundaryLayerRelay_mem_filippovSet (k ε s : ℝ) (hk : 0 ≤ k) (_hε : 0 < ε) :
+`filippovSet (relay k) 0 = Set.Icc (-k) k`, for every `ε`. The previously present
+hypothesis `0 < ε` was unused and has been removed. -/
+theorem boundaryLayerRelay_mem_filippovSet (k ε s : ℝ) (hk : 0 ≤ k) :
     boundaryLayerRelay k ε s ∈ filippovSet (relay k) 0 := by
   rcases eq_or_lt_of_le hk with hk0 | hkpos
   · subst hk0

@@ -21,7 +21,9 @@ output `y = x₀`, the super-twisting differentiator of
 full state `(x₀, x₁)`: in the estimate `z = (z₀, z₁)` the field is the super-twisting
 differentiator field `superTwistingDifferentiatorField k₁ k₂ y`, and the observation error
 `z - x` is exactly the differentiator error `(z₀ - y, z₁ - y')`.  When the observation
-error vanishes the estimate coincides with the state, i.e. the reconstruction is exact.
+error vanishes the estimate coincides with the state; that vanishing is produced by the
+finite-time decay of the differentiator error (the convergence content), while
+`state_reconstruction_exact` only unpacks the algebraic identity `z - x = 0`.
 
 ## Main definitions
 
@@ -33,8 +35,8 @@ error vanishes the estimate coincides with the state, i.e. the reconstruction is
 
 * `observationError_eq_differentiatorError`: the observation error is the differentiator
   error of the measured output.
-* `state_reconstruction_exact`: a vanishing observation error gives exact state
-  reconstruction.
+* `state_reconstruction_exact`: the algebraic coordinate unpacker `z - x = 0 →
+  z₀ = x₀ ∧ z₁ = x₁` (not a convergence theorem).
 
 ## Scope
 
@@ -80,9 +82,13 @@ theorem superTwistingObserver_error_eq_superTwistingVectorField
     superTwistingDifferentiator_error_eq_superTwistingVectorField,
     observationError_eq_differentiatorError]
 
-/-- **Exact state reconstruction for the canonical observable system.** If the observation
-error vanishes then the estimate coincides with the state, so both components are
-reconstructed exactly: `z₀ = x₀` and `z₁ = x₁`. -/
+/-- **Algebraic coordinate unpacking of a vanishing observation error.** This is *not* a
+convergence theorem: it merely unpacks the identity `z - x = 0` into the two coordinate
+equalities `z₀ = x₀ ∧ z₁ = x₁`. The convergence content of the observer is the finite-time
+decay of the differentiator error `superTwistingVectorField` towards `0` (the Moreno–Osorio
+certificate of `Differentiator.lean` and the finite-time comparison
+`superTwisting_finiteTime_of_lyapunov_decay`); this lemma is the terminal step that reads
+off state reconstruction *after* that decay has already driven `z - x` to `0`. -/
 theorem state_reconstruction_exact (z x : Fin 2 → ℝ) (h : observationError z x = 0) :
     z 0 = x 0 ∧ z 1 = x 1 := by
   have hz : z = x := sub_eq_zero.mp (by simpa only [observationError] using h)

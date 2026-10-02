@@ -60,8 +60,8 @@ Definition 1 & Theorem 1, printed pp. 100 and 104–105).
 * `hasDerivAt_p_norm_decrease_in_sector`: the trajectory-level counterpart.
 * `inner_subset_slidingSector`, `inner_union_outer_eq_slidingSector`,
   `inner_inter_outer_eq_empty`: the inner/outer partition of the second-order sector.
-* `sectorDefect_lieDeriv_nonpos`: algebraic infinitesimal tangency to the outer
-  boundary.
+* `sectorDefect_lieDeriv_nonpos`: algebraic infinitesimal tangency — a nonpositive
+  defect-derivative inequality gives a nonpositive Lie derivative.
 * `slidingSector_invariant_of_deriv_nonpos`: path-level forward invariance of the
   sector via `monotoneOn_of_deriv_nonneg`.
 
@@ -265,15 +265,12 @@ theorem hasDerivAt_p_norm_decrease_in_sector
 
 /-! ### Second-order sector invariance -/
 
--- The hypothesis `_hx` records that the invariance condition is imposed on the outer
--- sector, as in Pan & Furuta Eq. 47; the algebraic implication below only needs the
--- differential inequality, so the (mathematically redundant) sector membership is kept
--- for the geometric reading and named with a leading underscore to satisfy the linter.
-/-- Algebraic infinitesimal tangency: along any vector field `F` satisfying the
-outer-sector invariance condition, the Lie derivative of the defect is nonpositive. -/
+/-- Algebraic infinitesimal tangency: along any vector field `F` whose sector-defect
+derivative is nonpositive, the Lie derivative of the defect is nonpositive. The previously
+present hypothesis `x ∈ outerSlidingSector c Ξ Δ` was unused (the implication needs only
+the differential inequality) and has been removed together with the dead parameter `Ξ`. -/
 theorem sectorDefect_lieDeriv_nonpos
-    {c : ι → ℝ} {Ξ Δ : Matrix ι ι ℝ} {F : (ι → ℝ) → (ι → ℝ)} {x : ι → ℝ}
-    (_hx : x ∈ outerSlidingSector c Ξ Δ)
+    {c : ι → ℝ} {Δ : Matrix ι ι ℝ} {F : (ι → ℝ) → (ι → ℝ)} {x : ι → ℝ}
     (hinv : 2 * (c ⬝ᵥ x) * (c ⬝ᵥ F x) ≤ 2 * (x ⬝ᵥ (Δ *ᵥ F x))) :
     sectorDefectLieDeriv c Δ F x ≤ 0 := by
   simp only [sectorDefectLieDeriv]

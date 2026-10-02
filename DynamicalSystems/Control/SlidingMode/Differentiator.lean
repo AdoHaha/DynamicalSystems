@@ -153,28 +153,30 @@ theorem morenoOsorio_robust_quadratic_form (k₁ k₂ L : ℝ) (x : Fin 2 → �
     Matrix.of_apply, Matrix.sub_apply, Matrix.smul_apply]
   ring
 
-/-- **Robust Moreno–Osorio certificate.** With `k₁ > 0`, `L < k₂` and the corrected gain
-condition `k₁² (k₂ - 3 L) > 2 L²`, the dissipation matrix
+/-- **Robust Moreno–Osorio certificate.** With `k₁ > 0` and the corrected gain condition
+`k₁² (k₂ - 3 L) > 2 L²`, the dissipation matrix
 `Q(k₁, k₂) - L • !![k₁, 1; 1, 0]` is positive definite.
 
 The reviewer's proposed condition `2 k₁ (k₂ - L)² > L²` is *not* sufficient: the
 determinant of the matrix is `k₁² (k₂ - 3 L) / 2 - L²`, so `k₂ > 3 L` is unavoidable.
-The condition stated here is exactly `det > 0`, which together with the positivity of the
-leading entry `k₁ (k₂ - L + k₁²/2)` (a consequence of `L < k₂`) characterises positive
-definiteness of the `2 × 2` matrix. -/
-theorem morenoOsorio_robust_posDef {k₁ k₂ L : ℝ} (hk₁ : 0 < k₁) (hrob : L < k₂)
+The condition stated here is exactly `det > 0`, which by itself forces the leading entry
+`k₁ (k₂ - L + k₁²/2)` to be positive (`det > 0` gives `a c > b² ≥ 0` with `c = k₁/2 > 0`,
+so `a > 0`); the extra hypothesis `L < k₂` is therefore redundant and has been removed. -/
+theorem morenoOsorio_robust_posDef {k₁ k₂ L : ℝ} (hk₁ : 0 < k₁)
     (hgain : k₁ ^ 2 * (k₂ - 3 * L) > 2 * L ^ 2) :
     (morenoOsorioQ k₁ k₂ - morenoOsorioPerturbationMatrix k₁ L).PosDef := by
   set a : ℝ := k₁ * k₂ + (k₁ / 2) * k₁ ^ 2 - L * k₁ with ha_def
   set b : ℝ := -((k₁ / 2) * k₁ + L) with hb_def
   set c : ℝ := k₁ / 2 with hc_def
-  have ha : 0 < a := by
-    rw [ha_def]
-    nlinarith [hk₁, hrob, mul_pos hk₁ hk₁]
+  have hcpos : 0 < c := by rw [hc_def]; linarith
   have hdet : 0 < a * c - b ^ 2 := by
     have heq : a * c - b ^ 2 = (k₁ ^ 2 * (k₂ - 3 * L) - 2 * L ^ 2) / 2 := by
       rw [ha_def, hb_def, hc_def]; ring
     rw [heq]; linarith
+  have ha : 0 < a := by
+    have hlt : b ^ 2 < a * c := by linarith
+    have hlt' : b ^ 2 < c * a := by rwa [mul_comm a c] at hlt
+    exact pos_of_mul_pos_right (lt_of_le_of_lt (sq_nonneg b) hlt') hcpos.le
   refine Matrix.PosDef.of_dotProduct_mulVec_pos ?_ ?_
   · rw [Matrix.IsHermitian]
     ext i j

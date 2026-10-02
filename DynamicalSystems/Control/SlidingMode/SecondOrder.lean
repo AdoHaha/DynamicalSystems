@@ -51,13 +51,16 @@ degree for which Levant's Theorem 1 applies.
 * `superTwistingVectorField_homogeneous`: super-twisting field is homogeneous of degree `-1`.
 * `quasiContinuous2Control_homogeneous`: quasi-continuous control has degree `0`.
 * `quasiContinuous2VectorField_homogeneous`: quasi-continuous field has degree `-1`.
-* `secondOrder_finiteTime_of_contractive`: Levant's Theorem 3 bridge, a contracting
-  retractable set for a time-`1`-homogeneous flow reaches the origin in finite time.
+* `secondOrder_finiteTime_of_contractive`: Levant Theorem 1 specialized to `p = 1`, with
+  the contractivity taken as a hypothesis; a contracting retractable set for a
+  time-`1`-homogeneous flow reaches the origin in finite time.
 * `morenoOsorioP_posDef` and `morenoOsorioQ_posDef`: `P` and `Q` are positive definite.
 * `morenoOsorio_lyapunov_equation`: `Aᵀ P + P A = -Q`.
 * `morenoOsorioV_pos_def`: `V` is positive definite and vanishes exactly at the origin.
-* `superTwisting_finiteTime_of_lyapunov_decay`: a continuous trajectory with right
-  derivative `z' ≤ -c z^{1/2}` reaches zero within the finite time `2 sqrt(z₀)/c`.
+* `superTwisting_finiteTime_of_lyapunov_decay`: the abstract scalar comparison — a
+  continuous trajectory with right derivative `z' ≤ -c z^{1/2}` reaches zero within the
+  finite time `2 sqrt(z₀)/c` (the decay inequality is a hypothesis, not derived from a
+  super-twisting trajectory).
 
 For the last statement the continuity of `z` on `[t₀, t₁]` is an explicit hypothesis
 (`hzcont`): without it the statement is false (a trajectory may jump at the final time
@@ -275,12 +278,16 @@ theorem quasiContinuous2VectorField_homogeneous (α : ℝ) :
   · exact h0
   · exact h1
 
-/-- **Levant's Theorem 3 bridge (Chapter 4).** A flow on the 2-sliding phase space
-`(σ, σ̇)` that is homogeneous of time exponent `1` with respect to the 2-sliding dilation,
-and that maps a dilation-retractable set `D ∋ x` into `d_λ D` in time `T`, reaches the
-origin by time `T / (1 - λ)`. This is
+/-- **Levant Theorem 1 specialized to `p = 1` (Chapter 4), with contractivity as a
+hypothesis.** A flow on the 2-sliding phase space `(σ, σ̇)` that is homogeneous of time
+exponent `1` with respect to the 2-sliding dilation, and that maps a dilation-retractable
+set `D ∋ x` into `d_λ D` in time `T`, reaches the origin by time `T / (1 - λ)`. This is
 `eventually_eq_zero_of_isHomogeneousFlow_of_contractive` instantiated with `p = 1` and the
-2-sliding dilation, using `secondOrderDilation_isDilationAction` and `Real.rpow_one`. -/
+2-sliding dilation, using `secondOrderDilation_isDilationAction` and `Real.rpow_one`.
+
+This is *not* the full Levant Theorem 3 controller analysis: the contraction hypothesis
+`hcontract` (the existence of `T`, `λ` with `Φ T y ∈ d_λ D` for all `y ∈ D`) is assumed,
+not derived from twisting/super-twisting controller gains. -/
 theorem secondOrder_finiteTime_of_contractive
     {Φ : ℝ → (Fin 2 → ℝ) → (Fin 2 → ℝ)}
     (hΦ : IsHomogeneousFlow Φ secondOrderDilation 1)
@@ -458,14 +465,17 @@ theorem morenoOsorioV_pos_def {k₁ k₂ : ℝ} (hk₂ : 0 < k₂) (x : Fin 2 �
       rw [hV]
       simp [superTwistingZeta]
 
-/-- **Bridge to the scalar finite-time comparison.** A continuous trajectory `z` on
-`[t₀, t₁]` whose right derivative satisfies `z' ≤ -c z^{1/2}` reaches `0` by the settling
-time `2 sqrt(z₀)/c`: if the endpoint value were positive, the barrier
+/-- **Abstract scalar finite-time comparison (not super-twisting specific).** A continuous
+trajectory `z` on `[t₀, t₁]` whose right derivative satisfies `z' ≤ -c z^{1/2}` reaches `0`
+by the settling time `2 sqrt(z₀)/c`: if the endpoint value were positive, the barrier
 `s ↦ z s^{1/2} + (c/2) s` would be non-increasing and would force `z t₁^{1/2} ≤ 0`.
 
 This is the `α = 1/2` case of slice S2's `eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow`,
 restricted to the finite interval and with an arbitrary (existential) right derivative,
-which is why the endpoint continuity `hzcont` is an explicit hypothesis. -/
+which is why the endpoint continuity `hzcont` is an explicit hypothesis. The theorem takes
+the decay inequality `z' ≤ -c z^{1/2}` as a *hypothesis*; it does **not** prove that a
+super-twisting trajectory satisfies that inequality (that would require the non-smooth
+Moreno–Osorio chain rule through `σ = 0`, which is out of scope). -/
 theorem superTwisting_finiteTime_of_lyapunov_decay
     {z : ℝ → ℝ} {c : ℝ} (hc : 0 < c) {t₀ t₁ : ℝ} (ht : t₀ < t₁)
     (hzcont : ContinuousOn z (Set.Icc t₀ t₁))

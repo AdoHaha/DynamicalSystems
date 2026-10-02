@@ -57,8 +57,9 @@ closed-loop motion starts on the sliding manifold. The tracking-error bounds
 `ismc_tracking_error_eventually_bound` are the discrete comparison estimates,
 reusing `DynamicalSystems.DiscreteTime.Comparison` and
 `DynamicalSystems.DiscreteTime.UltimateBoundedness`; the parametric bound
-`ismc_tracking_error_O_T_squared` is the exact algebraic content of the
-`O(T²)` accuracy claim of Chapter 12 eq. (21).
+`ismc_tracking_error_O_T_squared` is the *static* algebraic inequality behind the
+`O(T²)` accuracy claim of Chapter 12 eq. (21). It is not the continuous-sampling
+asymptotics of the sampled-data closed loop.
 
 ## Scope
 
@@ -181,9 +182,9 @@ theorem gaoReachingMap_le_sub_of_gt {q ε s : ℝ} (hq0 : 0 ≤ q) (hε : 0 < ε
   nlinarith [mul_nonneg hq0 (le_of_lt hspos)]
 
 /-- No overshoot below `-ε` when coming from above the band: for `ε < s` the
-reaching map lands strictly above `-ε`. The hypothesis `0 ≤ q` belongs to the
-standard reaching-law signature but is not needed for this one-sided bound. -/
-theorem gaoReachingMap_gt_neg_of_gt {q ε s : ℝ} (_hq0 : 0 ≤ q) (hq1 : q < 1) (hε : 0 < ε)
+reaching map lands strictly above `-ε`. The hypothesis `0 ≤ q` of the standard
+reaching-law signature was unused for this one-sided bound and has been removed. -/
+theorem gaoReachingMap_gt_neg_of_gt {q ε s : ℝ} (hq1 : q < 1) (hε : 0 < ε)
     (hs : ε < s) : -ε < gaoReachingMap q ε s := by
   have hspos : 0 < s := by linarith
   rw [gaoReachingMap_apply, Real.sign_of_pos hspos]
@@ -200,9 +201,9 @@ theorem gaoReachingMap_ge_add_of_lt {q ε s : ℝ} (hq0 : 0 ≤ q) (hε : 0 < ε
   nlinarith [mul_nonpos_of_nonneg_of_nonpos hq0 (le_of_lt hsneg)]
 
 /-- No overshoot above `ε` when coming from below the band: for `s < -ε` the
-reaching map lands strictly below `ε`. The hypothesis `0 ≤ q` belongs to the
-standard reaching-law signature but is not needed for this one-sided bound. -/
-theorem gaoReachingMap_lt_pos_of_lt {q ε s : ℝ} (_hq0 : 0 ≤ q) (hq1 : q < 1) (hε : 0 < ε)
+reaching map lands strictly below `ε`. The hypothesis `0 ≤ q` of the standard
+reaching-law signature was unused for this one-sided bound and has been removed. -/
+theorem gaoReachingMap_lt_pos_of_lt {q ε s : ℝ} (hq1 : q < 1) (hε : 0 < ε)
     (hs : s < -ε) : gaoReachingMap q ε s < ε := by
   have hsneg : s < 0 := by linarith
   rw [gaoReachingMap_apply, Real.sign_of_neg hsneg]
@@ -240,7 +241,7 @@ private lemma gaoReachingMap_excess_step {q ε : ℝ} (hq0 : 0 ≤ q) (hq1 : q <
     rcases hs with hspos | hsneg
     · have hsa : |s| = s := abs_of_pos (by linarith)
       rw [hsa, max_eq_left (by linarith : (0 : ℝ) ≤ s - ε)]
-      have h := max_abs_sub_le (gaoReachingMap_gt_neg_of_gt hq0 hq1 hε hspos)
+      have h := max_abs_sub_le (gaoReachingMap_gt_neg_of_gt hq1 hε hspos)
         (gaoReachingMap_le_sub_of_gt hq0 hε hspos)
       have heq : (s - ε) - ε = s - 2 * ε := by ring
       simpa only [heq] using h
@@ -248,7 +249,7 @@ private lemma gaoReachingMap_excess_step {q ε : ℝ} (hq0 : 0 ≤ q) (hq1 : q <
       have hsa : |s| = -s := abs_of_neg hsn
       rw [hsa, max_eq_left (by linarith : (0 : ℝ) ≤ -s - ε)]
       have hspos : ε < -s := by linarith
-      have h := max_abs_sub_le (gaoReachingMap_gt_neg_of_gt hq0 hq1 hε hspos)
+      have h := max_abs_sub_le (gaoReachingMap_gt_neg_of_gt hq1 hε hspos)
         (gaoReachingMap_le_sub_of_gt hq0 hε hspos)
       rw [gaoReachingMap_neg, abs_neg] at h
       have heq : ((-s) - ε) - ε = -s - 2 * ε := by ring
@@ -469,15 +470,16 @@ theorem ismc_tracking_error_eventually_bound {e δ : ℕ → ℝ} {a δ_max ε :
     (h_rec k).trans (add_le_add_right (hδ k) (a * |e k|))
   exact eventually_le_add_of_succ_le_mul_add ha0 ha1 (fun k ↦ abs_nonneg (e k)) h_step hε
 
-/-- **Parametric `O(T²)` tracking bound** (Chapter 12 eq. (21)). If the disturbance
-second difference obeys `δ_max ≤ M T³` and the contraction gap obeys
-`κ T ≤ 1 - a` with `κ > 0`, then the steady-state tracking bound satisfies
-`δ_max / (1 - a) ≤ (M / κ) T²`. This is the exact algebraic content of the
-`O(T²)` accuracy statement, with no continuous-sampling asymptotics. The
-hypothesis `0 ≤ a` belongs to the reviewed signature but is not needed for this
-algebraic bound. -/
+/-- **Static parametric tracking-error bound** (Chapter 12 eq. (21)). If the
+disturbance bound obeys `δ_max ≤ M T³` and the contraction gap obeys `κ T ≤ 1 - a`
+with `κ > 0`, then the steady-state parametric bound satisfies
+`δ_max / (1 - a) ≤ (M / κ) T²`. This is a *static* algebraic inequality between the
+parameters `M, κ, T, δ_max, a`; it is **not** the continuous-sampling `O(T²)`
+asymptotics of the sampled-data closed loop (which would require the sampled
+disturbance integrals `∫_0^T e^{Aτ} B f(…) dτ` and is out of scope). The hypothesis
+`0 ≤ a` of the reviewed signature was unused and has been removed. -/
 theorem ismc_tracking_error_O_T_squared {M κ T δ_max a : ℝ} (hM : 0 ≤ M) (hκ : 0 < κ)
-    (hT : 0 < T) (hδ : δ_max ≤ M * T ^ 3) (_ha0 : 0 ≤ a) (ha1 : a < 1)
+    (hT : 0 < T) (hδ : δ_max ≤ M * T ^ 3) (ha1 : a < 1)
     (hgap : κ * T ≤ 1 - a) :
     δ_max / (1 - a) ≤ (M / κ) * T ^ 2 := by
   have hpos : 0 < 1 - a := by linarith
