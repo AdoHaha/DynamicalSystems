@@ -46,9 +46,11 @@ semicontinuous.
 
 ## Main statements
 
-The local existence theorem `exists_filippovSolution_local` itself is *not* proved in this
-file yet; see the module note below. It is recorded as the target statement of the
-surrounding campaign.
+The local existence theorem `exists_filippovSolution_local` is proved in this file: a Filippov
+inclusion in finite dimension admits a local Filippov solution through every initial state.
+The proof combines the local a priori bound `exists_local_bound`, the Arzelà–Ascoli extraction
+`exists_eulerCurve_tendsto_subseq`, and the limit theorem
+`isFilippovSolutionOn_of_tendsto_eulerCurve`.
 
 ## Implementation notes
 
@@ -992,9 +994,8 @@ section LimitIsSolution
 variable [FiniteDimensional ℝ E]
 
 /-- The pointwise derivative of the uniform limit curve belongs to `F (γlim t)`. -/
-@[nolint unusedArguments]
 theorem IsFilippovInclusion.limit_inclusion_pointwise
-    {F : E → Set E} (hF : IsFilippovInclusion F) {x₀ : E} {T M : ℝ} (_hT : 0 < T) (hM : 0 ≤ M)
+    {F : E → Set E} (hF : IsFilippovInclusion F) {x₀ : E} {T M : ℝ} (hM : 0 ≤ M)
     {h : ℕ → ℝ} (hh : ∀ n, 0 < h n) (hh0 : Tendsto h atTop (𝓝 0))
     {γlim : ℝ → E} (hγlip : LipschitzOnWith ⟨M, hM⟩ γlim (Set.Icc 0 T))
     (hconv : TendstoUniformlyOn (fun n t ↦ hF.eulerCurve (h n) x₀ t) γlim atTop (Set.Icc 0 T))
@@ -1032,9 +1033,8 @@ theorem IsFilippovInclusion.limit_inclusion_pointwise
     rw [Set.mem_Icc]
     exact ⟨htint.1.le, htint.2.le⟩
   refine limit_slope_mem_C hC_closed (hconv.tendsto_at ht_mem) (hconv.tendsto_at htδ_mem) ?_
-  have h_h_eventually : ∀ᶠ n in atTop, h n < min t (ρ / (4 * L)) := by
-    have hpos : 0 < min t (ρ / (4 * L)) := lt_min htint.1 (div_pos hρ (by linarith))
-    exact (tendsto_order.mp hh0).2 _ hpos
+  have h_h_eventually : ∀ᶠ n in atTop, h n < ρ / (4 * L) :=
+    (tendsto_order.mp hh0).2 _ (div_pos hρ (by linarith))
   have hconv_eventually : ∀ᶠ n in atTop,
       ∀ y ∈ Set.Icc 0 T, dist (hF.eulerCurve (h n) x₀ y) (γlim y) < ρ / 4 := by
     rw [Metric.tendstoUniformlyOn_iff] at hconv
@@ -1042,8 +1042,7 @@ theorem IsFilippovInclusion.limit_inclusion_pointwise
     rw [dist_comm]
     exact hn y hy
   filter_upwards [h_h_eventually, hconv_eventually] with n hhn hconv_n
-  have hhn_t : h n < t := lt_of_lt_of_le hhn (min_le_left _ _)
-  have hhn_ρ : h n < ρ / (4 * L) := lt_of_lt_of_le hhn (min_le_right _ _)
+  have hhn_ρ : h n < ρ / (4 * L) := hhn
   have h_euler_in_C : ∀ x ∈ Set.Ioo t (t + δ), hF.eulerVelStep (h n) x₀ x ∈ C := by
     intro x hx
     rw [Set.mem_Ioo] at hx
@@ -1150,22 +1149,19 @@ theorem IsFilippovInclusion.limit_inclusion_pointwise
   exact hcvx.set_average_mem hC_closed hvol_ne_zero hvol_ne_top hIoc_ae hint
 
 /-- **The uniform limit of Euler curves is a Filippov solution.** Let `F` be a Filippov
-inclusion, `T > 0`, and let `h n > 0` be step sizes tending to `0`. Suppose the Euler polygonal
-curves `eulerCurve hF (h n) x₀` converge uniformly on `Icc 0 T` to a curve `γlim` that is
-`M`-Lipschitz on `Icc 0 T` and satisfies `γlim 0 = x₀`. Then `γlim` is a Filippov solution of
-`ẋ ∈ F x` on `Icc 0 T`.
+inclusion and let `h n > 0` be step sizes tending to `0`. Suppose the Euler polygonal curves
+`eulerCurve hF (h n) x₀` converge uniformly on `Icc 0 T` to a curve `γlim` that is `M`-Lipschitz
+on `Icc 0 T`. Then `γlim` is a Filippov solution of `ẋ ∈ F x` on `Icc 0 T`.
 
 The absolutely continuous part is inherited from the Lipschitz bound (Rademacher gives the
 almost-everywhere differentiability). For the inclusion, at an almost-everywhere point `t` one
 averages the Euler slopes over a shrinking window: each Euler slope is a convex combination of
 velocities lying in `F (γlim t) + ball ε` for large `n`, convexity keeps the average there, and
 closedness of the values passes to the limit as `n → ∞`, then `δ → 0`, then `ε → 0`. -/
-@[nolint unusedArguments] -- the remaining hypotheses are part of the existence contract
 theorem IsFilippovInclusion.isFilippovSolutionOn_of_tendsto_eulerCurve
-    {F : E → Set E} (hF : IsFilippovInclusion F) {x₀ : E} {T M : ℝ} (hT : 0 < T) (hM : 0 ≤ M)
+    {F : E → Set E} (hF : IsFilippovInclusion F) {x₀ : E} {T M : ℝ} (hM : 0 ≤ M)
     {h : ℕ → ℝ} (hh : ∀ n, 0 < h n) (hh0 : Tendsto h atTop (𝓝 0))
     {γlim : ℝ → E} (hγlip : LipschitzOnWith ⟨M, hM⟩ γlim (Set.Icc 0 T))
-    (_hγ0 : γlim 0 = x₀)
     (hconv : TendstoUniformlyOn (fun n t ↦ eulerCurve hF (h n) x₀ t) γlim atTop
       (Set.Icc 0 T)) :
     IsFilippovSolutionOn γlim F (Set.Icc 0 T) := by
@@ -1198,7 +1194,62 @@ theorem IsFilippovInclusion.isFilippovSolutionOn_of_tendsto_eulerCurve
       hdt.hasDerivWithinAt.hasDerivAt hnhds
     rwa [derivWithin_of_mem_nhds hnhds] at h2
   filter_upwards [hderiv_ae, hmem_int] with t hdt htint
-  exact ⟨hdt, hF.limit_inclusion_pointwise hT hM hh hh0 hγlip hconv htint hdt⟩
+  exact ⟨hdt, hF.limit_inclusion_pointwise hM hh hh0 hγlip hconv htint hdt⟩
 
 end LimitIsSolution
+
+/-! ## Local existence of Filippov solutions
+
+Combining the local a priori bound `exists_local_bound`, the Arzelà–Ascoli extraction
+`exists_eulerCurve_tendsto_subseq`, and the limit theorem
+`isFilippovSolutionOn_of_tendsto_eulerCurve` yields the headline local existence theorem for
+Filippov inclusions in finite dimension. -/
+
+section Existence
+
+variable [FiniteDimensional ℝ E]
+
+/-- **Local existence of Filippov solutions.** Every Filippov inclusion on a finite-dimensional
+real normed space admits a local Filippov solution through every initial state: there is `T > 0`
+and a curve `γ` with `γ 0 = x₀` that is a Filippov solution of `ẋ ∈ F x` on `Icc 0 T`.
+
+The proof extracts the local slope bound `M` about `x₀`, runs the Euler scheme with step sizes
+`h n = (1 / (n + 1)) * (r / max M 1)` (so that every step stays inside the ball of radius `r`,
+where the inclusion is bounded by `M`), extracts a uniformly convergent subsequence on
+`Icc 0 (r / max M 1)` by Arzelà–Ascoli, and identifies its limit as a Filippov solution. -/
+theorem exists_filippovSolution_local {F : E → Set E} (hF : IsFilippovInclusion F) (x₀ : E) :
+    ∃ (T : ℝ) (_ : 0 < T) (γ : ℝ → E), γ 0 = x₀ ∧ IsFilippovSolutionOn γ F (Set.Icc 0 T) := by
+  obtain ⟨r, hr, M, hM0, hM⟩ := hF.exists_local_bound x₀
+  have hmaxpos : 0 < max M 1 := lt_of_lt_of_le zero_lt_one (le_max_right M 1)
+  have hTpos : 0 < r / max M 1 := div_pos hr hmaxpos
+  have hTM : r / max M 1 * M ≤ r := by
+    calc r / max M 1 * M ≤ r / max M 1 * max M 1 :=
+          mul_le_mul_of_nonneg_left (le_max_left M 1) (div_nonneg hr.le hmaxpos.le)
+      _ = r := div_mul_cancel₀ r hmaxpos.ne'
+  let h : ℕ → ℝ := fun n ↦ (1 / ((n : ℝ) + 1)) * (r / max M 1)
+  have hh : ∀ n, 0 < h n := fun n ↦ mul_pos (one_div_pos.mpr (by positivity)) hTpos
+  have hh0 : Tendsto h atTop (𝓝 0) := by
+    have hg : Tendsto (fun n : ℕ ↦ 1 / ((n : ℝ) + 1)) atTop (𝓝 0) :=
+      tendsto_one_div_add_atTop_nhds_zero_nat
+    simpa [h] using hg.mul_const (r / max M 1)
+  have hhr : ∀ n, h n * M ≤ r := by
+    intro n
+    have hle : 1 / ((n : ℝ) + 1) ≤ 1 := by
+      have hb : (0 : ℝ) < (n : ℝ) + 1 := by positivity
+      rw [div_le_one hb]
+      linarith [Nat.cast_nonneg (α := ℝ) n]
+    change (1 / ((n : ℝ) + 1)) * (r / max M 1) * M ≤ r
+    calc (1 / ((n : ℝ) + 1)) * (r / max M 1) * M
+        = (1 / ((n : ℝ) + 1)) * (r / max M 1 * M) := by ring
+      _ ≤ 1 * (r / max M 1 * M) :=
+            mul_le_mul_of_nonneg_right hle (mul_nonneg hTpos.le hM0)
+      _ = r / max M 1 * M := by ring
+      _ ≤ r := hTM
+  obtain ⟨φ, γlim, hφ, hconv, hlip, hγ0⟩ :=
+    hF.exists_eulerCurve_tendsto_subseq x₀ hr hM0 hM h hh hh0 hhr
+  refine ⟨r / max M 1, hTpos, γlim, hγ0, ?_⟩
+  exact hF.isFilippovSolutionOn_of_tendsto_eulerCurve (h := fun n ↦ h (φ n)) hM0
+    (fun n ↦ hh (φ n)) (hh0.comp hφ.tendsto_atTop) hlip hconv
+
+end Existence
 
