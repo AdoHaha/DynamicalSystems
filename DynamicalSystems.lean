@@ -16,6 +16,7 @@ import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Discrete
 import DynamicalSystems.Control.SlidingMode.Filippov
+import DynamicalSystems.Control.SlidingMode.FilippovExistence
 import DynamicalSystems.Control.SlidingMode.Observer
 import DynamicalSystems.Control.SlidingMode.Reaching
 import DynamicalSystems.Control.SlidingMode.Regularization
@@ -27,6 +28,9 @@ import DynamicalSystems.AdaptiveControl.BoundedGrowth
 import DynamicalSystems.AdaptiveControl.Direct
 import DynamicalSystems.AdaptiveControl.RobustDirect
 import DynamicalSystems.AdaptiveControl.PlantSynthesis
+import DynamicalSystems.ConvexAnalysis.Conjugate
+import DynamicalSystems.ConvexAnalysis.Duality
+import DynamicalSystems.ConvexAnalysis.Subdifferential
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
 import DynamicalSystems.DiscreteTime.Convolution
@@ -35,6 +39,9 @@ import DynamicalSystems.DiscreteTime.UltimateBoundedness
 import DynamicalSystems.Estimation.DeadZone
 import DynamicalSystems.Estimation.Normalization
 import DynamicalSystems.Estimation.Projection
+import DynamicalSystems.NonSmooth.Clarke
+import DynamicalSystems.NonSmooth.ChainRule
+import DynamicalSystems.NonSmooth.Lyapunov
 import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation

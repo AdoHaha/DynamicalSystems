@@ -8,9 +8,12 @@ module
 public import Mathlib.Analysis.Convex.Hull
 public import Mathlib.Analysis.Normed.Module.Convex
 public import Mathlib.Analysis.Calculus.Deriv.Basic
+public import Mathlib.Basic.Real.Sign
+public import Mathlib.MeasureTheory.Function.AbsolutelyContinuous
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.Topology.Bornology.Basic
 public import Mathlib.Topology.MetricSpace.Basic
+public import Mathlib.Topology.Order.OrderClosed
 public import Mathlib.Topology.Semicontinuity.Hemicontinuity
 
 /-! # Filippov convexification of a discontinuous vector field
@@ -45,14 +48,23 @@ level (see `DynamicalSystems.Control.SlidingMode.Relay`).
   characterises exactly the outer/Vietoris condition that every open set
   containing `F x` contains `F y` for `y` near `x`.
 * `filippovSet f x`: the Filippov convexification of the field `f` at `x`.
-* `IsFilippovSolutionOn γ F s`: a curve `γ` that is continuous on `s` and whose
-  derivative lies in `F (γ t)` for almost every `t ∈ s`.
+* `filippovSetMeasure f x`: the measure-zero-refined Filippov convexification of
+  the field `f` at `x`, where shrinking balls are intersected with the
+  complements of arbitrary null sets before convexifying.
+* `IsLocallyAbsolutelyContinuousOn γ s`: `γ` is absolutely continuous on every
+  closed interval `uIcc a b` contained in `s`.
+* `IsFilippovSolutionOn γ F s`: a curve `γ` that is locally absolutely continuous
+  on `s` and whose derivative lies in `F (γ t)` for almost every `t ∈ s`.
 
 ## Main statements
 
 * `filippovSet_of_continuousAt`: if `f` is continuous at `x`, then
   `filippovSet f x = {f x}`.
 * `filippovSet_of_continuous`: for a continuous field `f`, `filippovSet f x = {f x}`.
+* `filippovSetMeasure_subset_filippovSet`: the measure-zero-refined Filippov set
+  is contained in the plain one.
+* `filippovSetMeasure_relay_zero`: at the switching level the measure-zero-refined
+  Filippov set of the scalar relay `s ↦ k * sign s` is the interval `[-k, k]`.
 -/
 
 @[expose] public section
@@ -70,10 +82,10 @@ field are studied.
 This structure is a **definitional stub**: it records the standard Filippov
 regularity of the right-hand side, but it is not yet wired to an existence theorem
 for solutions (and the library does not yet prove that `filippovSet f` has these
-properties).  The associated scoped solution concept `IsFilippovSolutionOn` also
-uses `ContinuousOn` plus almost-everywhere differentiability rather than absolute
-continuity, so singular continuous curves such as the Cantor staircase are not
-excluded, unlike in the full Filippov theory. -/
+properties).  The associated scoped solution concept `IsFilippovSolutionOn` is
+built on absolute continuity, so — unlike bare continuity together with
+almost-everywhere differentiability — it excludes singular continuous curves
+such as the Cantor staircase, in line with the full Filippov theory. -/
 structure IsFilippovInclusion (F : E → Set E) : Prop where
   /-- Every value `F x` is nonempty. -/
   nonempty : ∀ x, (F x).Nonempty
@@ -133,21 +145,142 @@ theorem filippovSet_of_continuous {f : E → E} (hf : Continuous f) (x : E) :
     filippovSet f x = {f x} :=
   filippovSet_of_continuousAt hf.continuousAt
 
+/-- Local absolute continuity on a set: `γ` is absolutely continuous on every
+closed interval `uIcc a b` contained in `s`. This is the curve regularity
+required of a Filippov solution; it is stronger than continuity (it excludes the
+Cantor staircase) and is exactly the class for which the fundamental theorem of
+calculus holds. -/
+def IsLocallyAbsolutelyContinuousOn (γ : ℝ → E) (s : Set ℝ) : Prop :=
+  ∀ a b, Set.uIcc a b ⊆ s → AbsolutelyContinuousOnInterval γ a b
+
 /-- A Filippov solution of the differential inclusion `ẋ ∈ F x` on the set `s`:
-a curve `γ` that is continuous on `s` and whose derivative lies in `F (γ t)` for
-almost every `t ∈ s`. This is the solution concept for a state-discontinuous
-feedback, whose closed-loop field is replaced by its Filippov convexification.
+a curve `γ` that is locally absolutely continuous on `s` and whose derivative
+lies in `F (γ t)` for almost every `t ∈ s`. This is the solution concept for a
+state-discontinuous feedback, whose closed-loop field is replaced by its Filippov
+convexification.
 
-This scoped definition uses `ContinuousOn` together with almost-everywhere
-differentiability, whereas the full Filippov theory asks for *absolute
-continuity* of `γ` (equivalently, `γ` is the integral of an integrable function,
-as in the Carathéodory existence theory for differential inclusions). The two
-agree for the locally Lipschitz curves produced by existence theorems, but they
-are not equivalent in general: the Cantor staircase is continuous with
-zero derivative almost everywhere, yet is not absolutely continuous and so must
-not count as a solution of `ẋ ∈ F x` when `0 ∈ F x`.
+The absolute-continuity requirement (rather than mere continuity together with
+almost-everywhere differentiability) is what makes the concept match the full
+Filippov theory: it excludes singular continuous curves such as the Cantor
+staircase, which is continuous with zero derivative almost everywhere but is not
+absolutely continuous, and so must not count as a solution of `ẋ ∈ F x` when
+`0 ∈ F x`.
 
-This is likewise a **definitional stub**: it is not yet connected to an existence
-theorem for Filippov solutions, nor to `IsFilippovInclusion`. -/
+This is a **definitional stub**: it is not yet connected to an existence theorem
+for Filippov solutions, nor to `IsFilippovInclusion`. -/
 def IsFilippovSolutionOn (γ : ℝ → E) (F : E → Set E) (s : Set ℝ) : Prop :=
-  ContinuousOn γ s ∧ ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)
+  IsLocallyAbsolutelyContinuousOn γ s ∧
+    ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)
+
+section MeasureZeroRefinement
+
+variable [MeasureSpace E]
+
+/-- The **measure-zero-refined Filippov set-valued map** of a vector field `f` at
+`x`. Following Shtessel, Edwards, Fridman and Levant, *Sliding Mode Control and
+Observation*, Definition 2.3 eq. (2.5), the convexification is formed not merely
+from shrinking balls but from shrinking balls with an arbitrary measure-zero set
+`N` removed. Explicitly,
+
+`filippovSetMeasure f x
+  = ⋂_{δ > 0} ⋂_{μ(N) = 0} closure (convexHull ℝ (f '' (ball x δ \ N)))`.
+
+Since the intersection ranges over all null sets — in particular `N = ∅` — the
+measure-zero-refined set is contained in the plain `filippovSet`. This is the
+definition under which a vector field may be redefined on an arbitrary null set
+without changing its Filippov convexification. -/
+noncomputable def filippovSetMeasure (f : E → E) (x : E) : Set E :=
+  ⋂ δ ∈ Set.Ioi (0 : ℝ), ⋂ (N : Set E), ⋂ (_ : volume N = 0),
+    closure (convexHull ℝ (f '' (Metric.ball x δ \ N)))
+
+/-- The measure-zero-refined Filippov set is contained in the plain Filippov set:
+the latter is exactly the term of the intersection indexed by the null set
+`N = ∅`. -/
+theorem filippovSetMeasure_subset_filippovSet (f : E → E) (x : E) :
+    filippovSetMeasure f x ⊆ filippovSet f x := by
+  intro y hy
+  rw [filippovSet]
+  refine mem_iInter.mpr fun δ ↦ mem_iInter.mpr fun hδ ↦ ?_
+  have h : y ∈ closure (convexHull ℝ (f '' (Metric.ball x δ \ ∅))) :=
+    mem_iInter.mp (mem_iInter.mp (mem_iInter.mp (mem_iInter.mp hy δ) hδ) ∅) measure_empty
+  simpa using h
+
+end MeasureZeroRefinement
+
+/-- The measure-zero-refined Filippov set of the scalar relay `s ↦ k * sign s`
+(definitionally the relay `DynamicalSystems.Control.SlidingMode.Relay.relay k`)
+at the switching level `0` is the classical input interval `[-k, k]` for `k > 0`.
+The excision of a null set can never remove the whole positive (nor the whole
+negative) half of a ball, so the extreme values `±k` always survive, while the
+closed convex hull can never leave `[-k, k]`. -/
+theorem filippovSetMeasure_relay_zero {k : ℝ} (hk : 0 < k) :
+    filippovSetMeasure (fun s : ℝ ↦ k * Real.sign s) 0 = Set.Icc (-k) k := by
+  have hterm : ∀ δ, 0 < δ → ∀ N : Set ℝ, volume N = 0 →
+      closure (convexHull ℝ
+        ((fun s : ℝ ↦ k * Real.sign s) '' (Metric.ball (0 : ℝ) δ \ N)))
+        = Set.Icc (-k) k := by
+    intro δ hδ N hN
+    apply Set.Subset.antisymm
+    · apply closure_minimal
+      · apply convexHull_min _ (convex_Icc _ _)
+        rintro y ⟨z, -, rfl⟩
+        change k * Real.sign z ∈ Set.Icc (-k) k
+        rw [Set.mem_Icc]
+        rcases Real.sign_apply_eq z with h | h | h
+        · rw [h, mul_neg, mul_one]; constructor <;> linarith
+        · rw [h, mul_zero]; constructor <;> linarith
+        · rw [h, mul_one]; constructor <;> linarith
+      · exact isClosed_Icc
+    · have hpos : ∃ z ∈ Set.Ioo (0 : ℝ) δ, z ∉ N := by
+        by_contra h
+        push Not at h
+        have hsub : Set.Ioo (0 : ℝ) δ ⊆ N := fun z hz ↦ h z hz
+        have hle : volume (Set.Ioo (0 : ℝ) δ) ≤ volume N := measure_mono hsub
+        rw [Real.volume_Ioo, hN] at hle
+        simp only [sub_zero] at hle
+        exact absurd (ENNReal.ofReal_pos.mpr hδ) (not_lt_of_ge hle)
+      have hneg : ∃ z ∈ Set.Ioo (-δ) (0 : ℝ), z ∉ N := by
+        by_contra h
+        push Not at h
+        have hsub : Set.Ioo (-δ) (0 : ℝ) ⊆ N := fun z hz ↦ h z hz
+        have hle : volume (Set.Ioo (-δ) (0 : ℝ)) ≤ volume N := measure_mono hsub
+        rw [Real.volume_Ioo, hN] at hle
+        rw [show (0 : ℝ) - -δ = δ by ring] at hle
+        exact absurd (ENNReal.ofReal_pos.mpr hδ) (not_lt_of_ge hle)
+      obtain ⟨zp, hzp, hzpN⟩ := hpos
+      obtain ⟨zn, hzn, hznN⟩ := hneg
+      have hk_mem : k ∈ convexHull ℝ
+          ((fun s : ℝ ↦ k * Real.sign s) '' (Metric.ball (0 : ℝ) δ \ N)) := by
+        refine subset_convexHull ℝ _ ⟨zp, ⟨?_, hzpN⟩, ?_⟩
+        · rw [Real.ball_eq_Ioo]
+          constructor <;> linarith [hzp.1, hzp.2]
+        · change k * Real.sign zp = k
+          rw [Real.sign_of_pos hzp.1, mul_one]
+      have hneg_mem : -k ∈ convexHull ℝ
+          ((fun s : ℝ ↦ k * Real.sign s) '' (Metric.ball (0 : ℝ) δ \ N)) := by
+        refine subset_convexHull ℝ _ ⟨zn, ⟨?_, hznN⟩, ?_⟩
+        · rw [Real.ball_eq_Ioo]
+          constructor <;> linarith [hzn.1, hzn.2]
+        · change k * Real.sign zn = -k
+          rw [Real.sign_of_neg hzn.2, mul_neg, mul_one]
+      rintro y hy
+      have hseg : convexHull ℝ ({-k, k} : Set ℝ) ⊆ convexHull ℝ
+          ((fun s : ℝ ↦ k * Real.sign s) '' (Metric.ball (0 : ℝ) δ \ N)) :=
+        convexHull_min (by
+          intro w hw
+          rcases hw with rfl | rfl
+          · exact hneg_mem
+          · exact hk_mem) (convex_convexHull ℝ _)
+      have hyc : y ∈ convexHull ℝ ({-k, k} : Set ℝ) := by
+        rw [convexHull_pair, segment_eq_Icc (by linarith : -k ≤ k)]
+        exact hy
+      exact subset_closure (hseg hyc)
+  rw [filippovSetMeasure]
+  ext y
+  simp only [Set.mem_iInter, Set.mem_Ioi]
+  constructor
+  · intro hy
+    exact (hterm 1 one_pos ∅ measure_empty) ▸ hy 1 one_pos ∅ measure_empty
+  · intro hy δ hδ N hN
+    rw [hterm δ hδ N hN]
+    exact hy
