@@ -17,7 +17,7 @@ continuous, hence differentiable almost everywhere, and at almost every `t` its
 derivative is bounded by the support function of the Clarke generalized gradient of
 `V` at `γ t`:
 
-`deriv (V ∘ γ) t ≤ ⨆ ξ ∈ clarkeGradient V (γ t), ξ (deriv γ t)`.
+`deriv (V ∘ γ) t ≤ sSup ((fun ξ ↦ ξ (deriv γ t)) '' clarkeGradient V (γ t))`.
 
 This is the almost-everywhere form of the Clarke chain rule. The proof decomposes as
 follows: `V ∘ γ` is absolutely continuous because `V` is Lipschitz on the compact image
@@ -37,7 +37,7 @@ provide this property, so it is assumed rather than proved.
 * `absolutelyContinuousOnInterval_comp_locallyLipschitz`: `V ∘ γ` is absolutely continuous
   when `V` is locally Lipschitz and `γ` is absolutely continuous.
 * `exists_bound_clarkeGradient_apply`: the Clarke generalized gradient has bounded support
-  function, so the `⨆` on the right is well behaved.
+  function, so the `sSup` on the right is well behaved.
 * `clarke_chain_rule_ae`: the non-smooth chain rule almost everywhere.
 -/
 
@@ -65,7 +65,7 @@ theorem absolutelyContinuousOnInterval_comp_locallyLipschitz
 omit [FiniteDimensional ℝ E] in
 /-- The support function of the Clarke generalized gradient is bounded above: for a locally
 Lipschitz `V` at `x` there is `M` with `ξ v ≤ M` for every `ξ ∈ clarkeGradient V x`. This is
-what makes the `⨆` in the chain rule well behaved. -/
+what makes the `sSup` in the chain rule well behaved. -/
 theorem exists_bound_clarkeGradient_apply {V : E → ℝ} (hV : LocallyLipschitz V) (x v : E) :
     ∃ M : ℝ, ∀ ξ ∈ clarkeGradient V x, ξ v ≤ M := by
   obtain ⟨K, t, ht, hK⟩ := hV x
@@ -109,14 +109,15 @@ theorem exists_bound_clarkeGradient_apply {V : E → ℝ} (hV : LocallyLipschitz
 /-- **The non-smooth chain rule, almost everywhere.** For a locally Lipschitz `V : E → ℝ`
 and an absolutely continuous curve `γ`, the composition `V ∘ γ` is differentiable for
 almost every `t` and its derivative is bounded by the support function of the Clarke
-generalized gradient of `V` at `γ t`. The hypothesis `hV_diff` records the Lusin (N)
+generalized gradient of `V` at `γ t`, written as the supremum of `ξ (deriv γ t)` over
+`ξ ∈ clarkeGradient V (γ t)`. The hypothesis `hV_diff` records the Lusin (N)
 property of `γ`, that `V` is differentiable at `γ t` for almost every `t`. -/
 theorem clarke_chain_rule_ae {V : E → ℝ} (hV : LocallyLipschitz V) {γ : ℝ → E} {a b : ℝ}
     (hγ : AbsolutelyContinuousOnInterval γ a b)
     (hV_diff : ∀ᵐ t ∂volume.restrict (Set.uIcc a b), DifferentiableAt ℝ V (γ t)) :
     ∀ᵐ t ∂volume.restrict (Set.uIcc a b),
       DifferentiableAt ℝ (V ∘ γ) t ∧
-      deriv (V ∘ γ) t ≤ ⨆ ξ ∈ clarkeGradient V (γ t), ξ (deriv γ t) := by
+      deriv (V ∘ γ) t ≤ sSup ((fun ξ ↦ ξ (deriv γ t)) '' clarkeGradient V (γ t)) := by
   have hcomp_ac : AbsolutelyContinuousOnInterval (V ∘ γ) a b :=
     absolutelyContinuousOnInterval_comp_locallyLipschitz hV hγ
   have hcomp : ∀ᵐ t ∂volume.restrict (Set.uIcc a b), DifferentiableAt ℝ (V ∘ γ) t := by
@@ -134,22 +135,9 @@ theorem clarke_chain_rule_ae {V : E → ℝ} (hV : LocallyLipschitz V) {γ : ℝ
   rw [hchain.deriv]
   have hmem : fderiv ℝ V (γ t) ∈ clarkeGradient V (γ t) := fderiv_mem_clarkeGradient hVt
   obtain ⟨M, hM⟩ := exists_bound_clarkeGradient_apply hV (γ t) (deriv γ t)
-  have hbdd : BddAbove (Set.range (fun ξ : E →L[ℝ] ℝ ↦
-      ⨆ (_ : ξ ∈ clarkeGradient V (γ t)), ξ (deriv γ t))) := by
-    refine ⟨max M 0, ?_⟩
-    rintro w ⟨ξ, rfl⟩
-    by_cases hξ : ξ ∈ clarkeGradient V (γ t)
-    · change (⨆ (_ : ξ ∈ clarkeGradient V (γ t)), ξ (deriv γ t)) ≤ max M 0
-      rw [ciSup_pos hξ]
-      exact (hM ξ hξ).trans (le_max_left _ _)
-    · change (⨆ (_ : ξ ∈ clarkeGradient V (γ t)), ξ (deriv γ t)) ≤ max M 0
-      rw [ciSup_neg hξ, Real.sSup_empty]
-      exact le_max_right _ _
-  have h1 : fderiv ℝ V (γ t) (deriv γ t) ≤
-      ⨆ (_ : fderiv ℝ V (γ t) ∈ clarkeGradient V (γ t)),
-        fderiv ℝ V (γ t) (deriv γ t) :=
-    le_ciSup (by
-      refine ⟨fderiv ℝ V (γ t) (deriv γ t), ?_⟩
-      rintro _ ⟨_, rfl⟩
-      exact le_refl _) hmem
-  exact h1.trans (le_ciSup hbdd (fderiv ℝ V (γ t)))
+  have hbdd : BddAbove ((fun ξ : E →L[ℝ] ℝ ↦ ξ (deriv γ t)) ''
+      clarkeGradient V (γ t)) := by
+    refine ⟨M, ?_⟩
+    rintro w ⟨ξ, hξ, rfl⟩
+    exact hM ξ hξ
+  exact le_csSup hbdd (mem_image_of_mem (fun ξ : E →L[ℝ] ℝ ↦ ξ (deriv γ t)) hmem)
