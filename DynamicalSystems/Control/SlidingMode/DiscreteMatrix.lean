@@ -194,3 +194,88 @@ theorem dsmcDisturbanceEstimate_spec (A : Matrix (Fin n) (Fin n) ℝ) (B : Matri
   unfold dsmcDisturbanceEstimate
   rw [h k]
   abel
+
+/-! ## Vector (multi-input) reaching law and quasi-sliding band
+
+The declarations below are the multi-input (vector) counterparts of the scalar
+reaching law and quasi-sliding band of
+`DynamicalSystems.Control.SlidingMode.Discrete`. They act component by component
+through `gaoReachingMap`, so none of the scalar properties is restated: each
+theorem is a one-line reduction to its scalar namesake. -/
+
+/-- The **vector (multi-input) discrete reaching map** acts componentwise by
+Gao's scalar reaching map: `(d s)_i = gaoReachingMap q ε (s_i)`. This is the
+multi-channel reaching law behind the linear sliding control (1.31) of
+A. Argha, S. W. Su, L. Li and H. T. Nguyen, *Advances in Discrete-Time Sliding
+Mode Control: Theory and Applications*, CRC Press 2018, eqs. (1.30)–(1.34),
+printed pp. 21–22, where the closed-loop sliding dynamics are diagonal,
+`σ_x(k+1) = Φ σ_x(k)` (one scalar channel per input component). -/
+noncomputable def dsmcReachingMap (q ε : ℝ) (s : Fin m → ℝ) : Fin m → ℝ :=
+  fun i ↦ gaoReachingMap q ε (s i)
+
+/-- The pointwise unfolding of `dsmcReachingMap` (a `simp` lemma). -/
+@[simp] theorem dsmcReachingMap_apply (q ε : ℝ) (s : Fin m → ℝ) (i : Fin m) :
+    dsmcReachingMap q ε s i = gaoReachingMap q ε (s i) := rfl
+
+/-- The **vector quasi-sliding mode band** `{s | ∀ i, |s_i| ≤ Δ}`: the
+multi-input analogue of the scalar quasi-sliding band. See A. Argha, S. W. Su,
+L. Li and H. T. Nguyen, *Advances in Discrete-Time Sliding Mode Control: Theory
+and Applications*, CRC Press 2018, §2.3.2 (quasi sliding mode), printed pp. 34–35. -/
+def dsmcQuasiSlidingBand (Δ : ℝ) : Set (Fin m → ℝ) := {s | ∀ i, |s i| ≤ Δ}
+
+/-- Membership in the vector quasi-sliding band (a `simp` lemma). -/
+@[simp] theorem mem_dsmcQuasiSlidingBand (Δ : ℝ) (s : Fin m → ℝ) :
+    s ∈ dsmcQuasiSlidingBand Δ ↔ ∀ i, |s i| ≤ Δ := Iff.rfl
+
+/-- **Band forward invariance, multi-input.** For `0 ≤ q < 1` and `ε ≥ 0` the
+vector quasi-sliding band `{s | ∀ i, |s_i| ≤ ε}` is forward invariant under the
+componentwise reaching map. This is `mapsTo_gaoReachingMap_quasiSlidingBand`
+applied channel by channel. -/
+theorem mapsTo_dsmcReachingMap_dsmcQuasiSlidingBand {q ε : ℝ} (hq0 : 0 ≤ q)
+    (hq1 : q < 1) (hε : 0 ≤ ε) :
+    Set.MapsTo (dsmcReachingMap (m := m) q ε) (dsmcQuasiSlidingBand (m := m) ε)
+      (dsmcQuasiSlidingBand (m := m) ε) := by
+  intro s hs
+  rw [mem_dsmcQuasiSlidingBand] at hs ⊢
+  intro i
+  exact mapsTo_gaoReachingMap_quasiSlidingBand hq0 hq1 hε (hs i)
+
+/-- Iterating the vector reaching map commutes with evaluating a component:
+each channel evolves independently under Gao's scalar reaching map,
+`((dsmcReachingMap q ε)^[k] s₀)_i = (gaoReachingMap q ε)^[k] (s₀)_i`. This is
+the algebraic content of the diagonal closed-loop sliding dynamics (1.32),
+printed p. 21. -/
+theorem dsmcReachingMap_iterate_apply (q ε : ℝ) (s₀ : Fin m → ℝ) (k : ℕ) (i : Fin m) :
+    (dsmcReachingMap q ε)^[k] s₀ i = (gaoReachingMap q ε)^[k] (s₀ i) := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+      rw [Function.iterate_succ_apply', Function.iterate_succ_apply',
+        dsmcReachingMap_apply, ih]
+
+/-- **Finite-step reach into the vector quasi-sliding band.** From any initial
+vector `s₀` there is a finite time `N` after which every channel lies in the
+scalar band `{|s_i| ≤ ε}` and then stays there. Proved componentwise from
+`gaoReachingMap_reaches_quasiSlidingBand`, taking the maximum of the finitely
+many channel reach times (`Finset.sup` over `Fin m`); it is the multi-input
+reachability statement underlying the quasi sliding mode of §2.3.2, printed
+pp. 34–35. -/
+theorem dsmcReachingMap_reaches_dsmcQuasiSlidingBand (q ε : ℝ) (hq0 : 0 ≤ q)
+    (hq1 : q < 1) (hε : 0 < ε) (s₀ : Fin m → ℝ) :
+    ∃ N : ℕ, ∀ k ≥ N, (dsmcReachingMap q ε)^[k] s₀ ∈ dsmcQuasiSlidingBand ε := by
+  choose N hN using fun i ↦
+    gaoReachingMap_reaches_quasiSlidingBand q ε hq0 hq1 hε (s₀ i)
+  refine ⟨Finset.univ.sup N, fun k hk ↦ ?_⟩
+  rw [mem_dsmcQuasiSlidingBand]
+  intro i
+  rw [dsmcReachingMap_iterate_apply]
+  exact hN i k (le_trans (Finset.le_sup (Finset.mem_univ i)) hk)
+
+/-- **The `m = 1` bridge.** For a single input channel, membership in the vector
+quasi-sliding band is exactly membership of the scalar reading `s 0` in the
+scalar quasi-sliding band of `DynamicalSystems.Control.SlidingMode.Discrete`:
+`s ∈ dsmcQuasiSlidingBand Δ ↔ s 0 ∈ quasiSlidingBand Δ`. Thus the scalar band
+`{|s| ≤ Δ}` is the `m = 1` instance of `dsmcQuasiSlidingBand`. -/
+theorem mem_dsmcQuasiSlidingBand_one (Δ : ℝ) (s : Fin 1 → ℝ) :
+    s ∈ dsmcQuasiSlidingBand Δ ↔ s 0 ∈ quasiSlidingBand Δ := by
+  rw [mem_dsmcQuasiSlidingBand, mem_quasiSlidingBand_iff, Fin.forall_fin_one]
