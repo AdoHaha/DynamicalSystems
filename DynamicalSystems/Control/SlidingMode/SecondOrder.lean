@@ -5,10 +5,12 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.Stability.FiniteTimeLyapunov
 public import DynamicalSystems.Stability.Homogeneity
 public import DynamicalSystems.Stability.HomogeneityFiniteTime
 public import Mathlib.Basic.Real.Sign
 public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.LinearAlgebra.Matrix.PosDef
 
 /-! # Second-order sliding modes: twisting and super-twisting homogeneity
 
@@ -35,6 +37,11 @@ degree for which Levant's Theorem 1 applies.
 * `superTwistingVectorField`: the super-twisting closed loop.
 * `quasiContinuous2Control`: the quasi-continuous controller of order two.
 * `quasiContinuous2VectorField`: the quasi-continuous closed loop.
+* `superTwistingA`: the Moreno–Osorio matrix `A = [[-k₁/2, 1/2], [-k₂, 0]]`.
+* `morenoOsorioP`: the Moreno–Osorio matrix `P = [[2k₂ + k₁²/2, -k₁/2], [-k₁/2, 1]]`.
+* `morenoOsorioQ`: the Moreno–Osorio matrix `Q = (k₁/2) • [[2k₂ + k₁², -k₁], [-k₁, 1]]`.
+* `superTwistingZeta`: the Moreno–Osorio coordinate change `ζ(x) = (|x₀|^{1/2} sign x₀, x₁)`.
+* `morenoOsorioV`: the Moreno–Osorio Lyapunov function `V(x) = ζ(x)ᵀ P ζ(x)`.
 
 ## Main statements
 
@@ -46,9 +53,19 @@ degree for which Levant's Theorem 1 applies.
 * `quasiContinuous2VectorField_homogeneous`: quasi-continuous field has degree `-1`.
 * `secondOrder_finiteTime_of_contractive`: Levant's Theorem 3 bridge, a contracting
   retractable set for a time-`1`-homogeneous flow reaches the origin in finite time.
--/
+* `morenoOsorioP_posDef` and `morenoOsorioQ_posDef`: `P` and `Q` are positive definite.
+* `morenoOsorio_lyapunov_equation`: `Aᵀ P + P A = -Q`.
+* `morenoOsorioV_pos_def`: `V` is positive definite and vanishes exactly at the origin.
+* `superTwisting_finiteTime_of_lyapunov_decay`: a continuous trajectory with right
+  derivative `z' ≤ -c z^{1/2}` reaches zero within the finite time `2 sqrt(z₀)/c`.
+
+For the last statement the continuity of `z` on `[t₀, t₁]` is an explicit hypothesis
+(`hzcont`): without it the statement is false (a trajectory may jump at the final time
+or have an upward interior jump while still satisfying the right-derivative bound). -/
 
 @[expose] public section
+
+open Matrix
 
 /-- The 2-sliding homogeneity weights `(2, 1)`: the components `σ` and `σ̇` scale as
 `λ ^ 2` and `λ ^ 1` under the dilation. -/
@@ -269,3 +286,265 @@ theorem secondOrder_finiteTime_of_contractive
       hcontract hx (by simpa only [Real.rpow_one] using hcont) hfix hshrink
   intro t ht
   exact key t (by simpa only [Real.rpow_one] using ht)
+
+/-! ## Moreno–Osorio algebraic Lyapunov certificate -/
+
+/-- The super-twisting matrix `A = [[-k₁/2, 1/2], [-k₂, 0]]` of the Moreno–Osorio
+change of variables: with `ζ = (|σ|^{1/2} sign σ, w)` the super-twisting closed loop reads
+`ζ' = |σ|^{-1/2} A ζ` off `σ = 0` (Moreno and Osorio, *A Lyapunov approach to second-order
+sliding mode controllers and observers*, CDC 2008). -/
+noncomputable def superTwistingA (k₁ k₂ : ℝ) : Matrix (Fin 2) (Fin 2) ℝ :=
+  !![-(1 / 2) * k₁, 1 / 2; -k₂, 0]
+
+/-- The Moreno–Osorio matrix `P = [[2k₂ + k₁²/2, -k₁/2], [-k₁/2, 1]]`. It is positive
+definite for `k₁, k₂ > 0` and solves the algebraic Lyapunov equation `Aᵀ P + P A = -Q`. -/
+noncomputable def morenoOsorioP (k₁ k₂ : ℝ) : Matrix (Fin 2) (Fin 2) ℝ :=
+  !![2 * k₂ + (1 / 2) * k₁ ^ 2, -(1 / 2) * k₁; -(1 / 2) * k₁, 1]
+
+/-- The Moreno–Osorio matrix `Q = (k₁/2) • [[2k₂ + k₁², -k₁], [-k₁, 1]]`, positive
+definite for `k₁, k₂ > 0`, whose associated quadratic form is the sum of squares
+`k₁k₂ζ₁² + (k₁/2)(k₁ζ₁ - ζ₂)²`. -/
+noncomputable def morenoOsorioQ (k₁ k₂ : ℝ) : Matrix (Fin 2) (Fin 2) ℝ :=
+  (k₁ / 2) • !![2 * k₂ + k₁ ^ 2, -k₁; -k₁, 1]
+
+/-- The Moreno–Osorio change of variables `ζ(x) = (|x₀|^{1/2} sign x₀, x₁)` on the
+super-twisting phase space `x = (σ, w)`. -/
+noncomputable def superTwistingZeta (x : Fin 2 → ℝ) : Fin 2 → ℝ :=
+  ![|x 0| ^ (1 / 2 : ℝ) * Real.sign (x 0), x 1]
+
+/-- The Moreno–Osorio Lyapunov function `V(x) = ζ(x)ᵀ P ζ(x)` for the super-twisting
+algorithm. -/
+noncomputable def morenoOsorioV (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) : ℝ :=
+  dotProduct (superTwistingZeta x) (morenoOsorioP k₁ k₂ *ᵥ superTwistingZeta x)
+
+/-- The quadratic form of `morenoOsorioP` as a sum of squares,
+`2k₂ a² + ½(k₁a - b)² + ½b²`. -/
+private lemma qformP (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
+    star x ⬝ᵥ (morenoOsorioP k₁ k₂ *ᵥ x)
+      = 2 * k₂ * x 0 ^ 2 + (1 / 2) * (k₁ * x 0 - x 1) ^ 2 + (1 / 2) * x 1 ^ 2 := by
+  simp only [morenoOsorioP, Matrix.of_apply, dotProduct, Matrix.mulVec, Fin.sum_univ_two,
+    Matrix.cons_val_zero, Matrix.cons_val_one, star_trivial]
+  ring
+
+/-- The quadratic form of `morenoOsorioQ` as a sum of squares,
+`k₁k₂ a² + (k₁/2)(k₁a - b)²`. -/
+private lemma qformQ (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
+    star x ⬝ᵥ (morenoOsorioQ k₁ k₂ *ᵥ x)
+      = k₁ * k₂ * x 0 ^ 2 + (k₁ / 2) * (k₁ * x 0 - x 1) ^ 2 := by
+  simp only [morenoOsorioQ, Matrix.of_apply, Matrix.smul_apply, dotProduct, Matrix.mulVec,
+    Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one, star_trivial, smul_eq_mul]
+  ring
+
+/-- `|a|^{1/2} sign a` vanishes exactly at `a = 0`: the Moreno–Osorio coordinate change is
+a bijection on the real line. -/
+private theorem rpow_half_mul_sign_eq_zero {a : ℝ} :
+    |a| ^ (1 / 2 : ℝ) * Real.sign a = 0 ↔ a = 0 := by
+  constructor
+  · intro h
+    by_contra ha
+    have h1 : 0 < |a| ^ (1 / 2 : ℝ) := Real.rpow_pos_of_pos (abs_pos.mpr ha) _
+    have h2 : Real.sign a ≠ 0 := by simpa only [ne_eq, Real.sign_eq_zero_iff] using ha
+    exact (mul_ne_zero (ne_of_gt h1) h2) h
+  · rintro rfl; simp
+
+set_option linter.unusedVariables false in
+/-- `P` is positive definite for `k₁, k₂ > 0`, by the sum-of-squares decomposition
+`2k₂a² + ½(k₁a - b)² + ½b²`. The hypothesis `hk₁` is not needed for this particular
+matrix (it is kept to match the reviewed signature and the companion `Q`), hence the
+`nolint` below. -/
+@[nolint unusedArguments]
+theorem morenoOsorioP_posDef {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k₂) :
+    (morenoOsorioP k₁ k₂).PosDef := by
+  refine Matrix.PosDef.of_dotProduct_mulVec_pos ?_ ?_
+  · rw [Matrix.IsHermitian]
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [morenoOsorioP, Matrix.conjTranspose, Matrix.transpose]
+  · intro x hx
+    rw [qformP]
+    rcases eq_or_ne (x 1) 0 with h1 | h1
+    · have h0 : x 0 ≠ 0 := by
+        intro h0
+        exact hx (by funext i; fin_cases i <;> simp [h0, h1])
+      have hpos : 0 < 2 * k₂ * x 0 ^ 2 := mul_pos (by positivity) (sq_pos_of_ne_zero h0)
+      nlinarith [sq_nonneg (k₁ * x 0 - x 1), sq_nonneg (x 1)]
+    · have hpos : 0 < (1 / 2) * x 1 ^ 2 := mul_pos (by norm_num) (sq_pos_of_ne_zero h1)
+      nlinarith [sq_nonneg (k₁ * x 0 - x 1), mul_nonneg hk₂.le (sq_nonneg (x 0))]
+
+/-- `Q` is positive definite for `k₁, k₂ > 0`, by the sum-of-squares decomposition
+`k₁k₂a² + (k₁/2)(k₁a - b)²`. -/
+theorem morenoOsorioQ_posDef {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k₂) :
+    (morenoOsorioQ k₁ k₂).PosDef := by
+  refine Matrix.PosDef.of_dotProduct_mulVec_pos ?_ ?_
+  · rw [Matrix.IsHermitian]
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [morenoOsorioQ, Matrix.conjTranspose, Matrix.transpose, Matrix.smul_apply,
+        smul_eq_mul]
+  · intro x hx
+    rw [qformQ]
+    rcases eq_or_ne (x 0) 0 with h0 | h0
+    · have h1 : x 1 ≠ 0 := by
+        intro h1
+        exact hx (by funext i; fin_cases i <;> simp [h0, h1])
+      have hne : k₁ * x 0 - x 1 ≠ 0 := by rw [h0]; simpa using h1
+      have hpos : 0 < (k₁ / 2) * (k₁ * x 0 - x 1) ^ 2 :=
+        mul_pos (by positivity) (sq_pos_of_ne_zero hne)
+      nlinarith [mul_nonneg (mul_nonneg hk₁.le hk₂.le) (sq_nonneg (x 0))]
+    · have hpos : 0 < k₁ * k₂ * x 0 ^ 2 := by positivity
+      nlinarith [sq_nonneg (k₁ * x 0 - x 1)]
+
+/-- The Moreno–Osorio algebraic Lyapunov equation `Aᵀ P + P A = -Q`. -/
+theorem morenoOsorio_lyapunov_equation {k₁ k₂ : ℝ} :
+    (superTwistingA k₁ k₂)ᵀ * morenoOsorioP k₁ k₂
+      + morenoOsorioP k₁ k₂ * superTwistingA k₁ k₂ = -morenoOsorioQ k₁ k₂ := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [superTwistingA, morenoOsorioP, morenoOsorioQ, Matrix.mul_apply, Fin.sum_univ_two,
+      Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.transpose_apply,
+      Matrix.neg_apply, smul_eq_mul] <;> ring
+
+set_option linter.unusedVariables false in
+/-- The Moreno–Osorio Lyapunov function is positive definite: `0 ≤ V x` and `V x = 0`
+if and only if `x = 0`. The proof rewrites `V` through the sum of squares
+`2k₂ζ₁² + ½(k₁ζ₁ - ζ₂)² + ½ζ₂²` with `ζ = superTwistingZeta x`, and uses that the
+coordinate change `ζ` vanishes exactly at the origin. The hypothesis `hk₁` is not needed
+for this statement, hence the `nolint` below. -/
+@[nolint unusedArguments]
+theorem morenoOsorioV_pos_def {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k₂) (x : Fin 2 → ℝ) :
+    0 ≤ morenoOsorioV k₁ k₂ x ∧ (morenoOsorioV k₁ k₂ x = 0 ↔ x = 0) := by
+  have hV : morenoOsorioV k₁ k₂ x
+      = 2 * k₂ * (superTwistingZeta x 0) ^ 2
+        + (1 / 2) * (k₁ * superTwistingZeta x 0 - superTwistingZeta x 1) ^ 2
+        + (1 / 2) * (superTwistingZeta x 1) ^ 2 := by
+    rw [morenoOsorioV, show dotProduct (superTwistingZeta x)
+          (morenoOsorioP k₁ k₂ *ᵥ superTwistingZeta x)
+        = star (superTwistingZeta x) ⬝ᵥ (morenoOsorioP k₁ k₂ *ᵥ superTwistingZeta x) from by
+      simp only [dotProduct, star_trivial]]
+    exact qformP k₁ k₂ (superTwistingZeta x)
+  refine ⟨?_, ?_⟩
+  · rw [hV]; positivity
+  · constructor
+    · intro hzero
+      have hsum : 2 * k₂ * (superTwistingZeta x 0) ^ 2
+          + (1 / 2) * (k₁ * superTwistingZeta x 0 - superTwistingZeta x 1) ^ 2
+          + (1 / 2) * (superTwistingZeta x 1) ^ 2 = 0 := by rw [← hV]; exact hzero
+      have h1 : 0 ≤ 2 * k₂ * (superTwistingZeta x 0) ^ 2 := by positivity
+      have h2 : 0 ≤ (1 / 2) * (k₁ * superTwistingZeta x 0 - superTwistingZeta x 1) ^ 2 := by
+        positivity
+      have h3 : 0 ≤ (1 / 2) * (superTwistingZeta x 1) ^ 2 := by positivity
+      have hfirst : 2 * k₂ * (superTwistingZeta x 0) ^ 2 = 0 := by linarith
+      have hlast : (1 / 2) * (superTwistingZeta x 1) ^ 2 = 0 := by linarith
+      have hz0 : superTwistingZeta x 0 = 0 := by
+        refine sq_eq_zero_iff.mp ((mul_eq_zero.mp hfirst).resolve_left ?_)
+        positivity
+      have hz1 : superTwistingZeta x 1 = 0 := by
+        refine sq_eq_zero_iff.mp ((mul_eq_zero.mp hlast).resolve_left ?_)
+        norm_num
+      have hx0 : x 0 = 0 := by
+        have : |x 0| ^ (1 / 2 : ℝ) * Real.sign (x 0) = 0 := by
+          simpa [superTwistingZeta] using hz0
+        exact rpow_half_mul_sign_eq_zero.mp this
+      have hx1 : x 1 = 0 := by simpa [superTwistingZeta] using hz1
+      funext i; fin_cases i <;> simp [hx0, hx1]
+    · rintro rfl
+      rw [hV]
+      simp [superTwistingZeta]
+
+/-- **Bridge to the scalar finite-time comparison.** A continuous trajectory `z` on
+`[t₀, t₁]` whose right derivative satisfies `z' ≤ -c z^{1/2}` reaches `0` by the settling
+time `2 sqrt(z₀)/c`: if the endpoint value were positive, the barrier
+`s ↦ z s^{1/2} + (c/2) s` would be non-increasing and would force `z t₁^{1/2} ≤ 0`.
+
+This is the `α = 1/2` case of slice S2's `eq_zero_of_hasDerivWithinAt_le_neg_mul_rpow`,
+restricted to the finite interval and with an arbitrary (existential) right derivative,
+which is why the endpoint continuity `hzcont` is an explicit hypothesis. -/
+theorem superTwisting_finiteTime_of_lyapunov_decay
+    {z : ℝ → ℝ} {c : ℝ} (hc : 0 < c) {t₀ t₁ : ℝ} (ht : t₀ < t₁)
+    (hzcont : ContinuousOn z (Set.Icc t₀ t₁))
+    (hzpos : ∀ t ∈ Set.Icc t₀ t₁, 0 ≤ z t)
+    (hdiff : ∀ t ∈ Set.Ico t₀ t₁,
+      ∃ z', HasDerivWithinAt z z' (Set.Ici t) t ∧ z' ≤ -c * (z t) ^ (1 / 2 : ℝ))
+    (hsettle : 2 * (z t₀) ^ (1 / 2 : ℝ) / c ≤ t₁ - t₀) :
+    z t₁ = 0 := by
+  by_contra hz
+  have hztpos : 0 < z t₁ := lt_of_le_of_ne (hzpos t₁ ⟨ht.le, le_rfl⟩) (Ne.symm hz)
+  let z' : ℝ → ℝ := fun t ↦ if h : t ∈ Set.Ico t₀ t₁ then (hdiff t h).choose else 0
+  have hz'spec : ∀ t (ht' : t ∈ Set.Ico t₀ t₁),
+      HasDerivWithinAt z (z' t) (Set.Ici t) t ∧ z' t ≤ -c * (z t) ^ (1 / 2 : ℝ) := by
+    intro t ht'
+    have hz' : z' t = (hdiff t ht').choose := by
+      simp only [z', dite_eq_left ht']
+    rw [hz']
+    exact (hdiff t ht').choose_spec
+  have hanti : ∀ ⦃a b : ℝ⦄, t₀ ≤ a → a ≤ b → b ≤ t₁ → z b ≤ z a := by
+    intro a b ha hab hb
+    have hcont_ab : ContinuousOn z (Set.Icc a b) := hzcont.mono (Set.Icc_subset_Icc ha hb)
+    have hderiv' : ∀ x ∈ Set.Ico a b, HasDerivWithinAt z (z' x) (Set.Ici x) x :=
+      fun x hx ↦ (hz'spec x ⟨le_trans ha hx.1, lt_of_lt_of_le hx.2 hb⟩).1
+    have hbound : ∀ x ∈ Set.Ico a b, z' x ≤ (0 : ℝ) := by
+      intro x hx
+      have hx0 : t₀ ≤ x := le_trans ha hx.1
+      have hxt : x < t₁ := lt_of_lt_of_le hx.2 hb
+      have hzx : 0 ≤ z x := hzpos x ⟨hx0, le_of_lt hxt⟩
+      have hzr : 0 ≤ z x ^ (1 / 2 : ℝ) := Real.rpow_nonneg hzx _
+      have hle := (hz'spec x ⟨hx0, hxt⟩).2
+      nlinarith [hc, hzr, hle]
+    exact image_le_of_deriv_right_le_deriv_boundary (f := z) (f' := z')
+      (B := fun _ ↦ z a) (B' := fun _ ↦ 0) hcont_ab hderiv' (le_refl (z a)) continuousOn_const
+      (fun x _ ↦ hasDerivWithinAt_const x (Set.Ici x) (z a)) hbound
+      (Set.right_mem_Icc.mpr hab)
+  have hFbound : z t₁ ^ (1 / 2 : ℝ) + (c / 2) * (t₁ - t₀) ≤ z t₀ ^ (1 / 2 : ℝ) := by
+    let F : ℝ → ℝ := fun s ↦ z s ^ (1 / 2 : ℝ) + (c / 2) * s
+    have hFcont : ContinuousOn F (Set.Icc t₀ t₁) := by
+      have h1 : ContinuousOn (fun s ↦ z s ^ (1 / 2 : ℝ)) (Set.Icc t₀ t₁) :=
+        hzcont.rpow_const fun _ _ ↦ Or.inr (by norm_num)
+      have h2 : ContinuousOn (fun s : ℝ ↦ (c / 2) * s) (Set.Icc t₀ t₁) :=
+        continuousOn_const.mul continuousOn_id
+      exact h1.add h2
+    have hFderiv : ∀ x ∈ Set.Ico t₀ t₁,
+        HasDerivWithinAt F (z' x * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1) + c / 2)
+          (Set.Ici x) x := by
+      intro x hx
+      have hzx : 0 < z x := lt_of_lt_of_le hztpos (hanti hx.1 (le_of_lt hx.2) le_rfl)
+      have h1 : HasDerivWithinAt (fun s ↦ z s ^ (1 / 2 : ℝ))
+          (z' x * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1)) (Set.Ici x) x :=
+        (hz'spec x hx).1.rpow_const (Or.inl (ne_of_gt hzx))
+      have h2 : HasDerivWithinAt (fun s : ℝ ↦ (c / 2) * s) (c / 2) (Set.Ici x) x := by
+        simpa using (hasDerivWithinAt_id x (Set.Ici x)).const_mul (c / 2)
+      exact h1.add h2
+    have hbound : ∀ x ∈ Set.Ico t₀ t₁,
+        z' x * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1) + c / 2 ≤ 0 := by
+      intro x hx
+      have hzx : 0 < z x := lt_of_lt_of_le hztpos (hanti hx.1 (le_of_lt hx.2) le_rfl)
+      have hP : 0 ≤ z x ^ ((1 / 2 : ℝ) - 1) := Real.rpow_nonneg hzx.le _
+      have hle := (hz'spec x hx).2
+      have hstep1 : z' x * (1 / 2) ≤ (-c * z x ^ (1 / 2 : ℝ)) * (1 / 2) :=
+        mul_le_mul_of_nonneg_right hle (by norm_num)
+      have hstep2 : z' x * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1)
+          ≤ (-c * z x ^ (1 / 2 : ℝ)) * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1) :=
+        mul_le_mul_of_nonneg_right hstep1 hP
+      have haux : z x ^ (1 / 2 : ℝ) * z x ^ ((1 / 2 : ℝ) - 1) = 1 := by
+        rw [← Real.rpow_add hzx, show (1 / 2 : ℝ) + ((1 / 2 : ℝ) - 1) = 0 by ring,
+          Real.rpow_zero]
+      have hident : (-c * z x ^ (1 / 2 : ℝ)) * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1)
+          = -(c / 2) := by
+        calc (-c * z x ^ (1 / 2 : ℝ)) * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1)
+            = -c * (1 / 2) * (z x ^ (1 / 2 : ℝ) * z x ^ ((1 / 2 : ℝ) - 1)) := by ring
+          _ = -c * (1 / 2) := by rw [haux, mul_one]
+          _ = -(c / 2) := by ring
+      linarith
+    have hmain := image_le_of_deriv_right_le_deriv_boundary (f := F)
+      (f' := fun x ↦ z' x * (1 / 2) * z x ^ ((1 / 2 : ℝ) - 1) + c / 2)
+      (B := fun _ ↦ F t₀) (B' := fun _ ↦ 0) hFcont hFderiv (le_refl (F t₀)) continuousOn_const
+      (fun x _ ↦ hasDerivWithinAt_const x (Set.Ici x) (F t₀)) hbound
+    have hmain' : z t₁ ^ (1 / 2 : ℝ) + (c / 2) * t₁ ≤ z t₀ ^ (1 / 2 : ℝ) + (c / 2) * t₀ := by
+      simpa [F] using hmain (Set.right_mem_Icc.mpr ht.le)
+    linarith
+  have hst : z t₀ ^ (1 / 2 : ℝ) ≤ (c / 2) * (t₁ - t₀) := by
+    have h := hsettle
+    rw [div_le_iff₀ hc] at h
+    nlinarith
+  have hnonpos : z t₁ ^ (1 / 2 : ℝ) ≤ 0 := by linarith
+  have hpos : 0 < z t₁ ^ (1 / 2 : ℝ) := Real.rpow_pos_of_pos hztpos _
+  linarith
