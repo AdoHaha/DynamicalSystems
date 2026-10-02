@@ -52,11 +52,6 @@ open scoped Topology
 
 @[expose] public section
 
-/-- A **dilation action** on `E`: the identity at exponent `1` and the multiplicative
-one-parameter group law `d (κ * μ) = d κ ∘ d μ` for positive exponents. -/
-def IsDilationAction {E : Type*} (d : ℝ → E → E) : Prop :=
-  (d 1 = id) ∧ ∀ κ μ, 0 < κ → 0 < μ → ∀ x, d (κ * μ) x = d κ (d μ x)
-
 /-- A flow `Φ` is **homogeneous of time exponent `p`** with respect to a dilation `d` when
 the book's combined transformation `G_κ : (t, x) ↦ (κ ^ p * t, d_κ x)` maps trajectories to
 trajectories, i.e. `Φ (κ ^ p * t) (d κ x) = d κ (Φ t x)` for every `κ > 0`. -/
@@ -120,7 +115,7 @@ theorem eventually_eq_zero_of_isHomogeneousFlow_of_contractive
         (mul_nonneg hT.le (hstep_nonneg n)) (hs_nonneg n) x]
       rw [← hy]
       have harg : T * (l ^ p) ^ n = (l ^ n) ^ p * T := by
-        rw [mul_comm T, rpow_pow_comm hl0.le p n]
+        rw [mul_comm T, (Real.rpow_pow_comm hl0.le p n).symm]
       rw [harg, hΦ (l ^ n) (pow_pos hl0 n) T hT.le y]
       rw [← hz]
       rw [← hd.2 (l ^ n) l (pow_pos hl0 n) hl0 z]

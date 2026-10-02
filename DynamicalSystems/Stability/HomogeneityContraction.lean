@@ -23,12 +23,12 @@ step, and the accumulated settling time is the geometric series
 
 ## Main definitions
 
+* `IsDilationAction`: the one-parameter dilation laws `d 1 = id`,
+  `d (κ * μ) = d κ ∘ d μ`.
 * `geometricPartialSum`: the geometric partial sum `T * ∑_{k < N} (λ ^ p) ^ k`.
 
 ## Main results
 
-* `rpow_pow_comm`: the power-law commutation `(x ^ N) ^ p = (x ^ p) ^ N` for `x ≥ 0`,
-  reusing Mathlib's `Real.rpow_pow_comm`.
 * `tendsto_geometricPartialSum`: the geometric partial sums converge to `T / (1 - λ ^ p)`
   for `0 ≤ λ < 1` and `0 < p`.
 * `image_subset_of_le`: dilation-retractability makes the dilated images monotone,
@@ -40,14 +40,10 @@ open scoped Topology
 
 @[expose] public section
 
-/-- **Power-law commutation.** For `x ≥ 0`, a real exponent `p` and a natural number `N`,
-`(x ^ N) ^ p = (x ^ p) ^ N`. This is the identity that equates the time increment
-`(λ ^ p) ^ N` with the homogeneity scaling `(λ ^ N) ^ p`, and is the riskiest arithmetic
-step of the geometric-contraction proof. It is the symmetric form of Mathlib's
-`Real.rpow_pow_comm`. -/
-theorem rpow_pow_comm {x : ℝ} (hx : 0 ≤ x) (p : ℝ) (N : ℕ) :
-    (x ^ N) ^ p = (x ^ p) ^ N :=
-  (Real.rpow_pow_comm hx p N).symm
+/-- A **dilation action** on `E`: the identity at exponent `1` and the multiplicative
+one-parameter group law `d (κ * μ) = d κ ∘ d μ` for positive exponents. -/
+def IsDilationAction {E : Type*} (d : ℝ → E → E) : Prop :=
+  (d 1 = id) ∧ ∀ κ μ, 0 < κ → 0 < μ → ∀ x, d (κ * μ) x = d κ (d μ x)
 
 /-- The geometric partial sum `s_N = T * ∑_{k < N} (λ ^ p) ^ k`. Its limit as `N → ∞`
 is the accumulated settling time of the geometric contraction. -/
@@ -78,7 +74,7 @@ the larger contraction `d (λ ^ k)` is contained in the image under `d (λ ^ N)`
 Indeed `λ ^ k = λ ^ N * λ ^ (k - N)` with `λ ^ (k - N) ≤ 1`, so any `d (λ ^ k) y` is
 `d (λ ^ N) (d (λ ^ (k - N)) y)` and the inner point still lies in `D`. -/
 theorem image_subset_of_le {E : Type*} {d : ℝ → E → E}
-    (hd : (d 1 = id) ∧ ∀ κ μ, 0 < κ → 0 < μ → ∀ x, d (κ * μ) x = d κ (d μ x))
+    (hd : IsDilationAction d)
     {l : ℝ} (hl0 : 0 < l) (hl1 : l < 1) {D : Set E}
     (hD : ∀ κ, 0 < κ → κ ≤ 1 → ∀ y ∈ D, d κ y ∈ D) {N k : ℕ} (hkN : N ≤ k) :
     d (l ^ k) '' D ⊆ d (l ^ N) '' D := by
