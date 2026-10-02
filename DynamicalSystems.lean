@@ -20,6 +20,7 @@ import DynamicalSystems.Control.SlidingMode.Reaching
 import DynamicalSystems.Control.SlidingMode.Regularization
 import DynamicalSystems.Control.SlidingMode.Relay
 import DynamicalSystems.Control.SlidingMode.SecondOrder
+import DynamicalSystems.Control.SlidingMode.Sector
 import DynamicalSystems.AdaptiveControl.Switching
 import DynamicalSystems.AdaptiveControl.BoundedGrowth
 import DynamicalSystems.AdaptiveControl.Direct
