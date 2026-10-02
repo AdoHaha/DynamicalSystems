@@ -66,7 +66,7 @@ existing Picard–Lindelöf and Carathéodory–Lipschitz existence theories.
 @[expose] public section
 
 open Filter MeasureTheory Set
-open scoped NNReal Topology
+open scoped NNReal Topology BigOperators
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -188,6 +188,395 @@ theorem IsLocallyAbsolutelyContinuousOn.of_lipschitzWith {γ : ℝ → E} {s : S
   .of_lipschitzOn fun _ _ _ => h.lipschitzOnWith
 
 end AbsoluteContinuous
+
+section Euler
+
+omit [NormedSpace ℝ E] in
+/-- A pointwise limit of `K`-Lipschitz maps is `K`-Lipschitz. This is the closure step that
+upgrades the uniformly convergent Euler polygonal approximations to a Lipschitz (hence locally
+absolutely continuous) limit curve. -/
+theorem LipschitzWith.of_tendsto {α : Type*} [PseudoMetricSpace α]
+    {K : ℝ≥0} {f : ℕ → α → E} {g : α → E} (hf : ∀ n, LipschitzWith K (f n))
+    (h : ∀ x, Tendsto (fun n ↦ f n x) atTop (𝓝 (g x))) : LipschitzWith K g := by
+  rw [lipschitzWith_iff_dist_le_mul]
+  intro x y
+  have htend : Tendsto (fun n ↦ dist (f n x) (f n y)) atTop (𝓝 (dist (g x) (g y))) :=
+    (h x).dist (h y)
+  exact le_of_tendsto htend (Eventually.of_forall fun n ↦ (hf n).dist_le_mul x y)
+
+/-- **Euler nodes.** For a fixed step `h` the polygonal Euler scheme starting at `x₀` selects an
+admissible velocity `v k ∈ F (x k)` at each node and advances `x (k+1) = x k + h • v k`. The
+choice is classical; the resulting sequence is the sequence of vertices of the Euler polygonal
+approximation used in the existence proof. -/
+noncomputable def IsFilippovInclusion.eulerNode {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) : ℕ → E
+  | 0 => x₀
+  | k + 1 => eulerNode hF h x₀ k + h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))
+
+/-- **The velocity selected at an Euler node**, packaged as a function of the node index. -/
+noncomputable def IsFilippovInclusion.eulerVel {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (k : ℕ) : E :=
+  Classical.choose (hF.nonempty (eulerNode hF h x₀ k))
+
+/-- The velocity selected at the `k`-th Euler node lies in `F` applied to that node. -/
+theorem IsFilippovInclusion.eulerNode_choose_mem {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (k : ℕ) : eulerVel hF h x₀ k ∈ F (eulerNode hF h x₀ k) :=
+  Classical.choose_spec _
+
+/-- The successor Euler node is the previous node plus `h` times the selected velocity. -/
+theorem IsFilippovInclusion.eulerNode_succ {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (k : ℕ) :
+    eulerNode hF h x₀ (k + 1) = eulerNode hF h x₀ k + h • eulerVel hF h x₀ k :=
+  rfl
+
+/-- **Euler node a priori estimate.** If all velocities in `F` are bounded by `M` on the closed
+ball of radius `r` about `x₀`, then as long as `k * h * M ≤ r` the `k`-th Euler node stays within
+distance `k * h * M` of `x₀`. This is the discrete Gronwall estimate that keeps the polygonal
+approximation inside the ball of local boundedness for times `t ≤ r / M`. -/
+theorem IsFilippovInclusion.dist_eulerNode_le {F : E → Set E} (hF : IsFilippovInclusion F)
+    {x₀ : E} {r M h : ℝ} (hh : 0 ≤ h) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M) :
+    ∀ k : ℕ, (k : ℝ) * h * M ≤ r →
+      dist (eulerNode hF h x₀ k) x₀ ≤ (k : ℝ) * h * M := by
+  intro k
+  induction k with
+  | zero =>
+      intro _
+      simp [eulerNode]
+  | succ k ih =>
+      intro hk
+      have hk' : (k : ℝ) * h * M ≤ r := by
+        have hle : (k : ℝ) * h * M ≤ ((k + 1 : ℕ) : ℝ) * h * M := by
+          have : (0 : ℝ) ≤ h * M := mul_nonneg hh hM0
+          push_cast
+          nlinarith
+        exact le_trans hle hk
+      have hdist : dist (eulerNode hF h x₀ k) x₀ ≤ r := le_trans (ih hk') hk'
+      have hvnorm : ‖Classical.choose (hF.nonempty (eulerNode hF h x₀ k))‖ ≤ M :=
+        hM _ hdist _ (hF.eulerNode_choose_mem h x₀ k)
+      rw [eulerNode]
+      calc dist (eulerNode hF h x₀ k +
+              h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))) x₀
+          ≤ dist (eulerNode hF h x₀ k) x₀ +
+              ‖h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))‖ := by
+            calc dist (eulerNode hF h x₀ k +
+                    h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))) x₀
+                ≤ dist (eulerNode hF h x₀ k +
+                    h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k)))
+                    (eulerNode hF h x₀ k) + dist (eulerNode hF h x₀ k) x₀ :=
+                  dist_triangle _ _ _
+              _ = ‖h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))‖ +
+                    dist (eulerNode hF h x₀ k) x₀ := by
+                  rw [dist_eq_norm]
+                  simp
+              _ = dist (eulerNode hF h x₀ k) x₀ +
+                    ‖h • Classical.choose (hF.nonempty (eulerNode hF h x₀ k))‖ := by
+                  ring
+        _ ≤ (k : ℝ) * h * M + h * M := by
+            gcongr
+            · exact ih hk'
+            · rw [norm_smul, Real.norm_eq_abs, abs_of_nonneg hh]
+              gcongr
+        _ = ((k + 1 : ℕ) : ℝ) * h * M := by
+            push_cast
+            ring
+
+/-- **The Euler step velocity.** The piecewise-constant velocity driving the Euler scheme: at
+time `t` it is the velocity selected at the Euler node `⌊t / h⌋₊`. This is the right-hand side
+of the Euler differential equation `γ' = v` on each step. -/
+noncomputable def IsFilippovInclusion.eulerVelStep {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (t : ℝ) : E :=
+  eulerVel hF h x₀ ⌊t / h⌋₊
+
+/-- The Euler step velocity at time `t` lies in `F` at the corresponding Euler node. -/
+theorem IsFilippovInclusion.eulerVelStep_mem {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (t : ℝ) :
+    eulerVelStep hF h x₀ t ∈ F (eulerNode hF h x₀ ⌊t / h⌋₊) :=
+  eulerNode_choose_mem hF h x₀ ⌊t / h⌋₊
+
+/-- **Constancy of the Euler step velocity on a step.** For `h > 0` and `t ∈ [k * h, (k+1) * h)`
+the step velocity is the velocity selected at the `k`-th node. The endpoint `(k+1) * h` is excluded
+only; it is a single point and hence is irrelevant for the associated interval integral. -/
+theorem IsFilippovInclusion.eulerVelStep_eq {F : E → Set E} (hF : IsFilippovInclusion F)
+    {h : ℝ} (hh : 0 < h) (x₀ : E) {t : ℝ} {k : ℕ}
+    (hlo : (k : ℝ) * h ≤ t) (hhi : t < ((k : ℝ) + 1) * h) :
+    eulerVelStep hF h x₀ t = eulerVel hF h x₀ k := by
+  have hk : ⌊t / h⌋₊ = k := by
+    have hk0 : (0 : ℝ) ≤ t / h :=
+      div_nonneg (le_trans (mul_nonneg (Nat.cast_nonneg k) (le_of_lt hh)) hlo) (le_of_lt hh)
+    rw [Nat.floor_eq_iff hk0]
+    exact ⟨(le_div_iff₀ hh).mpr hlo, (div_lt_iff₀ hh).mpr hhi⟩
+  simp only [eulerVelStep]
+  rw [hk]
+
+/-- **A priori bound on the Euler step velocity.** On the steps that stay within the ball of local
+boundedness (`⌊t / h⌋₊ * h * M ≤ r`) the Euler step velocity is bounded by `M`. -/
+theorem IsFilippovInclusion.norm_eulerVelStep_le {F : E → Set E} (hF : IsFilippovInclusion F)
+    {x₀ : E} {r M h : ℝ} (hh : 0 < h) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M)
+    {t : ℝ} (hk : (⌊t / h⌋₊ : ℝ) * h * M ≤ r) :
+    ‖eulerVelStep hF h x₀ t‖ ≤ M := by
+  have hdist : dist (eulerNode hF h x₀ ⌊t / h⌋₊) x₀ ≤ r :=
+    le_trans (hF.dist_eulerNode_le (le_of_lt hh) hM0 hM _ hk) hk
+  exact hM _ hdist _ (hF.eulerVelStep_mem h x₀ t)
+
+/-- **The Euler polygonal curve.** The piecewise-linear interpolation of the Euler nodes
+`eulerNode hF h x₀ k`, evaluated at time `t` on the step `k = ⌊t / h⌋₊` and glued continuously at
+the nodes. This is the approximation whose uniform limits (after Arzelà–Ascoli) are the
+candidates for a Filippov solution. -/
+noncomputable def IsFilippovInclusion.eulerCurve {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) (t : ℝ) : E :=
+  let k := ⌊t / h⌋₊
+  eulerNode hF h x₀ k +
+    ((t - (k : ℝ) * h) / h) • (eulerNode hF h x₀ (k + 1) - eulerNode hF h x₀ k)
+
+/-- The Euler polygonal curve starts at `x₀`. -/
+theorem IsFilippovInclusion.eulerCurve_zero {F : E → Set E} (hF : IsFilippovInclusion F)
+    (h : ℝ) (x₀ : E) : eulerCurve hF h x₀ 0 = x₀ := by
+  simp [eulerCurve, eulerNode]
+
+/-- At a node `j * h` the Euler polygonal curve takes the value of the `j`-th Euler node. -/
+theorem IsFilippovInclusion.eulerCurve_node {F : E → Set E} (hF : IsFilippovInclusion F)
+    {h : ℝ} (hh : 0 < h) (x₀ : E) (j : ℕ) :
+    eulerCurve hF h x₀ ((j : ℝ) * h) = eulerNode hF h x₀ j := by
+  have hjh : (j : ℝ) * h / h = (j : ℝ) := by field_simp
+  simp only [eulerCurve, hjh, Nat.floor_natCast]
+  ring_nf
+  simp
+
+/-- **The Euler polygonal curve is differentiable on each open step**, with derivative the Euler
+velocity selected at the corresponding node. On the open interval
+`(k * h, (k+1) * h)` the floor `⌊t / h⌋₊` is constantly `k`, so the polygonal curve agrees there
+with an affine function; its derivative is `(1/h) • (eulerNode (k+1) - eulerNode k) = eulerVel k`.
+This is the `HasDerivAt` form used to express the Euler inclusion `γ' ∈ F (γ (⌊t/h⌋₊))`. -/
+theorem IsFilippovInclusion.eulerCurve_hasDerivAt {F : E → Set E} (hF : IsFilippovInclusion F)
+    {h : ℝ} (hh : 0 < h) (x₀ : E) {t : ℝ} {k : ℕ}
+    (hlo : (k : ℝ) * h < t) (hhi : t < ((k : ℝ) + 1) * h) :
+    HasDerivAt (eulerCurve hF h x₀) (eulerVel hF h x₀ k) t := by
+  have hfloor : ∀ᶠ u in 𝓝 t, ⌊u / h⌋₊ = k := by
+    filter_upwards [IsOpen.mem_nhds isOpen_Ioo ⟨hlo, hhi⟩] with u hu
+    have hu0 : (0 : ℝ) ≤ u / h :=
+      div_nonneg (le_trans (mul_nonneg (Nat.cast_nonneg k) (le_of_lt hh)) (le_of_lt hu.1))
+        (le_of_lt hh)
+    rw [Nat.floor_eq_iff hu0]
+    exact ⟨(le_div_iff₀ hh).mpr (le_of_lt hu.1), (div_lt_iff₀ hh).mpr hu.2⟩
+  have heq : eulerCurve hF h x₀ =ᶠ[𝓝 t]
+      (fun u : ℝ => eulerNode hF h x₀ k +
+        ((u - (k : ℝ) * h) / h) • (eulerNode hF h x₀ (k + 1) - eulerNode hF h x₀ k)) := by
+    filter_upwards [hfloor] with u hu
+    simp only [eulerCurve]
+    rw [hu]
+  rw [Filter.EventuallyEq.hasDerivAt_iff heq]
+  have hsub : eulerNode hF h x₀ (k + 1) - eulerNode hF h x₀ k = h • eulerVel hF h x₀ k := by
+    rw [eulerNode_succ]
+    abel
+  rw [hsub]
+  have h1 : HasDerivAt (fun u : ℝ => (u - (k : ℝ) * h) / h) (1 / h) t := by
+    simpa using ((hasDerivAt_id t).sub_const ((k : ℝ) * h)).div_const h
+  have h3 : HasDerivAt (fun u : ℝ => eulerNode hF h x₀ k +
+        ((u - (k : ℝ) * h) / h) • (h • eulerVel hF h x₀ k))
+      ((1 / h) • (h • eulerVel hF h x₀ k)) t :=
+    (h1.smul_const _).const_add _
+  convert h3 using 1
+  simp [smul_smul, hh.ne']
+
+/-- A single Euler step: on the step containing `t ≥ 0`, the difference between the polygonal
+curve and the left node is `(t - k * h) / h` times the increment of that step, whose norm is at
+most `h * M`. This is the elementary estimate summed over the steps in
+`eulerCurve_lipschitzOn`. -/
+theorem IsFilippovInclusion.dist_eulerCurve_node_le {F : E → Set E} (hF : IsFilippovInclusion F)
+    {x₀ : E} {r M h : ℝ} (hh : 0 < h) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M) {t : ℝ} (ht : 0 ≤ t)
+    (hk : (⌊t / h⌋₊ : ℝ) * h * M ≤ r) :
+    dist (eulerCurve hF h x₀ t) (eulerNode hF h x₀ ⌊t / h⌋₊) ≤
+      M * (t - (⌊t / h⌋₊ : ℝ) * h) := by
+  have hvel : ‖eulerVel hF h x₀ ⌊t / h⌋₊‖ ≤ M := by
+    have hdist : dist (eulerNode hF h x₀ ⌊t / h⌋₊) x₀ ≤ r :=
+      le_trans (hF.dist_eulerNode_le hh.le hM0 hM ⌊t / h⌋₊ hk) hk
+    exact hM _ hdist _ (hF.eulerNode_choose_mem h x₀ ⌊t / h⌋₊)
+  have hle : (⌊t / h⌋₊ : ℝ) * h ≤ t :=
+    (le_div_iff₀ hh).mp (Nat.floor_le (div_nonneg ht hh.le))
+  have hdiff : eulerCurve hF h x₀ t - eulerNode hF h x₀ ⌊t / h⌋₊ =
+      ((t - (⌊t / h⌋₊ : ℝ) * h) / h) •
+        (eulerNode hF h x₀ (⌊t / h⌋₊ + 1) - eulerNode hF h x₀ ⌊t / h⌋₊) := by
+    simp only [eulerCurve]
+    abel
+  have hgn : eulerNode hF h x₀ (⌊t / h⌋₊ + 1) - eulerNode hF h x₀ ⌊t / h⌋₊ =
+      h • eulerVel hF h x₀ ⌊t / h⌋₊ := by
+    rw [eulerNode_succ]
+    abel
+  rw [dist_eq_norm, hdiff, hgn]
+  simp only [norm_smul, Real.norm_eq_abs, abs_of_nonneg hh.le,
+    abs_of_nonneg (div_nonneg (sub_nonneg.mpr hle) hh.le)]
+  calc (t - (⌊t / h⌋₊ : ℝ) * h) / h * (h * ‖eulerVel hF h x₀ ⌊t / h⌋₊‖)
+      ≤ (t - (⌊t / h⌋₊ : ℝ) * h) / h * (h * M) := by gcongr
+    _ = M * (t - (⌊t / h⌋₊ : ℝ) * h) := by field_simp
+
+/-- The forward companion of `dist_eulerCurve_node_le`: the distance from the polygonal curve to
+the right node of the current step is at most `M` times the remaining time in the step. -/
+theorem IsFilippovInclusion.dist_eulerNode_succ_eulerCurve_le {F : E → Set E}
+    (hF : IsFilippovInclusion F) {x₀ : E} {r M h : ℝ} (hh : 0 < h) (hM0 : 0 ≤ M)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M) {s : ℝ}
+    (hk : ((⌊s / h⌋₊ : ℝ) + 1) * h * M ≤ r) :
+    dist (eulerNode hF h x₀ (⌊s / h⌋₊ + 1)) (eulerCurve hF h x₀ s) ≤
+      M * (((⌊s / h⌋₊ : ℝ) + 1) * h - s) := by
+  have hvel : ‖eulerVel hF h x₀ ⌊s / h⌋₊‖ ≤ M := by
+    have hdist : dist (eulerNode hF h x₀ ⌊s / h⌋₊) x₀ ≤ r := by
+      have hcast : ((⌊s / h⌋₊ : ℝ)) * h * M ≤ ((⌊s / h⌋₊ : ℝ) + 1) * h * M := by
+        have : (0 : ℝ) ≤ h * M := mul_nonneg hh.le hM0
+        nlinarith
+      exact le_trans (hF.dist_eulerNode_le hh.le hM0 hM ⌊s / h⌋₊ (le_trans hcast hk))
+        (le_trans hcast hk)
+    exact hM _ hdist _ (hF.eulerNode_choose_mem h x₀ ⌊s / h⌋₊)
+  have hs_lt : s < ((⌊s / h⌋₊ : ℝ) + 1) * h :=
+    (div_lt_iff₀ hh).mp (Nat.lt_floor_add_one (s / h))
+  have hform : eulerNode hF h x₀ (⌊s / h⌋₊ + 1) - eulerCurve hF h x₀ s =
+      (((⌊s / h⌋₊ : ℝ) + 1) * h - s) • eulerVel hF h x₀ ⌊s / h⌋₊ := by
+    simp only [eulerCurve, eulerNode_succ, add_sub_cancel_left, smul_smul]
+    rw [add_sub_add_left_eq_sub, ← sub_smul]
+    congr 1
+    field_simp
+    ring
+  rw [dist_eq_norm, hform, norm_smul, Real.norm_eq_abs,
+    abs_of_nonneg (sub_nonneg.mpr hs_lt.le)]
+  calc (((⌊s / h⌋₊ : ℝ) + 1) * h - s) * ‖eulerVel hF h x₀ ⌊s / h⌋₊‖
+      ≤ (((⌊s / h⌋₊ : ℝ) + 1) * h - s) * M :=
+        mul_le_mul_of_nonneg_left hvel (sub_nonneg.mpr hs_lt.le)
+    _ = M * (((⌊s / h⌋₊ : ℝ) + 1) * h - s) := by ring
+
+/-- **The Euler polygonal curves are uniformly `M`-Lipschitz on `[0, T]`.** Provided `T * M ≤ r`,
+all nodes reached before time `T` have admissible velocities bounded by `M`, and the polygonal
+curve is a convex-combination (`h`-step) interpolation of these nodes. This uniform Lipschitz bound
+is the equicontinuity input for the Arzelà–Ascoli compactness step. -/
+theorem IsFilippovInclusion.eulerCurve_lipschitzOn {F : E → Set E} (hF : IsFilippovInclusion F)
+    {x₀ : E} {r M h T : ℝ} (hh : 0 < h) (hM0 : 0 ≤ M) (hTM : T * M ≤ r)
+    (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M) :
+    LipschitzOnWith (⟨M, hM0⟩ : ℝ≥0) (eulerCurve hF h x₀) (Set.Icc 0 T) := by
+  have vel_bound_T : ∀ j : ℕ, (j : ℝ) * h ≤ T → ‖eulerVel hF h x₀ j‖ ≤ M := by
+    intro j hj
+    have hjr : (j : ℝ) * h * M ≤ r := by
+      have : (j : ℝ) * h * M ≤ T * M := by nlinarith [hj, hM0]
+      linarith
+    have hdist : dist (eulerNode hF h x₀ j) x₀ ≤ r :=
+      le_trans (hF.dist_eulerNode_le hh.le hM0 hM j hjr) hjr
+    exact hM _ hdist _ (hF.eulerNode_choose_mem h x₀ j)
+  refine LipschitzOnWith.of_dist_le_mul ?_
+  have key : ∀ a b, 0 ≤ a → b ≤ T → a ≤ b →
+      dist (eulerCurve hF h x₀ a) (eulerCurve hF h x₀ b) ≤ M * (b - a) := by
+    intro a b ha hbTab hab
+    have hma : (⌊a / h⌋₊ : ℝ) * h ≤ a :=
+      (le_div_iff₀ hh).mp (Nat.floor_le (div_nonneg ha hh.le))
+    have hnb : (⌊b / h⌋₊ : ℝ) * h ≤ b :=
+      (le_div_iff₀ hh).mp (Nat.floor_le (div_nonneg (ha.trans hab) hh.le))
+    have hmn : ⌊a / h⌋₊ ≤ ⌊b / h⌋₊ :=
+      Nat.floor_mono (div_le_div_of_nonneg_right hab hh.le)
+    by_cases hmn1 : ⌊a / h⌋₊ + 1 ≤ ⌊b / h⌋₊
+    · -- the nodes are separated by at least one full step
+      have hnode_a : dist (eulerCurve hF h x₀ a) (eulerNode hF h x₀ ⌊a / h⌋₊) ≤
+          M * (a - (⌊a / h⌋₊ : ℝ) * h) := by
+        refine hF.dist_eulerCurve_node_le hh hM0 hM ha ?_
+        have : (⌊a / h⌋₊ : ℝ) * h * M ≤ T * M := by nlinarith [hma, hbTab, hab, hM0]
+        linarith
+      have hnode_b : dist (eulerCurve hF h x₀ b) (eulerNode hF h x₀ ⌊b / h⌋₊) ≤
+          M * (b - (⌊b / h⌋₊ : ℝ) * h) := by
+        refine hF.dist_eulerCurve_node_le hh hM0 hM (ha.trans hab) ?_
+        have : (⌊b / h⌋₊ : ℝ) * h * M ≤ T * M := by nlinarith [hnb, hbTab, hM0]
+        linarith
+      have hnode_fwd : dist (eulerNode hF h x₀ (⌊a / h⌋₊ + 1)) (eulerCurve hF h x₀ a) ≤
+          M * (((⌊a / h⌋₊ : ℝ) + 1) * h - a) := by
+        refine hF.dist_eulerNode_succ_eulerCurve_le hh hM0 hM ?_
+        have : ((⌊a / h⌋₊ : ℝ) + 1) * h * M ≤ T * M := by
+          have hle : ((⌊a / h⌋₊ : ℝ) + 1) * h ≤ (⌊b / h⌋₊ : ℝ) * h := by
+            have : ⌊a / h⌋₊ + 1 ≤ ⌊b / h⌋₊ := hmn1
+            have hc : ((⌊a / h⌋₊ + 1 : ℕ) : ℝ) ≤ (⌊b / h⌋₊ : ℝ) := by exact_mod_cast this
+            simpa using mul_le_mul_of_nonneg_right hc hh.le
+          nlinarith [hle, hnb, hbTab, hM0]
+        linarith
+      have htel : eulerNode hF h x₀ ⌊b / h⌋₊ - eulerNode hF h x₀ (⌊a / h⌋₊ + 1) =
+          (Finset.range (⌊b / h⌋₊ - (⌊a / h⌋₊ + 1))).sum
+            (fun i => eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + (i + 1)) -
+              eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + i)) := by
+        rw [Finset.sum_range_sub (f := fun j => eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + j))]
+        simp [Nat.add_sub_of_le hmn1]
+      have hsum : ‖eulerNode hF h x₀ ⌊b / h⌋₊ - eulerNode hF h x₀ (⌊a / h⌋₊ + 1)‖ ≤
+          M * ((⌊b / h⌋₊ : ℝ) * h - ((⌊a / h⌋₊ : ℝ) + 1) * h) := by
+        rw [htel]
+        calc ‖(Finset.range (⌊b / h⌋₊ - (⌊a / h⌋₊ + 1))).sum
+              (fun i => eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + i + 1) -
+                eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + i))‖
+            ≤ (Finset.range (⌊b / h⌋₊ - (⌊a / h⌋₊ + 1))).sum
+                (fun i => ‖eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + i + 1) -
+                  eulerNode hF h x₀ (⌊a / h⌋₊ + 1 + i)‖) := norm_sum_le _ _
+          _ ≤ (Finset.range (⌊b / h⌋₊ - (⌊a / h⌋₊ + 1))).sum (fun _ => h * M) := by
+              apply Finset.sum_le_sum
+              intro i hi
+              have hi' : ⌊a / h⌋₊ + 1 + i < ⌊b / h⌋₊ := by
+                rw [Finset.mem_range] at hi
+                omega
+              have hleT : ((⌊a / h⌋₊ + 1 + i : ℕ) : ℝ) * h ≤ T := by
+                have : ((⌊a / h⌋₊ + 1 + i : ℕ) : ℝ) ≤ (⌊b / h⌋₊ : ℝ) := by exact_mod_cast hi'.le
+                nlinarith [mul_le_mul_of_nonneg_right this hh.le, hnb, hbTab]
+              have hv := vel_bound_T (⌊a / h⌋₊ + 1 + i) hleT
+              rw [eulerNode_succ, add_sub_cancel_left, norm_smul, Real.norm_eq_abs,
+                abs_of_nonneg hh.le]
+              gcongr
+          _ = ((⌊b / h⌋₊ - (⌊a / h⌋₊ + 1) : ℕ) : ℝ) * (h * M) := by simp
+          _ = M * ((⌊b / h⌋₊ : ℝ) * h - ((⌊a / h⌋₊ : ℝ) + 1) * h) := by
+              rw [Nat.cast_sub hmn1]
+              push_cast
+              ring
+      calc dist (eulerCurve hF h x₀ a) (eulerCurve hF h x₀ b)
+          = ‖eulerCurve hF h x₀ b - eulerCurve hF h x₀ a‖ := by
+              rw [dist_eq_norm, norm_sub_rev]
+        _ = ‖(eulerCurve hF h x₀ b - eulerNode hF h x₀ ⌊b / h⌋₊) +
+              (eulerNode hF h x₀ ⌊b / h⌋₊ - eulerNode hF h x₀ (⌊a / h⌋₊ + 1)) +
+              (eulerNode hF h x₀ (⌊a / h⌋₊ + 1) - eulerCurve hF h x₀ a)‖ := by
+              congr 1
+              abel
+        _ ≤ ‖eulerCurve hF h x₀ b - eulerNode hF h x₀ ⌊b / h⌋₊‖ +
+              ‖eulerNode hF h x₀ ⌊b / h⌋₊ - eulerNode hF h x₀ (⌊a / h⌋₊ + 1)‖ +
+              ‖eulerNode hF h x₀ (⌊a / h⌋₊ + 1) - eulerCurve hF h x₀ a‖ :=
+              norm_add₃_le
+        _ ≤ M * (b - (⌊b / h⌋₊ : ℝ) * h) +
+              M * ((⌊b / h⌋₊ : ℝ) * h - ((⌊a / h⌋₊ : ℝ) + 1) * h) +
+              M * (((⌊a / h⌋₊ : ℝ) + 1) * h - a) := by
+              refine add_le_add (add_le_add ?_ ?_) ?_
+              · simpa only [dist_eq_norm] using hnode_b
+              · simpa only [dist_eq_norm] using hsum
+              · simpa only [dist_eq_norm] using hnode_fwd
+        _ = M * (b - a) := by ring
+    · -- a and b lie in the same step
+      have hnm : ⌊b / h⌋₊ = ⌊a / h⌋₊ := by omega
+      have hform : eulerCurve hF h x₀ b - eulerCurve hF h x₀ a =
+          ((b - a) / h) • (eulerNode hF h x₀ (⌊a / h⌋₊ + 1) - eulerNode hF h x₀ ⌊a / h⌋₊) := by
+        simp only [eulerCurve, hnm]
+        rw [add_sub_add_left_eq_sub, ← sub_smul]
+        congr 1
+        field_simp
+        ring
+      have hDelta : ‖eulerNode hF h x₀ (⌊a / h⌋₊ + 1) - eulerNode hF h x₀ ⌊a / h⌋₊‖ ≤ h * M := by
+        have hleT : ((⌊a / h⌋₊ : ℕ) : ℝ) * h ≤ T := by nlinarith [hma, hbTab, hab]
+        have hv := vel_bound_T ⌊a / h⌋₊ hleT
+        rw [eulerNode_succ, add_sub_cancel_left, norm_smul, Real.norm_eq_abs,
+          abs_of_nonneg hh.le]
+        gcongr
+      rw [dist_eq_norm, norm_sub_rev, hform, norm_smul, Real.norm_eq_abs,
+        abs_of_nonneg (div_nonneg (sub_nonneg.mpr hab) hh.le)]
+      calc (b - a) / h * ‖eulerNode hF h x₀ (⌊a / h⌋₊ + 1) - eulerNode hF h x₀ ⌊a / h⌋₊‖
+          ≤ (b - a) / h * (h * M) := by gcongr
+        _ = M * (b - a) := by field_simp
+  intro s hs t ht
+  rcases le_total s t with hst | hts
+  · have hd : dist s t = t - s := by
+      rw [Real.dist_eq, abs_sub_comm, abs_of_nonneg (sub_nonneg.mpr hst)]
+    rw [hd]
+    exact key s t hs.1 ht.2 hst
+  · have hd : dist s t = s - t := by
+      rw [Real.dist_eq, abs_of_nonneg (sub_nonneg.mpr hts)]
+    rw [hd, dist_comm]
+    exact key t s ht.1 hs.2 hts
+
+end Euler
 
 /-! ## The remaining target
 
