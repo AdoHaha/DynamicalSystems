@@ -6,7 +6,6 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.Control.SlidingMode.Discrete
-public import DynamicalSystems.DiscreteTime.MatrixLyapunov
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 
 /-! # Matrix/vector regular-form discrete-time sliding-mode control
@@ -52,10 +51,8 @@ The scalar (single-channel) reaching law, the quasi-sliding band and their
 invariance/contraction properties are deliberately *not* repeated here: they
 live in `DynamicalSystems.Control.SlidingMode.Discrete` (Gao's reaching law and
 its forward invariance of the quasi-sliding band), and the continuous-time
-equivalent control in `DynamicalSystems.Control.SlidingMode.Basic`. Likewise the
-discrete matrix-Lyapunov quadratic-form toolkit is reused from
-`DynamicalSystems.DiscreteTime.MatrixLyapunov`. The matrix/vector statements
-below are the new regular-form content of this slice.
+equivalent control in `DynamicalSystems.Control.SlidingMode.Basic`. The
+matrix/vector statements below are the new regular-form content of this slice.
 
 ## Main definitions
 
