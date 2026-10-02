@@ -68,6 +68,18 @@ theorem observationError_eq_differentiatorError (z x : Fin 2 → ℝ) :
     simp only [observationError, differentiatorError, Pi.sub_apply, Matrix.cons_val_zero,
       Matrix.cons_val_one, Fin.reduceFinMk]
 
+/-- **Closed-loop observation-error identity for the canonical observable system.**
+Subtracting the state drift `![x 1, 0]` from the observer field and reading the result in
+the observation-error coordinates is exactly slice S7's super-twisting vector field:
+`ż - ![x₁, 0] = superTwistingVectorField k₁ k₂ (z - x)`. -/
+theorem superTwistingObserver_error_eq_superTwistingVectorField
+    (k₁ k₂ : ℝ) (x z : Fin 2 → ℝ) :
+    superTwistingObserverField k₁ k₂ (x 0) z - ![x 1, 0] =
+      superTwistingVectorField k₁ k₂ (observationError z x) := by
+  rw [superTwistingObserverField,
+    superTwistingDifferentiator_error_eq_superTwistingVectorField,
+    observationError_eq_differentiatorError]
+
 /-- **Exact state reconstruction for the canonical observable system.** If the observation
 error vanishes then the estimate coincides with the state, so both components are
 reconstructed exactly: `z₀ = x₀` and `z₁ = x₁`. -/

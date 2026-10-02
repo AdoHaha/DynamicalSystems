@@ -218,24 +218,30 @@ noncomputable def secondOrderDifferentiatorDilation (l : ℝ) : (Fin 3 → ℝ) 
 
 /-- Evaluation of the order-two differentiator dilation in the first coordinate:
 `(d_λ z) 0 = λ ^ 3 * z 0`. -/
-private theorem weightedDilation_diffWeights_zero (l : ℝ) (x : Fin 3 → ℝ) :
-    weightedDilation secondOrderDifferentiatorWeights l x 0 = l ^ (3 : ℝ) * x 0 := by
-  simp only [weightedDilation, secondOrderDifferentiatorWeights]
+theorem secondOrderDifferentiatorDilation_apply_zero (l : ℝ) (x : Fin 3 → ℝ) :
+    secondOrderDifferentiatorDilation l x 0 = l ^ (3 : ℝ) * x 0 := by
+  simp only [secondOrderDifferentiatorDilation, weightedDilation, secondOrderDifferentiatorWeights]
   norm_num
 
 /-- Evaluation of the order-two differentiator dilation in the second coordinate:
 `(d_λ z) 1 = λ ^ 2 * z 1`. -/
-private theorem weightedDilation_diffWeights_one (l : ℝ) (x : Fin 3 → ℝ) :
-    weightedDilation secondOrderDifferentiatorWeights l x 1 = l ^ (2 : ℝ) * x 1 := by
-  simp only [weightedDilation, secondOrderDifferentiatorWeights]
+theorem secondOrderDifferentiatorDilation_apply_one (l : ℝ) (x : Fin 3 → ℝ) :
+    secondOrderDifferentiatorDilation l x 1 = l ^ (2 : ℝ) * x 1 := by
+  simp only [secondOrderDifferentiatorDilation, weightedDilation, secondOrderDifferentiatorWeights]
   norm_num
 
 /-- Evaluation of the order-two differentiator dilation in the third coordinate:
 `(d_λ z) 2 = λ * z 2`. -/
-private theorem weightedDilation_diffWeights_two (l : ℝ) (x : Fin 3 → ℝ) :
-    weightedDilation secondOrderDifferentiatorWeights l x 2 = l ^ (1 : ℝ) * x 2 := by
-  simp only [weightedDilation, secondOrderDifferentiatorWeights]
+theorem secondOrderDifferentiatorDilation_apply_two (l : ℝ) (x : Fin 3 → ℝ) :
+    secondOrderDifferentiatorDilation l x 2 = l * x 2 := by
+  simp only [secondOrderDifferentiatorDilation, weightedDilation, secondOrderDifferentiatorWeights]
   norm_num
+
+/-- The weighted dilation with the order-two differentiator weights is the order-two
+differentiator dilation. -/
+private theorem weightedDilation_secondOrderDifferentiatorWeights_eq (l : ℝ) (x : Fin 3 → ℝ) :
+    weightedDilation secondOrderDifferentiatorWeights l x = secondOrderDifferentiatorDilation l x :=
+  rfl
 
 /-- `|λ³ a|^{2/3} = λ² |a|^{2/3}` for `λ > 0`. -/
 private theorem abs_rpow_two_thirds_mul_cube {l a : ℝ} (hl : 0 < l) :
@@ -248,12 +254,13 @@ private theorem abs_rpow_two_thirds_mul_cube {l a : ℝ} (hl : 0 < l) :
 
 /-- `|λ³ a|^{1/3} = λ |a|^{1/3}` for `λ > 0`. -/
 private theorem abs_rpow_one_third_mul_cube {l a : ℝ} (hl : 0 < l) :
-    |l ^ (3 : ℝ) * a| ^ (1 / 3 : ℝ) = l ^ (1 : ℝ) * |a| ^ (1 / 3 : ℝ) := by
+    |l ^ (3 : ℝ) * a| ^ (1 / 3 : ℝ) = l * |a| ^ (1 / 3 : ℝ) := by
   rw [abs_mul, abs_of_nonneg (Real.rpow_nonneg hl.le 3),
     Real.mul_rpow (Real.rpow_nonneg hl.le 3) (abs_nonneg a),
     show (l ^ (3 : ℝ)) ^ (1 / 3 : ℝ) = l ^ (1 : ℝ) by
       rw [← Real.rpow_mul hl.le]
-      norm_num]
+      norm_num,
+    Real.rpow_one]
 
 /-- `λ ^ (-1) * (λ³ * a) = λ² * a` for `λ > 0`. -/
 private theorem rpow_neg_one_mul_cube {l a : ℝ} (hl : 0 < l) :
@@ -264,18 +271,15 @@ private theorem rpow_neg_one_mul_cube {l a : ℝ} (hl : 0 < l) :
 
 /-- `λ ^ (-1) * (λ² * a) = λ * a` for `λ > 0`. -/
 private theorem rpow_neg_one_mul_sq {l a : ℝ} (hl : 0 < l) :
-    l ^ (-1 : ℝ) * (l ^ (2 : ℝ) * a) = l ^ (1 : ℝ) * a := by
+    l ^ (-1 : ℝ) * (l ^ (2 : ℝ) * a) = l * a := by
   rw [← mul_assoc, show l ^ (-1 : ℝ) * l ^ (2 : ℝ) = l ^ (1 : ℝ) by
     rw [← Real.rpow_add hl]
-    norm_num]
+    norm_num, Real.rpow_one]
 
 /-- `λ ^ (-1) * (λ * a) = a` for `λ > 0`. -/
 private theorem rpow_neg_one_mul_one {l a : ℝ} (hl : 0 < l) :
-    l ^ (-1 : ℝ) * (l ^ (1 : ℝ) * a) = a := by
-  rw [← mul_assoc, show l ^ (-1 : ℝ) * l ^ (1 : ℝ) = 1 by
-    rw [← Real.rpow_add hl]
-    norm_num,
-    one_mul]
+    l ^ (-1 : ℝ) * (l * a) = a := by
+  rw [Real.rpow_neg_one, inv_mul_cancel_left₀ (ne_of_gt hl)]
 
 /-- The **order-two exact differentiator** unperturbed error field on `Fin 3 → ℝ`:
 `ė₀ = -k₀ |e₀|^{2/3} sign e₀ + e₁`, `ė₁ = -k₁ |e₀|^{1/3} sign e₀ + e₂`,
@@ -294,23 +298,26 @@ theorem order2DifferentiatorVectorField_homogeneous (k₀ k₁ k₂ : ℝ) :
     IsHomogeneousVectorField (order2DifferentiatorVectorField k₀ k₁ k₂)
       secondOrderDifferentiatorWeights (-1) := by
   intro l hl x
+  simp only [weightedDilation_secondOrderDifferentiatorWeights_eq]
   funext i
   fin_cases i
   · simp only [order2DifferentiatorVectorField, Pi.smul_apply, smul_eq_mul,
       Matrix.cons_val_zero, Fin.reduceFinMk,
-      weightedDilation_diffWeights_zero,
-      weightedDilation_diffWeights_one, abs_rpow_two_thirds_mul_cube hl,
+      secondOrderDifferentiatorDilation_apply_zero,
+      secondOrderDifferentiatorDilation_apply_one, abs_rpow_two_thirds_mul_cube hl,
       sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 3), rpow_neg_one_mul_cube hl]
     ring
   · simp only [order2DifferentiatorVectorField, Pi.smul_apply, smul_eq_mul,
       Matrix.cons_val_zero, Matrix.cons_val_one, Fin.reduceFinMk,
-      weightedDilation_diffWeights_zero, weightedDilation_diffWeights_one,
-      weightedDilation_diffWeights_two, abs_rpow_one_third_mul_cube hl,
+      secondOrderDifferentiatorDilation_apply_zero,
+      secondOrderDifferentiatorDilation_apply_one,
+      secondOrderDifferentiatorDilation_apply_two, abs_rpow_one_third_mul_cube hl,
       sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 3), rpow_neg_one_mul_sq hl]
     ring
   · simp only [order2DifferentiatorVectorField, Pi.smul_apply, smul_eq_mul,
       Matrix.cons_val_two, Matrix.tail_cons, Matrix.head_cons, Fin.reduceFinMk,
-      weightedDilation_diffWeights_zero, weightedDilation_diffWeights_two,
+      secondOrderDifferentiatorDilation_apply_zero,
+      secondOrderDifferentiatorDilation_apply_two,
       sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 3), rpow_neg_one_mul_one hl]
 
 /-! ## Arbitrary-order Levant differentiator -/
@@ -338,16 +345,24 @@ noncomputable def levantDifferentiatorVectorField (p : ℕ) (k : Fin (p + 1) →
 theorem levantDifferentiatorWeights_apply (p : ℕ) (i : Fin (p + 1)) :
     levantDifferentiatorWeights p i = (p + 1 : ℝ) - (i : ℝ) := rfl
 
+/-- The order-two differentiator weights `(3, 2, 1)` are the Levant weights for `p = 2`. -/
+theorem secondOrderDifferentiatorWeights_eq_levantDifferentiatorWeights :
+    secondOrderDifferentiatorWeights = levantDifferentiatorWeights 2 := by
+  funext i
+  fin_cases i <;>
+    simp only [secondOrderDifferentiatorWeights, levantDifferentiatorWeights] <;>
+    norm_num
+
 /-- Componentwise evaluation of the weighted dilation with the Levant weights:
 `(d_λ x) i = λ ^ (p + 1 - i) * x i`. -/
-private theorem levantDifferentiatorDilation_apply (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
+theorem levantDifferentiatorDilation_apply (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
     (i : Fin (p + 1)) :
     weightedDilation (levantDifferentiatorWeights p) l x i =
       l ^ ((p + 1 : ℝ) - (i : ℝ)) * x i := rfl
 
 /-- The successor coordinate of the Levant dilation: for `i < p`,
 `(d_λ x) (i+1) = λ ^ (p - i) * x (i+1)`. -/
-private theorem levantDifferentiatorDilation_succ (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
+theorem levantDifferentiatorDilation_succ (p : ℕ) (l : ℝ) (x : Fin (p + 1) → ℝ)
     (i : Fin (p + 1)) (h : (i : ℕ) < p) :
     weightedDilation (levantDifferentiatorWeights p) l x ⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ =
       l ^ ((p : ℝ) - (i : ℝ)) * x ⟨(i : ℕ) + 1, Nat.succ_lt_succ h⟩ := by
