@@ -7,8 +7,10 @@ module
 
 public import DynamicalSystems.Control.SlidingMode.Basic
 public import DynamicalSystems.Control.SlidingMode.Relay
+public import Mathlib.Analysis.ODE.Gronwall
 public import Mathlib.Basic.Real.Sign
 public import Mathlib.Topology.MetricSpace.Lipschitz
+public import Mathlib.Topology.UniformSpace.UniformConvergence
 
 /-! # Boundary-layer regularization of the sliding-mode relay
 
@@ -54,6 +56,25 @@ is the bridge to the discontinuous-feedback semantics of
   with `Real.sign s` exactly, for `0 < ε ≤ δ`.
 * `boundaryLayerRelay_mem_filippovSet`: the regularized relay values lie in
   `filippovSet (relay k) 0 = Set.Icc (-k) k`.
+
+On top of the boundary-layer regularization the file records the *first-order
+approximability* transfer theorem of the same chapter: conditional stability
+`‖x'ε - y'‖ ≤ K ‖xε - y‖ + L |σ(xε)|` together with uniform decay `σ(xε) ⇉ 0` of
+the sliding variable and matching initial conditions forces `xε ⇉ y` on `[0, T]`.
+The quantitative input is Mathlib's Grönwall inequality (`gronwallBound`),
+packaged as the trajectory-error estimate `trajectory_error_le_gronwallBound`; the
+abstract property itself is `IsFirstOrderApproximable`.
+
+## Main statements (approximability)
+
+* `trajectory_error_le_gronwallBound`: the Grönwall trajectory-error estimate on
+  `[0, T]`.
+* `tendstoUniformlyOn_of_conditional_stability`: conditional stability plus
+  `σ(xε) ⇉ 0` gives uniform convergence `xε ⇉ y`.
+* `tendstoUniformlyOn_of_boundaryLayer`: the boundary-layer closed-loop corollary
+  `|σ(xε)| ≤ ε`.
+* `IsFirstOrderApproximable`: the abstract first-order approximability predicate
+  (printed p. 5).
 -/
 
 @[expose] public section
@@ -198,3 +219,189 @@ theorem boundaryLayerRelay_mem_filippovSet (k ε s : ℝ) (hk : 0 ≤ k) (_hε :
     have hsat := abs_sat_le_one (s / ε)
     rw [abs_le] at hsat
     constructor <;> nlinarith [hsat.1, hsat.2]
+
+/-! ### First-order approximability
+
+The *first-order approximability property* of Chapter 1 asks that an ideal
+sliding state `y` be the unique uniform limit on `[0, T]` of every family of real
+trajectories whose sliding variable decays uniformly and whose initial value
+converges to `y 0`. The quantitative engine is the conditional-stability
+inequality `‖x'ε - y'‖ ≤ K ‖xε - y‖ + L |σ(xε)|`, which is turned into a uniform
+estimate by Grönwall's inequality. -/
+
+/-- **Abstract first-order approximability** of the ideal sliding state `y` on
+`[0, T]` with respect to the scalar sliding variable `σ` (printed p. 5 of
+Chapter 1). Every family of trajectories `x ε` whose sliding variable
+`σ (x ε ·)` converges to `0` uniformly on `[0, T]` and whose initial values
+`x ε 0` converge to `y 0` converges to `y` uniformly on `[0, T]`. The control
+system, the uniqueness of the sliding control law and the existence of the
+equivalent control are abstracted away; the property is exactly the conclusion
+the transfer theorems below establish. -/
+def IsFirstOrderApproximable {E : Type*} [NormedAddCommGroup E] (σ : E → ℝ) (y : ℝ → E)
+    (T : ℝ) : Prop :=
+  ∀ x : ℝ → ℝ → E,
+    Tendsto (fun ε ↦ x ε 0) (𝓝[>] 0) (𝓝 (y 0)) →
+    (∀ δ > 0, ∀ᶠ ε in 𝓝[>] 0, ∀ t ∈ Set.Icc 0 T, |σ (x ε t)| ≤ δ) →
+    TendstoUniformlyOn x y (𝓝[>] 0) (Set.Icc 0 T)
+
+/-- The elementary exponential inequality `e ^ y - 1 ≤ y * e ^ y`, valid for
+every real `y` (it is the rearrangement of `1 - y ≤ e ^ (-y)`). It bounds the
+`ε / K * (e ^ (K * x) - 1)` term of `gronwallBound` by the corresponding
+`ε * x * e ^ (K * x)`. -/
+theorem exp_sub_one_le_mul_exp (y : ℝ) :
+    Real.exp y - 1 ≤ y * Real.exp y := by
+  have h1 : 1 - Real.exp (-y) ≤ y := by
+    have := Real.one_sub_le_exp_neg y
+    linarith
+  have h2 : (1 - Real.exp (-y)) * Real.exp y ≤ y * Real.exp y :=
+    mul_le_mul_of_nonneg_right h1 (Real.exp_pos y).le
+  have h3 : (1 - Real.exp (-y)) * Real.exp y = Real.exp y - 1 := by
+    simp only [sub_mul, one_mul, ← Real.exp_add, neg_add_cancel, Real.exp_zero]
+  rwa [h3] at h2
+
+/-- A uniform, `K`-free bound for the Grönwall kernel: for non-negative `δ`, `K`,
+`m`, `T`,
+`gronwallBound δ K m T ≤ (δ + m) * (e ^ (K * T) * (1 + T))`.
+It linearizes the dependence of the Grönwall estimate on the initial error `δ`
+and the perturbation rate `m`, which lets the transfer theorems drive both to `0`
+through the two small parameters of the regularized problem. -/
+theorem gronwallBound_le_mul_exp {δ K m T : ℝ} (hδ : 0 ≤ δ) (hK : 0 ≤ K) (hm : 0 ≤ m)
+    (hT : 0 ≤ T) :
+    gronwallBound δ K m T ≤ (δ + m) * (Real.exp (K * T) * (1 + T)) := by
+  have hkey : δ + m * T ≤ (δ + m) * (1 + T) := by nlinarith [hδ, hm, hT]
+  rcases eq_or_lt_of_le hK with hK0 | hKpos
+  · rw [← hK0, gronwallBound_K0]
+    simpa using hkey
+  · rw [gronwallBound_of_K_ne_0 hKpos.ne']
+    have h1 : m / K * (Real.exp (K * T) - 1) ≤ m * T * Real.exp (K * T) := by
+      have hbase := exp_sub_one_le_mul_exp (K * T)
+      have hdiv : 0 ≤ m / K := div_nonneg hm hKpos.le
+      calc m / K * (Real.exp (K * T) - 1)
+          ≤ m / K * ((K * T) * Real.exp (K * T)) := by gcongr
+        _ = m * T * Real.exp (K * T) := by field_simp
+    have h2 : δ * Real.exp (K * T) + m * T * Real.exp (K * T)
+        ≤ (δ + m) * (Real.exp (K * T) * (1 + T)) := by
+      have heq : δ * Real.exp (K * T) + m * T * Real.exp (K * T)
+          = (δ + m * T) * Real.exp (K * T) := by ring
+      rw [heq]
+      have h3 := mul_le_mul_of_nonneg_right hkey (Real.exp_pos (K * T)).le
+      calc (δ + m * T) * Real.exp (K * T)
+          ≤ (δ + m) * (1 + T) * Real.exp (K * T) := h3
+        _ = (δ + m) * (Real.exp (K * T) * (1 + T)) := by ring
+    linarith
+
+/-- **Grönwall trajectory-error estimate on `[0, T]`.** If `x` and `y` are two
+trajectories on `[0, T]` with right derivatives `x'` and `y'`, if the derivative
+gap is dominated by `K ‖x t - y t‖ + m` for `t ∈ [0, T)`, and if the initial gap
+is at most `δ₀`, then `‖x t - y t‖ ≤ gronwallBound δ₀ K m t` for every
+`t ∈ [0, T]`. The constant `m` is the uniform bound for the sliding-variable
+perturbation `L |σ (x t)|` of the conditional-stability inequality, so this is the
+error estimate behind first-order approximability. -/
+theorem trajectory_error_le_gronwallBound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {x y : ℝ → E} {x' y' : ℝ → E}
+    {K δ₀ m T : ℝ}
+    (hx_cont : ContinuousOn x (Set.Icc 0 T)) (hy_cont : ContinuousOn y (Set.Icc 0 T))
+    (hx_deriv : ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt x (x' t) (Set.Ici t) t)
+    (hy_deriv : ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt y (y' t) (Set.Ici t) t)
+    (hineq : ∀ t ∈ Set.Ico 0 T, ‖x' t - y' t‖ ≤ K * ‖x t - y t‖ + m)
+    (hinit : ‖x 0 - y 0‖ ≤ δ₀) :
+    ∀ t ∈ Set.Icc 0 T, ‖x t - y t‖ ≤ gronwallBound δ₀ K m t := by
+  have h := norm_le_gronwallBound_of_norm_deriv_right_le
+    (a := 0) (b := T) (f := fun t ↦ x t - y t) (f' := fun t ↦ x' t - y' t)
+    (δ := δ₀) (K := K) (ε := m) (hx_cont.sub hy_cont)
+    (fun t ht ↦ (hx_deriv t ht).sub (hy_deriv t ht))
+    (by simpa using hinit) (fun t ht ↦ by simpa using hineq t ht)
+  intro t ht
+  simpa using h t ht
+
+/-- **Master approximability theorem.** If the family `x ε` is conditionally
+stable about the ideal state `y` on `[0, T]`,
+`‖x'ε - y'‖ ≤ K ‖xε - y‖ + L |σ(xε)|`, if the sliding variable decays uniformly
+`σ(x ε) ⇉ 0`, and if the initial states converge `x ε 0 → y 0`, then
+`x ε ⇉ y` uniformly on `[0, T]` along `ε → 0⁺`. This is the first-order
+approximability property of printed p. 5, at the level of a single family. -/
+theorem tendstoUniformlyOn_of_conditional_stability
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {σ : E → ℝ}
+    {x : ℝ → ℝ → E} {y : ℝ → E} {x' : ℝ → ℝ → E} {y' : ℝ → E}
+    {T K L : ℝ} (hT : 0 ≤ T) (hK : 0 ≤ K) (hL : 0 ≤ L)
+    (hx_cont : ∀ ε > 0, ContinuousOn (x ε) (Set.Icc 0 T))
+    (hy_cont : ContinuousOn y (Set.Icc 0 T))
+    (hx_deriv : ∀ ε > 0, ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt (x ε) (x' ε t) (Set.Ici t) t)
+    (hy_deriv : ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt y (y' t) (Set.Ici t) t)
+    (hineq : ∀ ε > 0, ∀ t ∈ Set.Ico 0 T,
+      ‖x' ε t - y' t‖ ≤ K * ‖x ε t - y t‖ + L * |σ (x ε t)|)
+    (hinit : Tendsto (fun ε ↦ x ε 0) (𝓝[>] 0) (𝓝 (y 0)))
+    (hlayer : ∀ δ > 0, ∀ᶠ ε in 𝓝[>] 0, ∀ t ∈ Set.Icc 0 T, |σ (x ε t)| ≤ δ) :
+    TendstoUniformlyOn x y (𝓝[>] 0) (Set.Icc 0 T) := by
+  rw [Metric.tendstoUniformlyOn_iff]
+  intro η hη
+  have hL1 : 0 < 1 + L := by linarith
+  have hMpos : 0 < Real.exp (K * T) * (1 + T) :=
+    mul_pos (Real.exp_pos _) (by linarith)
+  set c : ℝ := η / (2 * (1 + L) * (Real.exp (K * T) * (1 + T))) with hc
+  have hcpos : 0 < c := by
+    rw [hc]
+    exact div_pos hη (mul_pos (mul_pos (by norm_num) hL1) hMpos)
+  have hinit_ev : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ‖x ε 0 - y 0‖ ≤ c := by
+    have hnorm : Tendsto (fun ε : ℝ ↦ ‖x ε 0 - y 0‖) (𝓝[>] (0 : ℝ)) (𝓝 0) := by
+      have hsub : Tendsto (fun ε : ℝ ↦ x ε 0 - y 0) (𝓝[>] (0 : ℝ)) (𝓝 (y 0 - y 0)) :=
+        hinit.sub tendsto_const_nhds
+      simpa using hsub.norm
+    filter_upwards [hnorm.eventually_mem (Iio_mem_nhds hcpos)] with ε hε
+    exact le_of_lt hε
+  filter_upwards [self_mem_nhdsWithin, hinit_ev, hlayer c hcpos] with ε hεmem hεinit hεlayer
+  intro t ht
+  have hεpos : 0 < ε := hεmem
+  have hbound : ∀ s ∈ Set.Ico 0 T, ‖x' ε s - y' s‖ ≤ K * ‖x ε s - y s‖ + L * c := by
+    intro s hs
+    have h1 := hineq ε hεpos s hs
+    have h2 : L * |σ (x ε s)| ≤ L * c :=
+      mul_le_mul_of_nonneg_left (hεlayer s (Set.Ico_subset_Icc_self hs)) hL
+    linarith
+  have herr := trajectory_error_le_gronwallBound (hx_cont ε hεpos) hy_cont
+    (hx_deriv ε hεpos) hy_deriv hbound hεinit
+  have hmono := gronwallBound_mono (δ := c) (K := K) (ε := L * c)
+    hcpos.le (mul_nonneg hL hcpos.le) hK
+  have hMle : gronwallBound c K (L * c) T
+      ≤ (c + L * c) * (Real.exp (K * T) * (1 + T)) :=
+    gronwallBound_le_mul_exp hcpos.le hK (mul_nonneg hL hcpos.le) hT
+  have hc_eq : (c + L * c) * (Real.exp (K * T) * (1 + T)) ≤ η / 2 := by
+    have hval : c * (1 + L) * (Real.exp (K * T) * (1 + T)) = η / 2 := by
+      rw [hc]
+      field_simp
+    rw [show (c + L * c) * (Real.exp (K * T) * (1 + T))
+        = c * (1 + L) * (Real.exp (K * T) * (1 + T)) from by ring]
+    exact hval.le
+  rw [dist_comm, dist_eq_norm]
+  calc ‖x ε t - y t‖ ≤ gronwallBound c K (L * c) t := herr t ht
+    _ ≤ gronwallBound c K (L * c) T := hmono ht.2
+    _ ≤ (c + L * c) * (Real.exp (K * T) * (1 + T)) := hMle
+    _ ≤ η / 2 := hc_eq
+    _ < η := by linarith
+
+/-- **Boundary-layer closed-loop corollary.** For a family `x ε` in the boundary
+layer of the sliding variable, `|σ (x ε t)| ≤ ε` for all `t ∈ [0, T]` and all
+sufficiently small `ε > 0`, conditional stability forces `x ε ⇉ y` on `[0, T]`.
+The hypothesis `|σ| ≤ ε` is the quantitative form of the regularized relay
+`boundaryLayerRelay k ε` of this file: inside the layer the regularized feedback
+keeps the sliding variable within the layer, so this discharges the formal
+decay hypothesis `hlayer` of `tendstoUniformlyOn_of_conditional_stability`. -/
+theorem tendstoUniformlyOn_of_boundaryLayer
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] {σ : E → ℝ}
+    {x : ℝ → ℝ → E} {y : ℝ → E} {x' : ℝ → ℝ → E} {y' : ℝ → E}
+    {T K L : ℝ} (hT : 0 ≤ T) (hK : 0 ≤ K) (hL : 0 ≤ L)
+    (hx_cont : ∀ ε > 0, ContinuousOn (x ε) (Set.Icc 0 T))
+    (hy_cont : ContinuousOn y (Set.Icc 0 T))
+    (hx_deriv : ∀ ε > 0, ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt (x ε) (x' ε t) (Set.Ici t) t)
+    (hy_deriv : ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt y (y' t) (Set.Ici t) t)
+    (hineq : ∀ ε > 0, ∀ t ∈ Set.Ico 0 T,
+      ‖x' ε t - y' t‖ ≤ K * ‖x ε t - y t‖ + L * |σ (x ε t)|)
+    (hinit : Tendsto (fun ε ↦ x ε 0) (𝓝[>] 0) (𝓝 (y 0)))
+    (hlayer : ∀ᶠ ε in 𝓝[>] 0, ∀ t ∈ Set.Icc 0 T, |σ (x ε t)| ≤ ε) :
+    TendstoUniformlyOn x y (𝓝[>] 0) (Set.Icc 0 T) :=
+  tendstoUniformlyOn_of_conditional_stability hT hK hL hx_cont hy_cont hx_deriv hy_deriv
+    hineq hinit fun δ hδ ↦ by
+      have hδev : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ε < δ :=
+        (eventually_lt_nhds hδ).filter_mono nhdsWithin_le_nhds
+      filter_upwards [hlayer, hδev] with ε hε hεδ
+      exact fun t ht ↦ (hε t ht).trans hεδ.le
