@@ -216,7 +216,8 @@ holds for `A_cl`, then (i) the surface `{x | C x = 0}` is invariant under `A_cl`
 strictly decreases along `A_cl`. This is the form of Theorem 2.1 (printed p. 35) in
 which the book's surface matrix `S = Bᵀ P̄⁻¹` is instantiated by `C`; the
 invertibility hypothesis `IsUnit (C * B).det` makes `A_cl` well defined. -/
-theorem dsmc_sliding_surface_lmi_closedLoop {A B C : Matrix (Fin n) (Fin n) ℝ}
+theorem dsmc_sliding_surface_lmi_closedLoop {n m : ℕ} {A : Matrix (Fin n) (Fin n) ℝ}
+    {B : Matrix (Fin n) (Fin m) ℝ} {C : Matrix (Fin m) (Fin n) ℝ}
     (hB : IsUnit (C * B).det) {P : Matrix (Fin n) (Fin n) ℝ}
     (hLMI : dsmcSurfaceLMI (dsmcEquivalentClosedLoop A B C) P) :
     (∀ x : Fin n → ℝ, dsmcSlidingVariable C (dsmcEquivalentClosedLoop A B C *ᵥ x) = 0) ∧
@@ -353,17 +354,19 @@ transporting the bound through `λmin`/`λmax`). The comparison is supplied by
 `eventually_le_add_of_succ_le_mul_add` of
 `DynamicalSystems.DiscreteTime.UltimateBoundedness` (Lemma 2.4, printed p. 34). -/
 theorem dsmc_reaching_with_disturbance_bound {m : ℕ} {v : ℕ → ℝ} {a c τ : ℝ}
-    {Fminus f ϑ : Fin m → ℝ} (hcomp : dsmcDisturbanceBound τ Fminus f ϑ)
+    {Fminus : Fin m → ℝ} {f ϑ : ℕ → Fin m → ℝ}
+    (hcomp : ∀ k, dsmcDisturbanceBound τ Fminus (f k) (ϑ k))
     (hτ : 0 ≤ τ) (hF : ∀ i, 0 ≤ Fminus i) (ha0 : 0 ≤ a) (ha1 : a < 1) (hc : 0 ≤ c)
-    (hv : ∀ k, 0 ≤ v k) (hrec : ∀ k, v (k + 1) ≤ a * v k + c * ‖f - ϑ‖ ^ 2)
+    (hv : ∀ k, 0 ≤ v k) (hrec : ∀ k, v (k + 1) ≤ a * v k + c * ‖f k - ϑ k‖ ^ 2)
     {ε : ℝ} (hε : 0 < ε) :
     ∀ᶠ k in Filter.atTop, v k ≤ c * (τ * ‖Fminus‖) ^ 2 / (1 - a) + ε := by
-  have hnorm : ‖f - ϑ‖ ≤ τ * ‖Fminus‖ := dsmc_disturbance_bound_norm hcomp hτ hF
+  have hnorm : ∀ k, ‖f k - ϑ k‖ ≤ τ * ‖Fminus‖ :=
+    fun k ↦ dsmc_disturbance_bound_norm (hcomp k) hτ hF
   have hrec' : ∀ k, v (k + 1) ≤ a * v k + c * (τ * ‖Fminus‖) ^ 2 := by
     intro k
-    have hsq : ‖f - ϑ‖ ^ 2 ≤ (τ * ‖Fminus‖) ^ 2 :=
-      pow_le_pow_left₀ (norm_nonneg _) hnorm 2
-    have hc' : c * ‖f - ϑ‖ ^ 2 ≤ c * (τ * ‖Fminus‖) ^ 2 :=
+    have hsq : ‖f k - ϑ k‖ ^ 2 ≤ (τ * ‖Fminus‖) ^ 2 :=
+      pow_le_pow_left₀ (norm_nonneg _) (hnorm k) 2
+    have hc' : c * ‖f k - ϑ k‖ ^ 2 ≤ c * (τ * ‖Fminus‖) ^ 2 :=
       mul_le_mul_of_nonneg_left hsq hc
     linarith [hrec k]
   exact eventually_le_add_of_succ_le_mul_add ha0 ha1 hv hrec' hε
