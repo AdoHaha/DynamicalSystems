@@ -94,6 +94,18 @@ theorem quadForm_sub (P Q : Matrix (Fin m) (Fin m) ℝ) (x : Fin m → ℝ) :
     quadForm (P - Q) x = quadForm P x - quadForm Q x := by
   simp only [quadForm, Matrix.sub_mulVec, dotProduct_sub]
 
+/-- The quadratic form is additive in the matrix (the linearity used to expand
+`quadForm` of the expected Lyapunov operator). -/
+theorem quadForm_add (P Q : Matrix (Fin m) (Fin m) ℝ) (x : Fin m → ℝ) :
+    quadForm (P + Q) x = quadForm P x + quadForm Q x := by
+  simp only [quadForm, Matrix.add_mulVec, dotProduct_add]
+
+/-- The quadratic form is homogeneous in the matrix (the linearity used to
+expand `quadForm` of the expected Lyapunov operator). -/
+theorem quadForm_smul_left (r : ℝ) (P : Matrix (Fin m) (Fin m) ℝ) (x : Fin m → ℝ) :
+    quadForm (r • P) x = r * quadForm P x := by
+  simp only [quadForm, Matrix.smul_mulVec, dotProduct_smul, smul_eq_mul]
+
 /-- If `Q - Mᵀ P M` is positive definite, then substituting `M` into the `P`-form
 strictly decreases the quadratic form compared with the `Q`-form. -/
 theorem quadForm_mulVec_lt {P Q : Matrix (Fin m) (Fin m) ℝ} {M : Matrix (Fin m) (Fin m) ℝ}
