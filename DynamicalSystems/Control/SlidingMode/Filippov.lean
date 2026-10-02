@@ -11,6 +11,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.Topology.Bornology.Basic
 public import Mathlib.Topology.MetricSpace.Basic
+public import Mathlib.Topology.Semicontinuity.Hemicontinuity
 
 /-! # Filippov convexification of a discontinuous vector field
 
@@ -37,18 +38,20 @@ level (see `DynamicalSystems.Control.SlidingMode.Relay`).
 
 ## Main definitions
 
-* `IsUpperSemicontinuousSetValued F`: upper (outer, Vietoris) semicontinuity of
-  a set-valued map `F`: every open set containing `F x` contains `F y` for all
-  `y` near `x`.
 * `IsFilippovInclusion F`: a Filippov differential inclusion `ẋ ∈ F x`, namely a
   set-valued map with nonempty, closed, convex values that is locally bounded and
-  upper semicontinuous.
+  upper semicontinuous. The upper semicontinuity field is Mathlib's
+  `UpperHemicontinuous` (`Mathlib.Topology.Semicontinuity.Hemicontinuity`), which
+  characterises exactly the outer/Vietoris condition that every open set
+  containing `F x` contains `F y` for `y` near `x`.
 * `filippovSet f x`: the Filippov convexification of the field `f` at `x`.
 * `IsFilippovSolutionOn γ F s`: a curve `γ` that is continuous on `s` and whose
   derivative lies in `F (γ t)` for almost every `t ∈ s`.
 
 ## Main statements
 
+* `filippovSet_of_continuousAt`: if `f` is continuous at `x`, then
+  `filippovSet f x = {f x}`.
 * `filippovSet_of_continuous`: for a continuous field `f`, `filippovSet f x = {f x}`.
 -/
 
@@ -58,13 +61,6 @@ open Filter MeasureTheory Set
 open scoped Topology
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-
-/-- Upper semicontinuity (outer/Vietoris) of a set-valued map `F`: every open set
-`U` containing the value `F x` contains the values `F y` for all `y` sufficiently
-close to `x`. Equivalently, `F` is upper semicontinuous as a map to the
-hyperspace of compact subsets with the Vietoris topology. -/
-def IsUpperSemicontinuousSetValued (F : E → Set E) : Prop :=
-  ∀ x, ∀ U : Set E, IsOpen U → F x ⊆ U → ∀ᶠ y in 𝓝 x, F y ⊆ U
 
 /-- A Filippov differential inclusion `ẋ ∈ F x`: a set-valued map with nonempty,
 closed and convex values which is locally bounded and upper semicontinuous. This
@@ -80,7 +76,7 @@ structure IsFilippovInclusion (F : E → Set E) : Prop where
   /-- `F` is locally bounded: near each point the union of its values is bounded. -/
   locallyBounded : ∀ x, ∃ U ∈ 𝓝 x, Bornology.IsBounded (⋃ y ∈ U, F y)
   /-- `F` is upper semicontinuous. -/
-  upperSemicontinuous : IsUpperSemicontinuousSetValued F
+  upperSemicontinuous : UpperHemicontinuous F
 
 /-- The **Filippov set-valued map** (convexification) of a vector field `f` at `x`:
 the intersection over all `δ > 0` of the closure of the convex hull of the image
@@ -90,18 +86,20 @@ state-discontinuous feedback. -/
 noncomputable def filippovSet (f : E → E) (x : E) : Set E :=
   ⋂ δ ∈ Set.Ioi (0 : ℝ), closure (convexHull ℝ (f '' Metric.ball x δ))
 
-/-- For a continuous vector field `f` the Filippov convexification collapses to
-the singleton `{f x}`: shrinking balls around `x` map into arbitrarily small
-balls around `f x`, and the convex hull of a subset of a ball stays in the
-(convex) ball. -/
-theorem filippovSet_of_continuous {f : E → E} (hf : Continuous f) (x : E) :
+/-- If a vector field `f` is continuous at `x`, then the Filippov convexification
+at `x` is the singleton `{f x}`. This is the germ-local form of
+`filippovSet_of_continuous`, needed when the field is continuous only off a
+switching level: shrinking balls around `x` map into arbitrarily small balls
+around `f x`, and the convex hull of a subset of a ball stays in the (convex)
+ball. -/
+theorem filippovSet_of_continuousAt {f : E → E} {x : E} (hf : ContinuousAt f x) :
     filippovSet f x = {f x} := by
   apply Set.Subset.antisymm
   · intro y hy
     rw [Set.mem_singleton_iff]
     apply eq_of_forall_dist_le
     intro ε hε
-    obtain ⟨δ, hδ0, hδ⟩ := (Metric.continuousAt_iff.mp hf.continuousAt) ε hε
+    obtain ⟨δ, hδ0, hδ⟩ := (Metric.continuousAt_iff.mp hf) ε hε
     have hsubset : f '' Metric.ball x δ ⊆ Metric.ball (f x) ε := by
       rintro _ ⟨z, hz, rfl⟩
       exact hδ hz
@@ -120,9 +118,25 @@ theorem filippovSet_of_continuous {f : E → E} (hf : Continuous f) (x : E) :
     exact subset_closure
       (subset_convexHull ℝ (f '' Metric.ball x δ) (mem_image_of_mem f (Metric.mem_ball_self hδ)))
 
+/-- For a continuous vector field `f` the Filippov convexification collapses to
+the singleton `{f x}`; this is the pointwise specialisation of
+`filippovSet_of_continuousAt` to a globally continuous field. -/
+theorem filippovSet_of_continuous {f : E → E} (hf : Continuous f) (x : E) :
+    filippovSet f x = {f x} :=
+  filippovSet_of_continuousAt hf.continuousAt
+
 /-- A Filippov solution of the differential inclusion `ẋ ∈ F x` on the set `s`:
 a curve `γ` that is continuous on `s` and whose derivative lies in `F (γ t)` for
 almost every `t ∈ s`. This is the solution concept for a state-discontinuous
-feedback, whose closed-loop field is replaced by its Filippov convexification. -/
+feedback, whose closed-loop field is replaced by its Filippov convexification.
+
+This scoped definition uses `ContinuousOn` together with almost-everywhere
+differentiability, whereas the full Filippov theory asks for *absolute
+continuity* of `γ` (equivalently, `γ` is the integral of an integrable function,
+as in the Carathéodory existence theory for differential inclusions). The two
+agree for the locally Lipschitz curves produced by existence theorems, but they
+are not equivalent in general: the Cantor staircase is continuous with
+zero derivative almost everywhere, yet is not absolutely continuous and so must
+not count as a solution of `ẋ ∈ F x` when `0 ∈ F x`. -/
 def IsFilippovSolutionOn (γ : ℝ → E) (F : E → Set E) (s : Set ℝ) : Prop :=
   ContinuousOn γ s ∧ ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)

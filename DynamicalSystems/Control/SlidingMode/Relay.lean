@@ -45,6 +45,8 @@ control of `DynamicalSystems.Control.SlidingMode.Basic`.
   `[-k, k]` that zeroes `σ̇ = a + b u` is the equivalent control `-a / b`.
 * `relay_tangent_selection_unique`: its uniqueness half, reusing
   `equivalentControl_unique` of `DynamicalSystems.Control.SlidingMode.Basic`.
+* `filippovSet_relay_tangent_selection`: the same selection phrased directly
+  against the Filippov set of the relay at `0`.
 -/
 
 @[expose] public section
@@ -61,36 +63,6 @@ noncomputable def relay (k : ℝ) : ℝ → ℝ := fun s ↦ k * Real.sign s
 
 /-- The pointwise unfolding of `relay` (a `simp` lemma). -/
 @[simp] theorem relay_apply (k s : ℝ) : relay k s = k * Real.sign s := rfl
-
-/-- Local form of `filippovSet_of_continuous`: if a vector field `f` is continuous
-at `x` then the Filippov convexification at `x` is the singleton `{f x}`. This is
-the germ-local refinement needed when the field is continuous only off a switching
-level. -/
-theorem filippovSet_of_continuousAt {f : E → E} {x : E} (hf : ContinuousAt f x) :
-    filippovSet f x = {f x} := by
-  apply Set.Subset.antisymm
-  · intro y hy
-    rw [Set.mem_singleton_iff]
-    apply eq_of_forall_dist_le
-    intro ε hε
-    obtain ⟨δ, hδ0, hδ⟩ := (Metric.continuousAt_iff.mp hf) ε hε
-    have hsubset : f '' Metric.ball x δ ⊆ Metric.ball (f x) ε := by
-      rintro _ ⟨z, hz, rfl⟩
-      exact hδ hz
-    have hball : convexHull ℝ (f '' Metric.ball x δ) ⊆ Metric.closedBall (f x) ε := by
-      calc convexHull ℝ (f '' Metric.ball x δ)
-          ⊆ convexHull ℝ (Metric.ball (f x) ε) := convexHull_mono hsubset
-        _ = Metric.ball (f x) ε := (convex_ball (f x) ε).convexHull_eq
-        _ ⊆ Metric.closedBall (f x) ε := Metric.ball_subset_closedBall
-    have hyδ : y ∈ closure (convexHull ℝ (f '' Metric.ball x δ)) := by
-      rw [filippovSet] at hy
-      exact mem_iInter.mp (mem_iInter.mp hy δ) hδ0
-    exact closure_minimal hball Metric.isClosed_closedBall hyδ
-  · rintro y rfl
-    rw [filippovSet]
-    refine mem_iInter.mpr fun δ ↦ mem_iInter.mpr fun hδ ↦ ?_
-    exact subset_closure
-      (subset_convexHull ℝ (f '' Metric.ball x δ) (mem_image_of_mem f (Metric.mem_ball_self hδ)))
 
 /-- The relay is continuous at every nonzero point: it is locally constant there.
 This is the key fact making its Filippov set off the switching level a singleton. -/
@@ -234,3 +206,22 @@ theorem relay_tangent_selection {a b k : ℝ} (hb : b ≠ 0) (hab : |a / b| ≤ 
       linarith [habs.1]
     · rw [neg_div b a, mul_neg, mul_div_cancel₀ a hb]
       ring
+
+/-- **Equivalent-control tangent selection, Filippov form.** Phrased directly
+against the Filippov convexification of the relay at the switching level, the
+only control value in `filippovSet (relay k) 0` that keeps the affine sliding
+dynamics `σ̇ = a + b u = 0` is the equivalent control `-a / b` (when it lies in
+range). This is the bridge between `filippovSet_relay_zero` and
+`relay_tangent_selection`. -/
+theorem filippovSet_relay_tangent_selection {a b k : ℝ} (hb : b ≠ 0)
+    (hab : |a / b| ≤ k) :
+    {u ∈ filippovSet (relay k) 0 | a + b * u = 0} = {-a / b} := by
+  have hzero : filippovSet (relay k) 0 = Set.Icc (-k) k := by
+    rcases eq_or_lt_of_le (le_trans (abs_nonneg (a / b)) hab) with hk | hk
+    · subst hk
+      have hrelay : relay 0 = fun _ : ℝ ↦ (0 : ℝ) := by funext s; simp [relay_apply]
+      rw [hrelay, filippovSet_of_continuous continuous_const]
+      simp
+    · exact filippovSet_relay_zero hk
+  rw [hzero]
+  exact relay_tangent_selection hb hab
