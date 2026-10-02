@@ -79,10 +79,11 @@ closed and convex values which is locally bounded and upper semicontinuous. This
 is the precise setting in which Filippov solutions of a discontinuous vector
 field are studied.
 
-This structure is a **definitional stub**: it records the standard Filippov
-regularity of the right-hand side, but it is not yet wired to an existence theorem
-for solutions (and the library does not yet prove that `filippovSet f` has these
-properties).  The associated scoped solution concept `IsFilippovSolutionOn` is
+This structure records the standard Filippov regularity of the right-hand side; the
+local existence theorem for solutions is proved in
+`DynamicalSystems.Control.SlidingMode.FilippovExistence`
+(`exists_filippovSolution_local`).  The library does not yet prove that
+`filippovSet f` has these properties.  The associated scoped solution concept `IsFilippovSolutionOn` is
 built on absolute continuity, so — unlike bare continuity together with
 almost-everywhere differentiability — it excludes singular continuous curves
 such as the Cantor staircase, in line with the full Filippov theory. -/
@@ -166,8 +167,8 @@ staircase, which is continuous with zero derivative almost everywhere but is not
 absolutely continuous, and so must not count as a solution of `ẋ ∈ F x` when
 `0 ∈ F x`.
 
-This is a **definitional stub**: it is not yet connected to an existence theorem
-for Filippov solutions, nor to `IsFilippovInclusion`. -/
+Its local existence theorem `exists_filippovSolution_local` is proved in
+`DynamicalSystems.Control.SlidingMode.FilippovExistence`. -/
 def IsFilippovSolutionOn (γ : ℝ → E) (F : E → Set E) (s : Set ℝ) : Prop :=
   IsLocallyAbsolutelyContinuousOn γ s ∧
     ∀ᵐ t ∂volume.restrict s, HasDerivAt γ (deriv γ t) t ∧ deriv γ t ∈ F (γ t)
