@@ -75,8 +75,10 @@ abstract property itself is `IsFirstOrderApproximable`.
   `σ(xε) ⇉ 0` gives uniform convergence `xε ⇉ y`.
 * `tendstoUniformlyOn_of_boundaryLayer`: the boundary-layer closed-loop corollary
   `|σ(xε)| ≤ ε`.
+* `isFirstOrderApproximable_of_conditional_stability`: the conditional-stability
+  class of trajectory families is first-order approximable.
 * `IsFirstOrderApproximable`: the abstract first-order approximability predicate
-  (printed p. 5).
+  for an admissible family class (printed p. 5).
 -/
 
 @[expose] public section
@@ -233,16 +235,21 @@ inequality `‖x'ε - y'‖ ≤ K ‖xε - y‖ + L |σ(xε)|`, which is turned 
 estimate by Grönwall's inequality. -/
 
 /-- **Abstract first-order approximability** of the ideal sliding state `y` on
-`[0, T]` with respect to the scalar sliding variable `σ` (printed p. 5 of
-Chapter 1). Every family of trajectories `x ε` whose sliding variable
+`[0, T]` with respect to the scalar sliding variable `σ` for a class of
+*admissible* trajectory families `realFamilies` (printed p. 5 of Chapter 1).
+Every admissible family of trajectories `x ε` whose sliding variable
 `σ (x ε ·)` converges to `0` uniformly on `[0, T]` and whose initial values
 `x ε 0` converge to `y 0` converges to `y` uniformly on `[0, T]`. The control
 system, the uniqueness of the sliding control law and the existence of the
-equivalent control are abstracted away; the property is exactly the conclusion
-the transfer theorems below establish. -/
-def IsFirstOrderApproximable {E : Type*} [NormedAddCommGroup E] (σ : E → ℝ) (y : ℝ → E)
-    (T : ℝ) : Prop :=
+equivalent control are abstracted into the predicate `realFamilies`; without
+such an admissibility constraint the property would quantify over arbitrary
+functions `x` and be refutable (any family sliding along `ker σ`). The lemma
+`isFirstOrderApproximable_of_conditional_stability` shows that the class of
+families satisfying the conditional-stability inequality is admissible. -/
+def IsFirstOrderApproximable {E : Type*} [NormedAddCommGroup E]
+    (realFamilies : (ℝ → ℝ → E) → Prop) (σ : E → ℝ) (y : ℝ → E) (T : ℝ) : Prop :=
   ∀ x : ℝ → ℝ → E,
+    realFamilies x →
     Tendsto (fun ε ↦ x ε 0) (𝓝[>] 0) (𝓝 (y 0)) →
     (∀ δ > 0, ∀ᶠ ε in 𝓝[>] 0, ∀ t ∈ Set.Icc 0 T, |σ (x ε t)| ≤ δ) →
     TendstoUniformlyOn x y (𝓝[>] 0) (Set.Icc 0 T)
@@ -381,6 +388,32 @@ theorem tendstoUniformlyOn_of_conditional_stability
     _ ≤ (c + L * c) * (Real.exp (K * T) * (1 + T)) := hMle
     _ ≤ η / 2 := hc_eq
     _ < η := by linarith
+
+/-- **Constructor for abstract approximability from conditional stability.** The
+class of trajectory families `x ε` whose members are continuous on `[0, T]`,
+right-differentiable on `[0, T)`, and satisfy the conditional-stability
+inequality `‖x'ε - y'‖ ≤ K ‖xε - y‖ + L |σ(xε)|` (with `K, L ≥ 0`) is
+first-order approximable in the sense of `IsFirstOrderApproximable`: uniform
+decay of the sliding variable together with matching initial conditions forces
+`x ε ⇉ y` on `[0, T]`. This is the bridge that makes the abstract predicate of
+printed p. 5 a theorem-backed concept rather than an arbitrary quantification,
+by discharging its admissibility hypothesis with
+`tendstoUniformlyOn_of_conditional_stability`. -/
+theorem isFirstOrderApproximable_of_conditional_stability
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] (σ : E → ℝ) (y : ℝ → E)
+    {x' : ℝ → ℝ → E} {y' : ℝ → E} {T K L : ℝ}
+    (hT : 0 ≤ T) (hK : 0 ≤ K) (hL : 0 ≤ L)
+    (hy_cont : ContinuousOn y (Set.Icc 0 T))
+    (hy_deriv : ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt y (y' t) (Set.Ici t) t) :
+    IsFirstOrderApproximable
+      (fun x ↦ (∀ ε > 0, ContinuousOn (x ε) (Set.Icc 0 T)) ∧
+               (∀ ε > 0, ∀ t ∈ Set.Ico 0 T, HasDerivWithinAt (x ε) (x' ε t) (Set.Ici t) t) ∧
+               (∀ ε > 0, ∀ t ∈ Set.Ico 0 T,
+                 ‖x' ε t - y' t‖ ≤ K * ‖x ε t - y t‖ + L * |σ (x ε t)|))
+      σ y T := by
+  intro x ⟨hx_cont, hx_deriv, hineq⟩ hinit hlayer
+  exact tendstoUniformlyOn_of_conditional_stability hT hK hL hx_cont hy_cont hx_deriv
+    hy_deriv hineq hinit hlayer
 
 /-- **Boundary-layer closed-loop corollary.** For a family `x ε` in the boundary
 layer of the sliding variable, `|σ (x ε t)| ≤ ε` for all `t ∈ [0, T]` and all
