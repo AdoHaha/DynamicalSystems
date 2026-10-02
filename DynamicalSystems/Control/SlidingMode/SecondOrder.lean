@@ -104,20 +104,20 @@ theorem secondOrderDilation_isDilationAction : IsDilationAction secondOrderDilat
   weightedDilation_isDilationAction secondOrderSlidingWeights
 
 /-- Evaluation of the 2-sliding dilation in the first coordinate: `(d_λ x) 0 = λ ^ 2 * x 0`. -/
-private theorem secondOrderDilation_apply_zero (l : ℝ) (x : Fin 2 → ℝ) :
-    weightedDilation secondOrderSlidingWeights l x 0 = l ^ (2 : ℝ) * x 0 := by
-  simp only [weightedDilation, secondOrderSlidingWeights]
+theorem secondOrderDilation_apply_zero (l : ℝ) (x : Fin 2 → ℝ) :
+    secondOrderDilation l x 0 = l ^ (2 : ℝ) * x 0 := by
+  simp only [secondOrderDilation, weightedDilation, secondOrderSlidingWeights]
   norm_num
 
-/-- Evaluation of the 2-sliding dilation in the second coordinate: `(d_λ x) 1 = λ ^ 1 * x 1`. -/
-private theorem secondOrderDilation_apply_one (l : ℝ) (x : Fin 2 → ℝ) :
-    weightedDilation secondOrderSlidingWeights l x 1 = l ^ (1 : ℝ) * x 1 := by
-  simp only [weightedDilation, secondOrderSlidingWeights]
+/-- Evaluation of the 2-sliding dilation in the second coordinate: `(d_λ x) 1 = λ * x 1`. -/
+theorem secondOrderDilation_apply_one (l : ℝ) (x : Fin 2 → ℝ) :
+    secondOrderDilation l x 1 = l * x 1 := by
+  simp only [secondOrderDilation, weightedDilation, secondOrderSlidingWeights]
   norm_num
 
 /-- If `0 < a` then `sign (a * b) = sign b`: multiplication by a positive number does
 not change the sign. -/
-private theorem sign_mul_of_pos_left {a b : ℝ} (ha : 0 < a) : Real.sign (a * b) = Real.sign b := by
+theorem sign_mul_of_pos_left {a b : ℝ} (ha : 0 < a) : Real.sign (a * b) = Real.sign b := by
   rcases lt_trichotomy b 0 with hb | rfl | hb
   · rw [Real.sign_of_neg (mul_neg_of_pos_of_neg ha hb), Real.sign_of_neg hb]
   · simp
@@ -126,14 +126,14 @@ private theorem sign_mul_of_pos_left {a b : ℝ} (ha : 0 < a) : Real.sign (a * b
 /-- The sign of the first coordinate of the 2-sliding dilation: `sign (λ ^ 2 σ) = sign σ`
 for `λ > 0`. -/
 private theorem sign_secondOrderDilation_apply_zero {l : ℝ} (hl : 0 < l) (x : Fin 2 → ℝ) :
-    Real.sign (weightedDilation secondOrderSlidingWeights l x 0) = Real.sign (x 0) := by
+    Real.sign (secondOrderDilation l x 0) = Real.sign (x 0) := by
   rw [secondOrderDilation_apply_zero, sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 2)]
 
 /-- The sign of the second coordinate of the 2-sliding dilation: `sign (λ σ̇) = sign σ̇`
 for `λ > 0`. -/
 private theorem sign_secondOrderDilation_apply_one {l : ℝ} (hl : 0 < l) (x : Fin 2 → ℝ) :
-    Real.sign (weightedDilation secondOrderSlidingWeights l x 1) = Real.sign (x 1) := by
-  rw [secondOrderDilation_apply_one, sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 1)]
+    Real.sign (secondOrderDilation l x 1) = Real.sign (x 1) := by
+  rw [secondOrderDilation_apply_one, sign_mul_of_pos_left hl]
 
 /-- The power `|λ ^ 2 a|^{1/2}` is `λ |a|^{1/2}` for `λ > 0`. -/
 private theorem abs_rpow_half_mul_sq {l a : ℝ} (hl : 0 < l) :
@@ -149,6 +149,8 @@ the origin, because `sign 0 = 0`). -/
 theorem twistingControl_homogeneous (r₁ r₂ : ℝ) :
     IsHomogeneousFunction (twistingControl r₁ r₂) secondOrderSlidingWeights 0 := by
   intro l hl x
+  change twistingControl r₁ r₂ (secondOrderDilation l x) =
+    l ^ (0 : ℝ) * twistingControl r₁ r₂ x
   rw [Real.rpow_zero, one_mul]
   simp only [twistingControl]
   rw [sign_secondOrderDilation_apply_zero hl, sign_secondOrderDilation_apply_one hl]
@@ -170,18 +172,21 @@ private theorem rpow_neg_one_mul_rpow_two_mul {l a : ℝ} (hl : 0 < l) :
 theorem twistingVectorField_homogeneous (r₁ r₂ : ℝ) :
     IsHomogeneousVectorField (twistingVectorField r₁ r₂) secondOrderSlidingWeights (-1) := by
   intro l hl x
-  have h0 : twistingVectorField r₁ r₂ (weightedDilation secondOrderSlidingWeights l x) 0 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+  change twistingVectorField r₁ r₂ (secondOrderDilation l x) =
+    l ^ (-1 : ℝ) • secondOrderDilation l (twistingVectorField r₁ r₂ x)
+  have h0 : twistingVectorField r₁ r₂ (secondOrderDilation l x) 0 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (twistingVectorField r₁ r₂ x)) 0 := by
     simp only [twistingVectorField, secondOrderDilation_apply_one,
       secondOrderDilation_apply_zero, Pi.smul_apply, smul_eq_mul, Matrix.cons_val_zero]
-    rw [Real.rpow_one, rpow_neg_one_mul_rpow_two_mul hl]
-  have h1 : twistingVectorField r₁ r₂ (weightedDilation secondOrderSlidingWeights l x) 1 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+    rw [rpow_neg_one_mul_rpow_two_mul hl]
+  have h1 : twistingVectorField r₁ r₂ (secondOrderDilation l x) 1 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (twistingVectorField r₁ r₂ x)) 1 := by
     simp only [twistingVectorField, secondOrderDilation_apply_one, Pi.smul_apply, smul_eq_mul,
       Matrix.cons_val_one, Matrix.cons_val_zero]
-    rw [twistingControl_homogeneous r₁ r₂ l hl x, Real.rpow_zero, one_mul, Real.rpow_one,
+    simp only [twistingControl]
+    rw [sign_secondOrderDilation_apply_zero hl, sign_secondOrderDilation_apply_one hl,
       rpow_neg_one_mul hl]
   funext i
   fin_cases i
@@ -192,20 +197,22 @@ theorem twistingVectorField_homogeneous (r₁ r₂ : ℝ) :
 theorem superTwistingVectorField_homogeneous (k₁ k₂ : ℝ) :
     IsHomogeneousVectorField (superTwistingVectorField k₁ k₂) secondOrderSlidingWeights (-1) := by
   intro l hl x
-  have h0 : superTwistingVectorField k₁ k₂ (weightedDilation secondOrderSlidingWeights l x) 0 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+  change superTwistingVectorField k₁ k₂ (secondOrderDilation l x) =
+    l ^ (-1 : ℝ) • secondOrderDilation l (superTwistingVectorField k₁ k₂ x)
+  have h0 : superTwistingVectorField k₁ k₂ (secondOrderDilation l x) 0 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (superTwistingVectorField k₁ k₂ x)) 0 := by
     simp only [superTwistingVectorField, Pi.smul_apply, smul_eq_mul, Matrix.cons_val_zero,
       secondOrderDilation_apply_zero, secondOrderDilation_apply_one]
-    rw [Real.rpow_one, abs_rpow_half_mul_sq hl,
+    rw [abs_rpow_half_mul_sq hl,
       sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 2), rpow_neg_one_mul_rpow_two_mul hl]
     ring
-  have h1 : superTwistingVectorField k₁ k₂ (weightedDilation secondOrderSlidingWeights l x) 1 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+  have h1 : superTwistingVectorField k₁ k₂ (secondOrderDilation l x) 1 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (superTwistingVectorField k₁ k₂ x)) 1 := by
     simp only [superTwistingVectorField, Pi.smul_apply, smul_eq_mul, Matrix.cons_val_one,
       Matrix.cons_val_zero, secondOrderDilation_apply_one, secondOrderDilation_apply_zero]
-    rw [sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 2), Real.rpow_one, rpow_neg_one_mul hl]
+    rw [sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 2), rpow_neg_one_mul hl]
   funext i
   fin_cases i
   · exact h0
@@ -223,18 +230,20 @@ private theorem quasi_div_scale {l A B α : ℝ} (hl : l ≠ 0) :
 theorem quasiContinuous2Control_homogeneous (α : ℝ) :
     IsHomogeneousFunction (quasiContinuous2Control α) secondOrderSlidingWeights 0 := by
   intro l hl x
+  change quasiContinuous2Control α (secondOrderDilation l x) =
+    l ^ (0 : ℝ) * quasiContinuous2Control α x
   rw [Real.rpow_zero, one_mul]
-  have hnum : (weightedDilation secondOrderSlidingWeights l x) 1 +
-        |(weightedDilation secondOrderSlidingWeights l x) 0| ^ (1 / 2 : ℝ) *
-          Real.sign ((weightedDilation secondOrderSlidingWeights l x) 0) =
+  have hnum : (secondOrderDilation l x) 1 +
+        |(secondOrderDilation l x) 0| ^ (1 / 2 : ℝ) *
+          Real.sign ((secondOrderDilation l x) 0) =
       l * (x 1 + |x 0| ^ (1 / 2 : ℝ) * Real.sign (x 0)) := by
-    rw [secondOrderDilation_apply_one, Real.rpow_one, secondOrderDilation_apply_zero,
+    rw [secondOrderDilation_apply_one, secondOrderDilation_apply_zero,
       abs_rpow_half_mul_sq hl, sign_mul_of_pos_left (Real.rpow_pos_of_pos hl 2)]
     ring
-  have hden : |(weightedDilation secondOrderSlidingWeights l x) 1| +
-        |(weightedDilation secondOrderSlidingWeights l x) 0| ^ (1 / 2 : ℝ) =
+  have hden : |(secondOrderDilation l x) 1| +
+        |(secondOrderDilation l x) 0| ^ (1 / 2 : ℝ) =
       l * (|x 1| + |x 0| ^ (1 / 2 : ℝ)) := by
-    rw [secondOrderDilation_apply_one, Real.rpow_one, abs_mul, abs_of_pos hl,
+    rw [secondOrderDilation_apply_one, abs_mul, abs_of_pos hl,
       secondOrderDilation_apply_zero, abs_rpow_half_mul_sq hl]
     ring
   simp only [quasiContinuous2Control]
@@ -245,19 +254,22 @@ theorem quasiContinuous2Control_homogeneous (α : ℝ) :
 theorem quasiContinuous2VectorField_homogeneous (α : ℝ) :
     IsHomogeneousVectorField (quasiContinuous2VectorField α) secondOrderSlidingWeights (-1) := by
   intro l hl x
-  have h0 : quasiContinuous2VectorField α (weightedDilation secondOrderSlidingWeights l x) 0 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+  change quasiContinuous2VectorField α (secondOrderDilation l x) =
+    l ^ (-1 : ℝ) • secondOrderDilation l (quasiContinuous2VectorField α x)
+  have h0 : quasiContinuous2VectorField α (secondOrderDilation l x) 0 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (quasiContinuous2VectorField α x)) 0 := by
     simp only [quasiContinuous2VectorField, secondOrderDilation_apply_one,
       secondOrderDilation_apply_zero, Pi.smul_apply, smul_eq_mul, Matrix.cons_val_zero]
-    rw [Real.rpow_one, rpow_neg_one_mul_rpow_two_mul hl]
-  have h1 : quasiContinuous2VectorField α (weightedDilation secondOrderSlidingWeights l x) 1 =
-      (l ^ (-1 : ℝ) • weightedDilation secondOrderSlidingWeights l
+    rw [rpow_neg_one_mul_rpow_two_mul hl]
+  have h1 : quasiContinuous2VectorField α (secondOrderDilation l x) 1 =
+      (l ^ (-1 : ℝ) • secondOrderDilation l
         (quasiContinuous2VectorField α x)) 1 := by
     simp only [quasiContinuous2VectorField, secondOrderDilation_apply_one, Pi.smul_apply,
       smul_eq_mul, Matrix.cons_val_one, Matrix.cons_val_zero]
-    rw [quasiContinuous2Control_homogeneous α l hl x, Real.rpow_zero, one_mul, Real.rpow_one,
-      rpow_neg_one_mul hl]
+    have hc := quasiContinuous2Control_homogeneous α l hl x
+    rw [show secondOrderDilation l x = weightedDilation secondOrderSlidingWeights l x from rfl,
+      hc, Real.rpow_zero, one_mul, rpow_neg_one_mul hl]
   funext i
   fin_cases i
   · exact h0
@@ -319,20 +331,20 @@ noncomputable def morenoOsorioV (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) : ℝ :=
 
 /-- The quadratic form of `morenoOsorioP` as a sum of squares,
 `2k₂ a² + ½(k₁a - b)² + ½b²`. -/
-private lemma qformP (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
-    star x ⬝ᵥ (morenoOsorioP k₁ k₂ *ᵥ x)
+theorem morenoOsorioP_quadratic_form (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
+    dotProduct x (morenoOsorioP k₁ k₂ *ᵥ x)
       = 2 * k₂ * x 0 ^ 2 + (1 / 2) * (k₁ * x 0 - x 1) ^ 2 + (1 / 2) * x 1 ^ 2 := by
   simp only [morenoOsorioP, Matrix.of_apply, dotProduct, Matrix.mulVec, Fin.sum_univ_two,
-    Matrix.cons_val_zero, Matrix.cons_val_one, star_trivial]
+    Matrix.cons_val_zero, Matrix.cons_val_one]
   ring
 
 /-- The quadratic form of `morenoOsorioQ` as a sum of squares,
 `k₁k₂ a² + (k₁/2)(k₁a - b)²`. -/
-private lemma qformQ (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
-    star x ⬝ᵥ (morenoOsorioQ k₁ k₂ *ᵥ x)
+theorem morenoOsorioQ_quadratic_form (k₁ k₂ : ℝ) (x : Fin 2 → ℝ) :
+    dotProduct x (morenoOsorioQ k₁ k₂ *ᵥ x)
       = k₁ * k₂ * x 0 ^ 2 + (k₁ / 2) * (k₁ * x 0 - x 1) ^ 2 := by
   simp only [morenoOsorioQ, Matrix.of_apply, Matrix.smul_apply, dotProduct, Matrix.mulVec,
-    Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one, star_trivial, smul_eq_mul]
+    Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one, smul_eq_mul]
   ring
 
 /-- `|a|^{1/2} sign a` vanishes exactly at `a = 0`: the Moreno–Osorio coordinate change is
@@ -347,13 +359,9 @@ private theorem rpow_half_mul_sign_eq_zero {a : ℝ} :
     exact (mul_ne_zero (ne_of_gt h1) h2) h
   · rintro rfl; simp
 
-set_option linter.unusedVariables false in
-/-- `P` is positive definite for `k₁, k₂ > 0`, by the sum-of-squares decomposition
-`2k₂a² + ½(k₁a - b)² + ½b²`. The hypothesis `hk₁` is not needed for this particular
-matrix (it is kept to match the reviewed signature and the companion `Q`), hence the
-`nolint` below. -/
-@[nolint unusedArguments]
-theorem morenoOsorioP_posDef {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k₂) :
+/-- `P` is positive definite for `k₂ > 0`, by the sum-of-squares decomposition
+`2k₂a² + ½(k₁a - b)² + ½b²`; no sign condition on `k₁` is needed. -/
+theorem morenoOsorioP_posDef {k₁ k₂ : ℝ} (hk₂ : 0 < k₂) :
     (morenoOsorioP k₁ k₂).PosDef := by
   refine Matrix.PosDef.of_dotProduct_mulVec_pos ?_ ?_
   · rw [Matrix.IsHermitian]
@@ -361,7 +369,9 @@ theorem morenoOsorioP_posDef {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k
     fin_cases i <;> fin_cases j <;>
       simp [morenoOsorioP, Matrix.conjTranspose, Matrix.transpose]
   · intro x hx
-    rw [qformP]
+    have hq := morenoOsorioP_quadratic_form k₁ k₂ x
+    simp only [dotProduct, star_trivial] at hq ⊢
+    rw [hq]
     rcases eq_or_ne (x 1) 0 with h1 | h1
     · have h0 : x 0 ≠ 0 := by
         intro h0
@@ -382,7 +392,9 @@ theorem morenoOsorioQ_posDef {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k
       simp [morenoOsorioQ, Matrix.conjTranspose, Matrix.transpose, Matrix.smul_apply,
         smul_eq_mul]
   · intro x hx
-    rw [qformQ]
+    have hq := morenoOsorioQ_quadratic_form k₁ k₂ x
+    simp only [dotProduct, star_trivial] at hq ⊢
+    rw [hq]
     rcases eq_or_ne (x 0) 0 with h0 | h0
     · have h1 : x 1 ≠ 0 := by
         intro h1
@@ -404,24 +416,19 @@ theorem morenoOsorio_lyapunov_equation {k₁ k₂ : ℝ} :
       Matrix.cons_val_zero, Matrix.cons_val_one, Matrix.transpose_apply,
       Matrix.neg_apply, smul_eq_mul] <;> ring
 
-set_option linter.unusedVariables false in
 /-- The Moreno–Osorio Lyapunov function is positive definite: `0 ≤ V x` and `V x = 0`
 if and only if `x = 0`. The proof rewrites `V` through the sum of squares
 `2k₂ζ₁² + ½(k₁ζ₁ - ζ₂)² + ½ζ₂²` with `ζ = superTwistingZeta x`, and uses that the
-coordinate change `ζ` vanishes exactly at the origin. The hypothesis `hk₁` is not needed
-for this statement, hence the `nolint` below. -/
-@[nolint unusedArguments]
-theorem morenoOsorioV_pos_def {k₁ k₂ : ℝ} (hk₁ : 0 < k₁) (hk₂ : 0 < k₂) (x : Fin 2 → ℝ) :
+coordinate change `ζ` vanishes exactly at the origin; no sign condition on `k₁` is
+needed. -/
+theorem morenoOsorioV_pos_def {k₁ k₂ : ℝ} (hk₂ : 0 < k₂) (x : Fin 2 → ℝ) :
     0 ≤ morenoOsorioV k₁ k₂ x ∧ (morenoOsorioV k₁ k₂ x = 0 ↔ x = 0) := by
   have hV : morenoOsorioV k₁ k₂ x
       = 2 * k₂ * (superTwistingZeta x 0) ^ 2
         + (1 / 2) * (k₁ * superTwistingZeta x 0 - superTwistingZeta x 1) ^ 2
         + (1 / 2) * (superTwistingZeta x 1) ^ 2 := by
-    rw [morenoOsorioV, show dotProduct (superTwistingZeta x)
-          (morenoOsorioP k₁ k₂ *ᵥ superTwistingZeta x)
-        = star (superTwistingZeta x) ⬝ᵥ (morenoOsorioP k₁ k₂ *ᵥ superTwistingZeta x) from by
-      simp only [dotProduct, star_trivial]]
-    exact qformP k₁ k₂ (superTwistingZeta x)
+    rw [morenoOsorioV]
+    exact morenoOsorioP_quadratic_form k₁ k₂ (superTwistingZeta x)
   refine ⟨?_, ?_⟩
   · rw [hV]; positivity
   · constructor
