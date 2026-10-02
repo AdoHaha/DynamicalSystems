@@ -630,30 +630,23 @@ variable [FiniteDimensional ℝ E]
 open scoped BoundedContinuousFunction
 
 /-- **Extraction of a uniformly convergent subsequence of Euler polygonal curves.** Given a slope
-bound `M` on the values of the inclusion in the ball of radius `r` about `x₀` and step sizes
-`h n > 0` with `h n * M ≤ r`, there is a strictly monotone subsequence `φ` of the Euler curves
+bound `M` on the values of the inclusion in the ball of radius `r` about `x₀` and positive step
+sizes `h n > 0`, there is a strictly monotone subsequence `φ` of the Euler curves
 `t ↦ eulerCurve hF (h (φ n)) x₀ t` converging uniformly on `Icc 0 (r / max M 1)` to a limit curve
 `γlim` that is `M`-Lipschitz there and starts at `x₀`.
 
 The compactness input is Arzelà–Ascoli: the curves are uniformly `M`-Lipschitz and take values in
-the compact ball `closedBall x₀ r`. The hypotheses `Tendsto h atTop (𝓝 0)` and `h n * M ≤ r` belong
-to the surrounding existence contract; the extraction itself only needs a uniform step bound, which
-is implied by the choice `T = r / max M 1`.
+the compact ball `closedBall x₀ r`. The extraction only needs a uniform step bound, which is implied
+by the choice `T = r / max M 1`.
 
 The proof is the standard diagonal/compactness argument: the images of the Euler curves in the
 space `Icc 0 T →ᵇ E` of bounded continuous functions form an equicontinuous family with values in a
 compact set, so their closure is compact and a subsequence converges in the uniform topology; the
-limit is extended to `ℝ` by `x₀` off `Icc 0 T`.
-
-We mark the lemma `@[nolint unusedArguments]` because the two hypotheses `Tendsto h atTop (𝓝 0)`
-and `h n * M ≤ r` are part of the campaign interface but are not needed for this half of the
-argument: the range estimate only uses the derived uniform bound `T * M ≤ r`. -/
-@[nolint unusedArguments] -- `hh0` and `hhr` are contract hypotheses not needed in the extraction
+limit is extended to `ℝ` by `x₀` off `Icc 0 T`. -/
 theorem IsFilippovInclusion.exists_eulerCurve_tendsto_subseq {F : E → Set E}
     (hF : IsFilippovInclusion F) (x₀ : E) {r M : ℝ} (hr : 0 < r) (hM0 : 0 ≤ M)
     (hM : ∀ y, dist y x₀ ≤ r → ∀ v ∈ F y, ‖v‖ ≤ M)
-    (h : ℕ → ℝ) (hh : ∀ n, 0 < h n) (_hh0 : Tendsto h atTop (𝓝 0))
-    (_hhr : ∀ n, h n * M ≤ r) :
+    (h : ℕ → ℝ) (hh : ∀ n, 0 < h n) :
     ∃ (φ : ℕ → ℕ) (γlim : ℝ → E),
       StrictMono φ ∧
       TendstoUniformlyOn (fun n t ↦ eulerCurve hF (h (φ n)) x₀ t) γlim atTop
@@ -1222,31 +1215,14 @@ theorem exists_filippovSolution_local {F : E → Set E} (hF : IsFilippovInclusio
   obtain ⟨r, hr, M, hM0, hM⟩ := hF.exists_local_bound x₀
   have hmaxpos : 0 < max M 1 := lt_of_lt_of_le zero_lt_one (le_max_right M 1)
   have hTpos : 0 < r / max M 1 := div_pos hr hmaxpos
-  have hTM : r / max M 1 * M ≤ r := by
-    calc r / max M 1 * M ≤ r / max M 1 * max M 1 :=
-          mul_le_mul_of_nonneg_left (le_max_left M 1) (div_nonneg hr.le hmaxpos.le)
-      _ = r := div_mul_cancel₀ r hmaxpos.ne'
   let h : ℕ → ℝ := fun n ↦ (1 / ((n : ℝ) + 1)) * (r / max M 1)
   have hh : ∀ n, 0 < h n := fun n ↦ mul_pos (one_div_pos.mpr (by positivity)) hTpos
   have hh0 : Tendsto h atTop (𝓝 0) := by
     have hg : Tendsto (fun n : ℕ ↦ 1 / ((n : ℝ) + 1)) atTop (𝓝 0) :=
       tendsto_one_div_add_atTop_nhds_zero_nat
     simpa [h] using hg.mul_const (r / max M 1)
-  have hhr : ∀ n, h n * M ≤ r := by
-    intro n
-    have hle : 1 / ((n : ℝ) + 1) ≤ 1 := by
-      have hb : (0 : ℝ) < (n : ℝ) + 1 := by positivity
-      rw [div_le_one hb]
-      linarith [Nat.cast_nonneg (α := ℝ) n]
-    change (1 / ((n : ℝ) + 1)) * (r / max M 1) * M ≤ r
-    calc (1 / ((n : ℝ) + 1)) * (r / max M 1) * M
-        = (1 / ((n : ℝ) + 1)) * (r / max M 1 * M) := by ring
-      _ ≤ 1 * (r / max M 1 * M) :=
-            mul_le_mul_of_nonneg_right hle (mul_nonneg hTpos.le hM0)
-      _ = r / max M 1 * M := by ring
-      _ ≤ r := hTM
   obtain ⟨φ, γlim, hφ, hconv, hlip, hγ0⟩ :=
-    hF.exists_eulerCurve_tendsto_subseq x₀ hr hM0 hM h hh hh0 hhr
+    hF.exists_eulerCurve_tendsto_subseq x₀ hr hM0 hM h hh
   refine ⟨r / max M 1, hTpos, γlim, hγ0, ?_⟩
   exact hF.isFilippovSolutionOn_of_tendsto_eulerCurve (h := fun n ↦ h (φ n)) hM0
     (fun n ↦ hh (φ n)) (hh0.comp hφ.tendsto_atTop) hlip hconv
