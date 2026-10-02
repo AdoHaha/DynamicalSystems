@@ -14,6 +14,7 @@ import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
+import DynamicalSystems.Control.SlidingMode.Discrete
 import DynamicalSystems.Control.SlidingMode.Filippov
 import DynamicalSystems.Control.SlidingMode.Observer
 import DynamicalSystems.Control.SlidingMode.Reaching
