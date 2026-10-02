@@ -28,6 +28,7 @@ import DynamicalSystems.AdaptiveControl.Direct
 import DynamicalSystems.AdaptiveControl.RobustDirect
 import DynamicalSystems.AdaptiveControl.PlantSynthesis
 import DynamicalSystems.ConvexAnalysis.Conjugate
+import DynamicalSystems.ConvexAnalysis.Duality
 import DynamicalSystems.ConvexAnalysis.Subdifferential
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
