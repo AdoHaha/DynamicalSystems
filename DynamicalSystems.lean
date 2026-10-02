@@ -17,6 +17,7 @@ import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Filippov
 import DynamicalSystems.Control.SlidingMode.Observer
 import DynamicalSystems.Control.SlidingMode.Reaching
+import DynamicalSystems.Control.SlidingMode.Regularization
 import DynamicalSystems.Control.SlidingMode.Relay
 import DynamicalSystems.Control.SlidingMode.SecondOrder
 import DynamicalSystems.AdaptiveControl.Switching
