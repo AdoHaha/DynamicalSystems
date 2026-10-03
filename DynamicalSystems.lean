@@ -14,6 +14,7 @@ import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
+import DynamicalSystems.Control.MPC.Estimation
 import DynamicalSystems.Control.MPC.Robust
 import DynamicalSystems.Control.MPC.Stability
 import DynamicalSystems.Control.MPC.Stochastic
