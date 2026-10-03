@@ -19,14 +19,16 @@ public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.Calculus.Deriv.Comp
 
 /-!
-# Pontryagin Minimum Principle (Variational / Smooth Formulation)
+# PMP Statement and Variational Bridge (Assembly Schema)
 
-This module formalizes the Pontryagin Minimum Principle (PMP) for continuous-time optimal
+This module formalizes the *statement* of the Pontryagin Minimum Principle (PMP) and its
+variational bridge (Euler–Lagrange ↔ costate equation) for continuous-time optimal
 control problems in its smooth, variational formulation following Sontag (*Mathematical
 Control Theory: Deterministic Finite Dimensional Systems*, 2nd ed., 1998, Ch. 9 §9.2,
 Theorem 43, and §9.5, Theorem 44, printed pp. 403, 418–421) and Liberzon (*Calculus of
 Variations and Optimal Control Theory: A Concise Introduction*, 2012, Ch. 4 §4.1–4.2,
-particularly Theorem 4.1, p. 101).
+particularly Theorem 4.1, p. 101); the derivation from optimality
+(optimality ⇒ existence of a costate) is NOT proved here.
 
 ## Scope and Design
 
@@ -68,7 +70,7 @@ optimality condition. Minimization implies stationarity only at interior points 
 control set (with differentiability of `H` in `u`), proved here as
 `stationary_of_minimizing_interior` via Fermat's theorem; at boundary points only the
 minimization form applies. Conversely, stationarity implies minimization only under a
-convexity hypothesis on `w ↦ H(t, x, w, λ)` (stated here, not proved).
+convexity hypothesis on `w ↦ H(t, x, w, λ)` (not stated or proved here).
 
 ## Main Definitions
 
@@ -111,9 +113,11 @@ convexity hypothesis on `w ↦ H(t, x, w, λ)` (stated here, not proved).
   at the augmented Lagrangian.
 * `eulerLagrange_augmented_of_vanishing`: S4's `eulerLagrange_of_firstVariation_zero`
   instantiated at the augmented Lagrangian.
-* `minimumPrinciple`: assembly schema packaging admissibility with a stationary
+* `costateEquation_of_vanishing_augmented`: end-to-end composition recovering the
+  costate ODE from a vanishing first variation under explicit regularity hypotheses.
+* `pmpAssembly`: assembly schema packaging admissibility with a stationary
   costate (adjoint ODE + transversality + stationarity).
-* `minimumPrinciple_minimizing`: assembly schema packaging admissibility with a
+* `pmpAssembly_minimizing`: assembly schema packaging admissibility with a
   minimizing costate (adjoint ODE + transversality + minimization).
 -/
 
@@ -197,7 +201,7 @@ This is valid only at interior points of the control set: minimization implies
 stationarity only when `u t ∈ interior controlSet` (see
 `stationary_of_minimizing_interior`), and at boundary points only the minimization
 form `HamiltonianMinimizing` applies. Conversely, stationarity implies minimization
-only under a convexity hypothesis on `w ↦ H(t, x, w, λ)` (not proved here). -/
+only under a convexity hypothesis on `w ↦ H(t, x, w, λ)` (not stated or proved here). -/
 def HamiltonianStationary [NormedAddCommGroup U] [NormedSpace ℝ U]
     (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (T : ℝ)
     (x : ℝ → E) (u : ℝ → U) (p : ℝ → E) : Prop :=
@@ -441,16 +445,26 @@ theorem stationarity_of_vanishing_first_variation
   exact h
 
 /-- **Minimization Implies Stationarity at Interior Points.**
-If the Hamiltonian is minimized over `controlSet` along the trajectory and each
-`u t` lies in the interior of `controlSet` (the explicit open-`U` hypothesis), then
-the pointwise stationarity condition holds. The proof is Fermat's theorem
-(`IsLocalMin.fderiv_eq_zero`): a set-minimum at an interior point is a local minimum.
-At boundary points this implication fails and only `HamiltonianMinimizing` applies. -/
+If the Hamiltonian is minimized over `controlSet` along the trajectory, each
+`u t` lies in the interior of `controlSet` (the explicit open-`U` hypothesis), and
+`w ↦ H(t, x(t), w, λ(t))` is differentiable at `u t` (the explicit `hHdiff`
+hypothesis), then the pointwise stationarity condition holds. The proof is Fermat's
+theorem (`IsLocalMin.hasFDerivAt_eq_zero`): a set-minimum at an interior point is a
+local minimum. At boundary points this implication fails and only
+`HamiltonianMinimizing` applies.
+
+Note on the differentiability hypothesis: Mathlib's `fderiv` is defined to be the junk
+value `0` at points where the function is not differentiable, so concluding
+`fderiv … = 0` via `IsLocalMin.fderiv_eq_zero` alone would be vacuous exactly where
+it matters. The explicit `hHdiff` hypothesis rules this out, and the conclusion is
+derived via `hloc.hasFDerivAt_eq_zero hHdiff.hasFDerivAt`. -/
 theorem stationary_of_minimizing_interior
     (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (controlSet : Set U) (T : ℝ)
     (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
     (hmin : HamiltonianMinimizing L f controlSet T x u p)
-    (hinterior : ∀ t ∈ Set.Icc 0 T, u t ∈ interior controlSet) :
+    (hinterior : ∀ t ∈ Set.Icc 0 T, u t ∈ interior controlSet)
+    (hHdiff : ∀ t ∈ Set.Icc 0 T,
+      DifferentiableAt ℝ (fun w : U ↦ hamiltonianOf L f t (x t) w (p t)) (u t)) :
     HamiltonianStationary L f T x u p := by
   intro t ht
   have hminOn : IsMinOn (fun w : U ↦ hamiltonianOf L f t (x t) w (p t)) controlSet (u t) :=
@@ -458,7 +472,7 @@ theorem stationary_of_minimizing_interior
   have hmem : controlSet ∈ 𝓝 (u t) := mem_interior_iff_mem_nhds.mp (hinterior t ht)
   have hloc : IsLocalMin (fun w : U ↦ hamiltonianOf L f t (x t) w (p t)) (u t) :=
     hminOn.isLocalMin hmem
-  exact hloc.fderiv_eq_zero
+  exact hloc.hasFDerivAt_eq_zero (hHdiff t ht).hasFDerivAt
 
 /-! #### Integration by parts at the scalarized costate pairing -/
 
@@ -509,8 +523,9 @@ If the first variation of the augmented calculus-of-variations functional vanish
 endpoint-vanishing perturbations, and the velocity-derivative curve is differentiable
 with continuous data, then the trajectory satisfies the augmented Euler–Lagrange
 equation. This is S4's `eulerLagrange_of_firstVariation_zero` instantiated at
-`cvLagrangianOf L f u p`; chained with `costateEquation_of_eulerLagrange_augmented` it
-recovers the costate ODE from the variational principle. -/
+`cvLagrangianOf L f u p`; each link is proved separately, and the end-to-end composition
+recovering the costate ODE from the variational principle is provided as
+`costateEquation_of_vanishing_augmented` below. -/
 theorem eulerLagrange_augmented_of_vanishing
     (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (u : ℝ → U) (p : ℝ → E)
     (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
@@ -526,15 +541,43 @@ theorem eulerLagrange_augmented_of_vanishing
     eulerLagrange (cvLagrangianOf L f u p) T x :=
   eulerLagrange_of_firstVariation_zero _ _ _ _ _ hT hvan hPderiv hPcont hQcont hScont
 
+omit [NormedAddCommGroup U] [NormedSpace ℝ U] in
+/-- **Costate equation from vanishing first variation (end-to-end composition).**
+If the first variation of the augmented calculus-of-variations functional vanishes on
+endpoint-vanishing perturbations (with the explicit regularity hypotheses of
+`eulerLagrange_augmented_of_vanishing`), and the costate arc `p` is differentiable with
+derivative `p'`, then `p` satisfies the costate equation `ṗ = - ∇ₓH`. This chains
+`eulerLagrange_augmented_of_vanishing` with `costateEquation_of_eulerLagrange_augmented`.
+The scalar IBP steps `ibp_costate_velocity` / `ibp_costate_velocity_deriv` and the
+unpacking `firstVariation_augmented_vanishes` remain available as standalone ingredients
+for callers. -/
+theorem costateEquation_of_vanishing_augmented [CompleteSpace E]
+    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (u : ℝ → U) (p : ℝ → E)
+    (p' : ℝ → E) (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
+    (hT : 0 < T)
+    (hvan : HasVanishingFirstVariation (cvLagrangianOf L f u p) K T x)
+    (hp : ∀ t ∈ Set.Icc 0 T, HasDerivAt p (p' t) t)
+    (hPderiv : ∀ t ∈ Set.Icc 0 T, HasDerivAt
+      (fun s ↦ fderiv ℝ (fun v : E ↦ cvLagrangianOf L f u p s (x s) v) (deriv x s)) (Q t) t)
+    (hPcont : Continuous
+      (fun s ↦ fderiv ℝ (fun v : E ↦ cvLagrangianOf L f u p s (x s) v) (deriv x s)))
+    (hQcont : Continuous Q)
+    (hScont : Continuous
+      (fun t ↦ fderiv ℝ (fun y : E ↦ cvLagrangianOf L f u p t y (deriv x t)) (x t))) :
+    costateEquation L f T x u p :=
+  costateEquation_of_eulerLagrange_augmented L f T x u p p' hp
+    (eulerLagrange_augmented_of_vanishing L f u p K Q T x hT hvan hPderiv hPcont
+      hQcont hScont)
+
 end Stationarity
 
-/-! ### The Main Theorem: Pontryagin Minimum Principle -/
+/-! ### The Main Theorem: PMP Assembly Schema -/
 
 section MainTheorem
 
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-/-- **The Pontryagin Minimum Principle (variational assembly schema).**
+/-- **The PMP assembly schema (stationary form).**
 Let `(x, u)` be an admissible trajectory/control pair for the continuous optimal control
 problem `prob`. Given a costate arc `p : ℝ → E` satisfying along the trajectory:
 1. The **costate differential equation**: `λ̇(t) = - ∂ₓH(t, x(t), u(t), λ(t))` on `[0, T]`;
@@ -549,8 +592,10 @@ Theory*, 2nd ed., 1998, Ch. 9 §9.2, Theorem 43, and §9.5, Theorem 44) and Libe
 (*Calculus of Variations and Optimal Control Theory*, 2012, Ch. 4 §4.1, Theorem 4.1).
 It takes no optimality hypothesis: the variational/needle step from optimality to the
 existence of such a costate is not proved here (see the module-level derivation-gap
-note). -/
-theorem minimumPrinciple [NormedAddCommGroup U] [NormedSpace ℝ U]
+note). Note that `exists_costate_of_lipschitz` above already gives costate existence
+(without optimality) under regularity hypotheses, so the schema's `hadj` hypothesis is a
+genuine under-claim relative to the file's own machinery. -/
+theorem pmpAssembly [NormedAddCommGroup U] [NormedSpace ℝ U]
     (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
     (Hadm : IsAdmissiblePair prob x₀ x u)
     (hadj : costateEquation prob.L prob.f prob.T x u p ∧
@@ -562,15 +607,15 @@ theorem minimumPrinciple [NormedAddCommGroup U] [NormedSpace ℝ U]
       HamiltonianStationary prob.L prob.f prob.T x u q :=
   ⟨Hadm, p, hadj.1, hadj.2, hstat⟩
 
-/-- **The Pontryagin Minimum Principle with pointwise minimization.**
-Same assembly schema as `minimumPrinciple`, but the costate hypothesis is pointwise
+/-- **The PMP assembly schema with pointwise minimization.**
+Same assembly schema as `pmpAssembly`, but the costate hypothesis is pointwise
 Hamiltonian minimization over `prob.controlSet`:
 `∀ w ∈ prob.controlSet, H(t, x(t), u(t), λ(t)) ≤ H(t, x(t), w, λ(t))`
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 9 §9.5, Eq. (9.37), printed p. 418;
 Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012, Theorem 4.1, p. 101).
 This is the boundary-capable form: at interior points
 `stationary_of_minimizing_interior` recovers stationarity from it. -/
-theorem minimumPrinciple_minimizing
+theorem pmpAssembly_minimizing
     (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
     (Hadm : IsAdmissiblePair prob x₀ x u)
     (hadj : costateEquation prob.L prob.f prob.T x u p ∧
