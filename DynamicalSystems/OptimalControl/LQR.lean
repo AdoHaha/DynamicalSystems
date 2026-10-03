@@ -8,26 +8,27 @@ module
 public import DynamicalSystems.DiscreteTime.MatrixLyapunov
 public import Mathlib.LinearAlgebra.Matrix.Invertible
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-public import Mathlib.LinearAlgebra.Matrix.PosDef
 
 /-! # Discrete-time Linear Quadratic Regulator (LQR) and the DARE
 
 This file formalizes the infinite-horizon discrete-time linear quadratic regulator (LQR),
 the discrete algebraic Riccati equation (DARE), and the Lyapunov / Bellman identity for
-the optimal linear state-feedback gain.
+the DARE state-feedback gain.
 
 The treatment follows Rawlings, Mayne and Diehl, *Model Predictive Control: Theory, Computation,
-and Design*, 2nd ed., 2019:
-* Chapter 1, §1.3.4 (printed pp. 21–22) for the discrete algebraic Riccati equation (DARE) and
-  the optimal state-feedback gain;
-* Chapter 1, §1.3.6 (printed pp. 24–25) for the closed-loop Lyapunov matrix equation and
-  the Bellman dynamic-programming decrease.
+and Design*, 2nd ed., 2019, Ch. 1 §1.3.6, eq. (1.18), printed p. 25, for the discrete algebraic
+Riccati equation (DARE), the DARE state-feedback gain, the closed-loop Lyapunov matrix equation,
+and the one-step (Bellman-form) identity.
+
+The book states the cost with a leading factor (1/2), `V = (1/2)xᵀ Π x`, whereas this file uses
+`V = xᵀ P x`. This is a uniform rescaling: it leaves the DARE and the gain unchanged in form
+(the book's `(Bᵀ P B + R)` equals this file's `(R + Bᵀ P B)` by commutativity of addition).
 
 ## Main definitions
 
 * `dare`: the discrete algebraic Riccati equation
   `P = Aᵀ P A - Aᵀ P B (R + Bᵀ P B)⁻¹ Bᵀ P A + Q`.
-* `lqrOptimalGain`: the optimal state-feedback gain
+* `lqrOptimalGain`: the DARE state-feedback gain
   `K = -⅟(R + Bᵀ P B) Bᵀ P A`.
 
 ## Main results
@@ -48,12 +49,12 @@ variable (Q : Matrix (Fin n) (Fin n) ℝ) (R : Matrix (Fin m) (Fin m) ℝ)
 variable (P : Matrix (Fin n) (Fin n) ℝ)
 
 /-- The discrete algebraic Riccati equation (DARE).
-Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.4 (printed p. 21). -/
+Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6, eq. (1.18), printed p. 25. -/
 def dare : Prop :=
   P = Aᵀ * P * A - Aᵀ * P * B * (R + Bᵀ * P * B)⁻¹ * (Bᵀ * P * A) + Q
 
-/-- The optimal state-feedback gain for the discrete LQR.
-Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.4 (printed p. 21). -/
+/-- The DARE state-feedback gain for the discrete LQR.
+Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6, eq. (1.18), printed p. 25. -/
 noncomputable def lqrOptimalGain [Invertible (R + Bᵀ * P * B)] : Matrix (Fin m) (Fin n) ℝ :=
   -⅟(R + Bᵀ * P * B) * (Bᵀ * P * A)
 
@@ -64,6 +65,8 @@ private lemma mul_gain :
   rw [Matrix.neg_mul, Matrix.mul_neg, Matrix.mul_invOf_cancel_left]
 
 /-- DARE implies the closed-loop Lyapunov matrix equation.
+This is the algebraic Lyapunov equation; no stability/decrease is asserted (that requires
+Q + KᵀRK ⪰ 0).
 Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6 (printed p. 24). -/
 theorem lqr_lyapunov_decrease (hD : dare A B Q R P) :
     P = (A + B * lqrOptimalGain A B R P)ᵀ * P * (A + B * lqrOptimalGain A B R P) + Q +
@@ -89,7 +92,7 @@ private lemma quadForm_mulVec_rect {k l : ℕ} (M : Matrix (Fin k) (Fin k) ℝ)
   simp only [quadForm, ← Matrix.mulVec_mulVec, Matrix.dotProduct_mulVec,
     Matrix.vecMul_mulVec, Matrix.vecMul_transpose]
 
-/-- The Bellman dynamic programming recursion for the discrete LQR.
+/-- The one-step (Bellman-form) identity for the DARE gain.
 Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6 (printed p. 24). -/
 theorem lqr_bellman (hD : dare A B Q R P) (x : Fin n → ℝ) :
     quadForm P x = quadForm Q x + quadForm R (lqrOptimalGain A B R P *ᵥ x) +
