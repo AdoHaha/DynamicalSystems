@@ -53,6 +53,8 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
 * `mpcStep`: convenient one-step closed-loop map `mpcClosedLoop prob x hN h`.
 * `mpc_valueFunction_decrease`: value-function descent `V(x⁺) ≤ V(x) − ℓ(x, κ(x))`.
 * `mpc_valueFunction_decrease_of_nonneg`: descent under non-negative stage and terminal costs.
+* `mpc_trajectory_valueFunction_decrease`: one-step descent along a closed-loop trajectory,
+  `V(x_{n+1}) ≤ V(x_n) − ℓ(x_n, u_n(0))`.
 * `costSet_bddBelow_of_nonneg`: non-negative costs guarantee `BddBelow (costSet prob y)`.
 * `valueFunction_nonneg`: non-negative costs guarantee `0 ≤ valueFunction prob y`.
 * `mpc_stageCost_tendsto_zero`: convergence of stage cost along closed-loop trajectories.
@@ -64,7 +66,9 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
 * `suboptimal_descent`: the ε-suboptimal perturbed descent obtained by combining
   `suboptimal_cost_bound` with the ε-suboptimality of `u`.
 * `mpc_geometric_decay`: the one-step geometric value-function contraction
-  `V(x⁺) ≤ (1 − γ) V(x)` under the domination `γ V(y) ≤ ℓ(y, κ_N(y))`.
+  `V(x⁺) ≤ (1 − γ) V(x)` under the domination `γ V(x) ≤ ℓ(x, κ_N(x))`.
+* `mpc_geometric_decay_of_nonneg`: the same contraction under non-negative stage and terminal
+  costs.
 * `mpc_geometric_iterate`: the n-step geometric contraction
   `V(x_n) ≤ (1 − γ)^n V(x_0)`, the scalar value-function analogue of
   `quadForm_pow_mulVec_le` (Rawlings–Mayne–Diehl §2.4.3, printed p. 120).
@@ -360,7 +364,11 @@ trajectory `x_{n+1} = f(x_n, u_n(0))`, the value function contracts geometricall
 `V(x_n) ≤ (1 − γ)^n V(x_0)`.
 
 This is the region-of-attraction formulation (stability on the feasible set `X_N`),
-matching Rawlings' `X_N`-feasible-region statement. This is the scalar (value-function) analogue of
+matching Rawlings' `X_N`-feasible-region statement.  The trajectory applies the first control
+`(u n) ⟨0, hN⟩` of the optimal input `u n`; for the canonical selection
+`u n = Classical.choose (hopt n)` this is exactly the receding-horizon law
+`mpcLaw prob (x n) hN (hopt n)`, so the per-step control `(u n) 0` is the same as `mpcLaw`.
+This is the scalar (value-function) analogue of
 `quadForm_pow_mulVec_le` in `DynamicalSystems.DiscreteTime.MatrixLyapunov`; the quadratic
 instantiation `V = quadForm P` via the LQR terminal cost should bridge to
 `quadForm_pow_mulVec_le`/`exists_factor` directly rather than re-derive the contraction.
