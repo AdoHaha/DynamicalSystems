@@ -64,6 +64,11 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
   arbitrary admissible (not necessarily optimal) `u` (Rawlings–Mayne–Diehl §2.7, Algorithm 2.43).
 * `suboptimal_descent`: the ε-suboptimal perturbed descent obtained by combining
   `suboptimal_cost_bound` with the ε-suboptimality of `u`.
+* `mpc_geometric_decay`: the one-step geometric value-function contraction
+  `V(x⁺) ≤ (1 − γ) V(x)` under the domination `γ V(y) ≤ ℓ(y, κ_N(y))`.
+* `mpc_geometric_iterate`: the n-step geometric contraction
+  `V(x_n) ≤ (1 − γ)^n V(x_0)`, the scalar value-function analogue of
+  `quadForm_pow_mulVec_le` (Rawlings–Mayne–Diehl §2.4.3, printed p. 120).
 
 ## Corrections relative to the task statement
 
@@ -87,6 +92,13 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
    `sInf` convention on unbounded-below cost sets makes the statement false.  In
    `suboptimal_descent` the gap parameter `ε` is an explicit real argument, and the intended
    non-negativity hypothesis `0 ≤ ε` is dropped as unused (the estimate is linear in `hopt`).
+4. **Geometric-rate hypotheses (`hγ0`, `hγ1`):**
+   The task's listed signature of `mpc_geometric_decay` carries both `0 ≤ γ` and `γ ≤ 1`.  Neither
+   is needed for the one-step contraction: `γ V(y) ≤ ℓ(y, κ_N(y))` alone gives
+   `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x)) ≤ V(x) − γ V(x) = (1 − γ) V(x)`, and the estimate is linear in
+   `γ`.  Both hypotheses are therefore dropped from `mpc_geometric_decay` (recorded here rather
+   than silently changed).  The iterate theorem `mpc_geometric_iterate` keeps `γ ≤ 1`, which is
+   exactly what supplies `0 ≤ 1 − γ` for its induction step.
 -/
 
 open scoped Topology
@@ -355,6 +367,77 @@ theorem mpc_stageCost_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
       costSet_bddBelow_of_nonneg prob _ hℓ hVf
     exact mpc_valueFunction_decrease prob (step^[t] x) hN (hopt (step^[t] x)) hCLF hsub hbd
   exact tendsto_zero_of_succ_le_sub hv hw hdec
+
+/-- **One-step geometric value-function contraction** (Rawlings–Mayne–Diehl 2019, 2nd ed.,
+Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163).  If the stage cost dominates
+`γ` times the value function along the receding-horizon law, `γ V(y) ≤ ℓ(y, κ_N(y))`, then the
+closed-loop value function contracts by the factor `1 − γ`, `V(x⁺) ≤ (1 − γ) V(x)`.
+
+The proof is the descent `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))` of `mpc_valueFunction_decrease` combined
+with `ℓ(x, κ_N(x)) ≥ γ V(x)`.  The conditional-completeness hypothesis
+`BddBelow (costSet prob (x⁺))` is derived from the optimality hypothesis `hopt` at `x⁺` (an
+existing minimizer bounds the cost set below), so no separate non-negativity cost hypothesis is
+needed.
+
+## Correction (recorded for the campaign)
+
+The book states the rate for `γ ∈ [0, 1]`.  Neither `0 ≤ γ` nor `γ ≤ 1` is used by this one-step
+estimate: the implication is linear in `γ` and holds for every real `γ`.  Both hypotheses are
+therefore omitted here (keeping hypotheses tight); the iterate theorem `mpc_geometric_iterate`
+retains `γ ≤ 1`, which is genuinely needed for `0 ≤ 1 − γ`.
+
+This is the scalar value-function analogue of `quadForm_pow_mulVec_le`
+(`DynamicalSystems.DiscreteTime.MatrixLyapunov`); the quadratic (LQR) instantiation over
+`quadForm`/`exists_factor` is a separate bridge and is not re-derived here. -/
+theorem mpc_geometric_decay (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < prob.horizon)
+    (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    {γ : ℝ}
+    (hdom : ∀ y, γ * valueFunction prob y ≤ prob.stageCost y (mpcLaw prob y hN (hopt y))) :
+    valueFunction prob (mpcStep prob x hN (hopt x)) ≤ (1 - γ) * valueFunction prob x := by
+  have hdec := mpc_valueFunction_decrease prob x hN (hopt x) hCLF hsub (by
+    obtain ⟨u, hu⟩ := hopt (mpcStep prob x hN (hopt x))
+    exact ⟨finiteHorizonTotalCost prob (mpcStep prob x hN (hopt x)) u, fun r hr ↦ by
+      obtain ⟨v, hv, rfl⟩ := hr
+      exact hu.2 v hv⟩)
+  linarith [hdom x]
+
+/-- **n-step geometric value-function contraction** (Rawlings–Mayne–Diehl 2019, 2nd ed.,
+Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163): iterating the one-step
+contraction `mpc_geometric_decay` along `x_{n+1} = mpcStep prob x_n hN (hopt x_n)` gives
+`V(x_n) ≤ (1 − γ)^n V(x_0)`.
+
+This is the scalar (value-function) analogue of `quadForm_pow_mulVec_le` in
+`DynamicalSystems.DiscreteTime.MatrixLyapunov`; the quadratic instantiation `V = quadForm P` via
+the LQR terminal cost should bridge to `quadForm_pow_mulVec_le`/`exists_factor` directly rather
+than re-derive the contraction.
+
+The only rate hypothesis needed is `γ ≤ 1`, which yields `0 ≤ 1 − γ` for the induction step. -/
+theorem mpc_geometric_iterate (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < prob.horizon)
+    (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    {γ : ℝ} (hγ1 : γ ≤ 1)
+    (hdom : ∀ y, γ * valueFunction prob y ≤ prob.stageCost y (mpcLaw prob y hN (hopt y)))
+    (n : ℕ) :
+    valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) ≤
+      (1 - γ) ^ n * valueFunction prob x := by
+  have hc : 0 ≤ 1 - γ := by linarith
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      calc
+        valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n.succ] x)
+            = valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))
+                ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)) :=
+              by rw [Function.iterate_succ_apply']
+        _ ≤ (1 - γ) * valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) :=
+              mpc_geometric_decay prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)
+                hN hopt hCLF hsub hdom
+        _ ≤ (1 - γ) * ((1 - γ) ^ n * valueFunction prob x) :=
+              mul_le_mul_of_nonneg_left ih hc
+        _ = (1 - γ) ^ n.succ * valueFunction prob x := by rw [pow_succ']; ring
 
 variable [NormedAddCommGroup X] [NormedAddCommGroup U]
 
