@@ -52,6 +52,7 @@ import DynamicalSystems.NonSmooth.ChainRule
 import DynamicalSystems.NonSmooth.Lyapunov
 import DynamicalSystems.OptimalControl.FiniteHorizon
 import DynamicalSystems.OptimalControl.ValueFunction
+import DynamicalSystems.OptimalControl.LQR
 import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
