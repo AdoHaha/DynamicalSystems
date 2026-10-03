@@ -39,6 +39,11 @@ Theory, Computation, and Design*, 2nd ed., 2019, Chapter 1, §1.3
 * `finiteHorizonRollout_zero`: the trajectory starts at `x₀`.
 * `finiteHorizonRollout_succ`: the one-step recursion defining the trajectory.
 * `finiteHorizonTotalCost_zero`: with horizon `0` the total cost is `Vf x₀`.
+* `finiteHorizonRollout_snoc`, `finiteHorizonRollout_snoc_last`,
+  `finiteHorizonAdmissible_snoc`: rollout and admissibility bookkeeping for
+  extending an input sequence by one terminal control.
+* `totalCost_snoc`, `totalCost_succ_split`: finite-horizon cost splitting and
+  shift identities.
 -/
 
 @[expose] public section
@@ -128,3 +133,112 @@ theorem finiteHorizonTotalCost_zero (prob : FiniteHorizonProblem X U) (x₀ : X)
   obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
   subst h
   simp [finiteHorizonTotalCost, finiteHorizonRollout]
+
+/-- Extending an input sequence by one terminal stabilizing control shifts the
+rollout of the successor state: for `v = Fin.snoc (Fin.tail u) w` started at
+`f x₀ (u 0)`, the state at index `j.castSucc` equals the state of `u` started at
+`x₀` at index `j.succ`. -/
+theorem finiteHorizonRollout_snoc {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
+    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X)
+    (u : Fin (M + 1) → U) (w : U) (j : Fin (M + 1)) :
+    finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩
+        (f x₀ (u 0)) (Fin.snoc (Fin.tail u) w) j.castSucc =
+      finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u j.succ := by
+  induction j using Fin.induction with
+  | zero =>
+      rw [Fin.castSucc_zero, finiteHorizonRollout_zero, finiteHorizonRollout_succ,
+          Fin.castSucc_zero, finiteHorizonRollout_zero]
+  | succ k ih =>
+      rw [Fin.castSucc_succ, finiteHorizonRollout_succ]
+      conv_rhs => rw [finiteHorizonRollout_succ]
+      rw [Fin.castSucc_succ k]
+      rw [ih, Fin.succ_castSucc, Fin.snoc_castSucc]
+      rfl
+
+/-- The terminal step of an extended rollout: extending the input sequence `u` of
+horizon `M + 1` by a terminal control `w` and restarting the rollout at the
+successor `f x₀ (u 0)` reaches `f x w` at the final index, where `x` is the
+terminal state of the original rollout.  This combines the one-step recursion with
+`finiteHorizonRollout_snoc`. -/
+theorem finiteHorizonRollout_snoc_last {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
+    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X) (u : Fin (M + 1) → U) (w : U) :
+    finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x₀ (u 0))
+        (Fin.snoc (Fin.tail u) w) (Fin.last (M + 1)) =
+      f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u (Fin.last (M + 1))) w := by
+  rw [← Fin.succ_last M, finiteHorizonRollout_succ]
+  rw [finiteHorizonRollout_snoc x₀ u w (Fin.last M), Fin.succ_last, Fin.snoc_last]
+
+/-- Admissibility of an input sequence extended by one terminal control: if `u` is
+admissible for the horizon-`M + 1` problem, its terminal state lies in the state
+set, and the appended control `w` is admissible with `f`-successor in the terminal
+set, then `Fin.snoc (Fin.tail u) w` started at the successor `f x₀ (u 0)` is
+admissible for the same horizon-`M + 1` problem.  The first `M` steps reuse the
+trajectory of `u` shifted by one index (`finiteHorizonRollout_snoc`) and the last
+step is the appended terminal control. -/
+theorem finiteHorizonAdmissible_snoc {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
+    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X) (u : Fin (M + 1) → U) (w : U)
+    (hadm : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u)
+    (htermXs : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u
+        (Fin.last (M + 1)) ∈ Xs)
+    (hwU : w ∈ Us)
+    (hwXf : f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u
+        (Fin.last (M + 1))) w ∈ Xf) :
+    FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x₀ (u 0))
+      (Fin.snoc (Fin.tail u) w) := by
+  unfold FiniteHorizonAdmissible
+  constructor
+  · intro k
+    constructor
+    · rw [finiteHorizonRollout_snoc x₀ u w k]
+      by_cases hlast : k.succ = Fin.last (M + 1)
+      · rw [hlast]
+        exact htermXs
+      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M + 1)).mpr hlast
+        rw [← hj]
+        exact (hadm.1 j).1
+    · by_cases hklast : k = Fin.last M
+      · rw [hklast, Fin.snoc_last]
+        exact hwU
+      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M)).mpr hklast
+        rw [← hj, Fin.snoc_castSucc]
+        exact (hadm.1 j.succ).2
+  · rw [← Fin.succ_last M, finiteHorizonRollout_succ]
+    rw [finiteHorizonRollout_snoc x₀ u w (Fin.last M), Fin.succ_last, Fin.snoc_last]
+    exact hwXf
+
+/-- Expanding the total cost of an extended input sequence `Fin.snoc (Fin.tail u) w`: the running
+sum shifts by one index along the original rollout, the last stage cost evaluates at the terminal
+state `x_N` with input `w`, and the terminal cost evaluates at `f x_N w`. -/
+theorem totalCost_snoc (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
+    (M : ℕ) (Xs : Set X) (Us : Set U) (Xf : Set X)
+    (x : X) (u : Fin (M + 1) → U) (w : U) :
+    finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) (Fin.snoc (Fin.tail u) w) =
+      (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u j.succ.castSucc)
+        (u j.succ)) +
+        ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) w +
+        Vf (f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) w) := by
+  unfold finiteHorizonTotalCost
+  rw [Fin.sum_univ_castSucc]
+  rw [finiteHorizonRollout_snoc_last]
+  congr 1
+  congr 1
+  · refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [finiteHorizonRollout_snoc, Fin.snoc_castSucc, Fin.tail]
+    rw [Fin.castSucc_succ]
+  · rw [finiteHorizonRollout_snoc, Fin.snoc_last, Fin.succ_last]
+
+/-- Splitting off the first stage cost from the finite-horizon total cost of sequence `u`, as the
+horizon-`M + 1` restatement of `finiteHorizonTotalCost_tail` combined with
+`finiteHorizonRollout_tail`. -/
+theorem totalCost_succ_split (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
+    (M : ℕ) (Xs : Set X) (Us : Set U) (Xf : Set X)
+    (x : X) (u : Fin (M + 1) → U) :
+    finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u =
+      ℓ x (u 0) +
+        (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u j.succ.castSucc)
+          (u j.succ)) +
+        Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) := by
+  unfold finiteHorizonTotalCost
+  rw [Fin.sum_univ_succ]
+  rw [Fin.castSucc_zero, finiteHorizonRollout_zero]

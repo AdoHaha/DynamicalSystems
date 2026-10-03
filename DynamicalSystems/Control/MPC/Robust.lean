@@ -5,6 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.DiscreteTime.DifferenceInclusion
 public import DynamicalSystems.DiscreteTime.UltimateBoundedness
 public import Mathlib.Analysis.Normed.Group.Basic
 
@@ -67,13 +68,14 @@ vocabulary `additiveInclusion`, `mem_additiveInclusion_iff` and
 `robustlyAdmissible_additive_iff` only ever adds a disturbance to `f x u`, so it is
 stated over an arbitrary `[Add X]` rather than over a normed group.
 
-## Main definitions
+## Difference-inclusion vocabulary
 
-* `DifferenceInclusion`: the uncertain dynamics `x⁺ ∈ F x u` of §3.1.5
-  (printed p. 203 / PDF p. 251).
-* `RobustlyAdmissible`: a state/control trajectory respects the state and input
-  constraints and every successor lies in the difference inclusion.
-* `additiveInclusion`: the additive uncertainty model `F x u = {f x u + w | w ∈ W}`.
+`DifferenceInclusion` (the uncertain dynamics `x⁺ ∈ F x u` of §3.1.5, printed
+p. 203 / PDF p. 251) and `additiveInclusion` (the additive uncertainty model
+`F x u = {f x u + w | w ∈ W}`) are defined in
+`DynamicalSystems.DiscreteTime.DifferenceInclusion` and imported here.  The
+trajectory-level predicate `RobustlyAdmissible` and its additive unfolding
+`robustlyAdmissible_additive_iff` are defined below on top of that vocabulary.
 
 ## Main results
 
@@ -97,14 +99,6 @@ open scoped Topology
 
 variable {X U : Type*}
 
-/-- The uncertain dynamics as a set-valued map `F : X → U → Set X`, writing
-`x⁺ ∈ F x u` for the difference inclusion of Rawlings–Mayne–Diehl 2019, 2nd ed.,
-§3.1.5 (printed p. 203 / PDF p. 251).  The set `F x u` collects *every* admissible
-successor of the pair `(x, u)`; a deterministic plant `x⁺ = f x u` is the special
-case `F x u = {f x u}`, and the additive uncertainty model of §3.2 (printed
-p. 207 / PDF p. 255) is `F x u = {f x u + w | w ∈ W}` (see `additiveInclusion`). -/
-def DifferenceInclusion (X U : Type*) : Type _ := X → U → Set X
-
 /-- Robust admissibility of a state/control trajectory `(x, u)` for the difference
 inclusion `F`: at every time `k` the state `x k` lies in the state constraint set
 `Xs`, the control `u k` lies in the input constraint set `Us`, and the successor
@@ -121,19 +115,6 @@ and input constraints of the trajectory. -/
 def RobustlyAdmissible (F : DifferenceInclusion X U) (Xs : Set X) (Us : Set U)
     (x : ℕ → X) (u : ℕ → U) : Prop :=
   (∀ k, x k ∈ Xs) ∧ (∀ k, u k ∈ Us) ∧ (∀ k, x (k + 1) ∈ F (x k) (u k))
-
-/-- The additive uncertainty model of Rawlings–Mayne–Diehl 2019, 2nd ed., §3.1.5
-(printed p. 203 / PDF p. 251): given the nominal dynamics `f` and a disturbance set
-`W`, the successor set is `F x u = {f x u + w | w ∈ W}`, i.e.
-`additiveInclusion f W x u`.  Only an addition on the state space is required. -/
-def additiveInclusion [Add X] (f : X → U → X) (W : Set X) : DifferenceInclusion X U :=
-  fun x u ↦ (fun w ↦ f x u + w) '' W
-
-/-- Membership in the additive inclusion unwinds to a disturbance witness: `y` is an
-admissible successor of `(x, u)` under `additiveInclusion f W` exactly when
-`y = f x u + w` for some `w ∈ W`. -/
-theorem mem_additiveInclusion_iff [Add X] {f : X → U → X} {W : Set X} {x : X} {u : U}
-    {y : X} : y ∈ additiveInclusion f W x u ↔ ∃ w ∈ W, f x u + w = y := Iff.rfl
 
 /-- Unfolding `RobustlyAdmissible` for the additive uncertainty model: a trajectory
 is robustly admissible for `additiveInclusion f W` exactly when it respects the
