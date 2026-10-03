@@ -262,46 +262,63 @@ theorem mpc_valueFunction_decrease_of_nonneg (prob : FiniteHorizonProblem X U) (
       valueFunction prob x - prob.stageCost x (mpcLaw prob x hN h) :=
   mpc_valueFunction_decrease prob x hN h hCLF hsub (costSet_bddBelow_of_nonneg prob _ hℓ hVf)
 
+/-- One-step value-function descent along an optimal closed-loop trajectory:
+`V(x_{n+1}) ≤ V(x_n) − ℓ(x_n, u_n(0))`.
+
+This is the region-of-attraction formulation (stability on the feasible set `X_N`),
+matching Rawlings' `X_N`-feasible-region statement. -/
+theorem mpc_trajectory_valueFunction_decrease (prob : FiniteHorizonProblem X U)
+    (hN : 0 < prob.horizon) (x : ℕ → X) (u : ℕ → Fin prob.horizon → U)
+    (hopt : ∀ n, IsOptimalInput prob (x n) (u n))
+    (hstep : ∀ n, x (n + 1) = prob.f (x n) ((u n) ⟨0, hN⟩))
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet) (n : ℕ) :
+    valueFunction prob (x (n + 1)) ≤
+      valueFunction prob (x n) - prob.stageCost (x n) ((u n) ⟨0, hN⟩) := by
+  have hbd : BddBelow (costSet prob (x (n + 1))) :=
+    ⟨finiteHorizonTotalCost prob (x (n + 1)) (u (n + 1)), fun r hr ↦ by
+      obtain ⟨v, hv, rfl⟩ := hr
+      exact (hopt (n + 1)).2 v hv⟩
+  rw [hstep n]
+  have hbound := suboptimal_cost_bound prob (x n) (u n) hN (hopt n).1 hCLF hsub (by
+    rw [← hstep n]
+    exact hbd)
+  have hVeq : valueFunction prob (x n) = finiteHorizonTotalCost prob (x n) (u n) :=
+    valueFunction_eq prob (x n) (u n) (hopt n)
+  rw [hVeq]
+  exact hbound
+
 /-- The stage cost along the closed-loop MPC trajectory converges to zero
 (Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, printed p. 116).
 
-This is the direct discrete dissipation consequence of the telescoping decrease
-`V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))` via `tendsto_zero_of_succ_le_sub`. -/
-theorem mpc_stageCost_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
-    (hN : 0 < prob.horizon) (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+This is the region-of-attraction formulation (stability on the feasible set `X_N`),
+matching Rawlings' `X_N`-feasible-region statement. This is the direct discrete dissipation
+consequence of the telescoping decrease `V(x_{n+1}) ≤ V(x_n) − ℓ(x_n, u_n(0))`
+via `tendsto_zero_of_succ_le_sub`. -/
+theorem mpc_stageCost_tendsto_zero (prob : FiniteHorizonProblem X U) (hN : 0 < prob.horizon)
+    (x : ℕ → X) (u : ℕ → Fin prob.horizon → U)
+    (hopt : ∀ n, IsOptimalInput prob (x n) (u n))
+    (hstep : ∀ n, x (n + 1) = prob.f (x n) ((u n) ⟨0, hN⟩))
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
     (hVf : ∀ x ∈ prob.terminalSet, 0 ≤ prob.terminalCost x) :
-    Filter.Tendsto (fun n ↦ prob.stageCost ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)
-      (mpcLaw prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) hN (hopt _)))
-      Filter.atTop (𝓝 0) := by
-  let step : X → X := fun y ↦ mpcStep prob y hN (hopt y)
-  let v : ℕ → ℝ := fun n ↦ valueFunction prob (step^[n] x)
-  let w : ℕ → ℝ := fun n ↦
-    prob.stageCost (step^[n] x) (mpcLaw prob (step^[n] x) hN (hopt (step^[n] x)))
-  have hv : ∀ t, 0 ≤ v t := fun t ↦ valueFunction_nonneg prob (step^[t] x) hℓ hVf
+    Filter.Tendsto (fun n ↦ prob.stageCost (x n) ((u n) ⟨0, hN⟩)) Filter.atTop (𝓝 0) := by
+  let v : ℕ → ℝ := fun n ↦ valueFunction prob (x n)
+  let w : ℕ → ℝ := fun n ↦ prob.stageCost (x n) ((u n) ⟨0, hN⟩)
+  have hv : ∀ t, 0 ≤ v t := fun t ↦ valueFunction_nonneg prob (x t) hℓ hVf
   have hw : ∀ t, 0 ≤ w t := fun t ↦ hℓ _ _
-  have hdec : ∀ t, v (t + 1) ≤ v t - w t := by
-    intro t
-    dsimp only [v, w]
-    rw [Function.iterate_succ_apply']
-    dsimp only [step]
-    have hbd : BddBelow (costSet prob (mpcStep prob (step^[t] x) hN (hopt (step^[t] x)))) :=
-      costSet_bddBelow_of_nonneg prob _ hℓ hVf
-    exact mpc_valueFunction_decrease prob (step^[t] x) hN (hopt (step^[t] x)) hCLF hsub hbd
+  have hdec : ∀ t, v (t + 1) ≤ v t - w t := fun t ↦
+    mpc_trajectory_valueFunction_decrease prob hN x u hopt hstep hCLF hsub t
   exact tendsto_zero_of_succ_le_sub hv hw hdec
 
 /-- **One-step geometric value-function contraction** (Rawlings–Mayne–Diehl 2019, 2nd ed.,
 Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163).  If the stage cost dominates
-`γ` times the value function along the receding-horizon law, `γ V(y) ≤ ℓ(y, κ_N(y))`, then the
+`γ` times the value function along the receding-horizon law, `γ V(x) ≤ ℓ(x, κ_N(x))`, then the
 closed-loop value function contracts by the factor `1 − γ`, `V(x⁺) ≤ (1 − γ) V(x)`.
 
 The proof is the descent `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))` of `mpc_valueFunction_decrease` combined
-with `ℓ(x, κ_N(x)) ≥ γ V(x)`.  The conditional-completeness hypothesis
-`BddBelow (costSet prob (x⁺))` is derived from the optimality hypothesis `hopt` at `x⁺` (an
-existing minimizer bounds the cost set below), so no separate non-negativity cost hypothesis is
-needed.
+with `ℓ(x, κ_N(x)) ≥ γ V(x)`.
 
 ## Correction (recorded for the campaign)
 
@@ -314,54 +331,64 @@ This is the scalar value-function analogue of `quadForm_pow_mulVec_le`
 (`DynamicalSystems.DiscreteTime.MatrixLyapunov`); the quadratic (LQR) instantiation over
 `quadForm`/`exists_factor` is a separate bridge and is not re-derived here. -/
 theorem mpc_geometric_decay (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < prob.horizon)
-    (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+    (hopt : ∃ u, IsOptimalInput prob x u)
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
+    (hbd : BddBelow (costSet prob (mpcStep prob x hN hopt)))
     {γ : ℝ}
-    (hdom : γ * valueFunction prob x ≤ prob.stageCost x (mpcLaw prob x hN (hopt x))) :
-    valueFunction prob (mpcStep prob x hN (hopt x)) ≤ (1 - γ) * valueFunction prob x := by
-  have hdec := mpc_valueFunction_decrease prob x hN (hopt x) hCLF hsub (by
-    obtain ⟨u, hu⟩ := hopt (mpcStep prob x hN (hopt x))
-    exact ⟨finiteHorizonTotalCost prob (mpcStep prob x hN (hopt x)) u, fun r hr ↦ by
-      obtain ⟨v, hv, rfl⟩ := hr
-      exact hu.2 v hv⟩)
+    (hdom : γ * valueFunction prob x ≤ prob.stageCost x (mpcLaw prob x hN hopt)) :
+    valueFunction prob (mpcStep prob x hN hopt) ≤ (1 - γ) * valueFunction prob x := by
+  have hdec := mpc_valueFunction_decrease prob x hN hopt hCLF hsub hbd
   linarith [hdom]
 
+/-- One-step geometric value-function contraction under non-negative stage and terminal costs,
+discharging the lower-boundedness condition automatically. -/
+theorem mpc_geometric_decay_of_nonneg (prob : FiniteHorizonProblem X U) (x : X)
+    (hN : 0 < prob.horizon) (hopt : ∃ u, IsOptimalInput prob x u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
+    (hVf : ∀ x ∈ prob.terminalSet, 0 ≤ prob.terminalCost x)
+    {γ : ℝ}
+    (hdom : γ * valueFunction prob x ≤ prob.stageCost x (mpcLaw prob x hN hopt)) :
+    valueFunction prob (mpcStep prob x hN hopt) ≤ (1 - γ) * valueFunction prob x :=
+  mpc_geometric_decay prob x hN hopt hCLF hsub (costSet_bddBelow_of_nonneg prob _ hℓ hVf) hdom
+
 /-- **n-step geometric value-function contraction** (Rawlings–Mayne–Diehl 2019, 2nd ed.,
-Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163): iterating the one-step
-contraction `mpc_geometric_decay` along `x_{n+1} = mpcStep prob x_n hN (hopt x_n)` gives
+Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163): along an optimal closed-loop
+trajectory `x_{n+1} = f(x_n, u_n(0))`, the value function contracts geometrically:
 `V(x_n) ≤ (1 − γ)^n V(x_0)`.
 
-This is the scalar (value-function) analogue of `quadForm_pow_mulVec_le` in
-`DynamicalSystems.DiscreteTime.MatrixLyapunov`; the quadratic instantiation `V = quadForm P` via
-the LQR terminal cost should bridge to `quadForm_pow_mulVec_le`/`exists_factor` directly rather
-than re-derive the contraction.
+This is the region-of-attraction formulation (stability on the feasible set `X_N`),
+matching Rawlings' `X_N`-feasible-region statement. This is the scalar (value-function) analogue of
+`quadForm_pow_mulVec_le` in `DynamicalSystems.DiscreteTime.MatrixLyapunov`; the quadratic
+instantiation `V = quadForm P` via the LQR terminal cost should bridge to
+`quadForm_pow_mulVec_le`/`exists_factor` directly rather than re-derive the contraction.
 
 The only rate hypothesis needed is `γ ≤ 1`, which yields `0 ≤ 1 − γ` for the induction step. -/
-theorem mpc_geometric_iterate (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < prob.horizon)
-    (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+theorem mpc_geometric_iterate (prob : FiniteHorizonProblem X U) (hN : 0 < prob.horizon)
+    (x : ℕ → X) (u : ℕ → Fin prob.horizon → U)
+    (hopt : ∀ n, IsOptimalInput prob (x n) (u n))
+    (hstep : ∀ n, x (n + 1) = prob.f (x n) ((u n) ⟨0, hN⟩))
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     {γ : ℝ} (hγ1 : γ ≤ 1)
-    (hdom : ∀ y, γ * valueFunction prob y ≤ prob.stageCost y (mpcLaw prob y hN (hopt y)))
+    (hdom : ∀ n, γ * valueFunction prob (x n) ≤ prob.stageCost (x n) ((u n) ⟨0, hN⟩))
     (n : ℕ) :
-    valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) ≤
-      (1 - γ) ^ n * valueFunction prob x := by
+    valueFunction prob (x n) ≤ (1 - γ) ^ n * valueFunction prob (x 0) := by
   have hc : 0 ≤ 1 - γ := by linarith
   induction n with
   | zero => simp
   | succ n ih =>
+      have hdec := mpc_trajectory_valueFunction_decrease prob hN x u hopt hstep hCLF hsub n
+      have hstep_decay : valueFunction prob (x (n + 1)) ≤ (1 - γ) * valueFunction prob (x n) := by
+        linarith [hdec, hdom n]
       calc
-        valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n.succ] x)
-            = valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))
-                ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)) :=
-              by rw [Function.iterate_succ_apply']
-        _ ≤ (1 - γ) * valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) :=
-              mpc_geometric_decay prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)
-                hN hopt hCLF hsub (hdom _)
-        _ ≤ (1 - γ) * ((1 - γ) ^ n * valueFunction prob x) :=
+        valueFunction prob (x (n + 1))
+            ≤ (1 - γ) * valueFunction prob (x n) := hstep_decay
+        _ ≤ (1 - γ) * ((1 - γ) ^ n * valueFunction prob (x 0)) :=
               mul_le_mul_of_nonneg_left ih hc
-        _ = (1 - γ) ^ n.succ * valueFunction prob x := by rw [pow_succ']; ring
+        _ = (1 - γ) ^ n.succ * valueFunction prob (x 0) := by rw [pow_succ']; ring
 
 variable [NormedAddCommGroup X] [NormedAddCommGroup U]
 
@@ -388,25 +415,29 @@ private theorem tendsto_zero_of_classK {s w : ℕ → ℝ} (hs : ∀ n, 0 ≤ s 
   exact hsn
 
 omit [NormedAddCommGroup U] in
-/-- Convergence to the origin (attractivity) of the MPC closed-loop system
+/-- Convergence to the origin (attractivity) of the MPC closed-loop trajectory
 (Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19, printed pp. 119–120):
 under coercive stage cost `α ‖y‖ ≤ ℓ y u` with `α 0 = 0` and `StrictMono α`, the closed-loop state
-converges in norm to the origin, `Tendsto (fun n ↦ ‖x_n‖) atTop (𝓝 0)`.
+trajectory converges in norm to the origin, `Tendsto (fun n ↦ ‖x n‖) atTop (𝓝 0)`.
 
-This proves convergence to the origin (attractivity), not full asymptotic stability; full
+This is the region-of-attraction formulation (stability on the feasible set `X_N`),
+matching Rawlings' `X_N`-feasible-region statement. This proves convergence of the trajectory
+to the origin in norm (attractivity), not full asymptotic stability; full
 asymptotic stability (equilibrium plus Lyapunov ε–δ stability via `isStableOn_discreteFlow`) is a
 separate step not stated here. -/
-theorem mpc_converges_to_origin (prob : FiniteHorizonProblem X U) (x : X)
-    (hN : 0 < prob.horizon) (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+theorem mpc_converges_to_origin (prob : FiniteHorizonProblem X U) (hN : 0 < prob.horizon)
+    (x : ℕ → X) (u : ℕ → Fin prob.horizon → U)
+    (hopt : ∀ n, IsOptimalInput prob (x n) (u n))
+    (hstep : ∀ n, x (n + 1) = prob.f (x n) ((u n) ⟨0, hN⟩))
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
     (hVf : ∀ x ∈ prob.terminalSet, 0 ≤ prob.terminalCost x)
     (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧
       ∀ y u, α ‖y‖ ≤ prob.stageCost y u) :
-    Filter.Tendsto (fun n ↦ ‖(fun y ↦ mpcStep prob y hN (hopt y))^[n] x‖) Filter.atTop (𝓝 0) := by
+    Filter.Tendsto (fun n ↦ ‖x n‖) Filter.atTop (𝓝 0) := by
   obtain ⟨α, hα0, hmono, hle⟩ := hcoercive
-  have hw := mpc_stageCost_tendsto_zero prob x hN hopt hCLF hsub hℓ hVf
+  have hw := mpc_stageCost_tendsto_zero prob hN x u hopt hstep hCLF hsub hℓ hVf
   refine tendsto_zero_of_classK (fun n ↦ norm_nonneg _) α hα0 hmono ?_ hw
   intro n
   exact hle _ _
@@ -415,9 +446,14 @@ omit [NormedAddCommGroup U] in
 /-- Convergence of the value function along closed-loop trajectories to zero
 (Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19(a), printed pp. 119–120),
 given weak controllability (Assumption 2.17: upper bound `V_N(y) ≤ α₂ ‖y‖` with `α₂`
-continuous at `0` and `α₂ 0 = 0`). -/
-theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
-    (hN : 0 < prob.horizon) (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
+continuous at `0` and `α₂ 0 = 0`).
+
+This is the region-of-attraction formulation (stability on the feasible set `X_N`),
+matching Rawlings' `X_N`-feasible-region statement. -/
+theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (hN : 0 < prob.horizon)
+    (x : ℕ → X) (u : ℕ → Fin prob.horizon → U)
+    (hopt : ∀ n, IsOptimalInput prob (x n) (u n))
+    (hstep : ∀ n, x (n + 1) = prob.f (x n) ((u n) ⟨0, hN⟩))
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
@@ -425,12 +461,10 @@ theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
     (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧
       ∀ y u, α ‖y‖ ≤ prob.stageCost y u)
     (hVupper : ∃ α₂ : ℝ → ℝ, α₂ 0 = 0 ∧ ContinuousAt α₂ 0 ∧ ∀ y, valueFunction prob y ≤ α₂ ‖y‖) :
-    Filter.Tendsto (fun n ↦ valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x))
-      Filter.atTop (𝓝 0) := by
+    Filter.Tendsto (fun n ↦ valueFunction prob (x n)) Filter.atTop (𝓝 0) := by
   obtain ⟨α₂, hα₂0, hcont, hVle⟩ := hVupper
-  have hx := mpc_converges_to_origin prob x hN hopt hCLF hsub hℓ hVf hcoercive
-  have hα₂ : Filter.Tendsto (fun n ↦ α₂ ‖(fun y ↦ mpcStep prob y hN (hopt y))^[n] x‖)
-      Filter.atTop (𝓝 0) := by
+  have hx := mpc_converges_to_origin prob hN x u hopt hstep hCLF hsub hℓ hVf hcoercive
+  have hα₂ : Filter.Tendsto (fun n ↦ α₂ ‖x n‖) Filter.atTop (𝓝 0) := by
     have hlim := hcont.tendsto.comp hx
     rw [hα₂0] at hlim
     exact hlim
@@ -440,10 +474,8 @@ theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
   refine ⟨k, fun n hn ↦ ?_⟩
   have hnα := hk n hn
   rw [Real.dist_0_eq_abs] at hnα ⊢
-  have hVnn : 0 ≤ valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) :=
-    valueFunction_nonneg prob _ hℓ hVf
-  have hVup := hVle ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)
+  have hVnn : 0 ≤ valueFunction prob (x n) := valueFunction_nonneg prob _ hℓ hVf
+  have hVup := hVle (x n)
   rw [abs_of_nonneg hVnn]
-  have hlt : α₂ ‖(fun y ↦ mpcStep prob y hN (hopt y))^[n] x‖ < ε :=
-    (le_abs_self _).trans_lt hnα
+  have hlt : α₂ ‖x n‖ < ε := (le_abs_self _).trans_lt hnα
   exact hVup.trans_lt hlt
