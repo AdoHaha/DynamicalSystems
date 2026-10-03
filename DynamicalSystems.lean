@@ -12,6 +12,7 @@ import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
+import DynamicalSystems.Control.Geometric.LocalControllability
 import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
 import DynamicalSystems.Control.MPC.Estimation
