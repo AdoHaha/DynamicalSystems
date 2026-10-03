@@ -62,7 +62,10 @@ The input space `U` only indexes the control and no norm on `U` is used by any
 declaration here, so the statements carry the metric structure on `X` alone (the
 declarations are elaborated with `omit [NormedAddCommGroup U]`).  This is strictly
 more general than the requested signature and keeps the hypotheses tight, avoiding
-the `unusedArguments` lint.
+the `unusedArguments` lint.  In the same spirit, the difference-inclusion
+vocabulary `additiveInclusion`, `mem_additiveInclusion_iff` and
+`robustlyAdmissible_additive_iff` only ever adds a disturbance to `f x u`, so it is
+stated over an arbitrary `[Add X]` rather than over a normed group.
 
 ## Main definitions
 
@@ -80,6 +83,10 @@ the `unusedArguments` lint.
 * `robust_ultimate_boundedness`: coercivity upgrades the decrease to
   `V (x_{n+1}) ≤ (1 − γ) * V (x_n) + L * d`, and the existing discrete ultimate
   boundedness lemma yields the eventual tube bound `(L * d) / γ + ε`.
+* `robust_ultimate_boundedness_of_admissible`: the same eventual bound for a
+  single execution of the additive difference inclusion, obtained by unwinding
+  `RobustlyAdmissible` to a disturbance witness and applying
+  `robust_ultimate_boundedness`.
 -/
 
 open Filter
@@ -103,44 +110,44 @@ inclusion `F`: at every time `k` the state `x k` lies in the state constraint se
 `Xs`, the control `u k` lies in the input constraint set `Us`, and the successor
 `x (k + 1)` lies in the successor set `F (x k) (u k)`.
 
-Because `F (x k) (u k)` is the set of *all* admissible successors of `(x k, u k)`,
-the membership `x (k + 1) ∈ F (x k) (u k)` holds for every realization of the
-uncertainty; it is the constraint-satisfaction clause of §3.1.5
-(printed p. 203 / PDF p. 251), `x⁺ ∈ F (x, μ k x)`, paired with the state and input
-constraints of the trajectory. -/
+A trajectory `x : ℕ → X` is thus a SINGLE admissible execution (realization) of
+the difference inclusion: it satisfies the constraints and each successor
+`x (k + 1) ∈ F (x k) (u k)`.  For the additive uncertainty model
+`additiveInclusion f W` this is equivalent to the existence of a disturbance
+sequence `w` with `w k ∈ W` and `x (k + 1) = f (x k) (u k) + w k` (see
+`robustlyAdmissible_additive_iff`); it is the constraint-satisfaction clause of
+§3.1.5 (printed p. 203 / PDF p. 251), `x⁺ ∈ F (x, μ k x)`, paired with the state
+and input constraints of the trajectory. -/
 def RobustlyAdmissible (F : DifferenceInclusion X U) (Xs : Set X) (Us : Set U)
     (x : ℕ → X) (u : ℕ → U) : Prop :=
   (∀ k, x k ∈ Xs) ∧ (∀ k, u k ∈ Us) ∧ (∀ k, x (k + 1) ∈ F (x k) (u k))
 
-variable [NormedAddCommGroup X] [NormedAddCommGroup U]
-
-omit [NormedAddCommGroup U] in
 /-- The additive uncertainty model of Rawlings–Mayne–Diehl 2019, 2nd ed., §3.1.5
 (printed p. 203 / PDF p. 251): given the nominal dynamics `f` and a disturbance set
 `W`, the successor set is `F x u = {f x u + w | w ∈ W}`, i.e.
-`additiveInclusion f W x u`. -/
-def additiveInclusion (f : X → U → X) (W : Set X) : DifferenceInclusion X U :=
+`additiveInclusion f W x u`.  Only an addition on the state space is required. -/
+def additiveInclusion [Add X] (f : X → U → X) (W : Set X) : DifferenceInclusion X U :=
   fun x u ↦ (fun w ↦ f x u + w) '' W
 
-omit [NormedAddCommGroup U] in
 /-- Membership in the additive inclusion unwinds to a disturbance witness: `y` is an
 admissible successor of `(x, u)` under `additiveInclusion f W` exactly when
 `y = f x u + w` for some `w ∈ W`. -/
-theorem mem_additiveInclusion_iff {f : X → U → X} {W : Set X} {x : X} {u : U} {y : X} :
-    y ∈ additiveInclusion f W x u ↔ ∃ w ∈ W, f x u + w = y := Iff.rfl
+theorem mem_additiveInclusion_iff [Add X] {f : X → U → X} {W : Set X} {x : X} {u : U}
+    {y : X} : y ∈ additiveInclusion f W x u ↔ ∃ w ∈ W, f x u + w = y := Iff.rfl
 
-omit [NormedAddCommGroup U] in
 /-- Unfolding `RobustlyAdmissible` for the additive uncertainty model: a trajectory
 is robustly admissible for `additiveInclusion f W` exactly when it respects the
 state and input constraints and every successor equals `f (x k) (u k) + w` for some
 disturbance `w ∈ W`, i.e. it is a valid realization of the additive uncertainty
 `x⁺ = f x u + w` of §3.1.5 (printed p. 203 / PDF p. 251). -/
-theorem robustlyAdmissible_additive_iff {f : X → U → X} {W : Set X} {Xs : Set X}
+theorem robustlyAdmissible_additive_iff [Add X] {f : X → U → X} {W : Set X} {Xs : Set X}
     {Us : Set U} {x : ℕ → X} {u : ℕ → U} :
     RobustlyAdmissible (additiveInclusion f W) Xs Us x u ↔
       (∀ k, x k ∈ Xs) ∧ (∀ k, u k ∈ Us) ∧
         (∀ k, ∃ w ∈ W, f (x k) (u k) + w = x (k + 1)) := by
   simp only [RobustlyAdmissible, mem_additiveInclusion_iff]
+
+variable [NormedAddCommGroup X] [NormedAddCommGroup U]
 
 omit [NormedAddCommGroup U] in
 /-- **Nominal-robust (ISS-Lyapunov) one-step decrease** (Rawlings–Mayne–Diehl 2019,
@@ -158,13 +165,12 @@ and monotonicity of `x ↦ L * x` for `L ≥ 0`.  The descent hypothesis is left
 generic; for a finite-horizon MPC problem it is supplied by
 `mpc_valueFunction_decrease` of `DynamicalSystems.Control.MPC.Stability`. -/
 theorem nominal_robust_descent (f : X → U → X) (κ : X → U) (V : X → ℝ) (ℓ : X → U → ℝ)
-    (L d : ℝ) (hL : 0 ≤ L)
-    (hdesc : ∀ x, V (f x (κ x)) ≤ V x - ℓ x (κ x))
+    (L d : ℝ) (hL : 0 ≤ L) (x : X) (w : X)
+    (hdesc : V (f x (κ x)) ≤ V x - ℓ x (κ x))
     (hlip : ∀ y w, V (y + w) ≤ V y + L * ‖w‖)
-    (x : X) (w : X) (hw : ‖w‖ ≤ d) :
+    (hw : ‖w‖ ≤ d) :
     V (f x (κ x) + w) ≤ V x - ℓ x (κ x) + L * d := by
   have h1 : L * ‖w‖ ≤ L * d := mul_le_mul_of_nonneg_left hw hL
-  have h2 : V (f x (κ x)) ≤ V x - ℓ x (κ x) := hdesc x
   calc
     V (f x (κ x) + w) ≤ V (f x (κ x)) + L * ‖w‖ := hlip _ _
     _ ≤ V x - ℓ x (κ x) + L * d := by linarith
@@ -207,10 +213,43 @@ theorem robust_ultimate_boundedness (f : X → U → X) (κ : X → U) (V : X �
   have ha1 : 1 - γ < 1 := by linarith
   have hrec : ∀ n, V (x (n + 1)) ≤ (1 - γ) * V (x n) + L * d := by
     intro n
-    have hstep := nominal_robust_descent f κ V ℓ L d hL hdesc hlip (x n) (w n) (hw n)
+    have hstep := nominal_robust_descent f κ V ℓ L d hL (x n) (w n) (hdesc (x n)) hlip (hw n)
     have hc := hcoer (x n)
     rw [hx n]
     linarith
   have hb := eventually_le_add_of_succ_le_mul_add ha0 ha1 hVnn hrec hε
   have hsub : (1 : ℝ) - (1 - γ) = γ := by ring
   rwa [hsub] at hb
+
+omit [NormedAddCommGroup U] in
+/-- **Robust ultimate boundedness from a difference-inclusion execution**
+(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 3 §3.2, printed pp. 204–208 /
+PDF pp. 253–256).  This bridges the set-valued system description of §3.1.5 to the
+trajectory-level bound of `robust_ultimate_boundedness`.  If `x` is a SINGLE
+execution of the additive difference inclusion `x⁺ ∈ additiveInclusion f {w | ‖w‖ ≤ d}`
+under the feedback `k ↦ κ (x k)` — that is, `RobustlyAdmissible (additiveInclusion …)
+Xs Us x (fun k ↦ κ (x k))` — then, under the remaining hypotheses of
+`robust_ultimate_boundedness`, the value function is ultimately bounded by
+`(L * d) / γ + ε`:
+
+`∀ᶠ n, V (x n) ≤ (L * d) / γ + ε`.
+
+The proof unwinds the inclusion to a disturbance sequence `w` with `w k ∈ W` via
+`robustlyAdmissible_additive_iff`, chooses that witness, and applies
+`robust_ultimate_boundedness` to the additive realization
+`x (k + 1) = f (x k) (κ (x k)) + w k`. -/
+theorem robust_ultimate_boundedness_of_admissible (f : X → U → X) (κ : X → U) (V : X → ℝ)
+    (ℓ : X → U → ℝ) (L d γ ε : ℝ) (Xs : Set X) (Us : Set U)
+    (hL : 0 ≤ L) (hγ0 : 0 < γ) (hγ1 : γ ≤ 1)
+    (hdesc : ∀ x, V (f x (κ x)) ≤ V x - ℓ x (κ x))
+    (hlip : ∀ y w, V (y + w) ≤ V y + L * ‖w‖)
+    (hcoer : ∀ y, γ * V y ≤ ℓ y (κ y))
+    (x : ℕ → X)
+    (hadm : RobustlyAdmissible (additiveInclusion f {w | ‖w‖ ≤ d}) Xs Us x
+      (fun k ↦ κ (x k)))
+    (hVnn : ∀ n, 0 ≤ V (x n)) (hε : 0 < ε) :
+    ∀ᶠ n in Filter.atTop, V (x n) ≤ (L * d) / γ + ε := by
+  rw [robustlyAdmissible_additive_iff] at hadm
+  choose w hw hw_eq using hadm.2.2
+  exact robust_ultimate_boundedness f κ V ℓ L d γ ε hL hγ0 hγ1 hdesc hlip hcoer x w
+    (fun n ↦ (hw_eq n).symm) hw hVnn hε
