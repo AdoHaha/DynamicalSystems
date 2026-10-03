@@ -12,6 +12,10 @@ import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
+import DynamicalSystems.Control.Geometric.LocalControllability
+import DynamicalSystems.Control.Geometric.LieBrackets
+import DynamicalSystems.Control.Geometric.Accessibility
+import DynamicalSystems.Control.Geometric.FeedbackLinearization
 import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
 import DynamicalSystems.Control.MPC.Estimation
@@ -58,6 +62,14 @@ import DynamicalSystems.Estimation.Projection
 import DynamicalSystems.NonSmooth.Clarke
 import DynamicalSystems.NonSmooth.ChainRule
 import DynamicalSystems.NonSmooth.Lyapunov
+import DynamicalSystems.OptimalControl.ContinuousTime.ContinuousOCP
+import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming
+import DynamicalSystems.OptimalControl.ContinuousTime.LinearQuadratic
+import DynamicalSystems.OptimalControl.ContinuousTime.Tracking
+import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
+import DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.InverseOptimality
+import DynamicalSystems.OptimalControl.ContinuousTime.TimeOptimal
 import DynamicalSystems.OptimalControl.FiniteHorizon
 import DynamicalSystems.OptimalControl.ValueFunction
 import DynamicalSystems.OptimalControl.LQR
@@ -132,6 +144,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
 import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
+import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
