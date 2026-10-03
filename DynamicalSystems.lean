@@ -58,6 +58,7 @@ import DynamicalSystems.Estimation.Projection
 import DynamicalSystems.NonSmooth.Clarke
 import DynamicalSystems.NonSmooth.ChainRule
 import DynamicalSystems.NonSmooth.Lyapunov
+import DynamicalSystems.OptimalControl.ContinuousTime.Problem
 import DynamicalSystems.OptimalControl.FiniteHorizon
 import DynamicalSystems.OptimalControl.ValueFunction
 import DynamicalSystems.OptimalControl.LQR
