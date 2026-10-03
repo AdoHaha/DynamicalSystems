@@ -7,6 +7,7 @@ module
 
 public import DynamicalSystems.Control.SlidingMode.LMI
 public import DynamicalSystems.DiscreteTime.Comparison
+public import DynamicalSystems.DiscreteTime.ExpectedLyapunov
 public import DynamicalSystems.DiscreteTime.MatrixLyapunov
 public import Mathlib.Probability.Distributions.Bernoulli
 
@@ -80,7 +81,11 @@ reused from `DynamicalSystems.DiscreteTime.Comparison` and
 discrete flow, and no continuous-time `IsHurwitz` hypothesis is introduced. The
 closed-loop matrices are left abstract: the book's two operating modes are the
 delivered-mode closed loop and the dropped-mode (held-measurement) dynamics, and
-the statements below apply to either.
+the statements below apply to either. The generic expected-Lyapunov operator and
+its one-step decrease lemmas are provided by
+`DynamicalSystems.DiscreteTime.ExpectedLyapunov` and re-exported here as thin
+`dsmc`-prefixed aliases so that the stochastic MPC modules need not import the
+sliding-mode package.
 
 ## Honest boundary
 
@@ -323,91 +328,41 @@ martingale or almost-sure convergence is claimed. -/
 /-- The **expected discrete-Lyapunov operator** of the Bernoulli packet-loss
 channel of A. Argha, S. W. Su, L. Li and H. T. Nguyen, *Advances in Discrete-Time
 Sliding Mode Control: Theory and Applications*, CRC Press 2018, eq. (4.2),
-printed p. 72, and eq. (4.12), printed p. 75:
-
-`dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P =
-   ᾱ • (A₁ᵀ P A₁) + (1 - ᾱ) • (A₀ᵀ P A₀)`
-
-Here `A₁` is the delivered-mode closed-loop matrix and `A₀` the dropped-mode
-(held-measurement) matrix, and `ᾱ` is the delivery probability. Its defining
-property is that the quadratic form of the operator is the one-step expected
-quadratic form, `dsmcExpectedLyapunovOperator_quadForm` below. The definition
-makes sense for every real `ᾱ`; the probabilistic interpretation of `ᾱ` as
-a probability requires `0 ≤ ᾱ ≤ 1` and is used in the Bernoulli-measure
-statement `dsmc_bernoulli_meanSquare_decrease`. -/
-noncomputable def dsmcExpectedLyapunovOperator (ᾱ : ℝ)
+printed p. 72, and eq. (4.12), printed p. 75. This is a thin re-export alias for
+the generic `expectedLyapunovOperator` of
+`DynamicalSystems.DiscreteTime.ExpectedLyapunov`. -/
+noncomputable abbrev dsmcExpectedLyapunovOperator (ᾱ : ℝ)
     (A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ) : Matrix (Fin n) (Fin n) ℝ :=
-  ᾱ • (A₁ᵀ * P * A₁) + (1 - ᾱ) • (A₀ᵀ * P * A₀)
+  expectedLyapunovOperator ᾱ A₀ A₁ P
 
-/-- **The quadratic form of the expected Lyapunov operator is the one-step
-expected quadratic form.** This is the algebraic identity that turns the matrix
-inequality hypothesis of `dsmc_meanSquare_decrease_of_bernoulli` into a statement
-about the expectation
-
-`ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x)`,
-
-using the substitution identity `quadForm_mulVec` of
-`DynamicalSystems.DiscreteTime.MatrixLyapunov`. It is the scalar content of the
-expectation computation (4.12), printed p. 75, of A. Argha, S. W. Su, L. Li and
-H. T. Nguyen, *Advances in Discrete-Time Sliding Mode Control: Theory and
-Applications*, CRC Press 2018. -/
+/-- Thin re-export alias for the generic `expectedLyapunovOperator_quadForm`. -/
 theorem dsmcExpectedLyapunovOperator_quadForm (ᾱ : ℝ)
     (A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ) (x : Fin n → ℝ) :
-    quadForm (dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P) x =
-      ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) := by
-  simp only [dsmcExpectedLyapunovOperator, quadForm_add, quadForm_smul_left, quadForm_mulVec]
+    quadForm (expectedLyapunovOperator ᾱ A₀ A₁ P) x =
+      ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) :=
+  expectedLyapunovOperator_quadForm ᾱ A₀ A₁ P x
 
-/-- **Purely algebraic form of the one-step strict decrease.** The convex combination
-of the two one-step quadratic forms is strictly dominated by `quadForm P x` whenever
-`P - dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P` is positive definite, without requiring
-positivity or bounds on `ᾱ`. -/
+/-- Thin re-export alias for the generic `meanSquare_decrease_of_lmi`. -/
 theorem dsmc_meanSquare_decrease_of_lmi (ᾱ : ℝ)
     {A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ}
-    (hLMI : (P - dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P).PosDef)
-    {x : Fin n → ℝ} (hx : x ≠ 0) :
-    ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) < quadForm P x := by
-  have h := quadForm_pos hLMI hx
-  rw [quadForm_sub, dsmcExpectedLyapunovOperator_quadForm] at h
-  linarith
-
-/-- **One-step expected mean-square decrease under Bernoulli packet loss.** If
-the expected Lyapunov operator `dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P` satisfies
-the strict matrix inequality `P - dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P ≻ 0`,
-then the one-step expected quadratic form strictly decreases on every non-zero
-state:
-
-`ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) < quadForm P x`.
-
-This is the `η = 0` strict-decrease instance of the algebraic one-step
-expected-Lyapunov condition behind the disturbance-free part of Theorem 4.1
-(eqs. (4.11)–(4.12), printed p. 75) and of the exponential mean-square definition
-of Definition 4.1, printed p. 73, of A. Argha, S. W. Su, L. Li and H. T. Nguyen,
-*Advances in Discrete-Time Sliding Mode Control: Theory and Applications*, CRC
-Press 2018. It is *not* the uniform `∆V ≤ -η‖x‖²` margin: the strict margin with
-`η > 0` requires the additional compactness step, which is not formalized here.
-The statement does not require `P` to be positive definite or `ᾱ` to lie in
-`[0, 1]`; it is a purely algebraic inequality valid for every real `ᾱ` and any
-`P`. It is derived from the library's strict discrete decrease
-`quadForm_mulVec_lt` (`DynamicalSystems.DiscreteTime.MatrixLyapunov`) via the
-expectation identity `dsmcExpectedLyapunovOperator_quadForm`: in the degenerate
-case `ᾱ = 1` the condition is exactly `(P - A₁ᵀ P A₁) ≻ 0`, i.e.
-`quadForm_mulVec_lt` with `M = A₁`. -/
-theorem dsmc_meanSquare_decrease_of_bernoulli (ᾱ : ℝ)
-    {A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ}
-    (hLMI : (P - dsmcExpectedLyapunovOperator ᾱ A₀ A₁ P).PosDef)
+    (hLMI : (P - expectedLyapunovOperator ᾱ A₀ A₁ P).PosDef)
     {x : Fin n → ℝ} (hx : x ≠ 0) :
     ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) < quadForm P x :=
-  dsmc_meanSquare_decrease_of_lmi ᾱ hLMI hx
+  meanSquare_decrease_of_lmi ᾱ hLMI hx
 
-/-- **Mean-square nonnegativity.** For any valid Bernoulli delivery probability `ᾱ ∈ [0, 1]`
-and positive semidefinite matrix `P`, the expected one-step quadratic form is nonnegative. -/
+/-- Thin re-export alias for the generic `meanSquare_decrease_of_bernoulli`. -/
+theorem dsmc_meanSquare_decrease_of_bernoulli (ᾱ : ℝ)
+    {A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ}
+    (hLMI : (P - expectedLyapunovOperator ᾱ A₀ A₁ P).PosDef)
+    {x : Fin n → ℝ} (hx : x ≠ 0) :
+    ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) < quadForm P x :=
+  meanSquare_decrease_of_bernoulli ᾱ hLMI hx
+
+/-- Thin re-export alias for the generic `meanSquare_nonneg_of_bernoulli`. -/
 theorem dsmc_meanSquare_nonneg_of_bernoulli (ᾱ : ℝ) (hᾱ0 : 0 ≤ ᾱ) (hᾱ1 : ᾱ ≤ 1)
     {A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ} (hP : P.PosSemidef) (x : Fin n → ℝ) :
-    0 ≤ ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) := by
-  have : 0 ≤ quadForm P (A₁ *ᵥ x) := quadForm_nonneg hP _
-  have : 0 ≤ quadForm P (A₀ *ᵥ x) := quadForm_nonneg hP _
-  have : 0 ≤ 1 - ᾱ := sub_nonneg.mpr hᾱ1
-  positivity
+    0 ≤ ᾱ * quadForm P (A₁ *ᵥ x) + (1 - ᾱ) * quadForm P (A₀ *ᵥ x) :=
+  meanSquare_nonneg_of_bernoulli ᾱ hᾱ0 hᾱ1 hP x
 
 /-- **Mean-square decrease for DSMC equivalent-control closed loop under Bernoulli packet loss.**
 Specialization of `dsmc_meanSquare_decrease_of_bernoulli` to the discrete sliding-mode closed loop
