@@ -15,12 +15,12 @@ public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 This file formalizes the *optimal ⇒ stabilizing* direction of Sontag, *Mathematical
 Control Theory: Deterministic Finite Dimensional Systems*, 2nd ed., 1998, Ch. 8 §8.5
 ("Nonlinear Stabilizing Optimal Controls", printed pp. 390–394, PDF pp. 402–406):
-an optimal control is stabilizing, with the value function serving as a Lyapunov
-function for the closed loop.  The results are stated at the trajectory level over an
-optimal admissible pair `(x, u)` together with the Bellman/HJB equality along the
-trajectory; no global optimal-input function `x ↦ u` is postulated.  This mirrors the
-relational style of the dynamic-programming development in
-`DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming`.
+an optimal control is stabilizing, with the value function providing the Lyapunov
+identity along the optimal trajectory.  The results are stated at the trajectory level
+over an optimal admissible pair `(x, u)` together with the Bellman equality (the
+optimality-principle identity) along the trajectory; no global optimal-input function
+`x ↦ u` is postulated.  This mirrors the relational style of the dynamic-programming
+development in `DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming`.
 
 The book's §8.5 treats the infinite-horizon problem `J∞(x, ω) = ∫₀^∞ q(ξ, ω) dt` over
 stabilizing controls.  The substrate available here is the finite-horizon problem
@@ -30,18 +30,20 @@ costs of the time-shifted tail problem `continuousTailProblem prob t` (horizon
 
 * `optimal_valueFunction_decrease`: along an optimal pair the value function decreases at
   exactly the running-cost rate, `d/dt valueFunctionFrom prob t (x t) = -L t (x t) (u t)`.
-  This is the book's Lyapunov identity `V̇(ξ(t), ω(t)) + q(ξ(t), ω(t)) = 0` (Sontag
-  (8.62), §8.5), obtained from the Bellman equality `V(t, x t) = ∫_t^T L + K(x T)` and the
-  fundamental theorem of calculus.
+  This is Sontag's equation (8.62), `V̇(ξ(t), ω(t)) + q(ξ(t), ω(t)) = 0`, equivalently the
+  identity `V̇ = -q` used in the proof of Theorem 42; it is obtained from the Bellman
+  equality `V(t, x t) = ∫_t^T L + K(x T)` and the fundamental theorem of calculus.
 * `optimal_stageCost_tendsto_zero`: if the value function is bounded below along the
   trajectory then the running cost vanishes asymptotically, `L t (x t) (u t) → 0`
-  (Sontag §8.5, Proposition 8.5.1 and Theorem 42), via the monotone-decrease ⇒
+  (the argument in the proof of Sontag Theorem 42, together with the §8.4 discussion of
+  finiteness of the infinite-time cost), via the monotone-decrease ⇒
   convergent-integral ⇒ Barbălat chain.
 * `optimal_converges_to_origin`: if in addition the running cost is positive definite in
   the state (`c ‖x t‖² ≤ L t (x t) (u t)`, `c > 0`; the book's `q(x, u) > 0` for `x ≠ 0`),
-  then the optimal trajectory converges to the origin, `‖x t‖ → 0` (Sontag §8.5,
-  Theorem 42 / Corollary 8.5.3: "`V` is a global Lyapunov function for the closed-loop
-  system").
+  then the optimal trajectory converges to the origin, `‖x t‖ → 0` (the argument in the
+  proof of Sontag Theorem 42, using the §8.4 finiteness discussion).  This is the
+  trajectory-level consequence of the Lyapunov identity `V̇ = -q`, not a claim about a
+  closed-loop vector field.
 
 ## Implementation notes and honest hypotheses
 
@@ -60,18 +62,21 @@ The finite-horizon substrate cannot literally express the book's infinite horizo
 * The asymptotic statements `optimal_stageCost_tendsto_zero` and
   `optimal_converges_to_origin` are the infinite-horizon conclusions `t → ∞`.  They take
   as an explicit hypothesis the *global* decrease
-  `∀ t ≥ 0, HasDerivAt (fun s ↦ valueFunctionFrom prob s (x s)) (-L t (x t) (u t)) t`,
-  i.e. the extension of `optimal_valueFunction_decrease` to all forward times (the
-  infinite-horizon setting of §8.5).  Uniform continuity of the running-cost signal on
-  `[0, ∞)` is the additional regularity hypothesis of the continuous-time Barbălat
-  argument, and is stated explicitly.
+  `∀ t ≥ 0, HasDerivAt (fun s ↦ valueFunctionFrom prob s (x s)) (-L t (x t) (u t)) t`.
+  This global decrease is an ADDITIONAL infinite-horizon assumption, **not** a consequence
+  of `optimal_valueFunction_decrease`, which only holds on the finite horizon
+  `(0, prob.T)`.  Uniform continuity of the running-cost signal on `[0, ∞)` is the
+  additional regularity hypothesis of the continuous-time Barbălat argument, and is
+  stated explicitly.
+* No end-to-end corollary `IsTailOptimal → ‖x t‖ → 0` is proved: the step from
+  tail-optimality to the global decrease `hdec` above is left open, so
+  `optimal_converges_to_origin` reaches `‖x t‖ → 0` only under that additional hypothesis
+  (together with the other displayed hypotheses).
 
 ## References
 
 * E. D. Sontag, *Mathematical Control Theory: Deterministic Finite Dimensional Systems*,
-  2nd ed., Springer, 1998, Ch. 8 §8.5, printed pp. 390–394.
-* L. D. Berkovitz and N. G. Medhin, *Nonlinear Optimal Control Theory*, CRC Press, 2013,
-  Ch. 4 (existence of optimal pairs), used to justify the optimality relation.
+  2nd ed., Springer, 1998, Ch. 8 §8.4–8.5, printed pp. 389–394.
 -/
 
 @[expose] public section
@@ -102,8 +107,8 @@ def IsTailOptimal (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U) : P
 optimality principle `IsTailOptimal`, the value function evaluated along the trajectory
 equals the cost-to-go `∫_t^T L + K(x T)` (Sontag, *Mathematical Control Theory*, 2nd ed.,
 1998, Ch. 8 §8.5, printed pp. 390–394).  This is the identity `V(x₀) = J∞(x₀, ω)` of
-Proposition 8.5.1 in finite-horizon form, and it is the "HJB verification equality" used to
-derive the value-function decrease.
+Proposition 8.5.1 in finite-horizon form, and it is the Bellman equality
+(optimality-principle identity) used to derive the value-function decrease.
 
 The proof combines the relational optimality supplied by `IsTailOptimal` with
 `continuousValueFunction_eq_continuousTotalCost`, then rewrites the time-shifted tail
@@ -127,8 +132,8 @@ theorem valueFunctionFrom_eq_integral_of_isTailOptimal
   rw [hT, add_zero]
 
 /-- **The value function decreases at the running-cost rate along an optimal pair**
-(Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.5, equation (8.62),
-printed pp. 390–394).
+(Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.5, equation (8.62) and the
+identity `V̇ = -q` in the proof of Theorem 42, printed pp. 390–394).
 
 This is the Lyapunov identity `V̇(ξ(t), ω(t)) + q(ξ(t), ω(t)) = 0` along the optimal
 trajectory: at every interior time `t ∈ (0, T)`,
@@ -166,13 +171,16 @@ theorem optimal_valueFunction_decrease (prob : ContinuousOCP X U) (x : ℝ → X
   exact hderiv_rhs
 
 /-- **The running cost vanishes along an optimal trajectory** (Sontag, *Mathematical
-Control Theory*, 2nd ed., 1998, Ch. 8 §8.5, Proposition 8.5.1 and Theorem 42, printed
-pp. 390–394).
+Control Theory*, 2nd ed., 1998, Ch. 8 §8.5, the argument in the proof of Theorem 42,
+together with the §8.4 discussion of finiteness of the infinite-time cost, printed
+pp. 389–394).
 
-If the value function is bounded below along the trajectory (`BddBelow`; for instance
-supplied by nonnegative costs through `bddBelow_continuousCostSet`), the running cost is
-nonnegative, the value function decreases at the running-cost rate for all forward times,
-and the running-cost signal is uniformly continuous on `[0, ∞)`, then
+If the value function is bounded below along the trajectory (`BddBelow`; this is a
+per-tail requirement — each time-shifted tail problem needs its own nonnegativity
+instance, e.g. `bddBelow_continuousCostSet` applied to that tail, rather than a single
+one-step application), the running cost is nonnegative, the value function decreases at
+the running-cost rate for all forward times, and the running-cost signal is uniformly
+continuous on `[0, ∞)`, then
 
 `L t (x t) (u t) → 0` as `t → ∞`.
 
@@ -182,9 +190,9 @@ The proof is the continuous-time analogue of the MPC campaign's
 integral of the uniformly continuous nonnegative signal to convergence of the signal
 itself (Barbalat.tendsto_zero_of_hasDerivAt_le_neg_of_boundedBelow_of_uniformContinuousOn).
 
-The global decrease hypothesis is the extension of `optimal_valueFunction_decrease` to all
-forward times, i.e. the infinite-horizon setting of §8.5; see the module implementation
-notes. -/
+The global decrease hypothesis is an additional infinite-horizon assumption, not a
+consequence of `optimal_valueFunction_decrease` (which only holds on the finite horizon
+`(0, prob.T)`); see the module implementation notes. -/
 theorem optimal_stageCost_tendsto_zero (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U)
     (hV : BddBelow ((fun t ↦ valueFunctionFrom prob t (x t)) '' Set.Ici 0))
     (hL : ∀ t, 0 ≤ t → 0 ≤ prob.L t (x t) (u t))
@@ -209,7 +217,8 @@ theorem optimal_stageCost_tendsto_zero (prob : ContinuousOCP X U) (x : ℝ → X
     hV' hw hderiv hineq huc
 
 /-- **The optimal trajectory converges to the origin** (Sontag, *Mathematical Control
-Theory*, 2nd ed., 1998, Ch. 8 §8.5, Theorem 42 and Corollary 8.5.3, printed pp. 390–394).
+Theory*, 2nd ed., 1998, Ch. 8 §8.5, the argument in the proof of Theorem 42,
+together with the §8.4 finiteness discussion, printed pp. 389–394).
 
 Under the hypotheses of `optimal_stageCost_tendsto_zero`, if in addition the running cost is
 positive definite in the state along the trajectory,
@@ -218,8 +227,8 @@ formalized as a quadratic coercivity lower bound), then
 
 `‖x t‖ → 0` as `t → ∞`,
 
-i.e. `V` is a global Lyapunov function for the closed-loop system and the optimal
-trajectory is attracted to the origin.
+the trajectory-level consequence of the Lyapunov identity `V̇ = -q`: the optimal trajectory
+is attracted to the origin.
 
 The proof squeezes the positive-definite state norm from below by the running cost and
 applies `Barbalat.tendsto_zero_of_tendsto_zero_of_sq_le` to the convergence of the latter. -/
