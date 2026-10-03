@@ -22,7 +22,7 @@ This file develops the dynamic-programming principle and the Hamilton-Jacobi-Bel
 verification theorem for continuous-time deterministic optimal control problems.
 
 Given an optimal control problem `prob : ContinuousOCP X U`, the time-shifted subproblem starting at
-time `t₀` with horizon `prob.T - t₀` is `tailProblem prob t₀`. Its value function is
+time `t₀` with horizon `prob.T - t₀` is `continuousTailProblem prob t₀`. Its value function is
 `valueFunctionFrom prob t₀ x₀`, representing the optimal cost-to-go from initial event `(t₀, x₀)`.
 
 The main result is the **HJB verification theorem** (sufficiency / verification condition):
@@ -42,9 +42,9 @@ Theory: The Dynamic Programming Approach*, 1994, Ch. 3.
 
 ## Main definitions
 
-* `tailProblem`: the time-shifted subproblem starting at `t₀` with horizon `prob.T - t₀`.
+* `continuousTailProblem`: the time-shifted subproblem starting at `t₀` with horizon `prob.T - t₀`.
 * `valueFunctionFrom`: the optimal cost-to-go from `(t₀, x₀)`, i.e. the value function of
-  `tailProblem prob t₀`.
+  `continuousTailProblem prob t₀`.
 * `totalDerivOfPartials`: the continuous linear map on `ℝ × X` formed from a partial time
   derivative `Wt : ℝ` and a spatial Fréchet derivative `Wx : X →L[ℝ] ℝ`.
 
@@ -73,32 +73,35 @@ time-shifted dynamics `s ↦ prob.f (t₀ + s) x u`, time-shifted running cost
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.1, printed pp. 349–363;
 Hernández-Lerma, *An Introduction to Optimal Control Theory: The Dynamic Programming Approach*,
 1994, Ch. 3 §3.2). -/
-def tailProblem (prob : ContinuousOCP X U) (t₀ : ℝ) : ContinuousOCP X U where
+def continuousTailProblem (prob : ContinuousOCP X U) (t₀ : ℝ) : ContinuousOCP X U where
   T := prob.T - t₀
   f := fun s x u ↦ prob.f (t₀ + s) x u
   L := fun s x u ↦ prob.L (t₀ + s) x u
   K := prob.K
   controlSet := prob.controlSet
 
-@[simp] theorem tailProblem_T (prob : ContinuousOCP X U) (t₀ : ℝ) :
-    (tailProblem prob t₀).T = prob.T - t₀ := rfl
+@[simp] theorem continuousTailProblem_T (prob : ContinuousOCP X U) (t₀ : ℝ) :
+    (continuousTailProblem prob t₀).T = prob.T - t₀ := rfl
 
-@[simp] theorem tailProblem_f (prob : ContinuousOCP X U) (t₀ : ℝ) (s : ℝ) (x : X) (u : U) :
-    (tailProblem prob t₀).f s x u = prob.f (t₀ + s) x u := rfl
+@[simp] theorem continuousTailProblem_f (prob : ContinuousOCP X U) (t₀ : ℝ) (s : ℝ) (x : X)
+    (u : U) :
+    (continuousTailProblem prob t₀).f s x u = prob.f (t₀ + s) x u := rfl
 
-@[simp] theorem tailProblem_L (prob : ContinuousOCP X U) (t₀ : ℝ) (s : ℝ) (x : X) (u : U) :
-    (tailProblem prob t₀).L s x u = prob.L (t₀ + s) x u := rfl
+@[simp] theorem continuousTailProblem_L (prob : ContinuousOCP X U) (t₀ : ℝ) (s : ℝ) (x : X)
+    (u : U) :
+    (continuousTailProblem prob t₀).L s x u = prob.L (t₀ + s) x u := rfl
 
-@[simp] theorem tailProblem_K (prob : ContinuousOCP X U) (t₀ : ℝ) :
-    (tailProblem prob t₀).K = prob.K := rfl
+@[simp] theorem continuousTailProblem_K (prob : ContinuousOCP X U) (t₀ : ℝ) :
+    (continuousTailProblem prob t₀).K = prob.K := rfl
 
-@[simp] theorem tailProblem_controlSet (prob : ContinuousOCP X U) (t₀ : ℝ) :
-    (tailProblem prob t₀).controlSet = prob.controlSet := rfl
+@[simp] theorem continuousTailProblem_controlSet (prob : ContinuousOCP X U) (t₀ : ℝ) :
+    (continuousTailProblem prob t₀).controlSet = prob.controlSet := rfl
 
-/-- Explicit expansion of the total cost for the time-shifted problem `tailProblem prob t₀`. -/
-lemma continuousTotalCost_tailProblem (prob : ContinuousOCP X U) (t₀ : ℝ)
+/-- Explicit expansion of the total cost for the time-shifted problem
+`continuousTailProblem prob t₀`. -/
+lemma continuousTotalCost_continuousTailProblem (prob : ContinuousOCP X U) (t₀ : ℝ)
     (x : ℝ → X) (u : ℝ → U) :
-    continuousTotalCost (tailProblem prob t₀) x u =
+    continuousTotalCost (continuousTailProblem prob t₀) x u =
       (∫ s in 0..(prob.T - t₀), prob.L (t₀ + s) (x s) (u s)) + prob.K (x (prob.T - t₀)) := rfl
 
 section Normed
@@ -106,11 +109,11 @@ section Normed
 variable [NormedAddCommGroup X] [NormedSpace ℝ X]
 
 /-- The dynamic-programming value function from initial time `t₀` and initial state `x₀`:
-the infimum of total costs for `tailProblem prob t₀` over all admissible pairs from `x₀`
+the infimum of total costs for `continuousTailProblem prob t₀` over all admissible pairs from `x₀`
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.1, printed pp. 349–363;
 Hernández-Lerma, 1994, Ch. 3 §3.2). -/
 noncomputable def valueFunctionFrom (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X) : ℝ :=
-  continuousValueFunction (tailProblem prob t₀) x₀
+  continuousValueFunction (continuousTailProblem prob t₀) x₀
 
 /-- The multivariable chain rule along a trajectory: if `W : ℝ → X → ℝ` has joint Fréchet
 derivative `dW` at `(t, x t)` and `x` has derivative `x' t` at `t`, then `s ↦ W s (x s)` has
@@ -160,14 +163,14 @@ integrating the derivative of `s ↦ W (t₀ + s) (x s)` via FTC on `[0, prob.T 
 theorem hjb_verification_trajectory_le (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (W' : ℝ → ℝ) (x : ℝ → X) (u : ℝ → U)
     (ht : t₀ ≤ prob.T)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
     (hW_term : W prob.T (x (prob.T - t₀)) ≤ prob.K (x (prob.T - t₀)))
     (hW_deriv : ∀ s ∈ Set.Icc 0 (prob.T - t₀),
       HasDerivAt (fun s ↦ W (t₀ + s) (x s)) (W' s) s)
     (hW_int : IntervalIntegrable W' volume 0 (prob.T - t₀))
     (h_hjb : ∀ s ∈ Set.Icc 0 (prob.T - t₀),
       -prob.L (t₀ + s) (x s) (u s) ≤ W' s) :
-    W t₀ x₀ ≤ continuousTotalCost (tailProblem prob t₀) x u := by
+    W t₀ x₀ ≤ continuousTotalCost (continuousTailProblem prob t₀) x u := by
   have hT' : 0 ≤ prob.T - t₀ := sub_nonneg.mpr ht
   have huIcc : Set.uIcc 0 (prob.T - t₀) = Set.Icc 0 (prob.T - t₀) := Set.uIcc_of_le hT'
   have hderiv : ∀ s ∈ Set.uIcc 0 (prob.T - t₀),
@@ -194,7 +197,7 @@ theorem hjb_verification_trajectory_le (prob : ContinuousOCP X U) (t₀ : ℝ) (
   rw [intervalIntegral.integral_neg] at hmono
   rw [hftc] at hmono
   unfold continuousTotalCost
-  simp only [tailProblem_T, tailProblem_L, tailProblem_K]
+  simp only [continuousTailProblem_T, continuousTailProblem_L, continuousTailProblem_K]
   linarith
 
 /-- **HJB verification theorem (lower-bound direction).** If a candidate cost-to-go `W : ℝ → X → ℝ`
@@ -206,9 +209,9 @@ Hernández-Lerma, 1994, Ch. 3 §3.2). -/
 theorem hjb_verification_lower (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ)
     (ht : t₀ ≤ prob.T)
-    (hne : (continuousCostSet (tailProblem prob t₀) x₀).Nonempty)
+    (hne : (continuousCostSet (continuousTailProblem prob t₀) x₀).Nonempty)
     (hW_term : ∀ x, W prob.T x ≤ prob.K x)
-    (hW_traj : ∀ x u, IsAdmissiblePair (tailProblem prob t₀) x₀ x u →
+    (hW_traj : ∀ x u, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u →
       ∃ W' : ℝ → ℝ,
         (∀ s ∈ Set.Icc 0 (prob.T - t₀),
           HasDerivAt (fun s ↦ W (t₀ + s) (x s)) (W' s) s) ∧
@@ -217,7 +220,7 @@ theorem hjb_verification_lower (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X
           -prob.L (t₀ + s) (x s) (u s) ≤ W' s)) :
     W t₀ x₀ ≤ valueFunctionFrom prob t₀ x₀ := by
   unfold valueFunctionFrom
-  refine le_continuousValueFunction (tailProblem prob t₀) x₀ hne ?_
+  refine le_continuousValueFunction (continuousTailProblem prob t₀) x₀ hne ?_
   rintro c ⟨x, u, hadm, rfl⟩
   obtain ⟨W', hderiv, hint, hhjb⟩ := hW_traj x u hadm
   exact hjb_verification_trajectory_le prob t₀ x₀ W W' x u ht hadm (hW_term (x (prob.T - t₀)))
@@ -229,13 +232,13 @@ if `W` has joint derivative `dW` and satisfies `-prob.L ≤ dW (1, prob.f)`, the
 theorem hjb_verification_lower_of_fderiv (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (dW : ℝ → X → (ℝ × X) →L[ℝ] ℝ)
     (ht : t₀ ≤ prob.T)
-    (hne : (continuousCostSet (tailProblem prob t₀) x₀).Nonempty)
+    (hne : (continuousCostSet (continuousTailProblem prob t₀) x₀).Nonempty)
     (hW_term : ∀ x, W prob.T x ≤ prob.K x)
     (hW_diff : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ x,
       HasFDerivAt (fun p : ℝ × X ↦ W p.1 p.2) (dW (t₀ + s) x) (t₀ + s, x))
     (h_hjb : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ x, ∀ u ∈ prob.controlSet,
       -prob.L (t₀ + s) x u ≤ dW (t₀ + s) x (1, prob.f (t₀ + s) x u))
-    (h_int : ∀ x u, IsAdmissiblePair (tailProblem prob t₀) x₀ x u →
+    (h_int : ∀ x u, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u →
       IntervalIntegrable
         (fun s ↦ dW (t₀ + s) (x s) (1, prob.f (t₀ + s) (x s) (u s)))
         volume 0 (prob.T - t₀)) :
@@ -257,14 +260,14 @@ Hernández-Lerma, 1994, Ch. 3 §3.2). -/
 theorem hjb_verification_lower_of_partials (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (Wt : ℝ → X → ℝ) (Wx : ℝ → X → (X →L[ℝ] ℝ))
     (ht : t₀ ≤ prob.T)
-    (hne : (continuousCostSet (tailProblem prob t₀) x₀).Nonempty)
+    (hne : (continuousCostSet (continuousTailProblem prob t₀) x₀).Nonempty)
     (hW_term : ∀ x, W prob.T x ≤ prob.K x)
     (hW_diff : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ x,
       HasFDerivAt (fun p : ℝ × X ↦ W p.1 p.2)
         (totalDerivOfPartials (Wt (t₀ + s) x) (Wx (t₀ + s) x)) (t₀ + s, x))
     (h_hjb : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ x, ∀ u ∈ prob.controlSet,
       - (Wt (t₀ + s) x) ≤ prob.L (t₀ + s) x u + Wx (t₀ + s) x (prob.f (t₀ + s) x u))
-    (h_int : ∀ x u, IsAdmissiblePair (tailProblem prob t₀) x₀ x u →
+    (h_int : ∀ x u, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u →
       IntervalIntegrable
         (fun s ↦ Wt (t₀ + s) (x s) + Wx (t₀ + s) (x s) (prob.f (t₀ + s) (x s) (u s)))
         volume 0 (prob.T - t₀)) :
@@ -282,23 +285,23 @@ theorem hjb_verification_lower_of_partials (prob : ContinuousOCP X U) (t₀ : �
 
 /-- **HJB verification theorem (optimality direction).** Under the HJB verification hypotheses,
 if an admissible pair `(x, u)` achieves cost no greater than `W t₀ x₀` (in particular when
-`continuousTotalCost (tailProblem prob t₀) x u = W t₀ x₀`), then `(x, u)` is an optimal pair
-for `tailProblem prob t₀` (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.1,
-Lemma 8.1.6 and Theorem 36; Hernández-Lerma, 1994, Ch. 3 §3.2). -/
+`continuousTotalCost (continuousTailProblem prob t₀) x u = W t₀ x₀`), then `(x, u)` is an
+optimal pair for `continuousTailProblem prob t₀` (Sontag, *Mathematical Control Theory*, 2nd ed.,
+1998, Ch. 8 §8.1, Lemma 8.1.6 and Theorem 36; Hernández-Lerma, 1994, Ch. 3 §3.2). -/
 theorem hjb_verification_optimal (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
     (ht : t₀ ≤ prob.T)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
     (hW_term : ∀ y, W prob.T y ≤ prob.K y)
-    (hW_traj : ∀ v w, IsAdmissiblePair (tailProblem prob t₀) x₀ v w →
+    (hW_traj : ∀ v w, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ v w →
       ∃ W' : ℝ → ℝ,
         (∀ s ∈ Set.Icc 0 (prob.T - t₀),
           HasDerivAt (fun s ↦ W (t₀ + s) (v s)) (W' s) s) ∧
         IntervalIntegrable W' volume 0 (prob.T - t₀) ∧
         (∀ s ∈ Set.Icc 0 (prob.T - t₀),
           -prob.L (t₀ + s) (v s) (w s) ≤ W' s))
-    (hW_eq : continuousTotalCost (tailProblem prob t₀) x u ≤ W t₀ x₀) :
-    IsOptimalPair (tailProblem prob t₀) x₀ x u := by
+    (hW_eq : continuousTotalCost (continuousTailProblem prob t₀) x u ≤ W t₀ x₀) :
+    IsOptimalPair (continuousTailProblem prob t₀) x₀ x u := by
   rw [isOptimalPair_iff]
   refine ⟨hadm, fun v w hvw ↦ ?_⟩
   obtain ⟨W', hderiv, hint, hhjb⟩ := hW_traj v w hvw
@@ -310,35 +313,35 @@ theorem hjb_verification_optimal (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ :
 theorem hjb_verification_optimal_of_eq (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
     (ht : t₀ ≤ prob.T)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
     (hW_term : ∀ y, W prob.T y ≤ prob.K y)
-    (hW_traj : ∀ v w, IsAdmissiblePair (tailProblem prob t₀) x₀ v w →
+    (hW_traj : ∀ v w, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ v w →
       ∃ W' : ℝ → ℝ,
         (∀ s ∈ Set.Icc 0 (prob.T - t₀),
           HasDerivAt (fun s ↦ W (t₀ + s) (v s)) (W' s) s) ∧
         IntervalIntegrable W' volume 0 (prob.T - t₀) ∧
         (∀ s ∈ Set.Icc 0 (prob.T - t₀),
           -prob.L (t₀ + s) (v s) (w s) ≤ W' s))
-    (hW_eq : W t₀ x₀ = continuousTotalCost (tailProblem prob t₀) x u) :
-    IsOptimalPair (tailProblem prob t₀) x₀ x u :=
+    (hW_eq : W t₀ x₀ = continuousTotalCost (continuousTailProblem prob t₀) x u) :
+    IsOptimalPair (continuousTailProblem prob t₀) x₀ x u :=
   hjb_verification_optimal prob t₀ x₀ W x u ht hadm hW_term hW_traj (le_of_eq hW_eq.symm)
 
 /-- Optimality direction under pointwise joint Fréchet differentiability of `W`. -/
 theorem hjb_verification_optimal_of_fderiv (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (dW : ℝ → X → (ℝ × X) →L[ℝ] ℝ) (x : ℝ → X) (u : ℝ → U)
     (ht : t₀ ≤ prob.T)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
     (hW_term : ∀ y, W prob.T y ≤ prob.K y)
     (hW_diff : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ y,
       HasFDerivAt (fun p : ℝ × X ↦ W p.1 p.2) (dW (t₀ + s) y) (t₀ + s, y))
     (h_hjb : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ y, ∀ w ∈ prob.controlSet,
       -prob.L (t₀ + s) y w ≤ dW (t₀ + s) y (1, prob.f (t₀ + s) y w))
-    (h_int : ∀ v w, IsAdmissiblePair (tailProblem prob t₀) x₀ v w →
+    (h_int : ∀ v w, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ v w →
       IntervalIntegrable
         (fun s ↦ dW (t₀ + s) (v s) (1, prob.f (t₀ + s) (v s) (w s)))
         volume 0 (prob.T - t₀))
-    (hW_eq : continuousTotalCost (tailProblem prob t₀) x u ≤ W t₀ x₀) :
-    IsOptimalPair (tailProblem prob t₀) x₀ x u := by
+    (hW_eq : continuousTotalCost (continuousTailProblem prob t₀) x u ≤ W t₀ x₀) :
+    IsOptimalPair (continuousTailProblem prob t₀) x₀ x u := by
   refine hjb_verification_optimal prob t₀ x₀ W x u ht hadm hW_term ?_ hW_eq
   intro v w hvw
   refine ⟨fun s ↦ dW (t₀ + s) (v s) (1, prob.f (t₀ + s) (v s) (w s)), ?_, h_int v w hvw, ?_⟩
@@ -352,19 +355,19 @@ theorem hjb_verification_optimal_of_fderiv (prob : ContinuousOCP X U) (t₀ : �
 theorem hjb_verification_optimal_of_partials (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (Wt : ℝ → X → ℝ) (Wx : ℝ → X → (X →L[ℝ] ℝ)) (x : ℝ → X) (u : ℝ → U)
     (ht : t₀ ≤ prob.T)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
     (hW_term : ∀ y, W prob.T y ≤ prob.K y)
     (hW_diff : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ y,
       HasFDerivAt (fun p : ℝ × X ↦ W p.1 p.2)
         (totalDerivOfPartials (Wt (t₀ + s) y) (Wx (t₀ + s) y)) (t₀ + s, y))
     (h_hjb : ∀ s ∈ Set.Icc 0 (prob.T - t₀), ∀ y, ∀ w ∈ prob.controlSet,
       - (Wt (t₀ + s) y) ≤ prob.L (t₀ + s) y w + Wx (t₀ + s) y (prob.f (t₀ + s) y w))
-    (h_int : ∀ v w, IsAdmissiblePair (tailProblem prob t₀) x₀ v w →
+    (h_int : ∀ v w, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ v w →
       IntervalIntegrable
         (fun s ↦ Wt (t₀ + s) (v s) + Wx (t₀ + s) (v s) (prob.f (t₀ + s) (v s) (w s)))
         volume 0 (prob.T - t₀))
-    (hW_eq : continuousTotalCost (tailProblem prob t₀) x u ≤ W t₀ x₀) :
-    IsOptimalPair (tailProblem prob t₀) x₀ x u := by
+    (hW_eq : continuousTotalCost (continuousTailProblem prob t₀) x u ≤ W t₀ x₀) :
+    IsOptimalPair (continuousTailProblem prob t₀) x₀ x u := by
   refine hjb_verification_optimal_of_fderiv prob t₀ x₀ W
     (fun t x ↦ totalDerivOfPartials (Wt t x) (Wx t x)) x u ht hadm hW_term hW_diff ?_ ?_ hW_eq
   · intro s hs y w hw
@@ -380,11 +383,11 @@ theorem hjb_verification_optimal_of_partials (prob : ContinuousOCP X U) (t₀ : 
 on all admissible costs. -/
 theorem isOptimalPair_of_cost_le_all (prob : ContinuousOCP X U) (t₀ : ℝ) (x₀ : X)
     (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
-    (hadm : IsAdmissiblePair (tailProblem prob t₀) x₀ x u)
-    (hW_le : ∀ v w, IsAdmissiblePair (tailProblem prob t₀) x₀ v w →
-      W t₀ x₀ ≤ continuousTotalCost (tailProblem prob t₀) v w)
-    (hW_eq : continuousTotalCost (tailProblem prob t₀) x u ≤ W t₀ x₀) :
-    IsOptimalPair (tailProblem prob t₀) x₀ x u := by
+    (hadm : IsAdmissiblePair (continuousTailProblem prob t₀) x₀ x u)
+    (hW_le : ∀ v w, IsAdmissiblePair (continuousTailProblem prob t₀) x₀ v w →
+      W t₀ x₀ ≤ continuousTotalCost (continuousTailProblem prob t₀) v w)
+    (hW_eq : continuousTotalCost (continuousTailProblem prob t₀) x u ≤ W t₀ x₀) :
+    IsOptimalPair (continuousTailProblem prob t₀) x₀ x u := by
   rw [isOptimalPair_iff]
   refine ⟨hadm, fun v w hvw ↦ ?_⟩
   exact le_trans hW_eq (hW_le v w hvw)
