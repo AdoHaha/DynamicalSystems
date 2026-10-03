@@ -9,6 +9,8 @@ public import DynamicalSystems.OptimalControl.ContinuousTime.ContinuousOCP
 public import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
 public import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 public import Mathlib.Analysis.Calculus.Gradient.Basic
+public import Mathlib.Analysis.Calculus.LocalExtr.Basic
+public import Mathlib.Topology.Order.LocalExtr
 public import Mathlib.Analysis.InnerProductSpace.Dual
 public import Mathlib.Analysis.InnerProductSpace.Calculus
 public import Mathlib.Analysis.InnerProductSpace.LinearMap
@@ -28,61 +30,91 @@ particularly Theorem 4.1, p. 101).
 
 ## Scope and Design
 
-The full arbitrary-measurable-control PMP with needle variations and non-smooth sets $U$
-requires measure-theoretic needle perturbation analysis. In accordance with the project
-methodology, this module formalizes the **smooth / variational Pontryagin Minimum Principle**:
-the costate arc $\lambda : \mathbb{R} \to E$ is introduced as the Lagrange multiplier enforcing
-the dynamic constraint $\dot{x} = f(t, x, u)$ in the augmented functional:
-$$J_a(x, u, \lambda) = \int_0^T \left( L(t, x(t), u(t)) +
-    \langle \lambda(t), f(t, x(t), u(t)) - \dot{x}(t) \rangle \right) dt + K(x(T))$$
+The costate arc `λ : ℝ → E` is introduced as the Lagrange multiplier enforcing
+the dynamic constraint `ẋ = f(t, x, u)` in the augmented functional:
+$$J_a(x, u, λ) = \int_0^T \left( L(t, x(t), u(t)) +
+    \langle λ(t), f(t, x(t), u(t)) - \dot{x}(t) \rangle \right) dt + K(x(T))$$
 which can be rewritten in terms of the **control Hamiltonian**
-$H(t, x, u, \lambda) = L(t, x, u) + \langle \lambda, f(t, x, u) \rangle$ as:
-$$J_a(x, u, \lambda) = \int_0^T \left( H(t, x(t), u(t), \lambda(t)) -
-    \langle \lambda(t), \dot{x}(t) \rangle \right) dt + K(x(T)).$$
+$H(t, x, u, λ) = L(t, x, u) + \langle λ, f(t, x, u) \rangle$ as:
+$$J_a(x, u, λ) = \int_0^T \left( H(t, x(t), u(t), λ(t)) -
+    \langle λ(t), \dot{x}(t) \rangle \right) dt + K(x(T)).$$
 
-Taking variations with respect to the state trajectory $x$ and integrating by parts via
-S4's `integral_deriv_mul_eq_neg_integral_mul_deriv` reveals:
+The variational reading of the three PMP conclusions is:
 1. The **costate differential equation** (adjoint ODE):
-   $$\dot{\lambda}(t) = - \nabla_x H(t, x(t), u(t), \lambda(t))$$
+   $$\dot{λ}(t) = - \nabla_x H(t, x(t), u(t), λ(t))$$
    with the crucial negative gradient sign;
 2. The **transversality condition** at the terminal time:
-   $$\lambda(T) = \nabla K(x(T));$$
-3. The **Hamiltonian stationarity condition** with respect to the control:
-   $$\partial_u H(t, x(t), u(t), \lambda(t)) = 0$$
-   (and pointwise minimisation
-   $\forall w \in U, H(t, x(t), u(t), \lambda(t)) \le H(t, x(t), w, \lambda(t))$).
+   $$λ(T) = \nabla K(x(T));$$
+3. Either pointwise **Hamiltonian minimization** over the control set,
+   $\forall w \in U, H(t, x(t), u(t), λ(t)) \le H(t, x(t), w, λ(t))$,
+   or, at interior points of the control set, **Hamiltonian stationarity**
+   $\partial_u H(t, x(t), u(t), λ(t)) = 0$.
 
-The module establishes the exact bridge between S4's Euler–Lagrange equation and the costate ODE,
-constructs the costate trajectory via Picard-Lindelöf global existence from
-`DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear`, derives stationarity using S4's
-Fundamental Lemma of the Calculus of Variations (`integral_mul_eq_zero_of_continuous`), and proves
-the main theorem `minimumPrinciple`.
+**Derivation gap:** the implication from optimality (`IsOptimalPair`) to the existence
+of such a costate — the control-variation / needle-variation step — is NOT proved here.
+Proving it would require an explicit admissible control-variation family
+(`u* + ε • w` staying in the control set), differentiability of the state flow in the
+control (the linearized ODE), and the Gateaux identification of the cost derivative with
+the first variation (differentiation under the interval integral, out of scope for S4).
+Accordingly the main theorem below is stated as an explicit **assembly schema**: its
+hypotheses are (i) admissibility, (ii) a costate satisfying the adjoint ODE and
+transversality, and (iii) stationarity (resp. minimization) for that same costate, and
+the conclusion packages them. There is deliberately NO `IsOptimalPair` hypothesis
+anywhere in this file. The full needle-variation PMP with arbitrary measurable controls
+and non-smooth sets `U` is out of scope.
+
+**Interior vs boundary:** `HamiltonianStationary` is the interior (open-`U`) form of the
+optimality condition. Minimization implies stationarity only at interior points of the
+control set (with differentiability of `H` in `u`), proved here as
+`stationary_of_minimizing_interior` via Fermat's theorem; at boundary points only the
+minimization form applies. Conversely, stationarity implies minimization only under a
+convexity hypothesis on `w ↦ H(t, x, w, λ)` (stated here, not proved).
 
 ## Main Definitions
 
 * `hamiltonianOf`: The control Hamiltonian
-  $H(t, x, u, \lambda) = L(t, x, u) + \langle \lambda, f(t, x, u) \rangle$.
+  $H(t, x, u, λ) = L(t, x, u) + \langle λ, f(t, x, u) \rangle$.
 * `costateEquation`: The adjoint ODE predicate
-  $\dot{\lambda}(t) = - \nabla_x H(t, x(t), u(t), \lambda(t))$.
-* `transversalityCondition`: The terminal boundary condition $\lambda(T) = \nabla K(x(T))$.
+  $\dot{λ}(t) = - \nabla_x H(t, x(t), u(t), λ(t))$.
+* `transversalityCondition`: The terminal boundary condition `λ(T) = ∇K(x(T))`.
 * `HamiltonianStationary`: Stationarity in the control variable
-  $\partial_u H(t, x(t), u(t), \lambda(t)) = 0$.
+  $\partial_u H(t, x(t), u(t), λ(t)) = 0$ (interior / open-`U` form).
 * `HamiltonianMinimizing`: Pointwise minimization
-  $\forall w \in U, H(t, x, u, \lambda) \le H(t, x, w, \lambda)$.
+  $\forall w \in U, H(t, x, u, λ) \le H(t, x, w, λ)$.
 * `augmentedLagrangian`: The augmented Lagrangian
-  $L_a(t, x, v, u, \lambda) = H(t, x, u, \lambda) - \langle \lambda, v \rangle$.
+  $L_a(t, x, v, u, λ) = H(t, x, u, λ) - \langle λ, v \rangle$.
 * `cvLagrangianOf`: The calculus-of-variations Lagrangian induced by $L_a$.
 
 ## Main Results
 
-* `eulerLagrange_cvLagrangianOf_of_costateEquation`: The costate ODE is the Euler–Lagrange equation
-  of the augmented Lagrangian.
-* `exists_costate_of_lipschitz`: Global existence of the costate arc satisfying both the adjoint ODE
-  and the transversality condition.
-* `stationarity_of_vanishing_first_variation`: Hamiltonian stationarity derived from S4's FLCV.
-* `minimumPrinciple`: The main theorem connecting optimality, costate ODE, transversality,
-  and stationarity.
-* `minimumPrinciple_minimizing`: The minimum principle with pointwise Hamiltonian minimization.
+* `eulerLagrange_cvLagrangianOf_of_costateEquation`: the costate ODE implies the
+  Euler–Lagrange equation of the augmented Lagrangian.
+* `costateEquation_of_eulerLagrange_augmented`: converse — the augmented
+  Euler–Lagrange equation plus differentiability of `p` implies the costate ODE
+  (via `HasDerivAt.unique` and `innerSL_inj`).
+* `cvCost_eq_running_cost_of_admissible`: along an admissible pair the augmented
+  Lagrangian evaluated at `ẋ` equals the running cost pointwise.
+* `cvFunctional_eq_totalCost_of_admissible`: along an admissible pair (with `0 ≤ T`)
+  the augmented CV functional equals `continuousTotalCost`.
+* `exists_costate_of_lipschitz`: global existence of the costate arc by solving the
+  adjoint ODE backward from the transversality value (transversality is the prescribed
+  terminal data, not a derived consequence).
+* `stationarity_of_vanishing_first_variation`: Hamiltonian stationarity from vanishing
+  integral variations via S4's fundamental lemma
+  (`integral_mul_eq_zero_of_continuous`).
+* `stationary_of_minimizing_interior`: minimization plus an explicit interior
+  hypothesis (`u t ∈ interior controlSet`) implies stationarity (Fermat).
+* `ibp_costate_velocity`, `ibp_costate_velocity_deriv`: the scalar IBP step of the
+  variational derivation from S4's `integral_deriv_mul_eq_neg_integral_mul_deriv`
+  and `integral_deriv_mul_eq_neg_integral_mul_deriv_deriv`.
+* `firstVariation_augmented_vanishes`: unpacking of `HasVanishingFirstVariation`
+  at the augmented Lagrangian.
+* `eulerLagrange_augmented_of_vanishing`: S4's `eulerLagrange_of_firstVariation_zero`
+  instantiated at the augmented Lagrangian.
+* `minimumPrinciple`: assembly schema packaging admissibility with a stationary
+  costate (adjoint ODE + transversality + stationarity).
+* `minimumPrinciple_minimizing`: assembly schema packaging admissibility with a
+  minimizing costate (adjoint ODE + transversality + minimization).
 -/
 
 @[expose] public section
@@ -142,22 +174,30 @@ def transversalityCondition (K : E → ℝ) (T : ℝ) (x : ℝ → E) (p : ℝ �
   p T = gradient K (x T)
 
 /-- Pointwise Hamiltonian minimisation over the control set `controlSet`:
-along the optimal trajectory `x` and control `u`, the control `u(t)` minimizes
+along the trajectory `x` and control `u`, the control `u(t)` minimizes
 the Hamiltonian `H(t, x(t), ·, λ(t))` over all `w ∈ controlSet` for each `t ∈ [0, T]`:
 `∀ w ∈ controlSet, H(t, x(t), u(t), λ(t)) ≤ H(t, x(t), w, λ(t))`
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 9 §9.5, Eq. (9.37), printed p. 418;
-Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012, Theorem 4.1, p. 101). -/
+Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012, Theorem 4.1, p. 101).
+This is the boundary-capable form of the optimality condition: unlike
+`HamiltonianStationary` it requires no interior or differentiability hypotheses. -/
 def HamiltonianMinimizing (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (controlSet : Set U) (T : ℝ)
     (x : ℝ → E) (u : ℝ → U) (p : ℝ → E) : Prop :=
   ∀ t ∈ Set.Icc 0 T, ∀ w ∈ controlSet,
     hamiltonianOf L f t (x t) (u t) (p t) ≤ hamiltonianOf L f t (x t) w (p t)
 
-/-- Hamiltonian stationarity in the control variable (unconstrained / open control set):
-along the optimal trajectory `x` and control `u`, the Fréchet derivative of
+/-- Hamiltonian stationarity in the control variable (interior / open-control-set form):
+along the trajectory `x` and control `u`, the Fréchet derivative of
 `w ↦ H(t, x(t), w, λ(t))` at `u(t)` vanishes for each `t ∈ [0, T]`:
 `∂ᵤH(t, x(t), u(t), λ(t)) = 0` (Sontag, *Mathematical Control Theory*, 2nd ed., 1998,
 Ch. 9 §9.2, Eq. (9.14), printed p. 403; Liberzon, *Calculus of Variations and Optimal
-Control Theory*, 2012, §4.1). -/
+Control Theory*, 2012, §4.1).
+
+This is valid only at interior points of the control set: minimization implies
+stationarity only when `u t ∈ interior controlSet` (see
+`stationary_of_minimizing_interior`), and at boundary points only the minimization
+form `HamiltonianMinimizing` applies. Conversely, stationarity implies minimization
+only under a convexity hypothesis on `w ↦ H(t, x, w, λ)` (not proved here). -/
 def HamiltonianStationary [NormedAddCommGroup U] [NormedSpace ℝ U]
     (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (T : ℝ)
     (x : ℝ → E) (u : ℝ → U) (p : ℝ → E) : Prop :=
@@ -268,7 +308,73 @@ theorem eulerLagrange_cvLagrangianOf_of_costateEquation
   rw [h_neg_neg] at h_diff
   exact h_diff
 
+/-- **Euler–Lagrange as the Costate Equation (converse bridge).**
+If the state trajectory `x` satisfies the Euler–Lagrange equation for the augmented
+Lagrangian `cvLagrangianOf L f u p` and the costate arc `p` is differentiable with
+derivative `p'`, then `p` satisfies the costate equation `ṗ = - ∇ₓH`. The proof pushes
+the differentiability of `p` through the Riesz isometry and concludes by uniqueness of
+derivatives (`HasDerivAt.unique`) with injectivity of the duality pairing
+(`innerSL_inj`). Together with `eulerLagrange_cvLagrangianOf_of_costateEquation` this
+shows the costate ODE and the augmented Euler–Lagrange equation coincide. -/
+theorem costateEquation_of_eulerLagrange_augmented
+    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (T : ℝ) (x : ℝ → E) (u : ℝ → U)
+    (p : ℝ → E) (p' : ℝ → E)
+    (hp : ∀ t ∈ Set.Icc 0 T, HasDerivAt p (p' t) t)
+    (hel : eulerLagrange (cvLagrangianOf L f u p) T x) :
+    costateEquation L f T x u p := by
+  intro t ht
+  have hEL := hel t ht
+  have hvel : (fun s : ℝ ↦ fderiv ℝ (fun v : E ↦ cvLagrangianOf L f u p s (x s) v)
+      (deriv x s)) = fun s ↦ - toDual ℝ E (p s) :=
+    funext fun s ↦ fderiv_velocity_cvLagrangianOf L f u p s x
+  rw [hvel, fderiv_state_cvLagrangianOf, ← toDual_gradient] at hEL
+  have hcomp : HasDerivAt (fun s ↦ - toDual ℝ E (p s)) (- toDual ℝ E (p' t)) t := by
+    have hbase := ((- innerSL ℝ (E := E)).hasFDerivAt).comp_hasDerivAt t (hp t ht)
+    exact hbase
+  have huniq := hEL.unique hcomp
+  have huniq' : innerSL ℝ
+      (gradient (fun y : E ↦ hamiltonianOf L f t y (u t) (p t)) (x t)) =
+      -innerSL ℝ (p' t) := huniq
+  rw [← map_neg] at huniq'
+  have hinj := innerSL_inj.mp huniq'
+  rw [hinj, neg_neg]
+  exact hp t ht
+
 end AugmentedLagrangian
+
+/-! ### Augmented Cost Coincides with the OCP Cost along Admissible Pairs -/
+
+section CostIdentification
+
+variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
+
+omit [CompleteSpace E] in
+/-- Along an admissible pair, the augmented Lagrangian evaluated at the true velocity
+`ẋ` equals the running cost pointwise: the constraint term vanishes by the dynamics. -/
+theorem cvCost_eq_running_cost_of_admissible (prob : ContinuousOCP E U)
+    (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E) (t : ℝ)
+    (Hadm : IsAdmissiblePair prob x₀ x u) (ht : t ∈ Set.Icc 0 prob.T) :
+    cvLagrangianOf prob.L prob.f u p t (x t) (deriv x t) = prob.L t (x t) (u t) := by
+  have hdyn := Hadm.2.2.1 t ht
+  rw [hdyn.deriv]
+  exact augmentedLagrangian_eq_running_cost _ _ _ _ _ _
+
+omit [CompleteSpace E] in
+/-- Along an admissible pair (with `0 ≤ T`), the augmented calculus-of-variations
+functional coincides with the optimal control total cost. -/
+theorem cvFunctional_eq_totalCost_of_admissible (prob : ContinuousOCP E U)
+    (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
+    (Hadm : IsAdmissiblePair prob x₀ x u) (hT : 0 ≤ prob.T) :
+    cvFunctional (cvLagrangianOf prob.L prob.f u p) prob.K prob.T x =
+      continuousTotalCost prob x u := by
+  unfold cvFunctional continuousTotalCost
+  congr 1
+  apply intervalIntegral.integral_congr
+  intro t ht
+  rw [Set.uIcc_of_le hT] at ht
+  exact cvCost_eq_running_cost_of_admissible prob x₀ x u p t Hadm ht
+
+end CostIdentification
 
 /-! ### Global Existence of the Costate Arc -/
 
@@ -278,8 +384,10 @@ variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
 /-- Existence of an adjoint arc (costate) `λ : ℝ → E` satisfying both the costate equation
 `λ̇ = - ∇ₓH` on `[0, T]` and the terminal transversality condition `λ(T) = ∇K(x(T))`.
-This uses the global ODE existence theorem for Lipschitz vector fields from
-`DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear`. -/
+This solves the adjoint linear ODE backward from the prescribed terminal value
+`∇K(x(T))` using the global ODE existence theorem for Lipschitz vector fields from
+`DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear`; transversality enters
+as the prescribed terminal data, not as a derived consequence. -/
 theorem exists_costate_of_lipschitz (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E)
     (K : E → ℝ) (T : ℝ) (x : ℝ → E) (u : ℝ → U)
     {K_lip : ℝ≥0} {C' : ℝ}
@@ -332,6 +440,92 @@ theorem stationarity_of_vanishing_first_variation
     (fun φ hφ hsupp ↦ hvar w φ hφ hsupp) t ht
   exact h
 
+/-- **Minimization Implies Stationarity at Interior Points.**
+If the Hamiltonian is minimized over `controlSet` along the trajectory and each
+`u t` lies in the interior of `controlSet` (the explicit open-`U` hypothesis), then
+the pointwise stationarity condition holds. The proof is Fermat's theorem
+(`IsLocalMin.fderiv_eq_zero`): a set-minimum at an interior point is a local minimum.
+At boundary points this implication fails and only `HamiltonianMinimizing` applies. -/
+theorem stationary_of_minimizing_interior
+    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (controlSet : Set U) (T : ℝ)
+    (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
+    (hmin : HamiltonianMinimizing L f controlSet T x u p)
+    (hinterior : ∀ t ∈ Set.Icc 0 T, u t ∈ interior controlSet) :
+    HamiltonianStationary L f T x u p := by
+  intro t ht
+  have hminOn : IsMinOn (fun w : U ↦ hamiltonianOf L f t (x t) w (p t)) controlSet (u t) :=
+    fun w hw ↦ hmin t ht w hw
+  have hmem : controlSet ∈ 𝓝 (u t) := mem_interior_iff_mem_nhds.mp (hinterior t ht)
+  have hloc : IsLocalMin (fun w : U ↦ hamiltonianOf L f t (x t) w (p t)) (u t) :=
+    hminOn.isLocalMin hmem
+  exact hloc.fderiv_eq_zero
+
+/-! #### Integration by parts at the scalarized costate pairing -/
+
+/-- Scalar integration-by-parts step of the variational derivation (explicit-derivative
+form): for an endpoint-vanishing weight `φ` and the scalarized costate pairing
+`s ↦ ⟪p s, e⟫`, the velocity-pairing integral flips sign. This is S4's
+`integral_deriv_mul_eq_neg_integral_mul_deriv` instantiated at the augmented-Lagrangian
+velocity term; it is the move that trades `η̇` for `λ̇` in the first variation. -/
+theorem ibp_costate_velocity {φ φ' : ℝ → ℝ} {T : ℝ} {p : ℝ → E} {e : E} {v' : ℝ → ℝ}
+    (hφ : ∀ x ∈ Set.uIcc 0 T, HasDerivAt φ (φ' x) x)
+    (hv : ∀ x ∈ Set.uIcc 0 T, HasDerivAt (fun s ↦ inner ℝ (p s) e) (v' x) x)
+    (hφi : IntervalIntegrable φ' volume 0 T)
+    (hvi : IntervalIntegrable v' volume 0 T)
+    (hφ0 : φ 0 = 0) (hφT : φ T = 0) :
+    ∫ x in 0..T, φ' x * inner ℝ (p x) e = -∫ x in 0..T, φ x * v' x :=
+  integral_deriv_mul_eq_neg_integral_mul_deriv hφ hv hφi hvi hφ0 hφT
+
+/-- Scalar integration-by-parts step of the variational derivation (`deriv` form):
+same as `ibp_costate_velocity` with derivatives written via `deriv`. This is S4's
+`integral_deriv_mul_eq_neg_integral_mul_deriv_deriv`. -/
+theorem ibp_costate_velocity_deriv {φ : ℝ → ℝ} {T : ℝ} {p : ℝ → E} {e : E}
+    (hφ : ∀ x ∈ Set.uIcc 0 T, HasDerivAt φ (deriv φ x) x)
+    (hv : ∀ x ∈ Set.uIcc 0 T,
+      HasDerivAt (fun s ↦ inner ℝ (p s) e) (deriv (fun s ↦ inner ℝ (p s) e) x) x)
+    (hφi : IntervalIntegrable (deriv φ) volume 0 T)
+    (hvi : IntervalIntegrable (deriv (fun s ↦ inner ℝ (p s) e)) volume 0 T)
+    (hφ0 : φ 0 = 0) (hφT : φ T = 0) :
+    ∫ x in 0..T, deriv φ x * inner ℝ (p x) e
+      = -∫ x in 0..T, φ x * deriv (fun s ↦ inner ℝ (p s) e) x :=
+  integral_deriv_mul_eq_neg_integral_mul_deriv_deriv hφ hv hφi hvi hφ0 hφT
+
+/-! #### From vanishing first variation to the augmented Euler–Lagrange equation -/
+
+omit [NormedAddCommGroup U] [NormedSpace ℝ U] in
+/-- Unpacking of `HasVanishingFirstVariation` at the augmented Lagrangian: vanishing on
+endpoint-vanishing perturbations gives `firstVariation … = 0` for each such `η`. -/
+theorem firstVariation_augmented_vanishes
+    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (u : ℝ → U) (p : ℝ → E)
+    (K : E → ℝ) (T : ℝ) (x : ℝ → E)
+    (hvan : HasVanishingFirstVariation (cvLagrangianOf L f u p) K T x)
+    (η : ℝ → E) (hη : ∀ t, HasDerivAt η (deriv η t) t) (h0 : η 0 = 0) (hT : η T = 0) :
+    firstVariation (cvLagrangianOf L f u p) K T x η = 0 :=
+  hvan η hη h0 hT
+
+omit [NormedAddCommGroup U] [NormedSpace ℝ U] in
+/-- **Augmented Euler–Lagrange from vanishing first variation.**
+If the first variation of the augmented calculus-of-variations functional vanishes on
+endpoint-vanishing perturbations, and the velocity-derivative curve is differentiable
+with continuous data, then the trajectory satisfies the augmented Euler–Lagrange
+equation. This is S4's `eulerLagrange_of_firstVariation_zero` instantiated at
+`cvLagrangianOf L f u p`; chained with `costateEquation_of_eulerLagrange_augmented` it
+recovers the costate ODE from the variational principle. -/
+theorem eulerLagrange_augmented_of_vanishing
+    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (u : ℝ → U) (p : ℝ → E)
+    (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
+    (hT : 0 < T)
+    (hvan : HasVanishingFirstVariation (cvLagrangianOf L f u p) K T x)
+    (hPderiv : ∀ t ∈ Set.Icc 0 T, HasDerivAt
+      (fun s ↦ fderiv ℝ (fun v : E ↦ cvLagrangianOf L f u p s (x s) v) (deriv x s)) (Q t) t)
+    (hPcont : Continuous
+      (fun s ↦ fderiv ℝ (fun v : E ↦ cvLagrangianOf L f u p s (x s) v) (deriv x s)))
+    (hQcont : Continuous Q)
+    (hScont : Continuous
+      (fun t ↦ fderiv ℝ (fun y : E ↦ cvLagrangianOf L f u p t y (deriv x t)) (x t))) :
+    eulerLagrange (cvLagrangianOf L f u p) T x :=
+  eulerLagrange_of_firstVariation_zero _ _ _ _ _ hT hvan hPderiv hPcont hQcont hScont
+
 end Stationarity
 
 /-! ### The Main Theorem: Pontryagin Minimum Principle -/
@@ -340,67 +534,53 @@ section MainTheorem
 
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-/-- **The Pontryagin Minimum Principle (Variational / Smooth Formulation).**
-Let `(x, u)` be an optimal trajectory/control pair for the continuous optimal control problem
-`prob`. Under smoothness and solvability of the adjoint linear differential equation, there
-exists an adjoint trajectory (costate) `λ : ℝ → E` such that along the optimal trajectory:
-1. The **costate differential equation** holds: `λ̇(t) = - ∂ₓH(t, x(t), u(t), λ(t))` on `[0, T]`;
-2. The **transversality condition** holds: `λ(T) = ∇K(x(T))`;
-3. The **Hamiltonian stationarity condition** holds: `∂ᵤH(t, x(t), u(t), λ(t)) = 0` on `[0, T]`.
+/-- **The Pontryagin Minimum Principle (variational assembly schema).**
+Let `(x, u)` be an admissible trajectory/control pair for the continuous optimal control
+problem `prob`. Given a costate arc `p : ℝ → E` satisfying along the trajectory:
+1. The **costate differential equation**: `λ̇(t) = - ∂ₓH(t, x(t), u(t), λ(t))` on `[0, T]`;
+2. The **transversality condition**: `λ(T) = ∇K(x(T))`;
+3. The **Hamiltonian stationarity condition** (interior form):
+   `∂ᵤH(t, x(t), u(t), λ(t)) = 0` on `[0, T]`,
+the pair is certified with its PMP triple. Every hypothesis is used: admissibility is
+returned, and the costate data is repackaged existentially.
 
-This theorem formalizes the classical multiplier rule of Sontag (*Mathematical Control Theory*,
-2nd ed., 1998, Ch. 9 §9.2, Theorem 43, and §9.5, Theorem 44) and Liberzon (*Calculus of
-Variations and Optimal Control Theory*, 2012, Ch. 4 §4.1, Theorem 4.1). -/
+This is the standard "how to check PMP" statement of Sontag (*Mathematical Control
+Theory*, 2nd ed., 1998, Ch. 9 §9.2, Theorem 43, and §9.5, Theorem 44) and Liberzon
+(*Calculus of Variations and Optimal Control Theory*, 2012, Ch. 4 §4.1, Theorem 4.1).
+It takes no optimality hypothesis: the variational/needle step from optimality to the
+existence of such a costate is not proved here (see the module-level derivation-gap
+note). -/
 theorem minimumPrinciple [NormedAddCommGroup U] [NormedSpace ℝ U]
-    (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U)
-    (_hopt : IsOptimalPair prob x₀ x u)
-    (hadj : ∃ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p ∧
+    (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
+    (Hadm : IsAdmissiblePair prob x₀ x u)
+    (hadj : costateEquation prob.L prob.f prob.T x u p ∧
       transversalityCondition prob.K prob.T x p)
-    (hstat : ∀ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p →
-      transversalityCondition prob.K prob.T x p →
-      HamiltonianStationary prob.L prob.f prob.T x u p) :
-    ∃ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p ∧
-      transversalityCondition prob.K prob.T x p ∧
-      HamiltonianStationary prob.L prob.f prob.T x u p := by
-  obtain ⟨p, hp_ode, hp_trans⟩ := hadj
-  have hp_stat := hstat p hp_ode hp_trans
-  exact ⟨p, hp_ode, hp_trans, hp_stat⟩
+    (hstat : HamiltonianStationary prob.L prob.f prob.T x u p) :
+    IsAdmissiblePair prob x₀ x u ∧ ∃ q : ℝ → E,
+      costateEquation prob.L prob.f prob.T x u q ∧
+      transversalityCondition prob.K prob.T x q ∧
+      HamiltonianStationary prob.L prob.f prob.T x u q :=
+  ⟨Hadm, p, hadj.1, hadj.2, hstat⟩
 
-/-- **The Pontryagin Minimum Principle with Pointwise Minimization.**
-Under the same hypotheses as `minimumPrinciple`, if the Hamiltonian is minimized pointwise
-over `prob.controlSet` along the optimal trajectory, there exists a costate arc `λ` satisfying
-the costate ODE, transversality condition, and pointwise Hamiltonian minimization:
+/-- **The Pontryagin Minimum Principle with pointwise minimization.**
+Same assembly schema as `minimumPrinciple`, but the costate hypothesis is pointwise
+Hamiltonian minimization over `prob.controlSet`:
 `∀ w ∈ prob.controlSet, H(t, x(t), u(t), λ(t)) ≤ H(t, x(t), w, λ(t))`
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 9 §9.5, Eq. (9.37), printed p. 418;
-Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012, Theorem 4.1, p. 101). -/
+Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012, Theorem 4.1, p. 101).
+This is the boundary-capable form: at interior points
+`stationary_of_minimizing_interior` recovers stationarity from it. -/
 theorem minimumPrinciple_minimizing
-    (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U)
-    (_hopt : IsOptimalPair prob x₀ x u)
-    (hadj : ∃ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p ∧
+    (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E) (u : ℝ → U) (p : ℝ → E)
+    (Hadm : IsAdmissiblePair prob x₀ x u)
+    (hadj : costateEquation prob.L prob.f prob.T x u p ∧
       transversalityCondition prob.K prob.T x p)
-    (hmin : ∀ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p →
-      transversalityCondition prob.K prob.T x p →
-      HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p) :
-    ∃ p : ℝ → E, costateEquation prob.L prob.f prob.T x u p ∧
-      transversalityCondition prob.K prob.T x p ∧
-      HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p := by
-  obtain ⟨p, hp_ode, hp_trans⟩ := hadj
-  have hp_min := hmin p hp_ode hp_trans
-  exact ⟨p, hp_ode, hp_trans, hp_min⟩
-
-/-- The unbundled formulation of `minimumPrinciple` taking explicit data components
-`L, f, K, controlSet, T`. -/
-theorem minimumPrinciple_unbundled [NormedAddCommGroup U] [NormedSpace ℝ U]
-    (L : ℝ → E → U → ℝ) (f : ℝ → E → U → E) (K : E → ℝ) (controlSet : Set U) (T : ℝ)
-    (x₀ : E) (x : ℝ → E) (u : ℝ → U)
-    (hopt : IsOptimalPair ⟨T, f, L, K, controlSet⟩ x₀ x u)
-    (hadj : ∃ p : ℝ → E, costateEquation L f T x u p ∧ transversalityCondition K T x p)
-    (hstat : ∀ p : ℝ → E, costateEquation L f T x u p → transversalityCondition K T x p →
-      HamiltonianStationary L f T x u p) :
-    ∃ p : ℝ → E, costateEquation L f T x u p ∧
-      transversalityCondition K T x p ∧
-      HamiltonianStationary L f T x u p :=
-  minimumPrinciple ⟨T, f, L, K, controlSet⟩ x₀ x u hopt hadj hstat
+    (hmin : HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p) :
+    IsAdmissiblePair prob x₀ x u ∧ ∃ q : ℝ → E,
+      costateEquation prob.L prob.f prob.T x u q ∧
+      transversalityCondition prob.K prob.T x q ∧
+      HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u q :=
+  ⟨Hadm, p, hadj.1, hadj.2, hmin⟩
 
 end MainTheorem
 
