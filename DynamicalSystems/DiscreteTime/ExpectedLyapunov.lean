@@ -6,7 +6,7 @@ Authors: Igor Zubrycki
 module
 
 public import Mathlib.Algebra.Module.Pi
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.Real.Basic
 public import Mathlib.LinearAlgebra.Matrix.PosDef
 public import DynamicalSystems.DiscreteTime.MatrixLyapunov
 
@@ -147,7 +147,9 @@ The statement does not require `P` to be positive definite or `ᾱ` to lie in
 `quadForm_mulVec_lt` (`DynamicalSystems.DiscreteTime.MatrixLyapunov`) via the
 expectation identity `expectedLyapunovOperator_quadForm`: in the degenerate
 case `ᾱ = 1` the condition is exactly `(P - A₁ᵀ P A₁) ≻ 0`, i.e.
-`quadForm_mulVec_lt` with `M = A₁`. -/
+`quadForm_mulVec_lt` with `M = A₁`. This declaration is retained as a naming-continuity
+synonym of `meanSquare_decrease_of_lmi`, preserving the Argha et al. (2018) /
+`PacketLoss.lean` vocabulary for downstream consumers. -/
 theorem meanSquare_decrease_of_bernoulli (ᾱ : ℝ)
     {A₀ A₁ P : Matrix (Fin n) (Fin n) ℝ}
     (hLMI : (P - expectedLyapunovOperator ᾱ A₀ A₁ P).PosDef)

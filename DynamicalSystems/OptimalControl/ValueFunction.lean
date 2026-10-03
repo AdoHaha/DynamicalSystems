@@ -8,6 +8,7 @@ module
 public import DynamicalSystems.OptimalControl.FiniteHorizon
 public import Mathlib.Order.ConditionallyCompleteLattice.Indexed
 public import Mathlib.Algebra.Order.Archimedean.Real.Basic
+public import Mathlib.Order.Filter.Extr
 
 /-! # Dynamic-programming value function
 
@@ -153,19 +154,35 @@ def IsOptimalInput (prob : FiniteHorizonProblem X U) (x₀ : X)
     ∀ v, FiniteHorizonAdmissible prob x₀ v →
       finiteHorizonTotalCost prob x₀ u ≤ finiteHorizonTotalCost prob x₀ v
 
+/-- An admissible input sequence is optimal exactly when it minimizes the total cost
+over the admissible input sequences, the Mathlib `IsMinOn` formulation.  This bridges
+`IsOptimalInput` to the optimization vocabulary shared with
+`DynamicalSystems.ConvexAnalysis.Subdifferential`. -/
+theorem isOptimalInput_iff_isMinOn (prob : FiniteHorizonProblem X U) (x₀ : X)
+    (u : Fin prob.horizon → U) :
+    IsOptimalInput prob x₀ u ↔
+      FiniteHorizonAdmissible prob x₀ u ∧
+        IsMinOn (finiteHorizonTotalCost prob x₀)
+          {v | FiniteHorizonAdmissible prob x₀ v} u := by
+  unfold IsOptimalInput
+  rw [isMinOn_iff]
+  simp only [Set.mem_ofPred_eq]
+
 /-- When a minimizer exists, the value function equals its cost.  If no minimizer
 exists this fails in general and one should use the `valueFunction_le` /
 `le_valueFunction` sandwich instead. -/
 theorem valueFunction_eq (prob : FiniteHorizonProblem X U) (x₀ : X)
-    (u : Fin prob.horizon → U) (hu : IsOptimalInput prob x₀ u)
-    (hbd : BddBelow (costSet prob x₀)) :
+    (u : Fin prob.horizon → U) (hu : IsOptimalInput prob x₀ u) :
     valueFunction prob x₀ = finiteHorizonTotalCost prob x₀ u := by
-  refine le_antisymm ?_ ?_
-  · exact csInf_le hbd ⟨u, hu.1, rfl⟩
-  · refine le_csInf ⟨finiteHorizonTotalCost prob x₀ u, ⟨u, hu.1, rfl⟩⟩ ?_
-    intro r hr
-    obtain ⟨v, hv, rfl⟩ := hr
-    exact hu.2 v hv
+  have hbd : BddBelow (costSet prob x₀) :=
+    ⟨finiteHorizonTotalCost prob x₀ u, fun r hr ↦ by
+      obtain ⟨v, hv, rfl⟩ := hr
+      exact hu.2 v hv⟩
+  refine le_antisymm (csInf_le hbd ⟨u, hu.1, rfl⟩) ?_
+  refine le_csInf ⟨finiteHorizonTotalCost prob x₀ u, ⟨u, hu.1, rfl⟩⟩ ?_
+  intro r hr
+  obtain ⟨v, hv, rfl⟩ := hr
+  exact hu.2 v hv
 
 /-! ### Dynamic-programming recursion -/
 
@@ -180,19 +197,58 @@ below.  Without them the `sInf` convention for unbounded or empty sets breaks th
 recursion (the value function would evaluate an infeasible tail to `0`). -/
 theorem bellman (prob : FiniteHorizonProblem X U) (x₀ : X) (hN : 0 < prob.horizon)
     (hsub : (costSet prob x₀).Nonempty)
-    (hbd : BddBelow (costSet prob x₀))
-    (hbdt : ∀ u : U, BddBelow (costSet (tailProblem prob) (prob.f x₀ u)))
-    (hbdr : BddBelow (Set.range (fun u : (firstControls prob x₀) =>
-        prob.stageCost x₀ u.1 + valueFunction (tailProblem prob) (prob.f x₀ u.1)))) :
+    (hbd : BddBelow (costSet prob x₀)) :
     valueFunction prob x₀ = ⨅ u : (firstControls prob x₀),
         prob.stageCost x₀ u.1 + valueFunction (tailProblem prob) (prob.f x₀ u.1) := by
   obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
   obtain ⟨M, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hN)
   let g : (firstControls (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀) → ℝ :=
-    fun u => ℓ x₀ u.1 +
+    fun u ↦ ℓ x₀ u.1 +
       sInf (costSet (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u.1))
   change sInf (costSet (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀)
     = sInf (Set.range g)
+  -- The tail cost set of an admissible first control is bounded below, because any
+  -- admissible tail concatenated with the first control is admissible for `prob`.
+  have hbdt : ∀ u ∈ firstControls
+        (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀,
+      BddBelow (costSet (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u)) := by
+    intro u hu
+    obtain ⟨xu, uu, hCu⟩ := hu
+    obtain ⟨B, hB⟩ := hbd
+    refine ⟨B - ℓ x₀ u, ?_⟩
+    intro r hr
+    obtain ⟨v, hv, rfl⟩ := hr
+    have hmem : ℓ x₀ u + finiteHorizonTotalCost
+        (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u) v ∈
+        costSet (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀ := by
+      refine ⟨Fin.cons u v, ?_, ?_⟩
+      · rw [finiteHorizonAdmissible_tail]
+        exact ⟨xu, uu, by rw [Fin.cons_zero, Fin.tail_cons]; exact hv⟩
+      · rw [finiteHorizonTotalCost_tail, Fin.cons_zero, Fin.tail_cons]
+    have := hB hmem
+    linarith
+  -- Taking the infimum in the tail bound gives a uniform lower bound for the range.
+  have hbdr : BddBelow (Set.range g) := by
+    obtain ⟨B, hB⟩ := hbd
+    refine ⟨B, ?_⟩
+    rintro _ ⟨u, rfl⟩
+    obtain ⟨u, xu, uu, hCu⟩ := u
+    have hle : B - ℓ x₀ u ≤ sInf
+        (costSet (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u)) := by
+      refine le_csInf hCu ?_
+      intro r hr
+      obtain ⟨v, hv, rfl⟩ := hr
+      have hmem : ℓ x₀ u + finiteHorizonTotalCost
+          (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u) v ∈
+          costSet (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀ := by
+        refine ⟨Fin.cons u v, ?_, ?_⟩
+        · rw [finiteHorizonAdmissible_tail]
+          exact ⟨xu, uu, by rw [Fin.cons_zero, Fin.tail_cons]; exact hv⟩
+        · rw [finiteHorizonTotalCost_tail, Fin.cons_zero, Fin.tail_cons]
+      have := hB hmem
+      linarith
+    simp only [g]
+    linarith
   have hA : (firstControls
       (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀).Nonempty := by
     obtain ⟨r, u, hu, _⟩ := hsub
@@ -208,7 +264,8 @@ theorem bellman (prob : FiniteHorizonProblem X U) (x₀ : X) (hN : 0 < prob.hori
       obtain ⟨u, rfl⟩ := hy
       obtain ⟨u, xu, uu, hCu⟩ := u
       have hbu : BddBelow (costSet
-          (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u)) := hbdt u
+          (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u)) :=
+        hbdt u ⟨xu, uu, hCu⟩
       refine le_of_forall_pos_le_add ?_
       intro ε hε
       have hlt : sInf (costSet (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ u))
@@ -245,7 +302,7 @@ theorem bellman (prob : FiniteHorizonProblem X U) (x₀ : X) (hN : 0 < prob.hori
           (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) (f x₀ (u0 0)))
           ≤ finiteHorizonTotalCost (⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ : FiniteHorizonProblem X U)
               (f x₀ (u0 0)) (Fin.tail u0) :=
-        csInf_le (hbdt (u0 0)) ⟨Fin.tail u0, hdec.2.2, rfl⟩
+        csInf_le (hbdt (u0 0) hmem) ⟨Fin.tail u0, hdec.2.2, rfl⟩
       have hcost : finiteHorizonTotalCost
             (⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ : FiniteHorizonProblem X U) x₀ u0
           = ℓ x₀ (u0 0) + finiteHorizonTotalCost
