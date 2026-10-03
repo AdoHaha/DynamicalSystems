@@ -35,9 +35,6 @@ minimizer set, matching the set-valued convention of the receding-horizon law
 
 * `mpcLaw_firstControlAdmissible`: the chosen first control is admissible, i.e.
   `x` lies in the state set and `mpcLaw prob x hN h` lies in the input set.
-* `finiteHorizonRollout_snoc`, `finiteHorizonRollout_snoc_last`,
-  `finiteHorizonAdmissible_snoc`: the rollout and admissibility bookkeeping for
-  extending an input sequence by one terminal control.
 * `recursiveFeasibility`: recursive feasibility — the successor state of the MPC
   closed loop stays feasible when the terminal set is control invariant and
   contained in the state set (the standing `Xf ⊆ X` assumption).
@@ -119,78 +116,6 @@ continuous, control-affine `IsControlLyapunovFunction` of
 def IsTerminalCLF (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
     (Xf : Set X) (Uset : Set U) : Prop :=
   ∀ x ∈ Xf, ∃ u ∈ Uset, f x u ∈ Xf ∧ Vf (f x u) - Vf x ≤ -ℓ x u
-
-/-- Extending an input sequence by one terminal stabilizing control shifts the
-rollout of the successor state: for `v = Fin.snoc (Fin.tail u) w` started at
-`f x₀ (u 0)`, the state at index `j.castSucc` equals the state of `u` started at
-`x₀` at index `j.succ`. -/
-theorem finiteHorizonRollout_snoc {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
-    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X)
-    (u : Fin (M + 1) → U) (w : U) (j : Fin (M + 1)) :
-    finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩
-        (f x₀ (u 0)) (Fin.snoc (Fin.tail u) w) j.castSucc =
-      finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u j.succ := by
-  induction j using Fin.induction with
-  | zero =>
-      rw [Fin.castSucc_zero, finiteHorizonRollout_zero, finiteHorizonRollout_succ,
-          Fin.castSucc_zero, finiteHorizonRollout_zero]
-  | succ k ih =>
-      rw [Fin.castSucc_succ, finiteHorizonRollout_succ]
-      conv_rhs => rw [finiteHorizonRollout_succ]
-      rw [Fin.castSucc_succ k]
-      rw [ih, Fin.succ_castSucc, Fin.snoc_castSucc]
-      rfl
-
-/-- The terminal step of an extended rollout: extending the input sequence `u` of
-horizon `M + 1` by a terminal control `w` and restarting the rollout at the
-successor `f x₀ (u 0)` reaches `f x w` at the final index, where `x` is the
-terminal state of the original rollout.  This combines the one-step recursion with
-`finiteHorizonRollout_snoc`. -/
-theorem finiteHorizonRollout_snoc_last {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
-    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X) (u : Fin (M + 1) → U) (w : U) :
-    finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x₀ (u 0))
-        (Fin.snoc (Fin.tail u) w) (Fin.last (M + 1)) =
-      f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u (Fin.last (M + 1))) w := by
-  rw [← Fin.succ_last M, finiteHorizonRollout_succ]
-  rw [finiteHorizonRollout_snoc x₀ u w (Fin.last M), Fin.succ_last, Fin.snoc_last]
-
-/-- Admissibility of an input sequence extended by one terminal control: if `u` is
-admissible for the horizon-`M + 1` problem, its terminal state lies in the state
-set, and the appended control `w` is admissible with `f`-successor in the terminal
-set, then `Fin.snoc (Fin.tail u) w` started at the successor `f x₀ (u 0)` is
-admissible for the same horizon-`M + 1` problem.  The first `M` steps reuse the
-trajectory of `u` shifted by one index (`finiteHorizonRollout_snoc`) and the last
-step is the appended terminal control. -/
-theorem finiteHorizonAdmissible_snoc {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
-    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X) (u : Fin (M + 1) → U) (w : U)
-    (hadm : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u)
-    (htermXs : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u
-        (Fin.last (M + 1)) ∈ Xs)
-    (hwU : w ∈ Us)
-    (hwXf : f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u
-        (Fin.last (M + 1))) w ∈ Xf) :
-    FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x₀ (u 0))
-      (Fin.snoc (Fin.tail u) w) := by
-  unfold FiniteHorizonAdmissible
-  constructor
-  · intro k
-    constructor
-    · rw [finiteHorizonRollout_snoc x₀ u w k]
-      by_cases hlast : k.succ = Fin.last (M + 1)
-      · rw [hlast]
-        exact htermXs
-      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M + 1)).mpr hlast
-        rw [← hj]
-        exact (hadm.1 j).1
-    · by_cases hklast : k = Fin.last M
-      · rw [hklast, Fin.snoc_last]
-        exact hwU
-      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M)).mpr hklast
-        rw [← hj, Fin.snoc_castSucc]
-        exact (hadm.1 j.succ).2
-  · rw [← Fin.succ_last M, finiteHorizonRollout_succ]
-    rw [finiteHorizonRollout_snoc x₀ u w (Fin.last M), Fin.succ_last, Fin.snoc_last]
-    exact hwXf
 
 /-- Recursive feasibility of the receding-horizon law (Rawlings–Mayne–Diehl 2019,
 Ch. 2 §2.3, printed pp. 111–112 / PDF pp. 154–155): if `prob` is

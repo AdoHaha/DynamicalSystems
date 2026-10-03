@@ -51,7 +51,6 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
 ## Main definitions and theorems
 
 * `mpcStep`: convenient one-step closed-loop map `mpcClosedLoop prob x hN h`.
-* `totalCost_snoc`, `totalCost_succ_split`: Finset cost splitting and shift identities.
 * `mpc_valueFunction_decrease`: value-function descent `V(x⁺) ≤ V(x) − ℓ(x, κ(x))`.
 * `mpc_valueFunction_decrease_of_nonneg`: descent under non-negative stage and terminal costs.
 * `costSet_bddBelow_of_nonneg`: non-negative costs guarantee `BddBelow (costSet prob y)`.
@@ -113,63 +112,6 @@ control `mpcLaw prob x hN h` and advances the dynamics by one step
 noncomputable def mpcStep (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < prob.horizon)
     (h : ∃ u : Fin prob.horizon → U, IsOptimalInput prob x u) : X :=
   mpcClosedLoop prob x hN h
-
-/-- Expanding the total cost of an extended input sequence `Fin.snoc (Fin.tail u) w`: the running
-sum shifts by one index along the original rollout, the last stage cost evaluates at the terminal
-state `x_N` with input `w`, and the terminal cost evaluates at `f x_N w`. -/
-theorem totalCost_snoc (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
-    (M : ℕ) (Xs : Set X) (Us : Set U) (Xf : Set X)
-    (x : X) (u : Fin (M + 1) → U) (w : U) :
-    finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) (Fin.snoc (Fin.tail u) w) =
-      (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u j.succ.castSucc)
-        (u j.succ)) +
-        ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) w +
-        Vf (f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) w) := by
-  unfold finiteHorizonTotalCost
-  rw [Fin.sum_univ_castSucc]
-  rw [finiteHorizonRollout_snoc_last]
-  congr 1
-  congr 1
-  · refine Finset.sum_congr rfl ?_
-    intro j _
-    rw [finiteHorizonRollout_snoc, Fin.snoc_castSucc, Fin.tail]
-    rw [Fin.castSucc_succ]
-  · rw [finiteHorizonRollout_snoc, Fin.snoc_last, Fin.succ_last]
-
-/-- Splitting off the first stage cost from the finite-horizon total cost of sequence `u`, as the
-horizon-`M + 1` restatement of `finiteHorizonTotalCost_tail` combined with
-`finiteHorizonRollout_tail`. -/
-theorem totalCost_succ_split (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
-    (M : ℕ) (Xs : Set X) (Us : Set U) (Xf : Set X)
-    (x : X) (u : Fin (M + 1) → U) :
-    finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u =
-      ℓ x (u 0) +
-        (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u j.succ.castSucc)
-          (u j.succ)) +
-        Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) := by
-  rw [finiteHorizonTotalCost_tail]
-  have htail :
-      finiteHorizonTotalCost ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u) =
-        (∑ k : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0))
-            (Fin.tail u) k.castSucc) ((Fin.tail u) k)) +
-          Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u)
-            (Fin.last M)) := rfl
-  rw [htail]
-  have hsum :
-      (∑ k : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0))
-          (Fin.tail u) k.castSucc) ((Fin.tail u) k)) =
-        (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u
-          j.succ.castSucc) (u j.succ)) := by
-    refine Finset.sum_congr rfl ?_
-    intro j _
-    rw [← finiteHorizonRollout_tail x u j.castSucc, Fin.succ_castSucc]
-    rfl
-  have hVf :
-      Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u)
-          (Fin.last M)) =
-        Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) := by
-    rw [← finiteHorizonRollout_tail x u (Fin.last M), Fin.succ_last]
-  rw [hsum, hVf, add_assoc]
 
 /-- The suboptimal (warm-start) cost bound: for an arbitrary *admissible* — not necessarily
 optimal — input sequence `u`, the value function at the successor state `f x (u 0)` is bounded
