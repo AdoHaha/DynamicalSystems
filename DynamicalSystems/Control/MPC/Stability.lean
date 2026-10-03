@@ -25,13 +25,14 @@ terminal cost `Vf`, terminal constraint set `Xf`, and horizon `N > 0`, the reced
 control law `κ_N(x) = mpcLaw prob x hN h` applies the first control input of an optimal
 sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcStep prob x hN h`.
 
-1. **Value-function descent (Lemma 2.18 / eq. (2.26), printed p. 117):**
+1. **Value-function descent (eq. (2.17), §2.4.2, printed p. 117):**
    If `Vf` is a discrete terminal control-Lyapunov function on `Xf` (`IsTerminalCLF`) and
    `Xf ⊆ Xs`, then the value function satisfies
    `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))`.
    The candidate warm-start input for `x⁺` is `ũ = Fin.snoc (Fin.tail u*) w` where `w ∈ Us` is
    the stabilizing terminal control selected by `IsTerminalCLF` at the terminal state
-   `x_N = rollout x u* (Fin.last N) ∈ Xf`.
+   `x_N = rollout x u* (Fin.last N) ∈ Xf`; this warm-start pattern has the form of eq. (2.26),
+   §2.7, printed p. 147. (Value-function monotonicity is Proposition 2.18, printed p. 118.)
 
 2. **Decay rate convergence (discrete dissipation bridge):**
    Instantiating the scalar dissipation bridge `tendsto_zero_of_succ_le_sub` with
@@ -39,13 +40,13 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
    `v (n + 1) ≤ v n − w n` into summability and convergence of the stage cost:
    `ℓ(x_n, κ_N(x_n)) → 0`.
 
-3. **Asymptotic stability (Theorem 2.19, printed p. 116 / 120):**
+3. **Convergence to the origin (Theorem 2.19, printed pp. 119–120):**
    If the stage cost is coercive (`∃ α : ℝ → ℝ` with `α 0 = 0`, strictly increasing, and
    `α ‖y‖ ≤ ℓ y u`), the stage-cost convergence implies `α ‖x_n‖ → 0`, and by class-K
    inversion `‖x_n‖ → 0` as `n → ∞`.
    Note: the continuous-time stability notion `IsAsymptoticallyStable` in this library is
-   restricted to ℝ-flows; asymptotic stability in discrete time is formulated honestly as
-   the convergence of iterates to the origin in norm: `Tendsto (fun n ↦ ‖x_n‖) atTop (𝓝 0)`.
+   restricted to ℝ-flows; this theorem proves convergence of the iterates to the origin in norm
+   (attractivity), not the full ε–δ asymptotic stability statement.
 
 ## Main definitions and theorems
 
@@ -56,7 +57,7 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
 * `costSet_bddBelow_of_nonneg`: non-negative costs guarantee `BddBelow (costSet prob y)`.
 * `valueFunction_nonneg`: non-negative costs guarantee `0 ≤ valueFunction prob y`.
 * `mpc_stageCost_tendsto_zero`: convergence of stage cost along closed-loop trajectories.
-* `mpc_asymptoticallyStable`: norm convergence of closed-loop states to the origin.
+* `mpc_converges_to_origin`: norm convergence of closed-loop states to the origin (attractivity).
 * `mpc_valueFunction_tendsto_zero`: convergence of the value function to zero when upper bounded
   by a continuous comparison function (Rawlings–Mayne–Diehl Assumption 2.17).
 
@@ -73,7 +74,7 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
    `tendsto_zero_of_succ_le_sub` proves convergence of the decay rate `w n = ℓ(x_n, κ(x_n)) → 0`,
    not the Lyapunov sequence `v n`. This decay-rate convergence is formalized as
    `mpc_stageCost_tendsto_zero` and directly delivers state convergence `‖x_n‖ → 0` in
-   `mpc_asymptoticallyStable`. Convergence of the value function itself,
+   `mpc_converges_to_origin`. Convergence of the value function itself,
    `mpc_valueFunction_tendsto_zero`, requires an upper bound $V_N(x) \le \alpha_2(\|x\|)$
    (weak controllability, Rawlings Assumption 2.17).
 -/
@@ -113,7 +114,9 @@ theorem totalCost_snoc (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → �
     rw [Fin.castSucc_succ]
   · rw [finiteHorizonRollout_snoc, Fin.snoc_last, Fin.succ_last]
 
-/-- Splitting off the first stage cost from the finite-horizon total cost of sequence `u`. -/
+/-- Splitting off the first stage cost from the finite-horizon total cost of sequence `u`, as the
+horizon-`M + 1` restatement of `finiteHorizonTotalCost_tail` combined with
+`finiteHorizonRollout_tail`. -/
 theorem totalCost_succ_split (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
     (M : ℕ) (Xs : Set X) (Us : Set U) (Xf : Set X)
     (x : X) (u : Fin (M + 1) → U) :
@@ -122,19 +125,39 @@ theorem totalCost_succ_split (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X
         (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u j.succ.castSucc)
           (u j.succ)) +
         Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) := by
-  unfold finiteHorizonTotalCost
-  rw [Fin.sum_univ_succ]
-  rw [Fin.castSucc_zero, finiteHorizonRollout_zero]
+  rw [finiteHorizonTotalCost_tail]
+  have htail :
+      finiteHorizonTotalCost ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u) =
+        (∑ k : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0))
+            (Fin.tail u) k.castSucc) ((Fin.tail u) k)) +
+          Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u)
+            (Fin.last M)) := rfl
+  rw [htail]
+  have hsum :
+      (∑ k : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0))
+          (Fin.tail u) k.castSucc) ((Fin.tail u) k)) =
+        (∑ j : Fin M, ℓ (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u
+          j.succ.castSucc) (u j.succ)) := by
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [← finiteHorizonRollout_tail x u j.castSucc, Fin.succ_castSucc]
+    rfl
+  have hVf :
+      Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M, Xs, Us, Xf⟩ (f x (u 0)) (Fin.tail u)
+          (Fin.last M)) =
+        Vf (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1))) := by
+    rw [← finiteHorizonRollout_tail x u (Fin.last M), Fin.succ_last]
+  rw [hsum, hVf, add_assoc]
 
 /-- The fundamental value-function descent property of receding-horizon MPC
-(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Lemma 2.18 / eq. (2.26), printed p. 117):
+(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, eq. (2.17), printed p. 117):
 the optimal cost-to-go at the successor state decreases by at least the stage cost of the applied
 control input, `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))`.
 
-The proof constructs the candidate input `ũ = Fin.snoc (Fin.tail u*) w` using the stabilizing
-terminal control `w` from `IsTerminalCLF`, verifies admissibility with
-`finiteHorizonAdmissible_snoc`, and telescopes the stage costs using `totalCost_snoc` and
-`totalCost_succ_split`. -/
+The proof constructs the candidate input `ũ = Fin.snoc (Fin.tail u*) w`, the warm-start pattern of
+eq. (2.26), §2.7, printed p. 147, using the stabilizing terminal control `w` from `IsTerminalCLF`,
+verifies admissibility with `finiteHorizonAdmissible_snoc`, and telescopes the stage costs using
+`totalCost_snoc` and `totalCost_succ_split`. -/
 theorem mpc_valueFunction_decrease (prob : FiniteHorizonProblem X U) (x : X)
     (hN : 0 < prob.horizon) (h : ∃ u : Fin prob.horizon → U, IsOptimalInput prob x u)
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
@@ -276,23 +299,24 @@ private theorem tendsto_zero_of_classK {s w : ℕ → ℝ} (hs : ∀ n, 0 ≤ s 
   exact hsn
 
 omit [NormedAddCommGroup U] in
-/-- Asymptotic stability of the MPC closed-loop system
-(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19, printed p. 116 / 120):
-under coercive stage cost `α ‖y‖ ≤ ℓ y u` with class-K function `α`, the closed-loop state
+/-- Convergence to the origin (attractivity) of the MPC closed-loop system
+(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19, printed pp. 119–120):
+under coercive stage cost `α ‖y‖ ≤ ℓ y u` with `α 0 = 0` and `StrictMono α`, the closed-loop state
 converges in norm to the origin, `Tendsto (fun n ↦ ‖x_n‖) atTop (𝓝 0)`.
 
-Discrete-time asymptotic stability in this library is formulated as state convergence to the
-origin, avoiding continuous-flow restrictions (`IsAsymptoticallyStable` is ℝ-flow only). -/
-theorem mpc_asymptoticallyStable (prob : FiniteHorizonProblem X U) (x : X)
+This proves convergence to the origin (attractivity), not full asymptotic stability; full
+asymptotic stability (equilibrium plus Lyapunov ε–δ stability via `isStableOn_discreteFlow`) is a
+separate step not stated here. -/
+theorem mpc_converges_to_origin (prob : FiniteHorizonProblem X U) (x : X)
     (hN : 0 < prob.horizon) (hopt : ∀ y, ∃ u, IsOptimalInput prob y u)
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
     (hVf : ∀ x ∈ prob.terminalSet, 0 ≤ prob.terminalCost x)
-    (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧ Filter.Tendsto α Filter.atTop Filter.atTop ∧
+    (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧
       ∀ y u, α ‖y‖ ≤ prob.stageCost y u) :
     Filter.Tendsto (fun n ↦ ‖(fun y ↦ mpcStep prob y hN (hopt y))^[n] x‖) Filter.atTop (𝓝 0) := by
-  obtain ⟨α, hα0, hmono, -, hle⟩ := hcoercive
+  obtain ⟨α, hα0, hmono, hle⟩ := hcoercive
   have hw := mpc_stageCost_tendsto_zero prob x hN hopt hCLF hsub hℓ hVf
   refine tendsto_zero_of_classK (fun n ↦ norm_nonneg _) α hα0 hmono ?_ hw
   intro n
@@ -300,7 +324,7 @@ theorem mpc_asymptoticallyStable (prob : FiniteHorizonProblem X U) (x : X)
 
 omit [NormedAddCommGroup U] in
 /-- Convergence of the value function along closed-loop trajectories to zero
-(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19(a), printed p. 116 / 120),
+(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, Theorem 2.19(a), printed pp. 119–120),
 given weak controllability (Assumption 2.17: upper bound `V_N(y) ≤ α₂ ‖y‖` with `α₂`
 continuous at `0` and `α₂ 0 = 0`). -/
 theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
@@ -309,13 +333,13 @@ theorem mpc_valueFunction_tendsto_zero (prob : FiniteHorizonProblem X U) (x : X)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     (hℓ : ∀ x u, 0 ≤ prob.stageCost x u)
     (hVf : ∀ x ∈ prob.terminalSet, 0 ≤ prob.terminalCost x)
-    (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧ Filter.Tendsto α Filter.atTop Filter.atTop ∧
+    (hcoercive : ∃ α : ℝ → ℝ, α 0 = 0 ∧ StrictMono α ∧
       ∀ y u, α ‖y‖ ≤ prob.stageCost y u)
     (hVupper : ∃ α₂ : ℝ → ℝ, α₂ 0 = 0 ∧ ContinuousAt α₂ 0 ∧ ∀ y, valueFunction prob y ≤ α₂ ‖y‖) :
     Filter.Tendsto (fun n ↦ valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x))
       Filter.atTop (𝓝 0) := by
   obtain ⟨α₂, hα₂0, hcont, hVle⟩ := hVupper
-  have hx := mpc_asymptoticallyStable prob x hN hopt hCLF hsub hℓ hVf hcoercive
+  have hx := mpc_converges_to_origin prob x hN hopt hCLF hsub hℓ hVf hcoercive
   have hα₂ : Filter.Tendsto (fun n ↦ α₂ ‖(fun y ↦ mpcStep prob y hN (hopt y))^[n] x‖)
       Filter.atTop (𝓝 0) := by
     have hlim := hcont.tendsto.comp hx
