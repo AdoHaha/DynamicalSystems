@@ -50,6 +50,8 @@ the Bochner convention that non-integrable functions integrate to junk (`0`).
 
 ## Main results
 
+* `isOptimalPair_iff`: optimality iff admissibility together with the universal
+  inequality against every admissible pair.
 * `continuousValueFunction_le`: the value function is a lower bound of the cost of
   every admissible pair.
 * `le_continuousValueFunction`: a lower bound of every admissible cost bounds the
@@ -102,10 +104,9 @@ integrated over the horizon plus the terminal cost at the final state
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.1, printed
 pp. 349–363).
 
-The initial state `x₀` does not enter the formula; it is kept as a parameter so
-that the cost can be written uniformly with `IsAdmissiblePair`, which already
-records `x 0 = x₀`. -/
-noncomputable def continuousTotalCost (prob : ContinuousOCP X U) (_x₀ : X)
+The initial state does not enter the formula; it is recorded separately by
+`IsAdmissiblePair` through the condition `x 0 = x₀`. -/
+noncomputable def continuousTotalCost (prob : ContinuousOCP X U)
     (x : ℝ → X) (u : ℝ → U) : ℝ :=
   (∫ t in 0..prob.T, prob.L t (x t) (u t)) + prob.K (x prob.T)
 
@@ -131,7 +132,7 @@ def IsAdmissiblePair (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : 
 
 /-- The set of total costs of admissible trajectory/control pairs from `x₀`. -/
 def continuousCostSet (prob : ContinuousOCP X U) (x₀ : X) : Set ℝ :=
-  {c | ∃ x u, IsAdmissiblePair prob x₀ x u ∧ c = continuousTotalCost prob x₀ x u}
+  {c | ∃ x u, IsAdmissiblePair prob x₀ x u ∧ c = continuousTotalCost prob x u}
 
 /-- The dynamic-programming value function: the infimum of the total cost over the
 admissible trajectory/control pairs from `x₀`, i.e. the optimal cost-to-go
@@ -150,15 +151,33 @@ admissible pairs); the problem need not have a unique or even an existing
 minimiser. -/
 def IsOptimalPair (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : ℝ → U) : Prop :=
   IsAdmissiblePair prob x₀ x u ∧
-    IsMinOn (fun p : (ℝ → X) × (ℝ → U) ↦ continuousTotalCost prob x₀ p.1 p.2)
+    IsMinOn (fun p : (ℝ → X) × (ℝ → U) ↦ continuousTotalCost prob p.1 p.2)
       {p : (ℝ → X) × (ℝ → U) | IsAdmissiblePair prob x₀ p.1 p.2} (x, u)
+
+/-- Unpacking of `IsOptimalPair`: an optimal pair is admissible and its total cost
+is no larger than the total cost of every admissible pair.  This is the form used by
+verification theorems, where the relational `IsMinOn` minimisation is stated as a
+universal inequality over the admissible set (Sontag, *Mathematical Control
+Theory*, 2nd ed., 1998, Ch. 8 §8.1, printed pp. 349–363). -/
+theorem isOptimalPair_iff (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : ℝ → U) :
+    IsOptimalPair prob x₀ x u ↔
+      IsAdmissiblePair prob x₀ x u ∧
+        ∀ v w, IsAdmissiblePair prob x₀ v w →
+          continuousTotalCost prob x u ≤ continuousTotalCost prob v w := by
+  unfold IsOptimalPair
+  rw [isMinOn_iff]
+  constructor
+  · rintro ⟨hadm, hmin⟩
+    exact ⟨hadm, fun v w hv ↦ hmin (v, w) hv⟩
+  · rintro ⟨hadm, hmin⟩
+    exact ⟨hadm, fun p hp ↦ hmin p.1 p.2 hp⟩
 
 /-- The value function is a lower bound of the cost of every admissible pair.  The
 boundedness hypothesis is needed because `ℝ` is only conditionally complete. -/
 theorem continuousValueFunction_le (prob : ContinuousOCP X U) (x₀ : X)
     (x : ℝ → X) (u : ℝ → U) (hu : IsAdmissiblePair prob x₀ x u)
     (hbd : BddBelow (continuousCostSet prob x₀)) :
-    continuousValueFunction prob x₀ ≤ continuousTotalCost prob x₀ x u :=
+    continuousValueFunction prob x₀ ≤ continuousTotalCost prob x u :=
   csInf_le hbd ⟨x, u, hu, rfl⟩
 
 /-- A lower bound of every admissible cost bounds the value function. -/
@@ -173,15 +192,15 @@ cost.  If no minimiser exists this fails in general and one should use the
 `continuousValueFunction_le` / `le_continuousValueFunction` sandwich instead. -/
 theorem continuousValueFunction_eq_continuousTotalCost (prob : ContinuousOCP X U) (x₀ : X)
     (x : ℝ → X) (u : ℝ → U) (hu : IsOptimalPair prob x₀ x u) :
-    continuousValueFunction prob x₀ = continuousTotalCost prob x₀ x u := by
-  have hmem : continuousTotalCost prob x₀ x u ∈ continuousCostSet prob x₀ :=
+    continuousValueFunction prob x₀ = continuousTotalCost prob x u := by
+  have hmem : continuousTotalCost prob x u ∈ continuousCostSet prob x₀ :=
     ⟨x, u, hu.1, rfl⟩
   have hbd : BddBelow (continuousCostSet prob x₀) :=
-    ⟨continuousTotalCost prob x₀ x u, by
+    ⟨continuousTotalCost prob x u, by
       rintro r ⟨v, w, hv, rfl⟩
       exact (isMinOn_iff.mp hu.2) (v, w) hv⟩
   refine le_antisymm (csInf_le hbd hmem) ?_
-  refine le_csInf ⟨continuousTotalCost prob x₀ x u, hmem⟩ ?_
+  refine le_csInf ⟨continuousTotalCost prob x u, hmem⟩ ?_
   rintro r ⟨v, w, hv, rfl⟩
   exact (isMinOn_iff.mp hu.2) (v, w) hv
 
