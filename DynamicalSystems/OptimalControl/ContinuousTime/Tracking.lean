@@ -36,8 +36,8 @@ eqs. (8.37)–(8.41). Writing `S` for the square, the pointwise identity is
 so the optimal law makes `S = 0` and the accumulated cost is exactly the
 boundary term. The full finite-horizon problem (a `sInf` over admissible
 trajectories, cf. `ContinuousOCP`) is not formalized here; this file states the
-completion-of-squares identity at the trajectory level, which is the standard
-optimality certificate.
+completion-of-squares identity at the pointwise algebraic / state-space level,
+which is the standard optimality certificate.
 
 ## Deterministic estimation and duality (Sontag §8.3, printed pp. 375–378)
 
@@ -48,7 +48,7 @@ linear-quadratic duality are
 
 * `estimationRiccati A C V W P` — the dual continuous algebraic Riccati equation
   `A P + P Aᵀ - P Cᵀ W⁻¹ C P + V = 0`;
-* `observerGain A C W P` — the observer gain `P Cᵀ W` (Sontag's filtering gain
+* `observerGain C W P` — the observer gain `P Cᵀ W⁻¹` (Sontag's filtering gain
   `L = -ΠCᵀQ`, printed p. 378);
 * `estimation_dual_lqr` — the estimation Riccati equation is *exactly* the LQR
   `care` of the dual system `(Aᵀ, Cᵀ)` with weights `(V, W)`.
@@ -64,7 +64,7 @@ layering rule).
   continuous-time tracking problem.
 * `trackingOptimalControl`: the affine feedback-plus-feedforward law (8.41).
 * `estimationRiccati`: the dual continuous algebraic Riccati equation.
-* `observerGain`: the deterministic (Kalman) observer gain `P Cᵀ W`.
+* `observerGain`: the deterministic (Kalman) observer gain `P Cᵀ W⁻¹`.
 
 ## Main results
 
@@ -76,7 +76,7 @@ layering rule).
 
 @[expose] public section
 
-open Matrix MeasureTheory
+open Matrix
 
 variable {n m p : ℕ}
 
@@ -301,19 +301,38 @@ theorem estimation_dual_lqr (A : Matrix (Fin n) (Fin n) ℝ)
   unfold estimationRiccati care
   simp only [transpose_transpose, invOf_eq_nonsing_inv]
 
-/-- The deterministic (Kalman) observer gain `K = P Cᵀ W` of Sontag,
+/-- The deterministic (Kalman) observer gain `K = P Cᵀ W⁻¹` of Sontag,
 *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.3 (the filtering gain
 `L = -ΠCᵀQ` of the summary on printed p. 378, with `W` the measurement weight and
-`P` the solution of `estimationRiccati`). -/
+`P` the solution of `estimationRiccati`). The inverse `W⁻¹` is the dual input
+weight, matching the `⅟W` that appears in `estimationRiccati`. -/
 noncomputable def observerGain (C : Matrix (Fin p) (Fin n) ℝ)
-    (W : Matrix (Fin p) (Fin p) ℝ) (P : Matrix (Fin n) (Fin n) ℝ) :
+    (W : Matrix (Fin p) (Fin p) ℝ) [Invertible W] (P : Matrix (Fin n) (Fin n) ℝ) :
     Matrix (Fin n) (Fin p) ℝ :=
-  P * Cᵀ * W
+  P * Cᵀ * ⅟W
 
-/-- The transpose of the deterministic observer gain `P Cᵀ W` is `Wᵀ C Pᵀ`. -/
+/-- The transpose of the deterministic observer gain `P Cᵀ W⁻¹` is `(W⁻¹)ᵀ C Pᵀ`. -/
 theorem observerGain_transpose (C : Matrix (Fin p) (Fin n) ℝ)
-    (W : Matrix (Fin p) (Fin p) ℝ) (P : Matrix (Fin n) (Fin n) ℝ) :
-    (observerGain C W P)ᵀ = Wᵀ * C * Pᵀ := by
+    (W : Matrix (Fin p) (Fin p) ℝ) [Invertible W] (P : Matrix (Fin n) (Fin n) ℝ) :
+    (observerGain C W P)ᵀ = (⅟W)ᵀ * C * Pᵀ := by
   unfold observerGain
   rw [transpose_mul, transpose_mul, transpose_transpose]
   simp only [Matrix.mul_assoc]
+
+/-- **Duality of the observer gain and the dual LQR gain.** For a symmetric
+measurement weight `W` (`Wᵀ = W`) and a symmetric Riccati solution `P`
+(`Pᵀ = P`), the transpose of the deterministic observer gain is exactly the
+continuous LQR gain of the dual system `(Aᵀ, Cᵀ)`:
+`(P Cᵀ W⁻¹)ᵀ = ⅟W C P = continuousLQRGain Aᵀ Cᵀ W P`. The observer gain
+`P Cᵀ W⁻¹` is thus the transpose of the dual regulation gain, mirroring the
+filtering gain `L = -ΠCᵀQ` of Sontag, *Mathematical Control Theory*, 2nd ed.,
+1998, Ch. 8 §8.3 (printed pp. 377–378) and the estimation Riccati equation
+`estimationRiccati A C V W P`. -/
+theorem observerGain_dual_lqr (A : Matrix (Fin n) (Fin n) ℝ)
+    (C : Matrix (Fin p) (Fin n) ℝ) (W : Matrix (Fin p) (Fin p) ℝ) [Invertible W]
+    (P : Matrix (Fin n) (Fin n) ℝ) (hP : Pᵀ = P) (hW : Wᵀ = W) :
+    (observerGain C W P)ᵀ = continuousLQRGain Aᵀ Cᵀ W P := by
+  have hWt : (⅟W : Matrix (Fin p) (Fin p) ℝ)ᵀ = ⅟W := by
+    rw [invOf_eq_nonsing_inv, transpose_nonsing_inv, hW, ← invOf_eq_nonsing_inv]
+  unfold observerGain continuousLQRGain
+  simp only [transpose_mul, transpose_transpose, hP, hWt, Matrix.mul_assoc]
