@@ -33,10 +33,12 @@ The book states the cost with a leading factor (1/2), `V = (1/2)xᵀ Π x`, wher
 
 ## Main results
 
-* `lqr_lyapunov_decrease`: the DARE implies the closed-loop Lyapunov equation
-  `P = (A + B K)ᵀ P (A + B K) + Q + Kᵀ R K`.
+* `lqr_lyapunov_decrease`: the DARE implies the closed-loop Lyapunov matrix EQUATION
+  `P = (A + B K)ᵀ P (A + B K) + Q + Kᵀ R K`; despite the name this is an equality, not a
+  strict decrease.
 * `lqr_bellman`: the quadratic value function `V(x) = quadForm P x` satisfies the Bellman
-  one-step identity `V(x) = quadForm Q x + quadForm R (K x) + V((A + B K) x)`.
+  one-step *evaluation* identity `V(x) = quadForm Q x + quadForm R (K x) + V((A + B K) x)`
+  at the DARE gain; it is not an optimality/minimality recursion.
 -/
 
 @[expose] public section
@@ -64,9 +66,12 @@ private lemma mul_gain :
     (R + Bᵀ * P * B) * (-⅟(R + Bᵀ * P * B) * (Bᵀ * P * A)) = -(Bᵀ * P * A) := by
   rw [Matrix.neg_mul, Matrix.mul_neg, Matrix.mul_invOf_cancel_left]
 
-/-- DARE implies the closed-loop Lyapunov matrix equation.
-This is the algebraic Lyapunov equation; no stability/decrease is asserted (that requires
-Q + KᵀRK ⪰ 0).
+/-- DARE implies the closed-loop Lyapunov matrix EQUATION
+`P = (A + B * lqrOptimalGain A B R P)ᵀ * P * (A + B * lqrOptimalGain A B R P) + Q +
+  (lqrOptimalGain A B R P)ᵀ * R * (lqrOptimalGain A B R P)`.
+
+Despite its name this is an algebraic equality (a Lyapunov equation), not a strict decrease: a
+decrease of `quadForm P` along the closed loop would additionally require `Q + KᵀRK ⪰ 0`.
 Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6 (printed p. 24). -/
 theorem lqr_lyapunov_decrease (hD : dare A B Q R P) :
     P = (A + B * lqrOptimalGain A B R P)ᵀ * P * (A + B * lqrOptimalGain A B R P) + Q +
@@ -92,13 +97,19 @@ private lemma quadForm_mulVec_rect {k l : ℕ} (M : Matrix (Fin k) (Fin k) ℝ)
   simp only [quadForm, ← Matrix.mulVec_mulVec, Matrix.dotProduct_mulVec,
     Matrix.vecMul_mulVec, Matrix.vecMul_transpose]
 
-/-- The one-step (Bellman-form) identity for the DARE gain.
+/-- The one-step (Bellman-form) *evaluation* of the quadratic value function
+`V(x) = quadForm P x` at the DARE gain: `V x = quadForm Q x + quadForm R (K x) + V ((A + B K) x)`
+with `K = lqrOptimalGain A B R P`.
+
+This is a one-step evaluation identity at the DARE gain, obtained by expanding the closed-loop
+Lyapunov equation; it does NOT assert that the DARE gain is optimal or that the left-hand side is
+minimal over the input (that optimality/minimality recursion is not formalized here).
 Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 1 §1.3.6 (printed p. 24). -/
 theorem lqr_bellman (hD : dare A B Q R P) (x : Fin n → ℝ) :
     quadForm P x = quadForm Q x + quadForm R (lqrOptimalGain A B R P *ᵥ x) +
       quadForm P ((A + B * lqrOptimalGain A B R P) *ᵥ x) := by
-  have hdec := lqr_lyapunov_decrease A B Q R P hD
-  conv_lhs => rw [hdec]
+  have hlyap := lqr_lyapunov_decrease A B Q R P hD
+  conv_lhs => rw [hlyap]
   rw [quadForm_add, quadForm_add]
   rw [← quadForm_mulVec, ← quadForm_mulVec_rect]
   ring

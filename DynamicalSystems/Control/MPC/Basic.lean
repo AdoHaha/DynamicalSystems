@@ -205,6 +205,14 @@ invariance is expressed by `hXf`, which packages Definition 2.9(b) (for every
 assumption `Xf ⊆ X` needed because the old terminal state becomes an interior
 state of the extended horizon.
 
+Note the output type: recursive feasibility yields `FiniteHorizonFeasible prob x⁺`, i.e. the
+existence of an *admissible* input sequence at `x⁺`.  It does not yield
+`∃ u, IsOptimalInput prob x⁺ u`, and hence does not by itself let `mpcClosedLoop` take another
+step; stepping the closed loop additionally requires the existence of an optimal (minimizer)
+input — a Weierstrass-type compactness hypothesis (the admissible set is compact and the cost
+is continuous), which is a separate assumption rather than a consequence of recursive
+feasibility.
+
 ## Correction
 
 The statement intended in the task, which assumed only `hN` and `h`, is not

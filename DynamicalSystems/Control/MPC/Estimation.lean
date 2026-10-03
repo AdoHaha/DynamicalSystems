@@ -35,10 +35,10 @@ gain duality with `lqrOptimalGain`.
 For the tracking problem with setpoint `ysp`, an offset-free steady-state target is
 a pair `(xs, us)` that is simultaneously a fixed point of the dynamics and an output
 match for the setpoint: `xs = A xs + B us` and `C xs = ysp`. The predicate
-`offsetFree_steadyTarget` packages these two conditions. It is the *nominal*
+`offsetFreeSteadyTarget` packages these two conditions. It is the *nominal*
 (disturbance-free, `d̂ = 0`) target; the disturbance-augmented target of Rawlings
-eq. (1.45b), §5.5.2 is `offsetFree_augmentedTarget`. The trajectory-level
-`offsetFree_steadyTarget.zero_offset` shows that a trajectory initialized at a target
+eq. (1.45b), §5.5.2 is `offsetFreeAugmentedTarget`. The trajectory-level
+`offsetFreeSteadyTarget.zero_offset` shows that a trajectory initialized at a target
 and driven by the constant target input keeps zero steady-state error.
 
 ## Scope
@@ -53,14 +53,14 @@ statement is made here.
 
 * `mheRiccati`: the estimator (moving-horizon/full-information) Riccati equation.
 * `mheOptimalGain`: the estimator gain of §4.2.2.
-* `offsetFree_steadyTarget`: the nominal steady-state target predicate for a setpoint.
-* `offsetFree_augmentedTarget`: the disturbance-augmented offset-free target.
+* `offsetFreeSteadyTarget`: the nominal steady-state target predicate for a setpoint.
+* `offsetFreeAugmentedTarget`: the disturbance-augmented offset-free target.
 
 ## Main results
 
 * `mhe_dual_lqr`: the estimator Riccati equation is the DARE of the dual LQR problem.
 * `mhe_dual_gain`: the estimator gain is the negative transpose of the dual LQR gain.
-* `offsetFree_steadyTarget.zero_offset`: a trajectory at a target keeps zero offset.
+* `offsetFreeSteadyTarget.zero_offset`: a trajectory at a target keeps zero offset.
 -/
 
 @[expose] public section
@@ -150,16 +150,22 @@ the state `xs` is a fixed point of the dynamics under the input `us`,
 
 This is the *nominal* steady-state target condition of Rawlings–Mayne–Diehl 2019,
 2nd ed., Ch. 5 §5.5 (printed p. 353): it is disturbance-free, i.e. `d̂ = 0`. The
-disturbance-augmented target is `offsetFree_augmentedTarget`. Only the two target
+disturbance-augmented target is `offsetFreeAugmentedTarget`. Only the two target
 equalities are packaged here; the target-calculator QP that selects a particular
 target and the surrounding offset-free tracking controller are separate future work. -/
--- The underscore in `offsetFree_steadyTarget` is mandated by the campaign's
--- required-declaration list, so the naming linter is disabled for this def.
-@[nolint defsWithUnderscore]
-def offsetFree_steadyTarget (A : Matrix (Fin n) (Fin n) ℝ) (B : Matrix (Fin n) (Fin m) ℝ)
+def offsetFreeSteadyTarget (A : Matrix (Fin n) (Fin n) ℝ) (B : Matrix (Fin n) (Fin m) ℝ)
     (C : Matrix (Fin p) (Fin n) ℝ) (ysp : Fin p → ℝ)
     (xs : Fin n → ℝ) (us : Fin m → ℝ) : Prop :=
   xs = A *ᵥ xs + B *ᵥ us ∧ C *ᵥ xs = ysp
+
+/-- Deprecated underscore alias of `offsetFreeSteadyTarget`, kept for compatibility with the
+campaign's original declaration name.
+
+A `def`/`alias` cannot be used here: the `defsWithUnderscore` environment linter forbids
+underscore definitions and the campaign forbids linter suppressions, so the alias is supplied as
+a (deprecated) notation instead.  It is textually usable exactly like the original declaration. -/
+@[deprecated offsetFreeSteadyTarget +typeChanged (since := "2026-10-03")]
+notation3 "offsetFree_steadyTarget" => offsetFreeSteadyTarget
 
 /-- A steady-state target drives every trajectory initialized at it, under the
 constant target input `us`, to zero offset: if `x 0 = xs` and
@@ -170,9 +176,9 @@ a fixed point, so by induction `x k = xs` for all `k`, and `h.2` (`C xs = ysp`) 
 gives the zero steady-state error.
 
 Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 5 §5.5, printed p. 353. -/
-theorem offsetFree_steadyTarget.zero_offset {A : Matrix (Fin n) (Fin n) ℝ}
+theorem offsetFreeSteadyTarget.zero_offset {A : Matrix (Fin n) (Fin n) ℝ}
     {B : Matrix (Fin n) (Fin m) ℝ} {C : Matrix (Fin p) (Fin n) ℝ} {ysp : Fin p → ℝ}
-    {xs : Fin n → ℝ} {us : Fin m → ℝ} (h : offsetFree_steadyTarget A B C ysp xs us)
+    {xs : Fin n → ℝ} {us : Fin m → ℝ} (h : offsetFreeSteadyTarget A B C ysp xs us)
     (x : ℕ → Fin n → ℝ) (hx0 : x 0 = xs) (hx : ∀ k, x (k + 1) = A *ᵥ x k + B *ᵥ us) :
     ∀ k, ysp - C *ᵥ (x k) = 0 := by
   have hfix : ∀ k, x k = xs := by
@@ -186,19 +192,30 @@ theorem offsetFree_steadyTarget.zero_offset {A : Matrix (Fin n) (Fin n) ℝ}
   rw [hfix k, h.2]
   exact sub_self ysp
 
+/-- Deprecated underscore alias of `offsetFreeSteadyTarget.zero_offset`, kept for compatibility
+with the campaign's original declaration name. -/
+@[deprecated offsetFreeSteadyTarget.zero_offset (since := "2026-10-03")]
+alias offsetFree_steadyTarget.zero_offset := offsetFreeSteadyTarget.zero_offset
+
 /-- The disturbance-augmented offset-free steady-state target pair `(xs, us)` for the
 setpoint `ysp` with disturbance estimate `d̂`: the state `xs` is a fixed point of the
 disturbance-augmented dynamics, `xs = A xs + B us + Bd d̂`, and the augmented output
 matches the setpoint, `C xs + Cd d̂ = ysp`. Taking `d̂ = 0` recovers the nominal
-`offsetFree_steadyTarget`.
+`offsetFreeSteadyTarget`.
 
 This is the offset-free target condition of Rawlings–Mayne–Diehl 2019, 2nd ed.,
 Ch. 5 §5.5.2, Rawlings eq. (1.45b). -/
--- The underscore in `offsetFree_augmentedTarget` is mandated by the campaign's
--- required-declaration list, so the naming linter is disabled for this def.
-@[nolint defsWithUnderscore]
-def offsetFree_augmentedTarget {n m nd p : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
+def offsetFreeAugmentedTarget {n m nd p : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
     (B : Matrix (Fin n) (Fin m) ℝ) (Bd : Matrix (Fin n) (Fin nd) ℝ)
     (C : Matrix (Fin p) (Fin n) ℝ) (Cd : Matrix (Fin p) (Fin nd) ℝ) (ysp : Fin p → ℝ)
     (dhat : Fin nd → ℝ) (xs : Fin n → ℝ) (us : Fin m → ℝ) : Prop :=
   xs = A *ᵥ xs + B *ᵥ us + Bd *ᵥ dhat ∧ C *ᵥ xs + Cd *ᵥ dhat = ysp
+
+/-- Deprecated underscore alias of `offsetFreeAugmentedTarget`, kept for compatibility with
+the campaign's original declaration name.
+
+As for `offsetFree_steadyTarget`, the alias is a (deprecated) notation rather than a `def`, since
+the `defsWithUnderscore` environment linter forbids underscore definitions and the campaign
+forbids linter suppressions. -/
+@[deprecated offsetFreeAugmentedTarget +typeChanged (since := "2026-10-03")]
+notation3 "offsetFree_augmentedTarget" => offsetFreeAugmentedTarget

@@ -10,7 +10,7 @@ public import DynamicalSystems.DiscreteTime.MatrixLyapunov
 public import DynamicalSystems.OptimalControl.LQR
 public import Mathlib.LinearAlgebra.Matrix.PosDef
 
-/-! # Stochastic Model Predictive Control (mean-square stability)
+/-! # Stochastic Model Predictive Control (Bernoulli expected decrease)
 
 This file formalizes the algebraic expected-decrease certificate used in stochastic model
 predictive control (MPC) for a discrete-time linear system subject to Bernoulli packet
@@ -31,8 +31,8 @@ disturbance, whereas this module is the `η = 0`, two-mode Bernoulli restriction
 
 Consider a switched linear system under a Bernoulli packet-loss communication channel.
 The control packet is delivered with probability parameter `ᾱ` (the probabilistic
-reading `0 ≤ ᾱ ≤ 1` is needed only for the weighting step of the geometric-decay
-corollary; the one-step decrease is a purely algebraic inequality valid for every real
+reading `0 ≤ ᾱ ≤ 1` is needed only for the weighting step of the two-endpoint convex
+bound; the one-step decrease is a purely algebraic inequality valid for every real
 `ᾱ`). When delivered, the closed-loop matrix is `A₁ = A + B * K`, where
 `K = lqrOptimalGain A B R P` is the state-feedback gain associated with the discrete
 algebraic Riccati equation (DARE); when dropped (or the measurement is held), the
@@ -50,15 +50,16 @@ for the algebraic bounds below; only the assumed matrix inequalities are used.
   result `meanSquare_decrease_of_bernoulli` from
   `DynamicalSystems.DiscreteTime.ExpectedLyapunov` at the LQR closed-loop mode.
 
-* `mpc_meanSquare_geometric_decay`: If both the delivered mode `A₁` and the dropped mode `A₀`
+* `mpc_twoMode_endpoint_convex_bound`: If both the delivered mode `A₁` and the dropped mode `A₀`
   contract the quadratic form with a common factor `c ≥ 0`, then the convex combination of
   the two pure-mode endpoint values — the always-delivered endpoint
   `quadForm P ((A₁ ^ k) *ᵥ x)` and the always-dropped endpoint `quadForm P ((A₀ ^ k) *ᵥ x)`,
   weighted by `ᾱ` and `1 - ᾱ` — obeys the geometric bound
   `ᾱ * quadForm P ((A₁ ^ k) *ᵥ x) + (1 - ᾱ) * quadForm P ((A₀ ^ k) *ᵥ x) ≤ c ^ k * quadForm P x`.
-  The proved object is this convex combination of two deterministic endpoint values, *not* a
-  measure-theoretic expectation over the infinite product space of mode sequences, so the bound
-  is not by itself a mean-square convergence statement at rate `c`.
+  The proved object is this convex combination of the two deterministic endpoint values, *not* a
+  measure-theoretic expectation over the infinite product space of mode sequences, so it is a
+  two-endpoint convex bound rather than a mean-square convergence theorem; a genuine mean-square
+  statement needs a path-space expectation (out of scope).
 
 ## Scope and boundary
 
@@ -99,7 +100,7 @@ theorem mpc_meanSquare_decrease {n m : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
       quadForm P x :=
   meanSquare_decrease_of_bernoulli ᾱ hE hx
 
-/-- Mean-square geometric decay for stochastic MPC under Bernoulli packet loss.
+/-- **Two-endpoint convex bound** for the two-mode Bernoulli model of stochastic MPC.
 
 If both the delivered closed loop `A₁ = A + B * lqrOptimalGain A B R P` and the dropped
 system `A₀ = A` contract the quadratic form `P` with factor `c ≥ 0`, then for any step `k : ℕ`
@@ -108,13 +109,15 @@ the always-delivered endpoint `(A₁ ^ k) *ᵥ x` and the always-dropped endpoin
 weighted by `ᾱ` and `1 - ᾱ` — satisfies the geometric bound
 `ᾱ * quadForm P ((A₁ ^ k) *ᵥ x) + (1 - ᾱ) * quadForm P ((A₀ ^ k) *ᵥ x) ≤ c ^ k * quadForm P x`.
 
-The proved object is this convex combination of two deterministic endpoint values; it is *not*
-a measure-theoretic expectation over the infinite product space of mode sequences, and the
-bound should not be read as a mean-square convergence theorem at rate `c`. The contraction
-hypotheses `hA₁`/`hA₀` are assumptions here; deriving them, and a rate `c ∈ [0, 1)`, from
-`exists_factor` and the DARE is out of scope for this slice. The matrix `P` need not be positive
-(semi)definite for the algebraic bound. -/
-theorem mpc_meanSquare_geometric_decay {n m : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
+The proved object is only the convex combination of the two deterministic *endpoint* values,
+i.e. the two pure-mode paths of a Bernoulli channel; it is *not* a measure-theoretic expectation
+over the infinite product space of the `2 ^ k` mode sequences, so it is a two-endpoint convex
+bound and not a mean-square convergence theorem. A genuine mean-square statement needs a
+path-space expectation (out of scope for this slice). The contraction hypotheses `hA₁`/`hA₀` are
+assumptions here; deriving them, and a rate `c ∈ [0, 1)`, from `exists_factor` and the DARE is
+likewise out of scope. The matrix `P` need not be positive (semi)definite for the algebraic
+bound. -/
+theorem mpc_twoMode_endpoint_convex_bound {n m : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
     (B : Matrix (Fin n) (Fin m) ℝ) (R : Matrix (Fin m) (Fin m) ℝ) (P : Matrix (Fin n) (Fin n) ℝ)
     (ᾱ : ℝ) [Invertible (R + Bᵀ * P * B)]
     (hᾱ0 : 0 ≤ ᾱ) (hᾱ1 : ᾱ ≤ 1) {c : ℝ} (hc0 : 0 ≤ c)

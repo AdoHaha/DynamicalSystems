@@ -85,7 +85,7 @@ stated over an arbitrary `[Add X]` rather than over a normed group.
   boundedness lemma yields the eventual tube bound `(L * d) / γ + ε`.
 * `robust_ultimate_boundedness_of_admissible`: the same eventual bound for a
   single execution of the additive difference inclusion, obtained by unwinding
-  `RobustlyAdmissible` to a disturbance witness and applying
+  each inclusion step to a disturbance witness and applying
   `robust_ultimate_boundedness`.
 -/
 
@@ -227,29 +227,30 @@ omit [NormedAddCommGroup U] in
 PDF pp. 253–256).  This bridges the set-valued system description of §3.1.5 to the
 trajectory-level bound of `robust_ultimate_boundedness`.  If `x` is a SINGLE
 execution of the additive difference inclusion `x⁺ ∈ additiveInclusion f {w | ‖w‖ ≤ d}`
-under the feedback `k ↦ κ (x k)` — that is, `RobustlyAdmissible (additiveInclusion …)
-Xs Us x (fun k ↦ κ (x k))` — then, under the remaining hypotheses of
-`robust_ultimate_boundedness`, the value function is ultimately bounded by
-`(L * d) / γ + ε`:
+under the feedback `k ↦ κ (x k)` — that is,
+`∀ k, x (k + 1) ∈ additiveInclusion f {w | ‖w‖ ≤ d} (x k) (κ (x k))` — then, under the
+remaining hypotheses of `robust_ultimate_boundedness`, the value function is ultimately
+bounded by `(L * d) / γ + ε`:
 
 `∀ᶠ n, V (x n) ≤ (L * d) / γ + ε`.
 
-The proof unwinds the inclusion to a disturbance sequence `w` with `w k ∈ W` via
-`robustlyAdmissible_additive_iff`, chooses that witness, and applies
+The proof unwinds each inclusion step to a disturbance witness `w k ∈ {w | ‖w‖ ≤ d}` via
+`mem_additiveInclusion_iff`, chooses that witness, and applies
 `robust_ultimate_boundedness` to the additive realization
-`x (k + 1) = f (x k) (κ (x k)) + w k`. -/
+`x (k + 1) = f (x k) (κ (x k)) + w k`.  The state and input constraint sets bundled in
+`RobustlyAdmissible` are not needed for this bound, so no `Xs`/`Us` parameters appear. -/
 theorem robust_ultimate_boundedness_of_admissible (f : X → U → X) (κ : X → U) (V : X → ℝ)
-    (ℓ : X → U → ℝ) (L d γ ε : ℝ) (Xs : Set X) (Us : Set U)
+    (ℓ : X → U → ℝ) (L d γ ε : ℝ)
     (hL : 0 ≤ L) (hγ0 : 0 < γ) (hγ1 : γ ≤ 1)
     (hdesc : ∀ x, V (f x (κ x)) ≤ V x - ℓ x (κ x))
     (hlip : ∀ y w, V (y + w) ≤ V y + L * ‖w‖)
     (hcoer : ∀ y, γ * V y ≤ ℓ y (κ y))
     (x : ℕ → X)
-    (hadm : RobustlyAdmissible (additiveInclusion f {w | ‖w‖ ≤ d}) Xs Us x
-      (fun k ↦ κ (x k)))
+    (hadm : ∀ k, x (k + 1) ∈ additiveInclusion f {w | ‖w‖ ≤ d} (x k) (κ (x k)))
     (hVnn : ∀ n, 0 ≤ V (x n)) (hε : 0 < ε) :
     ∀ᶠ n in Filter.atTop, V (x n) ≤ (L * d) / γ + ε := by
-  rw [robustlyAdmissible_additive_iff] at hadm
-  choose w hw hw_eq using hadm.2.2
+  have hstep : ∀ k, ∃ w ∈ {w : X | ‖w‖ ≤ d}, f (x k) (κ (x k)) + w = x (k + 1) :=
+    fun k ↦ mem_additiveInclusion_iff.mp (hadm k)
+  choose w hw hw_eq using hstep
   exact robust_ultimate_boundedness f κ V ℓ L d γ ε hL hγ0 hγ1 hdesc hlip hcoer x w
     (fun n ↦ (hw_eq n).symm) hw hVnn hε
