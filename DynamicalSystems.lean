@@ -62,6 +62,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.ContinuousOCP
 import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming
 import DynamicalSystems.OptimalControl.ContinuousTime.LinearQuadratic
 import DynamicalSystems.OptimalControl.ContinuousTime.Tracking
+import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
 import DynamicalSystems.OptimalControl.FiniteHorizon
 import DynamicalSystems.OptimalControl.ValueFunction
 import DynamicalSystems.OptimalControl.LQR
