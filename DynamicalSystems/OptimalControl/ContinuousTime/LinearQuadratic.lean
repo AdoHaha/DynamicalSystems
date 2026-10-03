@@ -11,7 +11,6 @@ public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Prod
 public import Mathlib.LinearAlgebra.Matrix.Invertible
 public import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
-public import Mathlib.LinearAlgebra.Matrix.PosDef
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.Topology.Instances.Matrix
@@ -59,6 +58,12 @@ Systems*, 2nd ed., 1998:
 
 * `care_lyapunov`: CARE implies the closed-loop Lyapunov matrix equality
   `(A - B K)ᵀ P + P (A - B K) = -(Q + Kᵀ R K)`.
+* `quadForm_closed_loop_deriv_algebraic`: pointwise derivative of the quadratic value form
+  along the optimal closed loop, in algebraic form (before substituting CARE).
+* `quadForm_control_cost_algebraic`: the optimal control cost equality
+  `uᵀ R u = xᵀ (P B R⁻¹ Bᵀ P) x`.
+* `quadForm_closed_loop_deriv_care`: pointwise derivative of the quadratic value form along
+  the optimal closed loop under CARE, i.e. `d/dt (xᵀ P x) = -(xᵀ Q x + uᵀ R u)`.
 * `completion_of_squares_algebraic`: pointwise algebraic completion-of-squares expansion.
 * `lqrContinuous_completionOfSquares`: integrated cost identity for the Riccati ODE.
 * `lqrContinuous_completionOfSquares_care`: integrated cost identity for CARE.
@@ -76,12 +81,12 @@ variable (P : Matrix (Fin n) (Fin n) ℝ)
 
 /-! ### Definitions: Riccati ODE, CARE, and Optimal Gain -/
 
-/-- The finite-horizon matrix Riccati differential equation (RDE) backward in time.
-Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.2, Theorem 37, printed p. 364.
-
-Documented convention: the Riccati ODE is integrated backward from the terminal condition
-`P T = Qf`, satisfying `-Ṗ = Aᵀ P + P A + Q - P B R⁻¹ Bᵀ P`, which in forward time has
-derivative `HasDerivAt P (-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) t`. -/
+/-- The ODE part of the backward Riccati differential equation (RDE) for the finite-horizon
+matrix Riccati equation: the matrix function `P` satisfies the differential relation
+`-Ṗ = Aᵀ P + P A + Q - P B R⁻¹ Bᵀ P`, expressed in forward time as the pointwise derivative
+`HasDerivAt P (-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) t` for every `t`.
+The terminal condition `P T = Qf` is not currently formalized.
+Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.2, Theorem 37, printed p. 364. -/
 def riccatiODE (P : ℝ → Matrix (Fin n) (Fin n) ℝ) : Prop :=
   ∀ t, HasDerivAt P (-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) t
 
