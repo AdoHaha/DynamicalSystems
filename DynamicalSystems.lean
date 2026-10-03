@@ -135,6 +135,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
 import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
+import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
