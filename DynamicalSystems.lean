@@ -40,6 +40,7 @@ import DynamicalSystems.ConvexAnalysis.Subdifferential
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
 import DynamicalSystems.DiscreteTime.Convolution
+import DynamicalSystems.DiscreteTime.ExpectedLyapunov
 import DynamicalSystems.DiscreteTime.Lyapunov
 import DynamicalSystems.DiscreteTime.MatrixLyapunov
 import DynamicalSystems.DiscreteTime.UltimateBoundedness
@@ -49,6 +50,8 @@ import DynamicalSystems.Estimation.Projection
 import DynamicalSystems.NonSmooth.Clarke
 import DynamicalSystems.NonSmooth.ChainRule
 import DynamicalSystems.NonSmooth.Lyapunov
+import DynamicalSystems.OptimalControl.FiniteHorizon
+import DynamicalSystems.OptimalControl.ValueFunction
 import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
