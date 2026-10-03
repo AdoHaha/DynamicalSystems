@@ -15,6 +15,7 @@ public import Mathlib.LinearAlgebra.Matrix.PosDef
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.Topology.Instances.Matrix
+public import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 
 /-! # Continuous-time Linear Quadratic Regulator (LQR) and Riccati Equations
 
@@ -126,39 +127,6 @@ theorem dotProduct_mulVec_comp {k l : ℕ} (M : Matrix (Fin k) (Fin l) ℝ)
     _ = y ⬝ᵥ (x ᵥ* M) := by rw [dotProduct_comm]
     _ = y ⬝ᵥ (Mᵀ *ᵥ x) := by rw [mulVec_transpose]
 
-/-- Product rule for the dot product of two time-dependent vectors. -/
-theorem hasDerivAt_dotProduct
-    {t : ℝ} {u v : ℝ → Fin n → ℝ} {u' v' : Fin n → ℝ}
-    (hu : ∀ i, HasDerivAt (fun s ↦ u s i) (u' i) t)
-    (hv : ∀ i, HasDerivAt (fun s ↦ v s i) (v' i) t) :
-    HasDerivAt (fun s ↦ u s ⬝ᵥ v s) (u' ⬝ᵥ v t + u t ⬝ᵥ v') t := by
-  change HasDerivAt (fun s ↦ ∑ i, (u s i * v s i)) (u' ⬝ᵥ v t + u t ⬝ᵥ v') t
-  have hpi : (fun s ↦ ∑ i, u s i * v s i) = (∑ i, (fun s ↦ u s i * v s i)) := by
-    funext s
-    simp only [Finset.sum_apply]
-  rw [hpi]
-  have h := HasDerivAt.sum (u := Finset.univ) (fun i _ ↦ (hu i).mul (hv i))
-  have heq : (∑ i : Fin n, (u' i * v t i + u t i * v' i)) = u' ⬝ᵥ v t + u t ⬝ᵥ v' := by
-    rw [Finset.sum_add_distrib]
-    rfl
-  rwa [heq] at h
-
-/-- Linearity of differentiation for constant matrix applied to a time-dependent vector. -/
-theorem hasDerivAt_mulVec
-    {k : ℕ} {t : ℝ} {M : Matrix (Fin k) (Fin n) ℝ}
-    {x : ℝ → Fin n → ℝ} {x' : Fin n → ℝ}
-    (hx : ∀ j, HasDerivAt (fun s ↦ x s j) (x' j) t) (i : Fin k) :
-    HasDerivAt (fun s ↦ (M *ᵥ x s) i) ((M *ᵥ x') i) t := by
-  change HasDerivAt (fun s ↦ ∑ j, M i j * x s j) ((M *ᵥ x') i) t
-  have hpi : (fun s ↦ ∑ j, M i j * x s j) = (∑ j, (fun s ↦ M i j * x s j)) := by
-    funext s
-    simp only [Finset.sum_apply]
-  rw [hpi]
-  have h := HasDerivAt.sum (u := Finset.univ) (fun j _ ↦ (hasDerivAt_const t (M i j)).mul (hx j))
-  simp only [MulZeroClass.zero_mul, zero_add] at h
-  have heq : (∑ j : Fin n, M i j * x' j) = (M *ᵥ x') i := rfl
-  rwa [heq] at h
-
 /-- Derivative of a quadratic form with a constant matrix along a trajectory. -/
 theorem hasDerivAt_quadForm_const
     {t : ℝ} (P : Matrix (Fin n) (Fin n) ℝ)
@@ -167,7 +135,7 @@ theorem hasDerivAt_quadForm_const
     HasDerivAt (fun s ↦ x s ⬝ᵥ (P *ᵥ x s))
       (x' ⬝ᵥ (P *ᵥ x t) + x t ⬝ᵥ (P *ᵥ x')) t := by
   have hmul : ∀ i, HasDerivAt (fun s ↦ (P *ᵥ x s) i) ((P *ᵥ x') i) t :=
-    fun i ↦ hasDerivAt_mulVec hx i
+    fun i ↦ hasDerivAt_mulVec P hx i
   exact hasDerivAt_dotProduct hx hmul
 
 /-- Derivative of a quadratic form with a time-varying matrix along a trajectory. -/
