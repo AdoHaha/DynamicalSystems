@@ -95,7 +95,7 @@ def trackingProblem (A : Matrix (Fin n) (Fin n) ℝ) (B : Matrix (Fin n) (Fin m)
     (Q : Matrix (Fin n) (Fin n) ℝ) (R : Matrix (Fin m) (Fin m) ℝ) [Invertible R]
     (r : Fin n → ℝ) (P : Matrix (Fin n) (Fin n) ℝ) (β : Fin n → ℝ) : Prop :=
   care A B Q R P ∧ Pᵀ = P ∧ Qᵀ = Q ∧ Rᵀ = R ∧
-    (A - B * continuousLQRGain A B R P)ᵀ *ᵥ β = Q *ᵥ r
+    (A - B * continuousLQRGain B R P)ᵀ *ᵥ β = Q *ᵥ r
 
 /-- The continuous-time optimal tracking law (Sontag, *Mathematical Control
 Theory*, 2nd ed., 1998, Ch. 8 §8.3, eq. (8.41), printed p. 374):
@@ -123,7 +123,7 @@ theorem tracking_completion_of_squares
     (Q : Matrix (Fin n) (Fin n) ℝ) (R : Matrix (Fin m) (Fin m) ℝ) [Invertible R]
     (P : Matrix (Fin n) (Fin n) ℝ) (r : Fin n → ℝ) (β : Fin n → ℝ)
     (hcare : care A B Q R P) (hP : Pᵀ = P) (hQ : Qᵀ = Q) (hR : Rᵀ = R)
-    (hβ : (A - B * continuousLQRGain A B R P)ᵀ *ᵥ β = Q *ᵥ r)
+    (hβ : (A - B * continuousLQRGain B R P)ᵀ *ᵥ β = Q *ᵥ r)
     (x : Fin n → ℝ) (u : Fin m → ℝ) :
     (A *ᵥ x + B *ᵥ u) ⬝ᵥ (P *ᵥ x) + x ⬝ᵥ (P *ᵥ (A *ᵥ x + B *ᵥ u)) +
         2 * ((A *ᵥ x + B *ᵥ u) ⬝ᵥ β) + u ⬝ᵥ (R *ᵥ u) +
@@ -135,7 +135,7 @@ theorem tracking_completion_of_squares
   have hRt : (⅟R : Matrix (Fin m) (Fin m) ℝ)ᵀ = ⅟R := by
     rw [invOf_eq_nonsing_inv, transpose_nonsing_inv, hR, ← invOf_eq_nonsing_inv]
   -- transpose of the LQR gain
-  have hKt : (continuousLQRGain A B R P)ᵀ = P * B * ⅟R := by
+  have hKt : (continuousLQRGain B R P)ᵀ = P * B * ⅟R := by
     unfold continuousLQRGain
     rw [transpose_mul, transpose_mul, transpose_transpose, hP, hRt]
     simp only [Matrix.mul_assoc]
@@ -191,7 +191,7 @@ theorem tracking_completion_of_squares
     ring
   -- the square of the optimal control direction
   have hq : u + (⅟R * Bᵀ) *ᵥ (P *ᵥ x + β) =
-      (u + (⅟R * Bᵀ) *ᵥ β) + continuousLQRGain A B R P *ᵥ x := by
+      (u + (⅟R * Bᵀ) *ᵥ β) + continuousLQRGain B R P *ᵥ x := by
     rw [Matrix.mulVec_add, Matrix.mulVec_mulVec]
     unfold continuousLQRGain
     abel
@@ -201,7 +201,7 @@ theorem tracking_completion_of_squares
         2 * ((u + (⅟R * Bᵀ) *ᵥ β) ⬝ᵥ ((Bᵀ * P) *ᵥ x)) +
         x ⬝ᵥ ((P * B * ⅟R * Bᵀ * P) *ᵥ x) := by
     rw [hq]
-    exact completion_of_squares_algebraic A B R P hP hR x (u + (⅟R * Bᵀ) *ᵥ β)
+    exact completion_of_squares_algebraic B R P hP hR x (u + (⅟R * Bᵀ) *ᵥ β)
   -- reduction of the square by expanding the feedforward vector
   have hRc : R *ᵥ ((⅟R * Bᵀ) *ᵥ β) = Bᵀ *ᵥ β := by
     rw [Matrix.mulVec_mulVec, ← Matrix.mul_assoc, mul_invOf_self, Matrix.one_mul]
@@ -247,7 +247,7 @@ theorem trackingOptimalControl_optimal
     (Q : Matrix (Fin n) (Fin n) ℝ) (R : Matrix (Fin m) (Fin m) ℝ) [Invertible R]
     (P : Matrix (Fin n) (Fin n) ℝ) (r : Fin n → ℝ) (β : Fin n → ℝ)
     (hcare : care A B Q R P) (hP : Pᵀ = P) (hQ : Qᵀ = Q) (hR : Rᵀ = R)
-    (hβ : (A - B * continuousLQRGain A B R P)ᵀ *ᵥ β = Q *ᵥ r)
+    (hβ : (A - B * continuousLQRGain B R P)ᵀ *ᵥ β = Q *ᵥ r)
     (x : Fin n → ℝ) :
     (A *ᵥ x + B *ᵥ (trackingOptimalControl B R P β x)) ⬝ᵥ (P *ᵥ x) +
         x ⬝ᵥ (P *ᵥ (A *ᵥ x + B *ᵥ (trackingOptimalControl B R P β x))) +
@@ -323,15 +323,15 @@ theorem observerGain_transpose (C : Matrix (Fin p) (Fin n) ℝ)
 measurement weight `W` (`Wᵀ = W`) and a symmetric Riccati solution `P`
 (`Pᵀ = P`), the transpose of the deterministic observer gain is exactly the
 continuous LQR gain of the dual system `(Aᵀ, Cᵀ)`:
-`(P Cᵀ W⁻¹)ᵀ = ⅟W C P = continuousLQRGain Aᵀ Cᵀ W P`. The observer gain
+`(P Cᵀ W⁻¹)ᵀ = ⅟W C P = continuousLQRGain Cᵀ W P`. The observer gain
 `P Cᵀ W⁻¹` is thus the transpose of the dual regulation gain, mirroring the
 filtering gain `L = -ΠCᵀQ` of Sontag, *Mathematical Control Theory*, 2nd ed.,
 1998, Ch. 8 §8.3 (printed pp. 377–378) and the estimation Riccati equation
 `estimationRiccati A C V W P`. -/
-theorem observerGain_dual_lqr (A : Matrix (Fin n) (Fin n) ℝ)
-    (C : Matrix (Fin p) (Fin n) ℝ) (W : Matrix (Fin p) (Fin p) ℝ) [Invertible W]
+theorem observerGain_dual_lqr (C : Matrix (Fin p) (Fin n) ℝ)
+    (W : Matrix (Fin p) (Fin p) ℝ) [Invertible W]
     (P : Matrix (Fin n) (Fin n) ℝ) (hP : Pᵀ = P) (hW : Wᵀ = W) :
-    (observerGain C W P)ᵀ = continuousLQRGain Aᵀ Cᵀ W P := by
+    (observerGain C W P)ᵀ = continuousLQRGain Cᵀ W P := by
   have hWt : (⅟W : Matrix (Fin p) (Fin p) ℝ)ᵀ = ⅟W := by
     rw [invOf_eq_nonsing_inv, transpose_nonsing_inv, hW, ← invOf_eq_nonsing_inv]
   unfold observerGain continuousLQRGain

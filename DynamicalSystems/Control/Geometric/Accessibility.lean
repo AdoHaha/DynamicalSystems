@@ -202,7 +202,9 @@ at the origin (Sontag, Ch. 3 §3.7 and Ch. 4 §4.3, Remark 4.3.5).
 The Lie brackets of the linear drift `x ↦ A x` and constant fields `x ↦ B u`
 evaluate at `0` to the columns of the Kalman controllability matrix `A^k B u`.
 Thus the Kalman reachability subspace is contained in the accessibility distribution
-at `0`, and Kalman controllability implies LARC. -/
+at `0`, and Kalman controllability implies LARC. This is only the *first-order* LARC at
+the single point `0` — the linearization shadow of the full nonlinear LARC
+`∀ x, lieAlgebraRankCondition 𝓕 x`, which is not proved here. -/
 theorem larc_of_firstOrderControllable (f : X → U → X)
     (hcont : linearizationControllable f) :
     lieAlgebraRankCondition (firstOrderVectorFields f) 0 :=

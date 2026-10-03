@@ -41,8 +41,9 @@ unconditional positive instance:
    Sontag's Definition 5.3.2 with the open neighborhoods `O, Õ` specialised to
    the whole space;
 3. `integratorChain_feedbackLinearizable`, the positive instance: the
-   `(n+1)`-dimensional chain of integrators `ẋ₁ = x₂, …, ẋ_n = x_{n+1},
-   ẋ_{n+1} = u` is feedback linearizable, via the identity coordinate change
+   `(n+1)`-dimensional chain of integrators `ẋ₀ = u, ẋ₁ = x₀, …, ẋ_n = x_{n-1}`
+   on the coordinates `x₀, …, x_n` of `Fin (n+1) → ℝ` (control entering through
+   `x₀`) is feedback linearizable, via the identity coordinate change
    `T = id` and the trivial feedback `u = v` (`α = 0`, `β = 1`). The only real
    content is the controllability of the companion/shift pair
    `(A, b)`, which is proved directly here.
@@ -196,9 +197,10 @@ end FeedbackLinearizable
 
 /-! ## The chain of integrators
 
-We model the `(n+1)`-dimensional single-input chain of integrators
-`ẋ₁ = x₂, …, ẋ_n = x_{n+1}, ẋ_{n+1} = u` on the coordinate space
-`Fin (n+1) → ℝ`. The state map is the companion/shift operator `A` with
+We model the `(n+1)`-dimensional single-input chain of integrators on the
+coordinate space `Fin (n+1) → ℝ`, with coordinates `x₀, …, x_n`:
+`ẋ₀ = u, ẋ₁ = x₀, …, ẋ_n = x_{n-1}` (the control enters through `x₀`, matching
+`b = e_0`). The state map is the companion/shift operator `A` with
 `A e_k = e_{k+1}` for `k < n` and `A e_n = 0`, and the input direction is
 `b = e_0`. Its controllability is the linear-algebraic content of the feedback
 linearization statement. -/

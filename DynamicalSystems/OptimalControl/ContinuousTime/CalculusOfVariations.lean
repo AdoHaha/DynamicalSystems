@@ -415,7 +415,9 @@ Euler–Lagrange equation `d/dt ∂ᵥL = ∂ₓL` (Sontag, *Mathematical Contro
 Variations and Optimal Control Theory*, 2012, Theorem 2.1).  The terminal cost `K`
 is arbitrary here: fixed-endpoint (endpoint-vanishing) variations satisfy `η T = 0`,
 so the terminal-penalty term `(∂K (x T)) (η T)` vanishes and `K` does not enter the
-interior Euler–Lagrange equation. -/
+interior Euler–Lagrange equation. The continuity hypotheses (`hPcont`, `hQcont`, `hScont`)
+are assumed globally on `ℝ`, a mild over-strengthening of the book's interval-local regularity
+on `[0, T]`. -/
 theorem eulerLagrange_of_firstVariation_zero (L : ℝ → E → E → ℝ) (K : E → ℝ)
     (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
     (hT : 0 < T)

@@ -85,7 +85,8 @@ variable (P : Matrix (Fin n) (Fin n) ℝ)
 matrix Riccati equation: the matrix function `P` satisfies the differential relation
 `-Ṗ = Aᵀ P + P A + Q - P B R⁻¹ Bᵀ P`, expressed in forward time as the pointwise derivative
 `HasDerivAt P (-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) t` for every `t`.
-The terminal condition `P T = Qf` is not currently formalized.
+The terminal condition `P T = Qf` is not currently formalized. The ODE is stated on the whole
+real line (a global horizon) rather than on a fixed interval `[σ, τ]`.
 Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.2, Theorem 37, printed p. 364. -/
 def riccatiODE (P : ℝ → Matrix (Fin n) (Fin n) ℝ) : Prop :=
   ∀ t, HasDerivAt P (-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) t
@@ -98,7 +99,7 @@ def care : Prop :=
 /-- The continuous-time LQR optimal state-feedback gain `K = R⁻¹ Bᵀ P`
 (Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.2, eq. (8.27), printed p. 364;
 §8.4, printed p. 382). -/
-noncomputable def continuousLQRGain (_A : Matrix (Fin n) (Fin n) ℝ) (B : Matrix (Fin n) (Fin m) ℝ)
+noncomputable def continuousLQRGain (B : Matrix (Fin n) (Fin m) ℝ)
     (R : Matrix (Fin m) (Fin m) ℝ) [Invertible R] (P : Matrix (Fin n) (Fin n) ℝ) :
     Matrix (Fin m) (Fin n) ℝ :=
   ⅟R * Bᵀ * P
@@ -107,7 +108,7 @@ variable [Invertible R]
 
 /-- Alternative form of `continuousLQRGain` using matrix inverse `R⁻¹`. -/
 lemma continuousLQRGain_eq_inv :
-    continuousLQRGain A B R P = R⁻¹ * Bᵀ * P := by
+    continuousLQRGain B R P = R⁻¹ * Bᵀ * P := by
   unfold continuousLQRGain
   rw [invOf_eq_nonsing_inv]
 
@@ -172,13 +173,13 @@ theorem hasDerivAt_quadForm_timeVarying
 
 /-- CARE implies the closed-loop Lyapunov matrix equality:
 `(A - B * K)ᵀ * P + P * (A - B * K) = -(Q + Kᵀ * R * K)`
-where `K = continuousLQRGain A B R P`.
+where `K = continuousLQRGain B R P`.
 Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.4 (printed pp. 380–383). -/
 theorem care_lyapunov
     (hCARE : care A B Q R P)
     (hP_symm : Pᵀ = P)
     (hR_symm : Rᵀ = R) :
-    let K := continuousLQRGain A B R P
+    let K := continuousLQRGain B R P
     (A - B * K)ᵀ * P + P * (A - B * K) = -(Q + Kᵀ * R * K) := by
   intro K
   have hinv_symm : (⅟R : Matrix (Fin m) (Fin m) ℝ)ᵀ = ⅟R := by
@@ -219,10 +220,10 @@ theorem care_lyapunov
 theorem quadForm_closed_loop_deriv_algebraic
     (hP_symm : Pᵀ = P) (hR_symm : Rᵀ = R)
     (x : Fin n → ℝ) (u : Fin m → ℝ)
-    (hu : u = -(continuousLQRGain A B R P) *ᵥ x) :
+    (hu : u = -(continuousLQRGain B R P) *ᵥ x) :
     (A *ᵥ x + B *ᵥ u) ⬝ᵥ (P *ᵥ x) + x ⬝ᵥ (P *ᵥ (A *ᵥ x + B *ᵥ u)) =
       x ⬝ᵥ ((Aᵀ * P + P * A) *ᵥ x) - 2 * (x ⬝ᵥ ((P * B * ⅟R * Bᵀ * P) *ᵥ x)) := by
-  have hK_eq : continuousLQRGain A B R P = ⅟R * Bᵀ * P := rfl
+  have hK_eq : continuousLQRGain B R P = ⅟R * Bᵀ * P := rfl
   have hinv_symm : (⅟R : Matrix (Fin m) (Fin m) ℝ)ᵀ = ⅟R := by
     rw [invOf_eq_nonsing_inv, transpose_nonsing_inv, hR_symm, ← invOf_eq_nonsing_inv]
   have h1 : (A *ᵥ x + B *ᵥ u) ⬝ᵥ (P *ᵥ x) = (A *ᵥ x) ⬝ᵥ (P *ᵥ x) + (B *ᵥ u) ⬝ᵥ (P *ᵥ x) := by
@@ -265,9 +266,9 @@ theorem quadForm_closed_loop_deriv_algebraic
 theorem quadForm_control_cost_algebraic
     (hP_symm : Pᵀ = P) (hR_symm : Rᵀ = R)
     (x : Fin n → ℝ) (u : Fin m → ℝ)
-    (hu : u = -(continuousLQRGain A B R P) *ᵥ x) :
+    (hu : u = -(continuousLQRGain B R P) *ᵥ x) :
     u ⬝ᵥ (R *ᵥ u) = x ⬝ᵥ ((P * B * ⅟R * Bᵀ * P) *ᵥ x) := by
-  have hK_eq : continuousLQRGain A B R P = ⅟R * Bᵀ * P := rfl
+  have hK_eq : continuousLQRGain B R P = ⅟R * Bᵀ * P := rfl
   have hinv_symm : (⅟R : Matrix (Fin m) (Fin m) ℝ)ᵀ = ⅟R := by
     rw [invOf_eq_nonsing_inv, transpose_nonsing_inv, hR_symm, ← invOf_eq_nonsing_inv]
   rw [hu, hK_eq]
@@ -298,11 +299,11 @@ Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.4, printed p. 38
 theorem quadForm_closed_loop_deriv_care
     (hCARE : care A B Q R P) (hP_symm : Pᵀ = P) (hR_symm : Rᵀ = R)
     (x : Fin n → ℝ) (u : Fin m → ℝ)
-    (hu : u = -(continuousLQRGain A B R P) *ᵥ x) :
+    (hu : u = -(continuousLQRGain B R P) *ᵥ x) :
     (A *ᵥ x + B *ᵥ u) ⬝ᵥ (P *ᵥ x) + x ⬝ᵥ (P *ᵥ (A *ᵥ x + B *ᵥ u)) =
       -(x ⬝ᵥ (Q *ᵥ x) + u ⬝ᵥ (R *ᵥ u)) := by
   have h1 := quadForm_closed_loop_deriv_algebraic A B R P hP_symm hR_symm x u hu
-  have h2 := quadForm_control_cost_algebraic A B R P hP_symm hR_symm x u hu
+  have h2 := quadForm_control_cost_algebraic B R P hP_symm hR_symm x u hu
   have hcare_eq : Aᵀ * P + P * A - P * B * R⁻¹ * Bᵀ * P + Q = 0 := hCARE
   rw [← invOf_eq_nonsing_inv] at hcare_eq
   have hCARE_sub : Aᵀ * P + P * A = P * B * ⅟R * Bᵀ * P - Q := by
@@ -322,7 +323,7 @@ Sontag, *Mathematical Control Theory*, 2nd ed., 1998, Ch. 8 §8.2, Lemma 8.2.1, 
 theorem completion_of_squares_algebraic
     (hP_symm : Pᵀ = P) (hR_symm : Rᵀ = R)
     (x : Fin n → ℝ) (w : Fin m → ℝ) :
-    let K := continuousLQRGain A B R P
+    let K := continuousLQRGain B R P
     (w + K *ᵥ x) ⬝ᵥ (R *ᵥ (w + K *ᵥ x)) =
       w ⬝ᵥ (R *ᵥ w) + 2 * (w ⬝ᵥ ((Bᵀ * P) *ᵥ x)) +
       x ⬝ᵥ ((P * B * ⅟R * Bᵀ * P) *ᵥ x) := by
@@ -375,7 +376,7 @@ theorem lqrContinuous_completionOfSquares_care
     (hCARE : care A B Q R P)
     (x : ℝ → Fin n → ℝ) (u : ℝ → Fin m → ℝ)
     (hx_traj : ∀ t ∈ Set.Icc 0 T, ∀ j, HasDerivAt (fun s ↦ x s j) ((A *ᵥ x t + B *ᵥ u t) j) t)
-    (hu : ∀ t ∈ Set.Icc 0 T, u t = -(continuousLQRGain A B R P) *ᵥ x t)
+    (hu : ∀ t ∈ Set.Icc 0 T, u t = -(continuousLQRGain B R P) *ᵥ x t)
     (h_int : IntervalIntegrable (fun t ↦ x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t)) volume 0 T) :
     x 0 ⬝ᵥ (P *ᵥ x 0) =
       (∫ t in 0..T, (x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t))) + x T ⬝ᵥ (P *ᵥ x T) := by
@@ -407,7 +408,7 @@ theorem lqrContinuous_completionOfSquares
     (hODE : riccatiODE A B Q R P)
     (x : ℝ → Fin n → ℝ) (u : ℝ → Fin m → ℝ)
     (hx_traj : ∀ t ∈ Set.Icc 0 T, ∀ j, HasDerivAt (fun s ↦ x s j) ((A *ᵥ x t + B *ᵥ u t) j) t)
-    (hu : ∀ t ∈ Set.Icc 0 T, u t = -(continuousLQRGain A B R (P t)) *ᵥ x t)
+    (hu : ∀ t ∈ Set.Icc 0 T, u t = -(continuousLQRGain B R (P t)) *ᵥ x t)
     (h_int : IntervalIntegrable (fun t ↦ x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t)) volume 0 T) :
     x 0 ⬝ᵥ (P 0 *ᵥ x 0) =
       (∫ t in 0..T, (x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t))) + x T ⬝ᵥ (P T *ᵥ x T) := by
@@ -427,7 +428,7 @@ theorem lqrContinuous_completionOfSquares
     have hd := hasDerivAt_quadForm_timeVarying hP_entries (hx_traj t ht)
     have halg1 := quadForm_closed_loop_deriv_algebraic A B R (P t) (hP_symm t) hR_symm
       (x t) (u t) (hu t ht)
-    have halg2 := quadForm_control_cost_algebraic A B R (P t) (hP_symm t) hR_symm
+    have halg2 := quadForm_control_cost_algebraic B R (P t) (hP_symm t) hR_symm
       (x t) (u t) (hu t ht)
     have hsum : (A *ᵥ x t + B *ᵥ u t) ⬝ᵥ (P t *ᵥ x t) +
         x t ⬝ᵥ ((-(Aᵀ * P t + P t * A + Q - P t * B * R⁻¹ * Bᵀ * P t)) *ᵥ x t) +
@@ -469,7 +470,7 @@ theorem lqrContinuous_completionOfSquares_infinite
     (hCARE : care A B Q R P)
     (x : ℝ → Fin n → ℝ) (u : ℝ → Fin m → ℝ)
     (hx_traj : ∀ t ≥ 0, ∀ j, HasDerivAt (fun s ↦ x s j) ((A *ᵥ x t + B *ᵥ u t) j) t)
-    (hu : ∀ t ≥ 0, u t = -(continuousLQRGain A B R P) *ᵥ x t)
+    (hu : ∀ t ≥ 0, u t = -(continuousLQRGain B R P) *ᵥ x t)
     (h_int : ∀ T ≥ 0, IntervalIntegrable (fun t ↦ x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t)) volume 0 T)
     (h_conv : Filter.Tendsto (fun T ↦ x T ⬝ᵥ (P *ᵥ x T)) Filter.atTop (nhds 0)) :
     Filter.Tendsto (fun T ↦ ∫ t in 0..T, (x t ⬝ᵥ (Q *ᵥ x t) + u t ⬝ᵥ (R *ᵥ u t)))
