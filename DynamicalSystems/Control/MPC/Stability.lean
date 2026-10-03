@@ -171,53 +171,6 @@ theorem totalCost_succ_split (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X
     rw [← finiteHorizonRollout_tail x u (Fin.last M), Fin.succ_last]
   rw [hsum, hVf, add_assoc]
 
-/-- The fundamental value-function descent property of receding-horizon MPC
-(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, eq. (2.17), printed p. 117):
-the optimal cost-to-go at the successor state decreases by at least the stage cost of the applied
-control input, `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))`.
-
-The proof constructs the candidate input `ũ = Fin.snoc (Fin.tail u*) w`, the warm-start pattern of
-eq. (2.26), §2.7, printed p. 147, using the stabilizing terminal control `w` from `IsTerminalCLF`,
-verifies admissibility with `finiteHorizonAdmissible_snoc`, and telescopes the stage costs using
-`totalCost_snoc` and `totalCost_succ_split`. -/
-theorem mpc_valueFunction_decrease (prob : FiniteHorizonProblem X U) (x : X)
-    (hN : 0 < prob.horizon) (h : ∃ u : Fin prob.horizon → U, IsOptimalInput prob x u)
-    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
-    (hsub : prob.terminalSet ⊆ prob.stateSet)
-    (hbd : BddBelow (costSet prob (mpcStep prob x hN h))) :
-    valueFunction prob (mpcStep prob x hN h) ≤
-      valueFunction prob x - prob.stageCost x (mpcLaw prob x hN h) := by
-  obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
-  obtain ⟨M, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hN)
-  let u := Classical.choose h
-  have hu : IsOptimalInput ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u := Classical.choose_spec h
-  have hadm : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u := hu.1
-  have hterm : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xf :=
-    hadm.2
-  obtain ⟨w, hwU, hwXf, hwdec⟩ := hCLF _ hterm
-  have htermXs : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xs :=
-    hsub hterm
-  let u_tilde : Fin (M + 1) → U := Fin.snoc (Fin.tail u) w
-  have hadm_tilde : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde :=
-    finiteHorizonAdmissible_snoc x u w hadm htermXs hwU hwXf
-  have hmcl : mpcClosedLoop ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x hN h = f x (u 0) := by
-    simp only [mpcClosedLoop, mpcLaw]; rfl
-  have hmstep : mpcStep ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x hN h = f x (u 0) := hmcl
-  have hlaw : mpcLaw ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x hN h = u 0 := rfl
-  have hVeq : valueFunction ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x =
-      finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u :=
-    valueFunction_eq ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u hu
-  have hle_tilde : valueFunction ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) ≤
-      finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde := by
-    have hbd' : BddBelow (costSet ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0))) := by
-      rw [← hmstep]
-      exact hbd
-    exact valueFunction_le ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde hadm_tilde hbd'
-  have hcost_snoc := totalCost_snoc f ℓ Vf M Xs Us Xf x u w
-  have hcost_split := totalCost_succ_split f ℓ Vf M Xs Us Xf x u
-  rw [hmstep, hlaw, hVeq]
-  linarith [hle_tilde, hcost_snoc, hcost_split, hwdec]
-
 /-- The suboptimal (warm-start) cost bound: for an arbitrary *admissible* — not necessarily
 optimal — input sequence `u`, the value function at the successor state `f x (u 0)` is bounded
 by the current total cost with the first stage cost removed.  This is the one-step estimate
@@ -239,13 +192,13 @@ without it the `sInf` convention for unbounded-below sets makes the statement fa
 same correction already recorded for `mpc_valueFunction_decrease` and is not a weakening of the
 desired content. -/
 theorem suboptimal_cost_bound (prob : FiniteHorizonProblem X U) (x : X)
-    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon) [NeZero prob.horizon]
+    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon)
     (hadm : FiniteHorizonAdmissible prob x u)
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
-    (hbd : BddBelow (costSet prob (prob.f x (u 0)))) :
-    valueFunction prob (prob.f x (u 0)) ≤
-      finiteHorizonTotalCost prob x u - prob.stageCost x (u 0) := by
+    (hbd : BddBelow (costSet prob (prob.f x (u ⟨0, hN⟩)))) :
+    valueFunction prob (prob.f x (u ⟨0, hN⟩)) ≤
+      finiteHorizonTotalCost prob x u - prob.stageCost x (u ⟨0, hN⟩) := by
   obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
   obtain ⟨M, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hN)
   have hterm : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xf :=
@@ -261,7 +214,36 @@ theorem suboptimal_cost_bound (prob : FiniteHorizonProblem X U) (x : X)
     valueFunction_le ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde hadm_tilde hbd
   have hcost_snoc := totalCost_snoc f ℓ Vf M Xs Us Xf x u w
   have hcost_split := totalCost_succ_split f ℓ Vf M Xs Us Xf x u
+  change valueFunction ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) ≤
+    finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u - ℓ x (u 0)
   linarith [hle_tilde, hcost_snoc, hcost_split, hwdec]
+
+/-- The fundamental value-function descent property of receding-horizon MPC
+(Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.4.2, eq. (2.17), printed p. 117):
+the optimal cost-to-go at the successor state decreases by at least the stage cost of the applied
+control input, `V(x⁺) ≤ V(x) − ℓ(x, κ_N(x))`.
+
+The proof constructs the candidate input `ũ = Fin.snoc (Fin.tail u*) w`, the warm-start pattern of
+eq. (2.26), §2.7, printed p. 147, using the stabilizing terminal control `w` from `IsTerminalCLF`,
+verifies admissibility with `finiteHorizonAdmissible_snoc`, and telescopes the stage costs using
+`totalCost_snoc` and `totalCost_succ_split`. -/
+theorem mpc_valueFunction_decrease (prob : FiniteHorizonProblem X U) (x : X)
+    (hN : 0 < prob.horizon) (h : ∃ u : Fin prob.horizon → U, IsOptimalInput prob x u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    (hbd : BddBelow (costSet prob (mpcStep prob x hN h))) :
+    valueFunction prob (mpcStep prob x hN h) ≤
+      valueFunction prob x - prob.stageCost x (mpcLaw prob x hN h) := by
+  let u := Classical.choose h
+  have hu : IsOptimalInput prob x u := Classical.choose_spec h
+  have hbound := suboptimal_cost_bound prob x u hN hu.1 hCLF hsub (by
+    show BddBelow (costSet prob (prob.f x (u ⟨0, hN⟩)))
+    rw [show prob.f x (u ⟨0, hN⟩) = mpcStep prob x hN h from rfl]
+    exact hbd)
+  have hVeq : valueFunction prob x = finiteHorizonTotalCost prob x u :=
+    valueFunction_eq prob x u hu
+  rw [hVeq]
+  exact hbound
 
 /-- The ε-suboptimal perturbed descent of Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.7
 (printed pp. 147–152 / PDF pp. 190–195).  If the admissible input `u` is ε-suboptimal, i.e.
@@ -279,14 +261,14 @@ The non-negativity hypothesis `0 ≤ ε` that the book's perturbed descent sugge
 the estimate is a purely linear consequence of `hopt` and `suboptimal_cost_bound`, so it holds
 for every real gap and the extra hypothesis would only be flagged by `unusedArguments`. -/
 theorem suboptimal_descent (prob : FiniteHorizonProblem X U) (x : X)
-    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon) [NeZero prob.horizon]
+    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon)
     (hadm : FiniteHorizonAdmissible prob x u)
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
-    (hbd : BddBelow (costSet prob (prob.f x (u 0))))
+    (hbd : BddBelow (costSet prob (prob.f x (u ⟨0, hN⟩))))
     (ε : ℝ) (hopt : finiteHorizonTotalCost prob x u ≤ valueFunction prob x + ε) :
-    valueFunction prob (prob.f x (u 0)) ≤
-      valueFunction prob x + ε - prob.stageCost x (u 0) := by
+    valueFunction prob (prob.f x (u ⟨0, hN⟩)) ≤
+      valueFunction prob x + ε - prob.stageCost x (u ⟨0, hN⟩) := by
   have h := suboptimal_cost_bound prob x u hN hadm hCLF hsub hbd
   linarith
 
@@ -394,14 +376,14 @@ theorem mpc_geometric_decay (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 < 
     (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
     (hsub : prob.terminalSet ⊆ prob.stateSet)
     {γ : ℝ}
-    (hdom : ∀ y, γ * valueFunction prob y ≤ prob.stageCost y (mpcLaw prob y hN (hopt y))) :
+    (hdom : γ * valueFunction prob x ≤ prob.stageCost x (mpcLaw prob x hN (hopt x))) :
     valueFunction prob (mpcStep prob x hN (hopt x)) ≤ (1 - γ) * valueFunction prob x := by
   have hdec := mpc_valueFunction_decrease prob x hN (hopt x) hCLF hsub (by
     obtain ⟨u, hu⟩ := hopt (mpcStep prob x hN (hopt x))
     exact ⟨finiteHorizonTotalCost prob (mpcStep prob x hN (hopt x)) u, fun r hr ↦ by
       obtain ⟨v, hv, rfl⟩ := hr
       exact hu.2 v hv⟩)
-  linarith [hdom x]
+  linarith [hdom]
 
 /-- **n-step geometric value-function contraction** (Rawlings–Mayne–Diehl 2019, 2nd ed.,
 Ch. 2 §2.4.3, exponential stability, printed p. 120 / PDF p. 163): iterating the one-step
@@ -434,7 +416,7 @@ theorem mpc_geometric_iterate (prob : FiniteHorizonProblem X U) (x : X) (hN : 0 
               by rw [Function.iterate_succ_apply']
         _ ≤ (1 - γ) * valueFunction prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x) :=
               mpc_geometric_decay prob ((fun y ↦ mpcStep prob y hN (hopt y))^[n] x)
-                hN hopt hCLF hsub hdom
+                hN hopt hCLF hsub (hdom _)
         _ ≤ (1 - γ) * ((1 - γ) ^ n * valueFunction prob x) :=
               mul_le_mul_of_nonneg_left ih hc
         _ = (1 - γ) ^ n.succ * valueFunction prob x := by rw [pow_succ']; ring
