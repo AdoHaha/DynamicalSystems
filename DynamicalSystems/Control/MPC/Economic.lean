@@ -5,6 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.DiscreteTime.Dissipative
 public import Mathlib.Algebra.BigOperators.Intervals
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Basic.Real.Basic
@@ -23,7 +24,8 @@ pair `(xs, us)` minimises `ℓ` over the steady states `x = f x u`.  Two ingredi
 of §2.8 are isolated here over an arbitrary state space `X` and input space `U`:
 
 * the *discrete pointwise storage inequality* of Definition 2.53 (printed p. 156),
-  `λ (f x u) - λ x ≤ s x u`, formalised as `IsDissipative`;
+  `λ (f x u) - λ x ≤ s x u`, now the foundational `IsDissipative` of
+  `DynamicalSystems.DiscreteTime.Dissipative`;
 * the *rotated stage cost* of Theorem 2.56 (printed p. 157),
   `ℓ x u - ℓ xs us + λ x - λ (f x u)`, formalised as `rotatedCost`.
 
@@ -45,8 +47,9 @@ dissipativity, and is a separate future step.
 
 ## Main definitions
 
-* `IsDissipative`: the discrete storage inequality `λ (f x u) - λ x ≤ s x u` of
-  Definition 2.53 (printed p. 156).
+* `IsDissipative` (imported from `DynamicalSystems.DiscreteTime.Dissipative`): the
+  discrete storage inequality `λ (f x u) - λ x ≤ s x u` of Definition 2.53
+  (printed p. 156).
 * `rotatedCost`: the rotated stage cost `ℓ x u + λ x - λ (f x u) - ℓ xs us` of
   Theorem 2.56 (printed p. 157).
 
@@ -68,21 +71,6 @@ Assumption 2.51 — is a separate future step and is not established here. -/
 @[expose] public section
 
 variable {X U : Type*}
-
-/-- The discrete, pointwise *storage inequality* of dissipativity
-(Rawlings–Mayne–Diehl 2019, Definition 2.53, §2.8.2, printed p. 156): the system
-`x⁺ = f x u` is dissipative with respect to the supply rate `s` if there is a
-storage function `lam` with
-
-`lam (f x u) - lam x ≤ s x u` for all states `x` and inputs `u`.
-
-This is the discrete state-space storage condition (2.35).  It is deliberately kept
-apart from `InputOutput.Dissipative.IsDissipativeWith`, which is the
-continuous-time `L^p` *integral* supply inequality, and from
-`Control.ControlLyapunov.IsControlLyapunovFunction`, which is a continuous,
-control-affine object. -/
-def IsDissipative (f : X → U → X) (s : X → U → ℝ) (lam : X → ℝ) : Prop :=
-  ∀ x u, lam (f x u) - lam x ≤ s x u
 
 /-- The *rotated stage cost* of economic MPC (Rawlings–Mayne–Diehl 2019,
 Theorem 2.56, §2.8.2, printed p. 157):
