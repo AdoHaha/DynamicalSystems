@@ -13,6 +13,7 @@ import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.Control.MPC.Basic
+import DynamicalSystems.Control.MPC.Stability
 import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Discrete
