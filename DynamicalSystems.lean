@@ -46,6 +46,8 @@ import DynamicalSystems.ConvexAnalysis.Subdifferential
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
 import DynamicalSystems.DiscreteTime.Convolution
+import DynamicalSystems.DiscreteTime.DifferenceInclusion
+import DynamicalSystems.DiscreteTime.Dissipative
 import DynamicalSystems.DiscreteTime.ExpectedLyapunov
 import DynamicalSystems.DiscreteTime.Lyapunov
 import DynamicalSystems.DiscreteTime.MatrixLyapunov
