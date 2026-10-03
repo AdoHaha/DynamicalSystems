@@ -16,6 +16,7 @@ import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
 import DynamicalSystems.Control.MPC.Robust
 import DynamicalSystems.Control.MPC.Stability
+import DynamicalSystems.Control.MPC.Stochastic
 import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Discrete
