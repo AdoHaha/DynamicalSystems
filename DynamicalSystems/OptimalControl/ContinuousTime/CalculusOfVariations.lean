@@ -9,7 +9,6 @@ public import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
 public import Mathlib.Analysis.Calculus.Deriv.Basic
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.FDeriv.Basic
-public import Mathlib.Analysis.Calculus.ParametricIntervalIntegral
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
 
@@ -91,7 +90,7 @@ fundamental-lemma variant for `η'`) is not formalised.
 
 open scoped Interval Topology
 
-open Filter MeasureTheory
+open MeasureTheory
 
 variable {E : Type*}
 
@@ -371,23 +370,40 @@ section EulerLagrange
 
 variable [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- Integration by parts for the scalar functions `u` and `v` when `u` vanishes at
-both endpoints: `∫ u' v = - ∫ u v'`. -/
+/-- Integration by parts for the scalar functions `u` and `v` with explicit
+endpoints-vanishing weight and explicit derivatives `u'`, `v'`:
+`∫ u' v = - ∫ u v'`.  This is the shape of Mathlib's
+`intervalIntegral.integral_deriv_mul_eq_sub`, specialised to a weight `u` that
+vanishes at both endpoints. -/
 theorem integral_deriv_mul_eq_neg_integral_mul_deriv
+    {u v u' v' : ℝ → ℝ} {a b : ℝ}
+    (hu : ∀ x ∈ Set.uIcc a b, HasDerivAt u (u' x) x)
+    (hv : ∀ x ∈ Set.uIcc a b, HasDerivAt v (v' x) x)
+    (hui : IntervalIntegrable u' volume a b)
+    (hvi : IntervalIntegrable v' volume a b)
+    (hua : u a = 0) (hub : u b = 0) :
+    ∫ x in a..b, u' x * v x = -∫ x in a..b, u x * v' x := by
+  have h1 : IntervalIntegrable (fun x ↦ u' x * v x) volume a b :=
+    hui.mul_continuousOn (HasDerivAt.continuousOn hv)
+  have h2 : IntervalIntegrable (fun x ↦ u x * v' x) volume a b :=
+    hvi.continuousOn_mul (HasDerivAt.continuousOn hu)
+  have h := intervalIntegral.integral_deriv_mul_eq_sub hu hv hui hvi
+  rw [hub, hua, zero_mul, zero_mul, sub_zero, intervalIntegral.integral_add h1 h2] at h
+  linarith
+
+/-- The built-in-derivative special case of
+`integral_deriv_mul_eq_neg_integral_mul_deriv`: integration by parts for the
+scalar functions `u` and `v` when `u` vanishes at both endpoints and derivatives
+are written with `deriv`, `∫ u' v = - ∫ u v'`. -/
+theorem integral_deriv_mul_eq_neg_integral_mul_deriv_deriv
     {u v : ℝ → ℝ} {a b : ℝ}
     (hu : ∀ x ∈ Set.uIcc a b, HasDerivAt u (deriv u x) x)
     (hv : ∀ x ∈ Set.uIcc a b, HasDerivAt v (deriv v x) x)
     (hui : IntervalIntegrable (deriv u) volume a b)
     (hvi : IntervalIntegrable (deriv v) volume a b)
     (hua : u a = 0) (hub : u b = 0) :
-    ∫ x in a..b, deriv u x * v x = -∫ x in a..b, u x * deriv v x := by
-  have h1 : IntervalIntegrable (fun x ↦ deriv u x * v x) volume a b :=
-    hui.mul_continuousOn (HasDerivAt.continuousOn hv)
-  have h2 : IntervalIntegrable (fun x ↦ u x * deriv v x) volume a b :=
-    hvi.continuousOn_mul (HasDerivAt.continuousOn hu)
-  have h := intervalIntegral.integral_deriv_mul_eq_sub hu hv hui hvi
-  rw [hub, hua, zero_mul, zero_mul, sub_zero, intervalIntegral.integral_add h1 h2] at h
-  linarith
+    ∫ x in a..b, deriv u x * v x = -∫ x in a..b, u x * deriv v x :=
+  integral_deriv_mul_eq_neg_integral_mul_deriv hu hv hui hvi hua hub
 
 /-- **Euler–Lagrange equation from vanishing first variation.**  If the first
 variation of the cost functional vanishes on every differentiable perturbation
@@ -396,7 +412,10 @@ variation of the cost functional vanishes on every differentiable perturbation
 state derivative `∂ₓL` continuous), then `∂ₓL = Q` and hence `x` satisfies the
 Euler–Lagrange equation `d/dt ∂ᵥL = ∂ₓL` (Sontag, *Mathematical Control Theory*,
 2nd ed., 1998, Ch. 9 §9.3, Eq. (9.20), printed p. 410; Liberzon, *Calculus of
-Variations and Optimal Control Theory*, 2012, Theorem 2.1). -/
+Variations and Optimal Control Theory*, 2012, Theorem 2.1).  The terminal cost `K`
+is arbitrary here: fixed-endpoint (endpoint-vanishing) variations satisfy `η T = 0`,
+so the terminal-penalty term `(∂K (x T)) (η T)` vanishes and `K` does not enter the
+interior Euler–Lagrange equation. -/
 theorem eulerLagrange_of_firstVariation_zero (L : ℝ → E → E → ℝ) (K : E → ℝ)
     (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
     (hT : 0 < T)
@@ -465,10 +484,8 @@ theorem eulerLagrange_of_firstVariation_zero (L : ℝ → E → E → ℝ) (K : 
     have hIS : IntervalIntegrable (fun t ↦ ((S t) e) * φ t) volume 0 T :=
       ((hScont.clm_apply continuous_const).mul hφ.continuous).continuousOn.intervalIntegrable
     have hibp : (∫ t in 0..T, deriv φ t * ((P t) e))
-        = -∫ t in 0..T, φ t * ((Q t) e) := by
-      have h := intervalIntegral.integral_deriv_mul_eq_sub hφ_deriv hPe_deriv hui hvi
-      rw [hφT, hφ0, zero_mul, zero_mul, sub_zero, intervalIntegral.integral_add hIb hIc] at h
-      linarith
+        = -∫ t in 0..T, φ t * ((Q t) e) :=
+      integral_deriv_mul_eq_neg_integral_mul_deriv hφ_deriv hPe_deriv hui hvi hφ0 hφT
     have hsplit : (∫ t in 0..T, ((S t) e) * φ t + deriv φ t * ((P t) e))
         = (∫ t in 0..T, ((S t) e) * φ t) + (∫ t in 0..T, deriv φ t * ((P t) e)) :=
       intervalIntegral.integral_add hIS hIb
