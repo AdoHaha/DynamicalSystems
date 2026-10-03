@@ -5,8 +5,10 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.FiniteHorizon
-public import DynamicalSystems.DiscreteTime.Lyapunov
+public import Mathlib.Algebra.BigOperators.Intervals
+public import Mathlib.Algebra.Order.BigOperators.Group.Finset
+public import Mathlib.Basic.Real.Basic
+public import Mathlib.Tactic.Linarith
 
 /-! # Economic model predictive control: dissipativity and average performance
 
@@ -113,6 +115,17 @@ theorem rotatedCost_nonneg {f : X → U → X} {ℓ : X → U → ℝ} {lam : X 
   simp only [rotatedCost]
   linarith
 
+/-- The rotated stage cost vanishes at a steady-state pair (Rawlings–Mayne–Diehl
+2019, Theorem 2.56, §2.8.2, printed p. 157): at a state–input pair fixed by the
+dynamics, `f xs us = xs`, the storage correction in `rotatedCost` cancels and only
+the shift `ℓ xs us - ℓ xs us` remains, so `rotatedCost f ℓ lam xs us xs us = 0`.
+This is the steady-state value appearing on the right-hand side of (2.37). -/
+theorem rotatedCost_steady_state {f : X → U → X} {ℓ : X → U → ℝ} {lam : X → ℝ}
+    {xs : X} {us : U} (hss : f xs us = xs) :
+    rotatedCost f ℓ lam xs us xs us = 0 := by
+  simp only [rotatedCost, hss]
+  linarith
+
 /-- **Asymptotic average performance of economic MPC, partial-sum form**
 (Rawlings–Mayne–Diehl 2019, §2.8.1, printed p. 155).
 
@@ -130,7 +143,10 @@ dividing by `N` and letting `N → ∞` gives `liminf` of the average at least
 `ℓ xs us` (the storage-inequality form of the average-performance discussion of
 §2.8.1, printed p. 155); the statement below keeps the exact finite-horizon
 inequality, which is all the telescoping argument needs and requires no
-boundedness. -/
+boundedness.  The telescope uses `Finset.sum_range_sub` (Mathlib) rather than
+`DiscreteTime.Lyapunov.sum_le_of_succ_le_sub`, because economic storage functions
+are generally signed and the two-sided boundary `lam (x N) - lam (x 0)` must be
+preserved, whereas that lemma assumes non-negative `v` and drops the terminal term. -/
 theorem economic_average_performance {f : X → U → X} {ℓ : X → U → ℝ} {lam : X → ℝ}
     {xs : X} {us : U} {x : ℕ → X} {u : ℕ → U}
     (h : IsDissipative f (fun x u ↦ ℓ x u - ℓ xs us) lam)
