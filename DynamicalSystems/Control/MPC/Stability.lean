@@ -60,6 +60,10 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
 * `mpc_converges_to_origin`: norm convergence of closed-loop states to the origin (attractivity).
 * `mpc_valueFunction_tendsto_zero`: convergence of the value function to zero when upper bounded
   by a continuous comparison function (Rawlings–Mayne–Diehl Assumption 2.17).
+* `suboptimal_cost_bound`: warm-start cost bound `V(f x (u 0)) ≤ V_N(x, u) − ℓ(x, u(0))` for an
+  arbitrary admissible (not necessarily optimal) `u` (Rawlings–Mayne–Diehl §2.7, Algorithm 2.43).
+* `suboptimal_descent`: the ε-suboptimal perturbed descent obtained by combining
+  `suboptimal_cost_bound` with the ε-suboptimality of `u`.
 
 ## Corrections relative to the task statement
 
@@ -77,6 +81,12 @@ sequence to the system, yielding the one-step closed-loop successor `x⁺ = mpcS
    `mpc_converges_to_origin`. Convergence of the value function itself,
    `mpc_valueFunction_tendsto_zero`, requires an upper bound $V_N(x) \le \alpha_2(\|x\|)$
    (weak controllability, Rawlings Assumption 2.17).
+3. **Suboptimal descent (§2.7):**
+   `suboptimal_cost_bound` carries the same conditional-completeness hypothesis `hbd` as
+   `mpc_valueFunction_decrease`, because it also invokes `valueFunction_le`; without it the
+   `sInf` convention on unbounded-below cost sets makes the statement false.  In
+   `suboptimal_descent` the gap parameter `ε` is an explicit real argument, and the intended
+   non-negativity hypothesis `0 ≤ ε` is dropped as unused (the estimate is linear in `hopt`).
 -/
 
 open scoped Topology
@@ -195,6 +205,78 @@ theorem mpc_valueFunction_decrease (prob : FiniteHorizonProblem X U) (x : X)
   have hcost_split := totalCost_succ_split f ℓ Vf M Xs Us Xf x u
   rw [hmstep, hlaw, hVeq]
   linarith [hle_tilde, hcost_snoc, hcost_split, hwdec]
+
+/-- The suboptimal (warm-start) cost bound: for an arbitrary *admissible* — not necessarily
+optimal — input sequence `u`, the value function at the successor state `f x (u 0)` is bounded
+by the current total cost with the first stage cost removed.  This is the one-step estimate
+underlying suboptimal MPC (Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.7, Algorithm 2.43,
+printed pp. 147–152 / PDF pp. 190–195).
+
+The candidate warm start `Fin.snoc (Fin.tail u) w` drops the applied control `u 0`, shifts the
+remaining controls and appends the terminal control `w` produced by `IsTerminalCLF` at the
+terminal state `x_N`; it is admissible from `f x (u 0)` by `finiteHorizonAdmissible_snoc`.
+`valueFunction_le` bounds the value function by its cost, `totalCost_snoc` + `totalCost_succ_split`
+expose the shared running-sum term, and the terminal closed-loop inequality of `hCLF` cancels the
+terminal cost, leaving exactly `finiteHorizonTotalCost prob x u - stageCost x (u 0)`.
+
+## Correction
+
+The conditional-completeness hypothesis `hbd` is required.  `valueFunction` is an `sInf` into the
+conditionally complete order `ℝ`, and `valueFunction_le` needs `BddBelow (costSet prob ·)`;
+without it the `sInf` convention for unbounded-below sets makes the statement false.  This is the
+same correction already recorded for `mpc_valueFunction_decrease` and is not a weakening of the
+desired content. -/
+theorem suboptimal_cost_bound (prob : FiniteHorizonProblem X U) (x : X)
+    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon) [NeZero prob.horizon]
+    (hadm : FiniteHorizonAdmissible prob x u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    (hbd : BddBelow (costSet prob (prob.f x (u 0)))) :
+    valueFunction prob (prob.f x (u 0)) ≤
+      finiteHorizonTotalCost prob x u - prob.stageCost x (u 0) := by
+  obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
+  obtain ⟨M, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hN)
+  have hterm : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xf :=
+    hadm.2
+  obtain ⟨w, hwU, hwXf, hwdec⟩ := hCLF _ hterm
+  have htermXs : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xs :=
+    hsub hterm
+  let u_tilde : Fin (M + 1) → U := Fin.snoc (Fin.tail u) w
+  have hadm_tilde : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde :=
+    finiteHorizonAdmissible_snoc x u w hadm htermXs hwU hwXf
+  have hle_tilde : valueFunction ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) ≤
+      finiteHorizonTotalCost ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde :=
+    valueFunction_le ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ (f x (u 0)) u_tilde hadm_tilde hbd
+  have hcost_snoc := totalCost_snoc f ℓ Vf M Xs Us Xf x u w
+  have hcost_split := totalCost_succ_split f ℓ Vf M Xs Us Xf x u
+  linarith [hle_tilde, hcost_snoc, hcost_split, hwdec]
+
+/-- The ε-suboptimal perturbed descent of Rawlings–Mayne–Diehl 2019, 2nd ed., Ch. 2 §2.7
+(printed pp. 147–152 / PDF pp. 190–195).  If the admissible input `u` is ε-suboptimal, i.e.
+`finiteHorizonTotalCost prob x u ≤ valueFunction prob x + ε`, then the value function at the
+successor obeys the perturbed descent
+`valueFunction prob (f x (u 0)) ≤ valueFunction prob x + ε - stageCost x (u 0)`.
+
+The gap `ε` perturbs the exact decrease `V(x⁺) ≤ V(x) - ℓ(x, κ_N(x))` of
+`mpc_valueFunction_decrease`; at `ε = 0`, with `u` optimal, `valueFunction_eq` identifies the
+total cost with the value function and the two statements coincide.
+
+## Correction
+
+The non-negativity hypothesis `0 ≤ ε` that the book's perturbed descent suggests is omitted:
+the estimate is a purely linear consequence of `hopt` and `suboptimal_cost_bound`, so it holds
+for every real gap and the extra hypothesis would only be flagged by `unusedArguments`. -/
+theorem suboptimal_descent (prob : FiniteHorizonProblem X U) (x : X)
+    (u : Fin prob.horizon → U) (hN : 0 < prob.horizon) [NeZero prob.horizon]
+    (hadm : FiniteHorizonAdmissible prob x u)
+    (hCLF : IsTerminalCLF prob.f prob.stageCost prob.terminalCost prob.terminalSet prob.inputSet)
+    (hsub : prob.terminalSet ⊆ prob.stateSet)
+    (hbd : BddBelow (costSet prob (prob.f x (u 0))))
+    (ε : ℝ) (hopt : finiteHorizonTotalCost prob x u ≤ valueFunction prob x + ε) :
+    valueFunction prob (prob.f x (u 0)) ≤
+      valueFunction prob x + ε - prob.stageCost x (u 0) := by
+  have h := suboptimal_cost_bound prob x u hN hadm hCLF hsub hbd
+  linarith
 
 /-- Non-negative stage costs and terminal cost guarantee that the admissible cost set is
 bounded below by `0` everywhere. -/
