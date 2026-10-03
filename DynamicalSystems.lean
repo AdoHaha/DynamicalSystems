@@ -12,6 +12,12 @@ import DynamicalSystems.Control.Backstepping.Saturated
 import DynamicalSystems.Control.Backstepping.Tuning
 import DynamicalSystems.Control.Calculus
 import DynamicalSystems.Control.ControlLyapunov
+import DynamicalSystems.Control.MPC.Basic
+import DynamicalSystems.Control.MPC.Economic
+import DynamicalSystems.Control.MPC.Estimation
+import DynamicalSystems.Control.MPC.Robust
+import DynamicalSystems.Control.MPC.Stability
+import DynamicalSystems.Control.MPC.Stochastic
 import DynamicalSystems.Control.SlidingMode.Basic
 import DynamicalSystems.Control.SlidingMode.Differentiator
 import DynamicalSystems.Control.SlidingMode.Discrete
@@ -40,6 +46,7 @@ import DynamicalSystems.ConvexAnalysis.Subdifferential
 import DynamicalSystems.DiscreteTime.Basic
 import DynamicalSystems.DiscreteTime.Comparison
 import DynamicalSystems.DiscreteTime.Convolution
+import DynamicalSystems.DiscreteTime.ExpectedLyapunov
 import DynamicalSystems.DiscreteTime.Lyapunov
 import DynamicalSystems.DiscreteTime.MatrixLyapunov
 import DynamicalSystems.DiscreteTime.UltimateBoundedness
@@ -49,6 +56,9 @@ import DynamicalSystems.Estimation.Projection
 import DynamicalSystems.NonSmooth.Clarke
 import DynamicalSystems.NonSmooth.ChainRule
 import DynamicalSystems.NonSmooth.Lyapunov
+import DynamicalSystems.OptimalControl.FiniteHorizon
+import DynamicalSystems.OptimalControl.ValueFunction
+import DynamicalSystems.OptimalControl.LQR
 import DynamicalSystems.ParameterAdaptation.Basic
 import DynamicalSystems.ParameterAdaptation.Convergence
 import DynamicalSystems.ParameterAdaptation.Excitation
