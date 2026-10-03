@@ -27,11 +27,32 @@ minimizer set, matching the set-valued convention of the receding-horizon law
 * `mpcLaw`: the first control of a `Classical.choose`-selected optimal input
   sequence, i.e. the receding-horizon control `κ_N x = u⁰(0; x)`.
 * `mpcClosedLoop`: the one-step closed loop `x⁺ = f x (κ_N x)`.
+* `IsTerminalCLF`: the discrete terminal control-Lyapunov condition of
+  Assumption 2.14(a), a fresh predicate kept apart from the continuous,
+  control-affine `IsControlLyapunovFunction`.
 
 ## Main results
 
 * `mpcLaw_firstControlAdmissible`: the chosen first control is admissible, i.e.
   `x` lies in the state set and `mpcLaw prob x hN h` lies in the input set.
+* `recursiveFeasibility`: recursive feasibility — the successor state of the MPC
+  closed loop stays feasible when the terminal set is control invariant and
+  contained in the state set (the standing `Xf ⊆ X` assumption).
+* `mpc_terminalInvariant`: terminal-set invariance stated through `Set.MapsTo`
+  (one-step forward invariance of a set is `Set.MapsTo f S S`, see
+  `DynamicalSystems.DiscreteTime.Basic`; no separate predicate is introduced).
+
+## Correction relative to the task statement
+
+The raw statement of recursive feasibility with only the existence of an optimal
+input can fail: the tail of an optimal sequence has one control fewer, so it
+witnesses feasibility of the *tail* problem, not of the horizon-`N` problem, and
+an extra terminal step may be needed to close the horizon.  The statement below
+therefore carries the book's terminal-control-invariance condition
+(Definition 2.9(b) and Assumption 2.14(a), written without the decrease clause,
+which feasibility does not need) and the standing inclusion `Xf ⊆ X` of
+Assumption 2.2/2.3.  These are hypotheses of the statement, not of the proof
+only; the docstring of `recursiveFeasibility` records the details.
 -/
 
 @[expose] public section
@@ -76,3 +97,123 @@ theorem mpcLaw_firstControlAdmissible (prob : FiniteHorizonProblem X U) (x : X)
   rw [Fin.castSucc_mk, Fin.mk_zero, finiteHorizonRollout_zero] at hk
   unfold mpcLaw
   exact hk
+
+/-- The discrete terminal control-Lyapunov condition (Rawlings–Mayne–Diehl 2019,
+Ch. 2 §2.4.2, Assumption 2.14(a), printed p. 114 / PDF p. 162): for every state
+`x` of the terminal set `Xf` there is an admissible input `u ∈ Uset` whose
+successor stays in `Xf` and whose terminal-cost decrease is at least the stage
+cost, `Vf (f x u) - Vf x ≤ -ℓ x u`.
+
+This is a genuinely discrete-time object and must not be confused with the
+continuous, control-affine `IsControlLyapunovFunction` of
+`DynamicalSystems.Control.ControlLyapunov`, which bounds the Lie derivative along
+`f(x) + u·g(x)` rather than a one-step difference. -/
+def IsTerminalCLF (f : X → U → X) (ℓ : X → U → ℝ) (Vf : X → ℝ)
+    (Xf : Set X) (Uset : Set U) : Prop :=
+  ∀ x ∈ Xf, ∃ u ∈ Uset, f x u ∈ Xf ∧ Vf (f x u) - Vf x ≤ -ℓ x u
+
+/-- Extending an input sequence by one terminal stabilizing control shifts the
+rollout of the successor state: for `v = Fin.snoc (Fin.tail u) w` started at
+`f x₀ (u 0)`, the state at index `j.castSucc` equals the state of `u` started at
+`x₀` at index `j.succ`. -/
+private theorem finiteHorizonRollout_snoc {f : X → U → X} {ℓ : X → U → ℝ} {Vf : X → ℝ}
+    {M : ℕ} {Xs : Set X} {Us : Set U} {Xf : Set X} (x₀ : X)
+    (u : Fin (M + 1) → U) (w : U) (j : Fin (M + 1)) :
+    finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩
+        (f x₀ (u 0)) (Fin.snoc (Fin.tail u) w) j.castSucc =
+      finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x₀ u j.succ := by
+  induction j using Fin.induction with
+  | zero =>
+      rw [Fin.castSucc_zero, finiteHorizonRollout_zero, finiteHorizonRollout_succ,
+          Fin.castSucc_zero, finiteHorizonRollout_zero]
+  | succ k ih =>
+      rw [Fin.castSucc_succ, finiteHorizonRollout_succ]
+      conv_rhs => rw [finiteHorizonRollout_succ]
+      rw [Fin.castSucc_succ k]
+      rw [ih, Fin.succ_castSucc, Fin.snoc_castSucc]
+      rfl
+
+/-- Recursive feasibility of the receding-horizon law (Rawlings–Mayne–Diehl 2019,
+Ch. 2 §2.6, printed pp. 137–140 / PDF pp. 180–183; the terminal-invariance
+argument of Proposition 2.10(b), printed p. 158 / PDF p. 110): if `prob` is
+feasible at `x` with an optimal input `u`, then the successor state
+`x⁺ = f x (u 0)` of the MPC closed loop is again feasible for `prob`.
+
+After the first optimal control the remaining controls `Fin.tail u` are admissible
+for the horizon-one-shorter tail problem, and a single terminal step
+`w` that keeps the terminal state inside `Xf` restores the original horizon.  The
+invariance is expressed by `hXf`, which packages Definition 2.9(b) (for every
+`z ∈ Xf` there is an admissible `w` with `f z w ∈ Xf`) together with the standing
+assumption `Xf ⊆ X` needed because the old terminal state becomes an interior
+state of the extended horizon.
+
+## Correction
+
+The statement intended in the task, which assumed only `hN` and `h`, is not
+derivable: `Fin.tail u` has length `prob.horizon - 1`, so it witnesses feasibility
+of the tail problem, and without terminal control invariance and `Xf ⊆ X` there
+are counterexamples (e.g. `f x u = x + 1`, `Xf = {0}`, `Xs = Us = ℝ`, horizon `2`,
+`x = -2`: the successor `-1` is infeasible).  The two book hypotheses are therefore
+explicit here rather than implicit; no conclusion was weakened. -/
+theorem recursiveFeasibility (prob : FiniteHorizonProblem X U) (x : X)
+    (hN : 0 < prob.horizon)
+    (h : ∃ u : Fin prob.horizon → U, IsOptimalInput prob x u)
+    (hXf : ∀ z ∈ prob.terminalSet, z ∈ prob.stateSet ∧
+      ∃ w ∈ prob.inputSet, prob.f z w ∈ prob.terminalSet) :
+    FiniteHorizonFeasible prob (mpcClosedLoop prob x hN h) := by
+  obtain ⟨f, ℓ, Vf, N, Xs, Us, Xf⟩ := prob
+  obtain ⟨M, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hN)
+  let u := Classical.choose h
+  have hu : IsOptimalInput ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u := Classical.choose_spec h
+  have hadm : FiniteHorizonAdmissible ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u := hu.1
+  have hterm : finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u (Fin.last (M + 1)) ∈ Xf :=
+    hadm.2
+  obtain ⟨htermXs, hw⟩ := hXf _ hterm
+  let w := Classical.choose hw
+  have hwU : w ∈ Us := (Classical.choose_spec hw).1
+  have hwXf : f (finiteHorizonRollout ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x u
+      (Fin.last (M + 1))) w ∈ Xf := (Classical.choose_spec hw).2
+  have hmcl : mpcClosedLoop ⟨f, ℓ, Vf, M + 1, Xs, Us, Xf⟩ x hN h = f x (u 0) := by
+    simp only [mpcClosedLoop, mpcLaw]
+    rfl
+  rw [hmcl]
+  refine ⟨Fin.snoc (Fin.tail u) w, ?_⟩
+  unfold FiniteHorizonAdmissible
+  constructor
+  · intro k
+    constructor
+    · rw [finiteHorizonRollout_snoc x u w k]
+      by_cases hlast : k.succ = Fin.last (M + 1)
+      · rw [hlast]
+        exact htermXs
+      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M + 1)).mpr hlast
+        rw [← hj]
+        exact (hadm.1 j).1
+    · by_cases hklast : k = Fin.last M
+      · rw [hklast, Fin.snoc_last]
+        exact hwU
+      · obtain ⟨j, hj⟩ := (Fin.exists_castSucc_eq (n := M)).mpr hklast
+        rw [← hj, Fin.snoc_castSucc]
+        exact (hadm.1 j.succ).2
+  · rw [← Fin.succ_last M, finiteHorizonRollout_succ]
+    rw [finiteHorizonRollout_snoc x u w (Fin.last M), Fin.succ_last, Fin.snoc_last]
+    exact hwXf
+
+/-- Terminal-set invariance of the terminal closed loop, stated through
+`Set.MapsTo` (Rawlings–Mayne–Diehl 2019, Ch. 2 §2.4.2 / §2.6): if the terminal
+controller `κf` leaves the terminal set invariant, `Set.MapsTo (fun x ↦ f x (κf x))
+Xf Xf` (the `hXf` argument), then the closed loop `fun x ↦ prob.f x (κf x)` maps
+`terminalSet` into itself.
+
+The hypothesis `hU : Set.MapsTo κf prob.terminalSet prob.inputSet` records that the
+terminal controller is admissible on `Xf`; it is part of the standard invariance
+package but the invariance conclusion is `hXf` itself.  One-step forward
+invariance of a set is literally `Set.MapsTo f S S` in this library (see
+`DynamicalSystems.DiscreteTime.Basic`), so no separate `IsTerminalInvariant`
+predicate is introduced. -/
+theorem mpc_terminalInvariant (prob : FiniteHorizonProblem X U) (κf : X → U)
+    (hXf : Set.MapsTo (fun x ↦ prob.f x (κf x)) prob.terminalSet prob.terminalSet)
+    (hU : Set.MapsTo κf prob.terminalSet prob.inputSet) :
+    Set.MapsTo (fun x ↦ prob.f x (κf x)) prob.terminalSet prob.terminalSet := by
+  have _ := hU
+  exact hXf
