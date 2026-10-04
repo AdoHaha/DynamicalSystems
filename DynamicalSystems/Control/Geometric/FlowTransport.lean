@@ -16,7 +16,10 @@ point. These pre-G12 per-point results make no claim about the entire original
 flow box or about uniformity in the initial point; the G12 section below proves
 uniformity across fibers on a smaller concentric ball, closing the residual
 hypotheses of the box commuting reduction unconditionally
-(`flowsCommute_unconditional_onBox`).
+(`flowsCommute_unconditional_onBox`). The commuting conclusion itself concerns the
+distinguished initial point. `FlowBox.lean` exports uniform field preservation,
+and `FlowRegularity.lean` proves joint `C¹` regularity of the chosen flow; these
+feed the general chart construction in `SimultaneousRectification.lean`.
 -/
 
 @[expose] public section
@@ -114,11 +117,11 @@ bound below is proved on that fixed box as an available building block.
 continuity of the derivative at each point). It is a compactness bound only: the
 Picard lemma `ContinuousOn.exists_local_linearODE_solution` in `TangentSolution.lean`
 takes no coefficient-bound parameter and computes its own constant. The per-point
-trajectory windows still vary with `y`; making the final time radius independent of
-`y` (flow-agreement across fibers) remains open and is stated honestly here:
+trajectory windows in this section vary with `y`:
 `lieDerivative_along_flow_onBox` gives the transported identity at every `y` of the
-box, each on its own time neighbourhood. That neighbourhood depends on `y` and is
-NOT uniform in `y`.
+box, each for its own chosen flow and time neighbourhood. G12 below proves uniform
+transport for the fixed flow `localFlow D.hf0` on one smaller spatial ball and one
+shared time interval. These are distinct theorem contracts.
 -/
 
 omit [CompleteSpace X] in
@@ -193,9 +196,11 @@ theorem uniformFlowInvariance_f
 
 /-! ## G12: uniform variational theory across fibers (Hartman, Ch. V; Sontag, Ch. 4)
 
-This section discharges the uniform residuals `hDiffInv`/`hTransU` of
-`flowsCommute_of_uniformResiduals_onBox` (see `FlowCommutator.lean`) from `C¹`-on-the-box
-data alone. The per-fiber facts (`eventually_differentiableAt_localFlow`,
+This section proves the required uniform variational data on a smaller spatial ball
+from `C¹`-on-the-box regularity alone. The final commuting theorem uses the localized
+reduction directly; it does not fill the full-ball premises `hDiffInv`/`hTransU` of
+the older `flowsCommute_of_uniformResiduals_onBox`. The per-fiber facts
+(`eventually_differentiableAt_localFlow`,
 `eventually_isInvertible_fderiv_localFlow`, `lieDerivative_along_flow_onBox`) each carry
 their own `y`-dependent time neighbourhood; here a SINGLE time radius works for every
 fiber at once. The uniformity comes from finite-dimensional compactness: the common
@@ -208,8 +213,8 @@ shrunk.
 
 Honest scope: uniformity is proved on a SMALLER concentric ball `ball x₀ ρ` (whose
 existence is part of each statement), not on the whole `closedBall x₀ D.r`. The common
-flow `localFlow D.hf0` is only defined on the base flow box, and the Taylor remainder
-ball sits inside it; shrinking is what makes one radius work for all fibers. Full-box
+flow equations for `localFlow D.hf0` are certified on the base flow box, and the
+Taylor remainder ball sits inside it; shrinking makes one radius work for all fibers. Full-box
 uniformity would additionally need uniform nonlinear-flow data and is not claimed.
 References: Hartman, *Ordinary Differential Equations*, Ch. V (differentiable dependence
 on initial data); Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (the `Ad`
@@ -811,13 +816,14 @@ theorem uniformTransport_onBox
 
 /-- Flows commute near `x₀` with NO residual variational hypotheses (Sontag, Ch. 4
 §4.2/§4.4; Hartman, Ch. V): on a `CommonFlowDomain` with `[f, g] = 0` on the box, the
-base local flows commute near `(0, 0)`. The uniform residuals `hDiffInv`/`hTransU` of
-`flowsCommute_of_uniformResiduals_onBox` are discharged by
+base local flows commute at the initial point `x₀` for time pairs near `(0, 0)`.
+The required variational data on a smaller box are provided by
 `uniformDifferentiability_onBox`, `uniformInvertibility_onBox` and
 `uniformTransport_onBox` above (uniform-`δ` variational theory across fibers), and the
 box-invariance input `hFlow` by `uniformFlowInvariance`; the conclusion then follows
 from `flowsCommute_of_bracketVanishing_onBox`. Hypotheses are only the common domain
-and bracket vanishing. -/
+and bracket vanishing. The conclusion does not quantify over nearby initial points;
+uniform field preservation is exported separately in `FlowBox.lean`. -/
 theorem flowsCommute_unconditional_onBox
     {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀)
     (hbr : ∀ y ∈ Metric.closedBall x₀ D.r, lieBracket f g y = 0) :

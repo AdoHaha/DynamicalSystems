@@ -164,12 +164,20 @@ theorem contDiff_lieBracket {m n : ℕ∞ω} {V W : X → X}
     ContDiff ℝ m (lieBracket V W) :=
   ContDiff.lieBracket_vectorField hV hW hmn
 
-/-- Smoothness closure for smooth vector fields: the Lie bracket of smooth
-(`C^∞`) vector fields is smooth. -/
+/-- Analytic regularity is preserved by the Lie bracket. In Mathlib's order type
+`ℕ∞ω`, `⊤` denotes the analytic order `ω`; see the exponent definitions in
+`Mathlib.Analysis.Calculus.ContDiff.FTaylorSeries`. For smooth vector fields,
+use `contDiff_infty_lieBracket`. -/
 theorem contDiff_top_lieBracket {V W : X → X}
     (hV : ContDiff ℝ ⊤ V) (hW : ContDiff ℝ ⊤ W) :
     ContDiff ℝ ⊤ (lieBracket V W) :=
   ContDiff.lieBracket_vectorField hV hW le_rfl
+
+/-- The Lie bracket of two smooth (`C^∞`) vector fields is smooth. -/
+theorem contDiff_infty_lieBracket {V W : X → X}
+    (hV : ContDiff ℝ ∞ V) (hW : ContDiff ℝ ∞ W) :
+    ContDiff ℝ ∞ (lieBracket V W) :=
+  contDiff_lieBracket hV hW (by simp)
 
 end LieBracketDef
 
