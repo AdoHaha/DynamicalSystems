@@ -20,9 +20,11 @@ fields is the infinitesimal (mixed-second-order) commutator of their flows, i.e.
 identifies the value of the mixed second derivative — a prerequisite for, but not by
 itself a discharge of, the bracket-direction bridge used by `Chow.chowInterior`
 (which additionally needs the `k`-fold-bracket-to-flow-composition wiring). The later
-G7 material is a flows-commute REDUCTION modulo the transport hypothesis `hTrans`; it
-does not close the residual gate, namely differentiable dependence of the flow on the
-initial condition (the variational equation), which is UNCHANGED and still open.
+G7 material is a flows-commute reduction modulo the transport hypothesis `hTrans`.
+The companion `VariationalEquation.lean` proves differentiable dependence at the fixed
+initial point and discharges `hVar` in finite dimensions. `FlowTransport.lean` proves
+the transported identity near time zero at that point. Applying these results uniformly
+on a smaller common flow box and completing the geometric constructions remain separate steps.
 
 ## Attribution
 
@@ -76,12 +78,13 @@ that expansion (`DΦ₀ = id`) is recorded separately as `flow_deriv_at_zero`.
   value of the mixed second derivative but does not by itself discharge the `hBracket`
   hypothesis of `Chow.chowInterior` (that needs the `k`-fold-to-flow-composition wiring).
 * `lieDerivative_along_flow` (G7): the pullback of `g` along the flow of `f` has time
-  derivative `[f, g](x₀)` at `t = 0` (Path B: assumes the `t = 0` variational derivative).
+  derivative `[f, g](x₀)` at `t = 0`. The hypothesis `hVar` is discharged by
+  `flow_deriv_firstOrder` in `VariationalEquation.lean`.
 * `flowsCommute_of_bracketVanishing` (G7): a flows-commute REDUCTION modulo the transport
   hypothesis `hTrans`. Assuming `hdiff`/`hinv`/`hTrans` (together with `hbr : [f, g] = 0`),
-  the local flows commute near `x₀`; the integration argument is fully proved. The residual
-  gate (differentiable dependence of the flow on the initial condition — the variational
-  equation) is UNCHANGED and still open. See the G7 section at the end of the file.
+  the local flows commute near `x₀`; the integration argument is fully proved. Its premises
+  quantify over the original flow box, whereas the companion variational and transport
+  theorems are local at the fixed initial point. See the G7 section at the end of the file.
 -/
 
 @[expose] public section
@@ -263,18 +266,20 @@ Prop. 18.4 and Cor. 20.6 (Lie derivative). No originality is claimed.
 
 The *spatial* first-order expansion `DΦₜ(x₀) = id + t • Df(x₀) + o(t)` (the baby variational
 equation — the flow is differentiable in the initial condition with `∂ₜ DΦₜ = Df(Φₜ) DΦₜ`) is
-**not** in Mathlib, and the Picard–Lindelöf bundle `LocalFlowData` records only Lipschitz
-dependence on the initial condition. The G5 inner-`s`-first trick does not remove it here,
-because the pullback genuinely involves `DΦₜ`. We therefore take it as an explicit,
-documented hypothesis:
+not supplied by the Mathlib Picard–Lindelöf bundle `LocalFlowData`, which records only
+Lipschitz dependence on the initial condition. The companion `VariationalEquation.lean`
+constructs the tangent ODE and identifies its solution with the spatial derivative in
+finite dimensions. The results in this file retain their existing interfaces:
 
 * `lieDerivative_along_flow` assumes `hVar : HasDerivAt (t ↦ DΦₜ(x₀)) (Df(x₀)) 0` (the
   `t = 0` variational derivative; the `t = 0` value `DΦ₀ = id` is `flow_deriv_at_zero`).
+  `lieDerivative_along_flow_of_contDiffAt` in the companion file supplies `hVar`.
 * `flowsCommute_of_bracketVanishing` needs STRICTLY MORE than `hVar`: it assumes
   `hdiff` (spatial differentiability of the time-`t` flow), `hinv` (invertibility of its
   spatial derivative), and `hTrans` (the Lie-derivative identity at every time `t` and base
-  point in the flow box — the transported/`t`-indexed form of the variational input, i.e.
-  the variational equation in integral form). Of these `hTrans` is the load-bearing one.
+  point in the flow box). `eventually_lieDerivative_along_flow` in `FlowTransport.lean`
+  proves the transport identity locally in time at the fixed initial point; a uniform
+  common-box argument is still required to use it in this reduction.
   Note that `lieDerivative_along_flow` establishes only the single `t = 0` instance and so
   does NOT supply this theorem's variational input. Given `hdiff`/`hinv`/`hTrans`, the proof
   is complete — with no further assumption — for the *integration* argument: bracket zero ⇒
@@ -313,9 +318,10 @@ theorem hasDerivAt_field_along_flow (f g : X → X) (x₀ : X)
 `(Φₜ)^* g (x₀) = (DΦₜ(x₀))⁻¹ g(Φₜ x₀)` (Mathlib `VectorField.pullback`; equal to
 `DΦ₋ₜ(Φₜ x₀) g(Φₜ x₀)` by the group law) has time derivative `[f, g](x₀)` at `t = 0`.
 
-*Path B hypothesis.* `hVar` is the baby variational equation at `t = 0`:
+*Path B hypothesis.* `hVar` is the first-order variational equation at `t = 0`:
 `t ↦ DΦₜ(x₀)` has derivative `Df(x₀)` at `0` (as a map `ℝ → (X →L[ℝ] X)`). It is not in
-Mathlib (see the section header); all else is proved, using `flow_deriv_at_zero`
+the Mathlib flow API used here; `flow_deriv_firstOrder` in `VariationalEquation.lean`
+proves it in finite dimensions. The present reduction uses `flow_deriv_at_zero`
 (`DΦ₀ = id`), the differentiability of `Ring.inverse` at `1`, and the chain rule along the
 flow. The bracket arises as `Dg(f) − Df(g)`: the first term from `t ↦ g(Φₜ x₀)`, the second
 from `d/dt (DΦₜ)⁻¹|₀ = −Df(x₀)`. -/

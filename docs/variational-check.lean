@@ -1,0 +1,27 @@
+import DynamicalSystems.Control.Geometric.FlowTransport
+
+#check flow_deriv_firstOrder
+#check flow_deriv_firstOrder_isLittleO
+#check eventually_hasDerivAt_fderiv_localFlow
+#check lieDerivative_along_flow_of_contDiffAt
+#check eventually_lieDerivative_along_flow
+
+#print axioms ContDiffAt.exists_uniform_fderiv_remainder
+#print axioms ContinuousOn.exists_local_linearODE_solution
+#print axioms eventually_continuousAt_fderiv_localFlow
+#print axioms exists_localFlow_tangent_solution
+#print axioms norm_le_gronwall_symmetric
+#print axioms norm_le_gronwall_symmetric_uniform
+#print axioms gronwall_symmetric_multiplier_pos
+#print axioms norm_le_mul_of_deriv_le_symmetric
+#print axioms localFlow_hasFDerivAt_of_tangent
+#print axioms eventually_differentiableAt_localFlow
+#print axioms localFlow_increment_firstOrder_small
+#print axioms flow_deriv_firstOrder_of_eventually_differentiableAt
+#print axioms flow_deriv_firstOrder
+#print axioms flow_deriv_firstOrder_isLittleO
+#print axioms eventually_hasDerivAt_fderiv_localFlow
+#print axioms lieDerivative_along_flow_of_contDiffAt
+#print axioms eventually_isUnit_fderiv_localFlow
+#print axioms eventually_isInvertible_fderiv_localFlow
+#print axioms eventually_lieDerivative_along_flow
