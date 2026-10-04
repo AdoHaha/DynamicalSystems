@@ -15,7 +15,9 @@ import DynamicalSystems.Control.ControlLyapunov
 import DynamicalSystems.Control.Geometric.LocalControllability
 import DynamicalSystems.Control.Geometric.LieBrackets
 import DynamicalSystems.Control.Geometric.Accessibility
+import DynamicalSystems.Control.Geometric.Frobenius
 import DynamicalSystems.Control.Geometric.FeedbackLinearization
+import DynamicalSystems.Control.Geometric.Rectification
 import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
 import DynamicalSystems.Control.MPC.Estimation
