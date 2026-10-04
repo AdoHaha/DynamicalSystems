@@ -94,36 +94,36 @@ theorem eventually_lieDerivative_along_flow
     Ring.inverse_unit, mul_apply_eq_comp, map_sub]
   abel
 
-/-! ## Uniform transport on the common box (GPT Pro follow-up, step 2)
+/-! ## Transport on the common box (GPT Pro follow-up, step 1)
 
-This section implements step 2 of the follow-up plan recorded in
-`docs/variational-equation.md` (\"Remaining Frobenius work\"): the transported
-Lie-derivative identity, proved above locally in time at a fixed base point, is
-lifted to EVERY point `y` of a `CommonFlowDomain` box (see `FlowCommutator.lean`).
-References: Hartman, *Ordinary Differential Equations*, Ch. V; Sontag,
-*Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (Lemma 4.4.2). No originality is
-claimed.
+This section implements step 1 of the follow-up plan recorded in
+`docs/variational-equation.md` (\"Remaining Frobenius work\"): expose a common flow
+domain and state transport on that box. The transported Lie-derivative identity,
+proved above locally in time at a fixed base point, is lifted to EVERY point `y` of
+a `CommonFlowDomain` box (see `FlowCommutator.lean`). References: Hartman,
+*Ordinary Differential Equations*, Ch. V; Sontag, *Mathematical Control Theory*,
+Ch. 4 §4.2/§4.4 (Lemma 4.4.2). No originality is claimed.
 
-The invariant is respected: the common domain is fixed FIRST, and the uniform
-coefficient bound below is proved on that fixed box BEFORE any per-point tangent
-solution is chosen. Concretely, `CommonFlowDomain.uniform_fderiv_bound` gives a
-single `C` bounding `‖Df‖` and `‖Dg‖` over the whole closed box (compactness in
-finite dimensions plus `C¹` continuity of the derivative at each point). The direct
-Picard construction (`ContinuousOn.exists_local_linearODE_solution` in
-`TangentSolution.lean`) builds each tangent solution with radius
-`δ = min ε (1 / L)` where `L` depends only on such a coefficient bound — so the
-time-radius dependency is uniform in the coefficients before individual solutions
-are chosen. The per-point trajectory windows `ε_y` still vary with `y`; making the
-final time radius fully uniform (flow-agreement across fibers) remains open and is
-stated honestly here: `lieDerivative_along_flow_uniform` gives the transported
-identity at every `y` of the box, each on its own time neighborhood.
+The invariant is respected: the common domain is fixed FIRST, and the coefficient
+bound below is proved on that fixed box as an available building block.
+`CommonFlowDomain.uniform_fderiv_bound` gives a single `C` bounding `‖Df‖` and
+`‖Dg‖` over the whole closed box (compactness in finite dimensions plus `C¹`
+continuity of the derivative at each point). It is a compactness bound only: the
+Picard lemma `ContinuousOn.exists_local_linearODE_solution` in `TangentSolution.lean`
+takes no coefficient-bound parameter and computes its own constant. The per-point
+trajectory windows still vary with `y`; making the final time radius independent of
+`y` (flow-agreement across fibers) remains open and is stated honestly here:
+`lieDerivative_along_flow_onBox` gives the transported identity at every `y` of the
+box, each on its own time neighbourhood. That neighbourhood depends on `y` and is
+NOT uniform in `y`.
 -/
 
 omit [CompleteSpace X] in
-/-- Uniform coefficient bound for the tangent ODE on the common box: a single `C`
-dominates `‖Df‖` and `‖Dg‖` at every point of the closed box. This is the COMMON
-bound fed to the Picard construction uniformly, before per-point solutions are
-chosen (Hartman, Ch. V). -/
+/-- Coefficient bound on the common box: a single `C` dominates `‖Df‖` and `‖Dg‖` at
+every point of the closed box (Hartman, Ch. V). This is an available building block
+for the tangent ODE — a compactness bound on the derivatives over the box — not an
+input to the Picard construction: `ContinuousOn.exists_local_linearODE_solution`
+takes no coefficient-bound parameter and computes its own constant. -/
 theorem CommonFlowDomain.uniform_fderiv_bound
     {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀) :
     ∃ C : ℝ, ∀ y ∈ Metric.closedBall x₀ D.r,
@@ -141,12 +141,13 @@ theorem CommonFlowDomain.uniform_fderiv_bound
   exact ⟨max Cf Cg, fun y hy ↦
     ⟨le_max_of_le_left (hCf y hy), le_max_of_le_right (hCg y hy)⟩⟩
 
-/-- Uniform transport (Sontag Lemma 4.4.2, every-point form): on a common flow
-domain, `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)` holds eventually in time at EVERY
-`y` of the box — not just at the base point — for the per-point local flow. This
-is the pointwise-uniform lift of `eventually_lieDerivative_along_flow`; both
-fields are needed `C¹` only on the box. -/
-theorem lieDerivative_along_flow_uniform
+/-- Transport on the common box (Sontag Lemma 4.4.2, every-point form): on a common
+flow domain, `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)` holds eventually in time at
+EVERY `y` of the box — not just at the base point — for the per-point local flow.
+This is the box-localized lift of `eventually_lieDerivative_along_flow`; the time
+neighbourhood it produces depends on `y`, so it is NOT uniform in `y`. Both fields
+are needed `C¹` only on the box. -/
+theorem lieDerivative_along_flow_onBox
     {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀)
     {y : X} (hy : y ∈ Metric.closedBall x₀ D.r) :
     ∀ᶠ t in 𝓝 (0 : ℝ),
@@ -157,7 +158,7 @@ theorem lieDerivative_along_flow_uniform
 /-- Time-zero transport at every point of the box, unconditionally: the pullback
 of `g` along the flow of `f` through `y` has derivative `[f, g](y)` at `t = 0`.
 The variational premise is discharged per fiber by `flow_deriv_firstOrder`. -/
-theorem lieDerivative_timeZero_uniform
+theorem lieDerivative_timeZero_onBox
     {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀)
     {y : X} (hy : y ∈ Metric.closedBall x₀ D.r) :
     HasDerivAt (fun t : ℝ ↦ VectorField.pullback ℝ (localFlow (D.hf y hy) t) g y)
