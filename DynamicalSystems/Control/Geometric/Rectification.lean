@@ -18,11 +18,28 @@ public import Mathlib.Analysis.Normed.Operator.Banach
 public import Mathlib.Analysis.Normed.Module.FiniteDimension
 public import Mathlib.Topology.OpenPartialHomeomorph.Defs
 
-/-! # Local rectification of nonsingular vector fields (flow-box theorem)
+/-! # Local rectification of nonsingular vector fields (rectifying chart)
 
-This file formalises the local rectification theorem (also known as the flow-box or
-straightening theorem) for a continuously differentiable vector field on a
-finite-dimensional real normed space.
+This file constructs a local *rectifying chart* for a continuously differentiable
+nonsingular vector field `f` on a finite-dimensional real normed space, and shows that
+the coordinate lines of the chart are integral curves of `f` (`rectifyingChart_rectifies`).
+
+## Scope fence
+
+This is **not** the full flow-box theorem. The latter additionally asserts that the
+pullback identity `pullback Φ f = e₁` holds on an open neighbourhood of the base point,
+which requires the variational equation (the linearisation of the flow) and is not proved
+here. What is proved here is the rectifying chart together with the rectification of its
+trajectories.
+
+## Downstream needs (not proved here)
+
+The Frobenius steps (G2/G3) will additionally need:
+
+* `Φ 0 = x₀`,
+* `0 ∈ source` (the base point lies in the chart's source),
+* differentiability of the inverse chart `Φ⁻¹`,
+* the pullback identity `fderiv Φ⁻¹ (Φ 0) (f x₀) = e₁`.
 
 ## References
 
@@ -31,6 +48,8 @@ finite-dimensional real normed space.
 * Sontag, E. D., *Mathematical Control Theory: Deterministic Finite Dimensional Systems*,
   2nd ed., Springer, 1998, Ch. 4 §4.2–§4.4 (printed pp. 141–176, especially Lemma 4.4.16).
 -/
+
+@[expose] public section
 
 open Set Filter Metric
 open scoped Topology NNReal
@@ -164,20 +183,38 @@ lemma flow_mvt_space {ϕ : ℝ → X → X} {x₀ : X} {ε r : ℝ}
     ‖ϕ s y - ϕ s z - (y - z)‖ ≤ ((K : ℝ) * (L' : ℝ)) * ‖y - z‖ * |s| := h_mvi
     _ = ((K : ℝ) * (L' : ℝ) * |s|) * ‖y - z‖ := by ring
 
+/-- Picard-Lindelöf data for the local flow of a vector field `f` through `x₀`: a time
+radius `ε`, a space radius `r ≤ a`, Lipschitz constants and a local flow `ϕ` that integrates
+`f` on `Ioo (-ε) ε × closedBall x₀ r`. This bundles the existence output of
+Picard-Lindelöf and is an implementation detail behind `localFlow`. -/
 structure LocalFlowData (f : X → X) (x₀ : X) where
+  /-- The half-width of the time interval on which the flow is defined. -/
   ε : ℝ
+  /-- The time radius is positive. -/
   hε : 0 < ε
+  /-- The radius of the ball on which the flow is defined. -/
   r : ℝ
+  /-- The space radius is positive. -/
   hr : 0 < r
+  /-- An outer radius, at least `r`, on which `f` is Lipschitz. -/
   a : ℝ
+  /-- The outer radius is positive. -/
   ha : 0 < a
+  /-- The outer radius dominates the flow radius. -/
   hra : r ≤ a
+  /-- A Lipschitz constant for the flow at each time. -/
   L' : NNReal
+  /-- A Lipschitz constant for `f`. -/
   K : NNReal
+  /-- The local flow map. -/
   ϕ : ℝ → X → X
+  /-- The flow fixes points at time zero. -/
   ϕ_zero : ∀ x ∈ closedBall x₀ r, ϕ 0 x = x
+  /-- The flow integrates `f` on its domain. -/
   ϕ_hasDerivAt : ∀ t ∈ Ioo (-ε) ε, ∀ x ∈ closedBall x₀ r, HasDerivAt (ϕ · x) (f (ϕ t x)) t
+  /-- The flow is Lipschitz in space at each time. -/
   ϕ_lipschitz : ∀ t ∈ Icc (-ε) ε, LipschitzOnWith L' (ϕ t ·) (closedBall x₀ r)
+  /-- `f` is Lipschitz on the outer ball. -/
   f_lipschitz : LipschitzOnWith K f (closedBall x₀ a)
 
 lemma exists_localFlowData [CompleteSpace X] {f : X → X} {x₀ : X} (hf : ContDiffAt ℝ 1 f x₀) :
@@ -225,10 +262,10 @@ lemma toSpanSingleton_range (v : X) :
     ContinuousLinearMap.toSpanSingleton_apply]
 
 /-- A complementary subspace to `ℝ • f x₀` in `X`. -/
-noncomputable def flowComplement [FiniteDimensional ℝ X] (v : X) : Submodule ℝ X :=
+noncomputable def flowComplement (v : X) : Submodule ℝ X :=
   (Submodule.exists_isCompl (Submodule.span ℝ {v})).choose
 
-theorem isCompl_flowComplement [FiniteDimensional ℝ X] (v : X) :
+theorem isCompl_flowComplement (v : X) :
     IsCompl (Submodule.span ℝ {v}) (flowComplement v) :=
   (Submodule.exists_isCompl (Submodule.span ℝ {v})).choose_spec
 
@@ -248,23 +285,40 @@ noncomputable def flowEquiv [FiniteDimensional ℝ X] (v : X) (hv : v ≠ 0) :
   simp [ContinuousLinearMap.toSpanSingleton_apply]
 
 
-lemma tendsto_flow_f [CompleteSpace X] {f : X → X} {x₀ : X} (hf : ContDiffAt ℝ 1 f x₀)
-    (data : LocalFlowData f x₀) :
-    Tendsto (fun p : ℝ × X ↦ f (data.ϕ p.1 p.2)) (𝓝 (0, x₀)) (𝓝 (f x₀)) := by
-  have h1 : Tendsto (fun p : ℝ × X ↦ data.ϕ p.1 p.2) (𝓝 (0, x₀)) (𝓝 x₀) :=
-    tendsto_flow_aux data.hε data.hr data.ϕ_zero (fun t ht ↦ data.ϕ_hasDerivAt t ht x₀
-      (mem_closedBall_self (le_of_lt data.hr))) data.ϕ_lipschitz
-  exact hf.continuousAt.tendsto.comp h1
+/-- The `Classical.choice` Picard-Lindelöf bundle behind `localFlow`.
 
-
+This is an **implementation detail**: downstream code should use `localFlow` (together
+with the domain projections `localFlowTime` and `localFlowRadius`) rather than this raw
+bundle. -/
 noncomputable def getLocalFlowData [CompleteSpace X] {f : X → X} {x₀ : X} (hf : ContDiffAt ℝ 1 f x₀) :
     LocalFlowData f x₀ :=
   Classical.choice (exists_localFlowData hf)
 
-/-- The local flow of `f` near `(0, x₀)` obtained via Picard-Lindelöf. -/
+/-- The local flow of `f` near `(0, x₀)` obtained via Picard-Lindelöf.
+
+This is the intended public API for the local flow; `getLocalFlowData` is an
+implementation detail behind it. -/
 noncomputable def localFlow [CompleteSpace X] {f : X → X} {x₀ : X} (hf : ContDiffAt ℝ 1 f x₀) :
     ℝ → X → X :=
   (getLocalFlowData hf).ϕ
+
+/-- The time-radius of the local flow `localFlow hf`.
+
+Part of the intended `localFlow` API: the half-width of the time interval on which
+`localFlow hf` integrates `f`. The raw `Classical.choice` bundle `getLocalFlowData` is an
+implementation detail. -/
+noncomputable def localFlowTime [CompleteSpace X] {f : X → X} {x₀ : X}
+    (hf : ContDiffAt ℝ 1 f x₀) : ℝ :=
+  (getLocalFlowData hf).ε
+
+/-- The space-radius of the local flow `localFlow hf`.
+
+Part of the intended `localFlow` API: the radius of the ball around `x₀` on which
+`localFlow hf` integrates `f`. The raw `Classical.choice` bundle `getLocalFlowData` is an
+implementation detail. -/
+noncomputable def localFlowRadius [CompleteSpace X] {f : X → X} {x₀ : X}
+    (hf : ContDiffAt ℝ 1 f x₀) : ℝ :=
+  (getLocalFlowData hf).r
 
 
 lemma mem_ball_zero_of_mem_uIcc {s t : ℝ} {δ : ℝ} (hs : s ∈ ball (0 : ℝ) δ) (ht : t ∈ ball (0 : ℝ) δ)
@@ -495,13 +549,18 @@ noncomputable def rectifyingChart [CompleteSpace X] [FiniteDimensional ℝ X]
     OpenPartialHomeomorph (ℝ × ↥(flowComplement (f x₀))) X :=
   (rectifyingChartStrict hf hv).toOpenPartialHomeomorph _
 
+/-- Trajectory rectification: the coordinate lines `s ↦ rectifyingChart hf hv (s, z')` are
+integral curves of `f`, provided `t` and the base point lie in the domain of the local flow.
+
+The hypothesis `_hmem_source` (membership of `(t, z')` in the chart's source) is **unused**
+in the proof: it is recorded only for downstream locality bookkeeping and must not be
+treated as a discharge of the flow-domain hypotheses `ht` / `hz`. -/
 theorem rectifyingChart_rectifies [CompleteSpace X] [FiniteDimensional ℝ X]
     {f : X → X} {x₀ : X} (hf : ContDiffAt ℝ 1 f x₀) (hv : f x₀ ≠ 0)
     (z' : ↥(flowComplement (f x₀))) (t : ℝ)
-    (ht : t ∈ Ioo (-(getLocalFlowData hf).ε) (getLocalFlowData hf).ε)
-    (hz : x₀ + (flowComplement (f x₀)).subtypeL z'
-      ∈ closedBall x₀ (getLocalFlowData hf).r)
-    (_hmem : ((t, z') : ℝ × ↥(flowComplement (f x₀))) ∈ (rectifyingChart hf hv).source) :
+    (ht : t ∈ Ioo (-(localFlowTime hf)) (localFlowTime hf))
+    (hz : x₀ + (flowComplement (f x₀)).subtypeL z' ∈ closedBall x₀ (localFlowRadius hf))
+    (_hmem_source : ((t, z') : ℝ × ↥(flowComplement (f x₀))) ∈ (rectifyingChart hf hv).source) :
     HasDerivAt (fun s ↦ (rectifyingChart hf hv) (s, z'))
       (f ((rectifyingChart hf hv) (t, z'))) t := by
   have hcoe : ⇑(rectifyingChart hf hv) = rectifyingChartΦ hf :=
