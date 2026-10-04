@@ -69,6 +69,21 @@ not tracked.
 * `chowInterior`: THE theorem — full accessibility rank at `x₀`, plus the deferred
   bracket-direction bridge (`hBracket`, `hReach`), implies the reachable set has
   nonempty interior.
+* `chowInterior_of_larc` (G6): `chowInterior` with the joint-map wiring decomposed into the
+  explicit range-inclusion hypotheses `hFirst`/`hBridge`.
+* `bracketDirection_mem_range` (G6): a Lie-bracket direction is the time-`1` value of the
+  Hessian-level commutator end-point map, hence lies in its range.
+* `generatorDirection_mem_range` (G6): a generator direction is the time-`1` value of the
+  single-flow tangent map, hence lies in its range.
+* `BracketDirectionCovers` (G9): the documented pointwise Path-B hypothesis that every
+  bracket direction of the accessibility Lie algebra lies in `L.range`.
+* `hFirst_of_generatorDirection` (G9): pointwise generator coverage `hGenPt` yields the
+  `hFirst` range inclusion via the `range ≤ S` upgrade.
+* `hBridge_of_bracketDirection` (G9): the pointwise relation `hBracketPt` yields the
+  `hBridge` range inclusion via the `range ≤ S` upgrade.
+* `chowInterior_of_pointwise` (G9): `chowInterior_of_larc` with `hFirst`/`hBridge`
+  restated pointwise (`hGenPt`, `hBracketPt`); no new mathematical power, since
+  `hGenPt ∧ hBracketPt` is logically equivalent to `hFirst ∧ hBridge`.
 -/
 
 @[expose] public section
@@ -358,49 +373,58 @@ theorem chowInterior_of_larc [CompleteSpace X] [FiniteDimensional ℝ X]
     exact hEval V hVm
   exact chowInterior f x₀ hRank E L hE hBracket hReach
 
-/-! ## G9: hBridge discharge via the pointwise bracket-range relation (Path B)
+/-! ## G9: hBridge restated pointwise via the bracket-range relation (Path B)
 
 Attribution (binding): E. D. Sontag, *Mathematical Control Theory: Deterministic Finite
 Dimensional Systems*, 2nd ed., Springer, 1998, Ch. 4 §4.3 (Theorem 9, p. 156); A. J. Krener,
 *Differential Geometric Methods in Nonlinear Control*, in *Encyclopedia of Systems and
 Control*, Springer, 2nd ed. No originality is claimed.
 
-Path B (honest scope fence). The full discharge of `hBridge` — proving that the
-Hessian-level commutator ranges factor through the JOINT end-point derivative `L` — is the
-Sontag-at-`t⁰` content: Sontag's classical end-point map `F` is differentiated at a
-generically NONZERO parameter `t⁰`, where bracket directions appear at FIRST order via
-pushforward transport of the flow commutator along the constituent flows (the
-flow-commutator reparametrisation built on G5's `bracket_eq_flowCommutator`). Formalising
-that transport (differentials of composed `Rectification.localFlow`s and the
-nonzero-parameter chain rule) is 600–1000 lines and absent from Mathlib, so the pointwise
-relation "every Lie-bracket direction lies in `L.range`" is taken as the DOCUMENTED
-hypothesis `bracketDirectionBridge` below (the second-derivative→first-order-range
-relation). What IS proved here (complete proofs under the standard logical foundations):
+Path B (honest scope fence, pointwise restatement). `hBridge` is not proved here: the
+full statement — the Hessian-level commutator ranges factor through the JOINT end-point
+derivative `L` — is the Sontag-at-`t⁰` content. Sontag's classical end-point map `F` is
+differentiated at a generically NONZERO parameter `t⁰`, where bracket directions appear at
+FIRST order via pushforward transport of the flow commutator along the constituent flows
+(the flow-commutator reparametrisation built on G5's `bracket_eq_flowCommutator`).
+Formalising that transport (differentials of composed `Rectification.localFlow`s and the
+nonzero-parameter chain rule) is 600–1000 lines and absent from Mathlib, so G9 restates
+`hBridge` pointwise: the relation "every Lie-bracket direction lies in `L.range`" is taken
+as the DOCUMENTED hypothesis `BracketDirectionCovers` below (the
+second-derivative→first-order-range relation). What IS proved here (complete proofs under
+the standard logical foundations) is only the `range ≤ S` upgrade and the identification of
+the Hessian-level generator with the bracket, not the bracket→`L.range` relation:
 
-* `realLine_range_le_of_one_mem`: a linear map out of `ℝ` is controlled by its value at
-  `1` — if `A 1 = v ∈ S` then `A.range ≤ S`.
+* `realLine_range_le_of_one_mem`: the range-inclusion upgrade — a linear map out of `ℝ` is
+  controlled by its value at `1` — if `A 1 = v ∈ S` then `A.range ≤ S`.
 * `hFirst_of_generatorDirection`: pointwise generator coverage of `L` (`hGenPt`, the
   first-order end-point-map setup of Sontag §4.2) plus G6's `generatorDirection_mem_range`
   yields the `hFirst` range inclusion.
 * `hBridge_of_bracketDirection`: the pointwise Path-B relation `hBracketPt` plus G5's
   `bracket_eq_flowCommutator` (via G6's identification of the Hessian-level generator with
   the bracket) yields the `hBridge` range inclusion.
-* `chowInterior_unconditional`: LARC plus regularity (`hSmooth`), end-point-map data
+* `chowInterior_of_pointwise`: LARC plus regularity (`hSmooth`), end-point-map data
   (`E`, `L`, `hE`, `hReach`), and the pointwise coverage hypotheses (`hGenPt`, `hBracketPt`)
-  imply nonempty interior — with NO `hFirst`/`hBridge` assumed — by feeding the derived
+  imply nonempty interior — with NO `hFirst`/`hBridge` assumed — by feeding the upgraded
   inclusions to G6's `chowInterior_of_larc`.
+
+Logical equivalence with G6. `hGenPt ∧ hBracketPt` is logically EQUIVALENT to G6's
+`hFirst ∧ hBridge`: `hFirst_of_generatorDirection` / `hBridge_of_bracketDirection` derive
+the range inclusions from the pointwise relations, while the reverse direction specializes
+an inclusion to the value at `1` (using `generatorDirection_mem_range` /
+`bracketDirection_mem_range`). G9 is therefore a pointwise restatement of G6, not new
+mathematical power.
 -/
 
-/-- **Path-B bridge hypothesis (documented; Sontag, Ch. 4 §4.3, Theorem 9, p. 156):** every
-Lie-bracket direction of the accessibility Lie algebra lies in the range of the JOINT
-end-point map derivative `L`. Classically this holds because the end-point map is
-differentiated at a generically nonzero parameter `t⁰`, where the flow-commutator
-reparametrisation (G5's `bracket_eq_flowCommutator`: the bracket is the mixed second
-derivative of the two-flow commutator) is transported to first order along the flows;
-that pushforward transport is the deferred 600–1000-line step (absent from Mathlib) and is
-NOT proved here — it is assumed in this pointwise form, which is exactly the
+/-- **Path-B coverage hypothesis (an ASSUMED `Prop`, not a built object; Sontag, Ch. 4
+§4.3, Theorem 9, p. 156):** every Lie-bracket direction of the accessibility Lie algebra
+lies in the range of the JOINT end-point map derivative `L`. Classically this holds
+because the end-point map is differentiated at a generically nonzero parameter `t⁰`, where
+the flow-commutator reparametrisation (G5's `bracket_eq_flowCommutator`: the bracket is the
+mixed second derivative of the two-flow commutator) is transported to first order along the
+flows; that pushforward transport is the deferred 600–1000-line step (absent from Mathlib)
+and is NOT proved here — it is assumed in this pointwise form, which is exactly the
 second-derivative→first-order-range relation. -/
-def bracketDirectionBridge (f : Fin m → X → X) (x₀ : X)
+def BracketDirectionCovers (f : Fin m → X → X) (x₀ : X)
     (L : (Fin (Module.finrank ℝ X) → ℝ) →L[ℝ] X) : Prop :=
   ∀ (V W : X → X), V ∈ lieAlgebraOf (Set.range f) → W ∈ lieAlgebraOf (Set.range f) →
     ContDiffAt ℝ 1 V x₀ → ContDiffAt ℝ 1 W x₀ → lieBracket V W x₀ ∈ L.range
@@ -446,17 +470,18 @@ theorem hFirst_of_generatorDirection [CompleteSpace X] (f : Fin m → X → X) (
   change (fderiv ℝ (fun t : ℝ ↦ localFlow hCi t x₀) 0) 1 = f i x₀
   rw [hder.hasFDerivAt.fderiv, ContinuousLinearMap.toSpanSingleton_apply, one_smul]
 
-/-- **hBridge discharge (Krener; Sontag, Ch. 4 §4.3, Theorem 9, p. 156):** the pointwise
-Path-B relation `hBracketPt` (every bracket direction lies in `L.range` — the documented
-`bracketDirectionBridge`, i.e. the flow-commutator reparametrisation transported to the
-joint derivative) plus G5's `bracket_eq_flowCommutator` (the Hessian-level generator equals
-the bracket, cf. G6's `bracketDirection_mem_range`) yields the `hBridge` range inclusion
-of `chowInterior_of_larc`. The remaining deferred content is exactly `hBracketPt` itself
-(the Sontag-at-`t⁰` pushforward transport); the upgrade from pointwise membership to range
-inclusion is fully proved here via `realLine_range_le_of_one_mem`. -/
+/-- **hBridge restated pointwise (Krener; Sontag, Ch. 4 §4.3, Theorem 9, p. 156):** the
+pointwise Path-B relation `hBracketPt` (every bracket direction lies in `L.range` — the
+documented `BracketDirectionCovers`, i.e. the flow-commutator reparametrisation
+transported to the joint derivative) plus G5's `bracket_eq_flowCommutator` (the
+Hessian-level generator equals the bracket, cf. G6's `bracketDirection_mem_range`) yields
+the `hBridge` range inclusion of `chowInterior_of_larc` via `realLine_range_le_of_one_mem`.
+This is only the trivial range-inclusion upgrade: the bracket→`L.range` relation itself is
+not derived, it is exactly the deferred `hBracketPt` (Sontag-at-`t⁰` pushforward
+transport). -/
 theorem hBridge_of_bracketDirection [CompleteSpace X] (f : Fin m → X → X) (x₀ : X)
     (L : (Fin (Module.finrank ℝ X) → ℝ) →L[ℝ] X)
-    (hBracketPt : bracketDirectionBridge f x₀ L) :
+    (hBracketPt : BracketDirectionCovers f x₀ L) :
     ∀ (V W : X → X) (_ : V ∈ lieAlgebraOf (Set.range f))
       (_ : W ∈ lieAlgebraOf (Set.range f)) (hV1 : ContDiffAt ℝ 1 V x₀)
       (hW1 : ContDiffAt ℝ 1 W x₀),
@@ -470,19 +495,22 @@ theorem hBridge_of_bracketDirection [CompleteSpace X] (f : Fin m → X → X) (x
   rw [sub_apply]
   exact hb
 
-/-- **Chow sufficiency with the bridge wiring derived (Krener; Sontag, Ch. 4 §4.3,
-Theorem 9, p. 156):** the Lie algebra rank condition at `x₀` implies the
+/-- **Chow sufficiency from the pointwise bracket-direction coverage (Krener; Sontag,
+Ch. 4 §4.3, Theorem 9, p. 156):** the Lie algebra rank condition at `x₀` implies the
 piecewise-constant reachable set has nonempty interior, assuming only regularity
 (`hSmooth`: every Lie-algebra element is `C¹` at `x₀`), the end-point-map data (`E`, `L`,
 `hE`, `hReach`, as in G4), and the pointwise coverage hypotheses — `hGenPt` (first-order
 setup: generator directions are coordinate velocities of `E`, Sontag §4.2) and `hBracketPt`
-(the documented Path-B `bracketDirectionBridge`: bracket directions lie in `L.range` via
+(the documented Path-B `BracketDirectionCovers`: bracket directions lie in `L.range` via
 the flow-commutator reparametrisation at the Sontag nonzero parameter `t⁰`). In particular
-NO `hFirst`/`hBridge` range inclusions are assumed: they are derived above
-(`hFirst_of_generatorDirection`, `hBridge_of_bracketDirection`) and fed to G6's
+NO `hFirst`/`hBridge` range inclusions are assumed: they are obtained above
+(`hFirst_of_generatorDirection`, `hBridge_of_bracketDirection`) by the range-inclusion
+upgrade, i.e. `hBridge` is merely restated pointwise, and fed to G6's
 `chowInterior_of_larc`. Honest scope: the Sontag-at-`t⁰` pushforward transport behind
-`hBracketPt` remains the deferred step (see `bracketDirectionBridge`). -/
-theorem chowInterior_unconditional [CompleteSpace X] [FiniteDimensional ℝ X]
+`hBracketPt` remains the deferred step (see `BracketDirectionCovers`), and `hGenPt` /
+`hBracketPt` is logically EQUIVALENT to G6's `hFirst` / `hBridge`, so this is a pointwise
+restatement, not new mathematical power. -/
+theorem chowInterior_of_pointwise [CompleteSpace X] [FiniteDimensional ℝ X]
     (f : Fin m → X → X) (x₀ : X)
     (hRank : lieAlgebraRankCondition (Set.range f) x₀)
     (hSmooth : ∀ V : X → X, V ∈ lieAlgebraOf (Set.range f) → ContDiffAt ℝ 1 V x₀)
@@ -490,7 +518,7 @@ theorem chowInterior_unconditional [CompleteSpace X] [FiniteDimensional ℝ X]
     (L : (Fin (Module.finrank ℝ X) → ℝ) →L[ℝ] X)
     (hE : HasStrictFDerivAt E L 0)
     (hGenPt : ∀ i : Fin m, f i x₀ ∈ L.range)
-    (hBracketPt : bracketDirectionBridge f x₀ L)
+    (hBracketPt : BracketDirectionCovers f x₀ L)
     (hReach : ∀ᶠ t in 𝓝 (0 : Fin (Module.finrank ℝ X) → ℝ),
       E t ∈ reachableByPiecewiseConstant f x₀) :
     (interior (reachableByPiecewiseConstant f x₀)).Nonempty := by
