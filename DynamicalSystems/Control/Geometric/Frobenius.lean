@@ -204,9 +204,13 @@ independent, via `Pi.basisFun`), so a vector in the span with zero first-`k` blo
 zero.
 
 *Documented gap:* `hgraph` is assumed rather than derived from a general involutive
-distribution. In the classical proof it is always achievable by a constant linear change
-of coordinates (not formalised here); the passage from a general pointwise-independent
-involutive family to graph form is the missing preamble. -/
+distribution. Classically graph form is obtained in two steps, neither of them formalised
+here: (1) choose coordinates near `x₀` in which the distribution `Δ` satisfies
+`Δ(x₀) = span{e₁, …, e_k}`; this is a constant linear change of coordinates, making `Δ`
+transverse to the complementary coordinate directions at `x₀`, and (2) pass to the unique
+frame of `Δ` whose first-`k` block is `e_i`; this is an `x`-dependent change of frame, not
+a change of coordinates. The passage from a general pointwise-independent involutive
+family to graph form is the missing preamble. -/
 theorem commutingBasis_of_involutive {k : ℕ} {Y : Type*} [NormedAddCommGroup Y]
     [NormedSpace ℝ Y] {f : Fin k → ((Fin k → ℝ) × Y) → ((Fin k → ℝ) × Y)}
     (hf : ∀ i x, DifferentiableAt ℝ (f i) x)
