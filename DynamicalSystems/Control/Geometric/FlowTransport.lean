@@ -93,3 +93,74 @@ theorem eventually_lieDerivative_along_flow
     ← ContinuousLinearMap.mul_def, mul_assoc, Units.mul_inv, mul_one,
     Ring.inverse_unit, mul_apply_eq_comp, map_sub]
   abel
+
+/-! ## Transport on the common box (GPT Pro follow-up, step 1)
+
+This section implements step 1 of the follow-up plan recorded in
+`docs/variational-equation.md` (\"Remaining Frobenius work\"): expose a common flow
+domain and state transport on that box. The transported Lie-derivative identity,
+proved above locally in time at a fixed base point, is lifted to EVERY point `y` of
+a `CommonFlowDomain` box (see `FlowCommutator.lean`). References: Hartman,
+*Ordinary Differential Equations*, Ch. V; Sontag, *Mathematical Control Theory*,
+Ch. 4 §4.2/§4.4 (Lemma 4.4.2). No originality is claimed.
+
+The invariant is respected: the common domain is fixed FIRST, and the coefficient
+bound below is proved on that fixed box as an available building block.
+`CommonFlowDomain.uniform_fderiv_bound` gives a single `C` bounding `‖Df‖` and
+`‖Dg‖` over the whole closed box (compactness in finite dimensions plus `C¹`
+continuity of the derivative at each point). It is a compactness bound only: the
+Picard lemma `ContinuousOn.exists_local_linearODE_solution` in `TangentSolution.lean`
+takes no coefficient-bound parameter and computes its own constant. The per-point
+trajectory windows still vary with `y`; making the final time radius independent of
+`y` (flow-agreement across fibers) remains open and is stated honestly here:
+`lieDerivative_along_flow_onBox` gives the transported identity at every `y` of the
+box, each on its own time neighbourhood. That neighbourhood depends on `y` and is
+NOT uniform in `y`.
+-/
+
+omit [CompleteSpace X] in
+/-- Coefficient bound on the common box: a single `C` dominates `‖Df‖` and `‖Dg‖` at
+every point of the closed box (Hartman, Ch. V). This is an available building block
+for the tangent ODE — a compactness bound on the derivatives over the box — not an
+input to the Picard construction: `ContinuousOn.exists_local_linearODE_solution`
+takes no coefficient-bound parameter and computes its own constant. -/
+theorem CommonFlowDomain.uniform_fderiv_bound
+    {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀) :
+    ∃ C : ℝ, ∀ y ∈ Metric.closedBall x₀ D.r,
+      ‖fderiv ℝ f y‖ ≤ C ∧ ‖fderiv ℝ g y‖ ≤ C := by
+  have hcont_f : ContinuousOn (fun y ↦ fderiv ℝ f y) (Metric.closedBall x₀ D.r) := by
+    intro y hy
+    exact ((D.hf y hy).continuousAt_fderiv one_ne_zero).continuousWithinAt
+  have hcont_g : ContinuousOn (fun y ↦ fderiv ℝ g y) (Metric.closedBall x₀ D.r) := by
+    intro y hy
+    exact ((D.hg y hy).continuousAt_fderiv one_ne_zero).continuousWithinAt
+  obtain ⟨Cf, hCf⟩ :=
+    (isCompact_closedBall x₀ D.r).exists_bound_of_continuousOn hcont_f
+  obtain ⟨Cg, hCg⟩ :=
+    (isCompact_closedBall x₀ D.r).exists_bound_of_continuousOn hcont_g
+  exact ⟨max Cf Cg, fun y hy ↦
+    ⟨le_max_of_le_left (hCf y hy), le_max_of_le_right (hCg y hy)⟩⟩
+
+/-- Transport on the common box (Sontag Lemma 4.4.2, every-point form): on a common
+flow domain, `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)` holds eventually in time at
+EVERY `y` of the box — not just at the base point — for the per-point local flow.
+This is the box-localized lift of `eventually_lieDerivative_along_flow`; the time
+neighbourhood it produces depends on `y`, so it is NOT uniform in `y`. Both fields
+are needed `C¹` only on the box. -/
+theorem lieDerivative_along_flow_onBox
+    {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀)
+    {y : X} (hy : y ∈ Metric.closedBall x₀ D.r) :
+    ∀ᶠ t in 𝓝 (0 : ℝ),
+      HasDerivAt (fun u ↦ VectorField.pullback ℝ (localFlow (D.hf y hy) u) g y)
+        (VectorField.pullback ℝ (localFlow (D.hf y hy) t) (lieBracket f g) y) t :=
+  eventually_lieDerivative_along_flow (D.hf y hy) (D.hg y hy)
+
+/-- Time-zero transport at every point of the box, unconditionally: the pullback
+of `g` along the flow of `f` through `y` has derivative `[f, g](y)` at `t = 0`.
+The variational premise is discharged per fiber by `flow_deriv_firstOrder`. -/
+theorem lieDerivative_timeZero_onBox
+    {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀)
+    {y : X} (hy : y ∈ Metric.closedBall x₀ D.r) :
+    HasDerivAt (fun t : ℝ ↦ VectorField.pullback ℝ (localFlow (D.hf y hy) t) g y)
+      (lieBracket f g y) 0 :=
+  lieDerivative_along_flow_of_contDiffAt f g y (D.hf y hy) (D.hg y hy)

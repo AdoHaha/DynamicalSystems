@@ -23,8 +23,27 @@ itself a discharge of, the bracket-direction bridge used by `Chow.chowInterior`
 G7 material is a flows-commute reduction modulo the transport hypothesis `hTrans`.
 The companion `VariationalEquation.lean` proves differentiable dependence at the fixed
 initial point and discharges `hVar` in finite dimensions. `FlowTransport.lean` proves
-the transported identity near time zero at that point. Applying these results uniformly
-on a smaller common flow box and completing the geometric constructions remain separate steps.
+the transported identity near time zero at that point.
+
+## What G10 delivers (and what it does not)
+
+The G10 material in this file and in `FlowTransport.lean` delivers exactly three
+items:
+
+1. the `CommonFlowDomain` bundle — a genuine common time/spatial box on which both
+   fields are `C¹` at every point;
+2. a decoupled compactness bound `CommonFlowDomain.uniform_fderiv_bound` on
+   `‖Df‖`/`‖Dg‖` over that box, kept as a standalone building block independent of
+   the Picard construction; and
+3. a box-LOCALIZED version `flowsCommute_of_bracketVanishing_onBox` of the G7
+   flows-commute reduction, with `hdiff`/`hinv`/`hTrans`/`hFlow` stated on a working
+   box inside the common domain instead of on the whole preselected Picard box.
+
+Steps 2–3 of the follow-up plan — the arbitrary-initial-point comparison, a radius
+that is uniform in the initial point, and the discharge of `hdiff`/`hinv`/`hTrans`
+from `C¹` data — are NOT implemented here. The Frobenius gate is unchanged: the
+reduction still assumes its transport hypotheses, and nothing in this file closes
+the chain `[f, g] = 0` ⇒ flows commute ⇒ simultaneous rectification.
 
 ## Attribution
 
@@ -80,11 +99,16 @@ that expansion (`DΦ₀ = id`) is recorded separately as `flow_deriv_at_zero`.
 * `lieDerivative_along_flow` (G7): the pullback of `g` along the flow of `f` has time
   derivative `[f, g](x₀)` at `t = 0`. The hypothesis `hVar` is discharged by
   `flow_deriv_firstOrder` in `VariationalEquation.lean`.
-* `flowsCommute_of_bracketVanishing` (G7): a flows-commute REDUCTION modulo the transport
+* `flowsCommute_of_key` (G10): the hypothesis-agnostic integration core shared by both
+  reductions below — from the spatial identity `DΦₜ(y) g(y) = g(Φₜ y)` on a working box
+  it derives flow agreement near `(0, 0)` by Mathlib ODE uniqueness.
+* `flowsCommute_of_bracketVanishing` (G7): the broad flows-commute REDUCTION modulo the transport
   hypothesis `hTrans`. Assuming `hdiff`/`hinv`/`hTrans` (together with `hbr : [f, g] = 0`),
-  the local flows commute near `x₀`; the integration argument is fully proved. Its premises
-  quantify over the original flow box, whereas the companion variational and transport
-  theorems are local at the fixed initial point. See the G7 section at the end of the file.
+  the local flows commute near `x₀`; its premises quantify over the original Picard box. It
+  delegates the integration argument to `flowsCommute_of_key`. See the G7 section below.
+* `CommonFlowDomain` and `flowsCommute_of_bracketVanishing_onBox` (G10): the common
+  time/spatial box and the box-LOCALIZED flows-commute reduction, whose hypotheses live
+  on a working box inside the common domain. See the G7b section at the end of the file.
 -/
 
 @[expose] public section
@@ -278,8 +302,8 @@ finite dimensions. The results in this file retain their existing interfaces:
   `hdiff` (spatial differentiability of the time-`t` flow), `hinv` (invertibility of its
   spatial derivative), and `hTrans` (the Lie-derivative identity at every time `t` and base
   point in the flow box). `eventually_lieDerivative_along_flow` in `FlowTransport.lean`
-  proves the transport identity locally in time at the fixed initial point; a uniform
-  common-box argument is still required to use it in this reduction.
+  proves the transport identity locally in time at the fixed initial point; a common-box
+  argument valid across all fibers is still required to use it in this reduction.
   Note that `lieDerivative_along_flow` establishes only the single `t = 0` instance and so
   does NOT supply this theorem's variational input. Given `hdiff`/`hinv`/`hTrans`, the proof
   is complete — with no further assumption — for the *integration* argument: bracket zero ⇒
@@ -367,6 +391,138 @@ theorem localFlow_continuousAt (f : X → X) (x₀ : X) (hf : ContDiffAt ℝ 1 f
     ContinuousAt (fun p : ℝ × X ↦ localFlow hf p.1 p.2) (0, x₀) :=
   (flowStrictFDerivAt hf).hasFDerivAt.continuousAt
 
+/-- **Shared integration core of the flows-commute reductions.** Given `C¹` fields `f`,
+`g` at `x₀`, a working box `(rB, TB)`, the spatial identity
+`DΦₜ(y) g(y) = g(Φₜ y)` on that box (`key`), and differentiability of `Φₜ` there
+(`hdiff`), the two curves `s ↦ Φₜ(Ψₛ x₀)` and `s ↦ Ψₛ(Φₜ x₀)` agree on a neighbourhood
+of `(0, 0)`. This is purely the ODE-uniqueness argument for `ẏ = g(y)`: both
+`flowsCommute_of_bracketVanishing` and `flowsCommute_of_bracketVanishing_onBox` derive
+their conclusions from this lemma instead of repeating it. -/
+theorem flowsCommute_of_key {f g : X → X} {x₀ : X}
+    (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀)
+    {rB TB : ℝ} (hrB : 0 < rB) (hTB : 0 < TB)
+    (key : ∀ t ∈ Set.Ioo (-TB) TB, ∀ y ∈ Metric.ball x₀ rB,
+      fderiv ℝ (localFlow hf t) y (g y) = g (localFlow hf t y))
+    (hdiff : ∀ t ∈ Set.Ioo (-TB) TB, ∀ y ∈ Metric.ball x₀ rB,
+      DifferentiableAt ℝ (localFlow hf t) y) :
+    ∃ δ > 0, ∀ t ∈ Set.Ioo (-δ) δ, ∀ s ∈ Set.Ioo (-δ) δ,
+      localFlow hf t (localFlow hg s x₀) = localFlow hg s (localFlow hf t x₀) := by
+  have hucG : ContinuousAt (fun s : ℝ ↦ localFlow hg s x₀) 0 :=
+    (localFlow_hasDerivAt_zero g x₀ hg).continuousAt
+  have hucF : ContinuousAt (fun t : ℝ ↦ localFlow hf t x₀) 0 :=
+    (localFlow_hasDerivAt_zero f x₀ hf).continuousAt
+  have hF0 := localFlow_zero_apply f x₀ hf
+  have hG0 := localFlow_zero_apply g x₀ hg
+  have hFc := localFlow_continuousAt f x₀ hf
+  have hGc := localFlow_continuousAt g x₀ hg
+  -- (ii) `Ψₛ x₀ ∈ ball x₀ rB`
+  have hP2 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
+      localFlow hg p.2 x₀ ∈ Metric.ball x₀ rB := by
+    have h := (hucG.comp (f := Prod.snd) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_snd)
+    refine h.eventually_mem ?_
+    change Metric.ball x₀ rB ∈ 𝓝 (localFlow hg 0 x₀)
+    rw [hG0]
+    exact Metric.ball_mem_nhds x₀ hrB
+  -- (iii) `Φₜ x₀ ∈ closedBall x₀ rg`
+  have hP3 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
+      localFlow hf p.1 x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r := by
+    have h := (hucF.comp (f := Prod.fst) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_fst)
+    refine h.eventually_mem ?_
+    change Metric.closedBall x₀ (getLocalFlowData hg).r ∈
+      𝓝 (localFlow hf 0 x₀)
+    rw [hF0]
+    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).hr
+  -- (iv) `Φₜ(Ψₛ x₀) ∈ closedBall x₀ ag`
+  have hP4 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
+      localFlow hf p.1 (localFlow hg p.2 x₀) ∈
+        Metric.closedBall x₀ (getLocalFlowData hg).a := by
+    have hm : ContinuousAt (fun p : ℝ × ℝ ↦ (p.1, localFlow hg p.2 x₀)) (0, 0) :=
+      continuousAt_fst.prodMk
+        (hucG.comp (f := Prod.snd) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_snd)
+    have hm0 : (fun p : ℝ × ℝ ↦ (p.1, localFlow hg p.2 x₀)) (0, 0) = (0, x₀) := by
+      simp [hG0]
+    have h := hFc.comp_of_eq hm hm0
+    refine h.eventually_mem ?_
+    change Metric.closedBall x₀ (getLocalFlowData hg).a ∈
+      𝓝 (localFlow hf 0 (localFlow hg 0 x₀))
+    rw [hG0, hF0]
+    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).ha
+  -- (v) `Ψₛ(Φₜ x₀) ∈ closedBall x₀ ag`
+  have hP5 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
+      localFlow hg p.2 (localFlow hf p.1 x₀) ∈
+        Metric.closedBall x₀ (getLocalFlowData hg).a := by
+    have hm : ContinuousAt (fun p : ℝ × ℝ ↦ (p.2, localFlow hf p.1 x₀)) (0, 0) :=
+      continuousAt_snd.prodMk
+        (hucF.comp (f := Prod.fst) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_fst)
+    have hm0 : (fun p : ℝ × ℝ ↦ (p.2, localFlow hf p.1 x₀)) (0, 0) = (0, x₀) := by
+      simp [hF0]
+    have h := hGc.comp_of_eq hm hm0
+    refine h.eventually_mem ?_
+    change Metric.closedBall x₀ (getLocalFlowData hg).a ∈
+      𝓝 (localFlow hg 0 (localFlow hf 0 x₀))
+    rw [hF0, hG0]
+    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).ha
+  obtain ⟨ε', hε', hball⟩ := Metric.eventually_nhds_iff.mp
+    (hP2.and (hP3.and (hP4.and hP5)))
+  have hεg := (getLocalFlowData hg).hε
+  refine ⟨min ε' (min TB (getLocalFlowData hg).ε), lt_min hε'
+    (lt_min hTB hεg), ?_⟩
+  set δ := min ε' (min TB (getLocalFlowData hg).ε) with hδ
+  have hδpos : 0 < δ := lt_min hε' (lt_min hTB hεg)
+  have hδ1 : δ ≤ ε' := min_le_left _ _
+  have hδT : δ ≤ TB := (min_le_right _ _).trans (min_le_left _ _)
+  have hδg : δ ≤ (getLocalFlowData hg).ε :=
+    (min_le_right _ _).trans (min_le_right _ _)
+  have habs : ∀ {u : ℝ}, u ∈ Set.Ioo (-δ) δ → |u| < δ := fun hu ↦ abs_lt.mpr hu
+  have hP : ∀ t ∈ Set.Ioo (-δ) δ, ∀ s ∈ Set.Ioo (-δ) δ,
+      localFlow hg s x₀ ∈ Metric.ball x₀ rB ∧
+      localFlow hf t x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r ∧
+      localFlow hf t (localFlow hg s x₀) ∈
+        Metric.closedBall x₀ (getLocalFlowData hg).a ∧
+      localFlow hg s (localFlow hf t x₀) ∈
+        Metric.closedBall x₀ (getLocalFlowData hg).a := by
+    intro t ht s hs
+    have hd : dist (t, s) ((0 : ℝ), (0 : ℝ)) < ε' := by
+      rw [Prod.dist_eq, Real.dist_eq, Real.dist_eq, sub_zero, sub_zero]
+      exact max_lt ((habs ht).trans_le hδ1) ((habs hs).trans_le hδ1)
+    exact hball hd
+  intro t ht s hs
+  have htT : t ∈ Set.Ioo (-TB) TB :=
+    ⟨lt_of_le_of_lt (neg_le_neg hδT) ht.1, lt_of_lt_of_le ht.2 hδT⟩
+  have hsG : ∀ σ ∈ Set.Ioo (-δ) δ,
+      σ ∈ Set.Ioo (-(getLocalFlowData hg).ε) (getLocalFlowData hg).ε :=
+    fun σ hσ ↦ ⟨by linarith [hσ.1], lt_of_lt_of_le hσ.2 hδg⟩
+  have hx₀G : x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r :=
+    Metric.mem_closedBall_self (le_of_lt (getLocalFlowData hg).hr)
+  have hmain := ODE_solution_unique_of_mem_Ioo
+    (v := fun _ : ℝ ↦ g) (s := fun _ : ℝ ↦ Metric.closedBall x₀ (getLocalFlowData hg).a)
+    (K := (getLocalFlowData hg).K) (a := -δ) (b := δ) (t₀ := 0)
+    (f := fun σ : ℝ ↦ localFlow hf t (localFlow hg σ x₀))
+    (g := fun σ : ℝ ↦ localFlow hg σ (localFlow hf t x₀))
+    (fun _ _ ↦ (getLocalFlowData hg).f_lipschitz)
+    ⟨by linarith [hδpos], hδpos⟩
+    (by
+      intro σ hσ
+      obtain ⟨hy, -, h4, -⟩ := hP t ht σ hσ
+      refine ⟨?_, h4⟩
+      have hΨ : HasDerivAt (fun σ' : ℝ ↦ localFlow hg σ' x₀)
+          (g (localFlow hg σ x₀)) σ :=
+        (getLocalFlowData hg).ϕ_hasDerivAt σ (hsG σ hσ) x₀ hx₀G
+      have hΦ : HasFDerivAt (localFlow hf t)
+          (fderiv ℝ (localFlow hf t) (localFlow hg σ x₀))
+          (localFlow hg σ x₀) := (hdiff t htT _ hy).hasFDerivAt
+      have h := hΦ.comp_hasDerivAt σ hΨ
+      rwa [key t htT _ hy] at h)
+    (by
+      intro σ hσ
+      obtain ⟨-, h3, -, h5⟩ := hP t ht σ hσ
+      exact ⟨(getLocalFlowData hg).ϕ_hasDerivAt σ (hsG σ hσ) _ h3, h5⟩)
+    (by
+      have h3 := (hP t ht 0 ⟨by linarith [hδpos], hδpos⟩).2.1
+      simp only [hG0]
+      exact ((getLocalFlowData hg).ϕ_zero _ h3).symm)
+  exact hmain hs
+
 /-- **The flows-commute REDUCTION modulo the transport hypothesis `hTrans` (Sontag,
 Ch. 4 §4.2/§4.4; Lee, Cor. 20.6 and Thm 9.44).**
 If the Lie bracket `[f, g]` vanishes identically, then — modulo the spatial variational
@@ -432,108 +588,136 @@ theorem flowsCommute_of_bracketVanishing (f g : X → X) (x₀ : X)
       exact (getLocalFlowData hf).ϕ_zero y (Metric.ball_subset_closedBall hy)
     rw [h00] at hconst
     rw [← VectorField.fderiv_pullback (𝕜 := ℝ) (localFlow hf t) g y (hinv t ht y hy), hconst]
-  -- Step 2: choose a common box `δ`.
-  have hucG : ContinuousAt (fun s : ℝ ↦ localFlow hg s x₀) 0 :=
-    (localFlow_hasDerivAt_zero g x₀ hg).continuousAt
-  have hucF : ContinuousAt (fun t : ℝ ↦ localFlow hf t x₀) 0 :=
-    (localFlow_hasDerivAt_zero f x₀ hf).continuousAt
-  have hF0 := localFlow_zero_apply f x₀ hf
-  have hG0 := localFlow_zero_apply g x₀ hg
-  have hFc := localFlow_continuousAt f x₀ hf
-  have hGc := localFlow_continuousAt g x₀ hg
-  -- (ii) `Ψₛ x₀ ∈ ball x₀ rf`
-  have hP2 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
-      localFlow hg p.2 x₀ ∈ Metric.ball x₀ (localFlowRadius hf) := by
-    have h := (hucG.comp (f := Prod.snd) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_snd)
-    refine h.eventually_mem ?_
-    change Metric.ball x₀ (localFlowRadius hf) ∈ 𝓝 (localFlow hg 0 x₀)
-    rw [hG0]
-    exact Metric.ball_mem_nhds x₀ (getLocalFlowData hf).hr
-  -- (iii) `Φₜ x₀ ∈ closedBall x₀ rg`
-  have hP3 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
-      localFlow hf p.1 x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r := by
-    have h := (hucF.comp (f := Prod.fst) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_fst)
-    refine h.eventually_mem ?_
-    change Metric.closedBall x₀ (getLocalFlowData hg).r ∈ 𝓝 (localFlow hf 0 x₀)
-    rw [hF0]
-    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).hr
-  -- (iv) `Φₜ(Ψₛ x₀) ∈ closedBall x₀ ag`
-  have hP4 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
-      localFlow hf p.1 (localFlow hg p.2 x₀) ∈ Metric.closedBall x₀ (getLocalFlowData hg).a := by
-    have hm : ContinuousAt (fun p : ℝ × ℝ ↦ (p.1, localFlow hg p.2 x₀)) (0, 0) :=
-      continuousAt_fst.prodMk (hucG.comp (f := Prod.snd) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_snd)
-    have hm0 : (fun p : ℝ × ℝ ↦ (p.1, localFlow hg p.2 x₀)) (0, 0) = (0, x₀) := by
-      simp [hG0]
-    have h := hFc.comp_of_eq hm hm0
-    refine h.eventually_mem ?_
-    change Metric.closedBall x₀ (getLocalFlowData hg).a ∈ 𝓝 (localFlow hf 0 (localFlow hg 0 x₀))
-    rw [hG0, hF0]
-    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).ha
-  -- (v) `Ψₛ(Φₜ x₀) ∈ closedBall x₀ ag`
-  have hP5 : ∀ᶠ p : ℝ × ℝ in 𝓝 (0, 0),
-      localFlow hg p.2 (localFlow hf p.1 x₀) ∈ Metric.closedBall x₀ (getLocalFlowData hg).a := by
-    have hm : ContinuousAt (fun p : ℝ × ℝ ↦ (p.2, localFlow hf p.1 x₀)) (0, 0) :=
-      continuousAt_snd.prodMk (hucF.comp (f := Prod.fst) (x := ((0 : ℝ), (0 : ℝ))) continuousAt_fst)
-    have hm0 : (fun p : ℝ × ℝ ↦ (p.2, localFlow hf p.1 x₀)) (0, 0) = (0, x₀) := by
-      simp [hF0]
-    have h := hGc.comp_of_eq hm hm0
-    refine h.eventually_mem ?_
-    change Metric.closedBall x₀ (getLocalFlowData hg).a ∈ 𝓝 (localFlow hg 0 (localFlow hf 0 x₀))
-    rw [hF0, hG0]
-    exact Metric.closedBall_mem_nhds x₀ (getLocalFlowData hg).ha
-  obtain ⟨ε', hε', hball⟩ := Metric.eventually_nhds_iff.mp
-    (hP2.and (hP3.and (hP4.and hP5)))
-  have hεf := (getLocalFlowData hf).hε
-  have hεg := (getLocalFlowData hg).hε
-  refine ⟨min ε' (min (getLocalFlowData hf).ε (getLocalFlowData hg).ε), lt_min hε'
-    (lt_min hεf hεg), ?_⟩
-  set δ := min ε' (min (getLocalFlowData hf).ε (getLocalFlowData hg).ε) with hδ
-  have hδpos : 0 < δ := lt_min hε' (lt_min hεf hεg)
-  have hδ1 : δ ≤ ε' := min_le_left _ _
-  have hδf : δ ≤ (getLocalFlowData hf).ε := (min_le_right _ _).trans (min_le_left _ _)
-  have hδg : δ ≤ (getLocalFlowData hg).ε := (min_le_right _ _).trans (min_le_right _ _)
-  have habs : ∀ {u : ℝ}, u ∈ Set.Ioo (-δ) δ → |u| < δ := fun hu ↦ abs_lt.mpr hu
-  have hP : ∀ t ∈ Set.Ioo (-δ) δ, ∀ s ∈ Set.Ioo (-δ) δ,
-      localFlow hg s x₀ ∈ Metric.ball x₀ (localFlowRadius hf) ∧
-      localFlow hf t x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r ∧
-      localFlow hf t (localFlow hg s x₀) ∈ Metric.closedBall x₀ (getLocalFlowData hg).a ∧
-      localFlow hg s (localFlow hf t x₀) ∈ Metric.closedBall x₀ (getLocalFlowData hg).a := by
-    intro t ht s hs
-    have hd : dist (t, s) ((0 : ℝ), (0 : ℝ)) < ε' := by
-      rw [Prod.dist_eq, Real.dist_eq, Real.dist_eq, sub_zero, sub_zero]
-      exact max_lt ((habs ht).trans_le hδ1) ((habs hs).trans_le hδ1)
-    exact hball hd
-  intro t ht s hs
-  -- the ODE uniqueness on `s ∈ (-δ, δ)`
-  have htF : t ∈ Set.Ioo (-localFlowTime hf) (localFlowTime hf) :=
-    ⟨lt_of_le_of_lt (neg_le_neg hδf) ht.1, lt_of_lt_of_le ht.2 hδf⟩
-  have hsG : ∀ σ ∈ Set.Ioo (-δ) δ, σ ∈ Set.Ioo (-(getLocalFlowData hg).ε) (getLocalFlowData hg).ε :=
-    fun σ hσ ↦ ⟨by linarith [hσ.1], lt_of_lt_of_le hσ.2 hδg⟩
-  have hx₀G : x₀ ∈ Metric.closedBall x₀ (getLocalFlowData hg).r :=
-    Metric.mem_closedBall_self (le_of_lt (getLocalFlowData hg).hr)
-  have hmain := ODE_solution_unique_of_mem_Ioo
-    (v := fun _ : ℝ ↦ g) (s := fun _ : ℝ ↦ Metric.closedBall x₀ (getLocalFlowData hg).a)
-    (K := (getLocalFlowData hg).K) (a := -δ) (b := δ) (t₀ := 0)
-    (f := fun σ : ℝ ↦ localFlow hf t (localFlow hg σ x₀))
-    (g := fun σ : ℝ ↦ localFlow hg σ (localFlow hf t x₀))
-    (fun _ _ ↦ (getLocalFlowData hg).f_lipschitz)
-    ⟨by linarith [hδpos], hδpos⟩
-    (by
-      intro σ hσ
-      obtain ⟨hy, -, h4, -⟩ := hP t ht σ hσ
-      refine ⟨?_, h4⟩
-      have hΨ : HasDerivAt (fun σ' : ℝ ↦ localFlow hg σ' x₀) (g (localFlow hg σ x₀)) σ :=
-        (getLocalFlowData hg).ϕ_hasDerivAt σ (hsG σ hσ) x₀ hx₀G
-      have hΦ : HasFDerivAt (localFlow hf t) (fderiv ℝ (localFlow hf t) (localFlow hg σ x₀))
-          (localFlow hg σ x₀) := (hdiff t htF _ hy).hasFDerivAt
-      have h := hΦ.comp_hasDerivAt σ hΨ
-      rwa [key t htF _ hy] at h)
-    (by
-      intro σ hσ
-      obtain ⟨-, h3, -, h5⟩ := hP t ht σ hσ
-      exact ⟨(getLocalFlowData hg).ϕ_hasDerivAt σ (hsG σ hσ) _ h3, h5⟩)
-    (by
-      have h3 := (hP t ht 0 ⟨by linarith [hδpos], hδpos⟩).2.1
-      simp only [hG0]
-      exact ((getLocalFlowData hg).ϕ_zero _ h3).symm)
-  exact hmain hs
+  exact flowsCommute_of_key hf hg (getLocalFlowData hf).hr (getLocalFlowData hf).hε key hdiff
+
+/-! ## G7b: common flow domain and localized flows-commute (GPT Pro follow-up)
+
+This section fixes a genuine common flow domain first, then states the box-localized
+commuting reduction together with the shared integration core it is built on. It is
+the G10 deliverable (steps 2–3 of the follow-up plan remain open; see the module
+header). References: Hartman, *Ordinary Differential Equations*, Ch. V
+(differentiable dependence); Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4
+(the `Ad` operator and Lemma 4.4.2); Lee, *Introduction to Smooth Manifolds*,
+Cor. 20.6 and Thm 9.44. No originality is claimed.
+
+* `CommonFlowDomain` bundles a common time radius `T > 0` and spatial ball
+  `B x₀ r` on which BOTH fields are `C¹` at every point. This is the invariant:
+  the domain is fixed before any tolerance or perturbation radius is varied, and
+  the spatial-derivative identification (`localFlow_hasFDerivAt_of_tangent`) is kept
+  separate from differentiating its operator ODE.
+* `flowsCommute_of_key` is the shared, hypothesis-agnostic integration core: from the
+  spatial identity `DΦₜ(y) g(y) = g(Φₜ y)` on a working box it concludes flow agreement
+  near `(0, 0)` by Mathlib ODE uniqueness. Both reductions below derive from it rather
+  than carrying their own copy.
+* `flowsCommute_of_bracketVanishing_onBox` localizes the earlier broad reduction
+  `flowsCommute_of_bracketVanishing` to a working box `(ρ, T₁)`. The old interface
+  quantified `hdiff`/`hinv`/`hTrans` over the entire preselected Picard box of the
+  base field, which pointwise `C¹` data near `x₀` cannot cover; the box version
+  below is the interface new applications should use, so it supersedes the old one.
+  The variational hypotheses are still present but localized to the working box:
+  discharging them at every point simultaneously from `C¹` data alone needs the
+  flow-agreement/common-`δ` step (per-point transport is
+  `lieDerivative_along_flow_onBox` in `FlowTransport.lean`), which remains open.
+-/
+
+/-- A common flow domain for two vector fields: a common time radius `T > 0` and a
+spatial radius `r > 0` such that BOTH fields are `C¹` at every point of the closed
+ball. This fixes the genuine common domain FIRST (GPT's invariant); Taylor
+tolerances and perturbation radii are varied afterwards. Only local regularity near
+the box is assumed for `g` (and for `f`): nothing global. -/
+structure CommonFlowDomain (f g : X → X) (x₀ : X) where
+  /-- Common time radius. -/
+  T : ℝ
+  /-- Common spatial radius. -/
+  r : ℝ
+  /-- Positivity of the time radius. -/
+  hT : 0 < T
+  /-- Positivity of the spatial radius. -/
+  hr : 0 < r
+  /-- `f` is `C¹` at every point of the closed box. -/
+  hf : ∀ y ∈ Metric.closedBall x₀ r, ContDiffAt ℝ 1 f y
+  /-- `g` is `C¹` at every point of the closed box. -/
+  hg : ∀ y ∈ Metric.closedBall x₀ r, ContDiffAt ℝ 1 g y
+
+omit [CompleteSpace X] in
+/-- The field `f` is `C¹` at the base point of a common domain. -/
+theorem CommonFlowDomain.hf0 {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀) :
+    ContDiffAt ℝ 1 f x₀ :=
+  D.hf x₀ (Metric.mem_closedBall_self D.hr.le)
+
+omit [CompleteSpace X] in
+/-- The field `g` is `C¹` at the base point of a common domain. -/
+theorem CommonFlowDomain.hg0 {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀) :
+    ContDiffAt ℝ 1 g x₀ :=
+  D.hg x₀ (Metric.mem_closedBall_self D.hr.le)
+
+/-- **Localized flows-commute (Sontag, Ch. 4 §4.2/§4.4; Lee, Cor. 20.6 and Thm 9.44).**
+On a common flow domain, if `[f, g]` vanishes on the box then the base local flows
+commute near `x₀`: there is `δ > 0` with `Φₜ(Ψₛ x₀) = Ψₛ(Φₜ x₀)` for `|t|, |s| < δ`.
+
+This supersedes `flowsCommute_of_bracketVanishing` for new applications: the working
+hypotheses `hdiff`/`hinv`/`hTrans`/`hFlow` are stated on a working box `(ρ, T₁)`
+anchored in the common domain rather than on the entire preselected Picard box.
+The proof reuses the same ODE-uniqueness argument: bracket zero makes
+`τ ↦ (Φ_τ)^* g (y)` constant (via `hTrans` and the box invariance `hFlow`), hence
+`DΦₜ(y) g(y) = g(Φₜ y)`; the shared integration core `flowsCommute_of_key` then
+matches the two curves `s ↦ Φₜ(Ψₛ x₀)`, `s ↦ Ψₛ(Φₜ x₀)` by Mathlib uniqueness.
+
+Honest scope: `hdiff`/`hinv`/`hTrans` are localized, not discharged, hypotheses.
+Per-point transport (`lieDerivative_along_flow_onBox`) supplies each fiber; the
+common-`δ` flow-agreement step discharging all fibers at once remains open. -/
+theorem flowsCommute_of_bracketVanishing_onBox (f g : X → X) (x₀ : X)
+    (D : CommonFlowDomain f g x₀)
+    {ρ T₁ : ℝ} (hρ : 0 < ρ) (hT₁ : 0 < T₁)
+    (hbr : ∀ y ∈ Metric.closedBall x₀ D.r, lieBracket f g y = 0)
+    (hdiff : ∀ t ∈ Set.Ioo (-T₁) T₁, ∀ y ∈ Metric.ball x₀ ρ,
+      DifferentiableAt ℝ (localFlow D.hf0 t) y)
+    (hinv : ∀ t ∈ Set.Ioo (-T₁) T₁, ∀ y ∈ Metric.ball x₀ ρ,
+      (fderiv ℝ (localFlow D.hf0 t) y).IsInvertible)
+    (hTrans : ∀ y ∈ Metric.ball x₀ ρ, ∀ t ∈ Set.Ioo (-T₁) T₁,
+        HasDerivAt (fun τ : ℝ ↦ VectorField.pullback ℝ (localFlow D.hf0 τ) g y)
+          (VectorField.pullback ℝ (localFlow D.hf0 t) (lieBracket f g) y) t)
+    (hFlow : ∀ t ∈ Set.Ioo (-T₁) T₁, ∀ y ∈ Metric.ball x₀ ρ,
+      localFlow D.hf0 t y ∈ Metric.closedBall x₀ D.r) :
+    ∃ δ > 0, ∀ t ∈ Set.Ioo (-δ) δ, ∀ s ∈ Set.Ioo (-δ) δ,
+      localFlow D.hf0 t (localFlow D.hg0 s x₀) =
+        localFlow D.hg0 s (localFlow D.hf0 t x₀) := by
+  -- Working radius inside both the working ball and the base flow box.
+  set ρw := min ρ (localFlowRadius D.hf0) with hρw
+  have hρw_pos : 0 < ρw := lt_min hρ (getLocalFlowData D.hf0).hr
+  have hsub_ρ : Metric.ball x₀ ρw ⊆ Metric.ball x₀ ρ :=
+    Metric.ball_subset_ball (min_le_left _ _)
+  have hsub_rf : Metric.ball x₀ ρw ⊆ Metric.ball x₀ (localFlowRadius D.hf0) :=
+    Metric.ball_subset_ball (min_le_right _ _)
+  -- Step 1: `DΦₜ(y) g(y) = g(Φₜ y)` on the working box.
+  have key : ∀ t ∈ Set.Ioo (-T₁) T₁, ∀ y ∈ Metric.ball x₀ ρw,
+      fderiv ℝ (localFlow D.hf0 t) y (g y) = g (localFlow D.hf0 t y) := by
+    intro t ht y hy
+    have h0 : (0 : ℝ) ∈ Set.Ioo (-T₁) T₁ :=
+      Set.mem_Ioo.mpr ⟨by linarith [hT₁], hT₁⟩
+    have hρy : y ∈ Metric.ball x₀ ρ := hsub_ρ hy
+    have hderiv : ∀ τ ∈ Set.Ioo (-T₁) T₁,
+        deriv (fun σ : ℝ ↦ VectorField.pullback ℝ (localFlow D.hf0 σ) g y)
+          τ = 0 := by
+      intro τ hτ
+      have hz : lieBracket f g (localFlow D.hf0 τ y) = 0 :=
+        hbr _ (hFlow τ hτ y hρy)
+      rw [(hTrans y hρy τ hτ).deriv]
+      simp [VectorField.pullback, hz]
+    have hconst := isOpen_Ioo.is_const_of_deriv_eq_zero isPreconnected_Ioo
+      (fun τ hτ ↦ (hTrans y hρy τ hτ).differentiableAt.differentiableWithinAt)
+      hderiv ht h0
+    have h00 : VectorField.pullback ℝ (localFlow D.hf0 0) g y = g y := by
+      have hyrf : y ∈ Metric.ball x₀ (localFlowRadius D.hf0) := hsub_rf hy
+      simp only [VectorField.pullback,
+        flow_deriv_zero_of_mem_ball f x₀ D.hf0 hyrf,
+        ContinuousLinearMap.inverse_id, ContinuousLinearMap.id_apply]
+      congr 1
+      exact (getLocalFlowData D.hf0).ϕ_zero y (Metric.ball_subset_closedBall hyrf)
+    rw [h00] at hconst
+    rw [← VectorField.fderiv_pullback (𝕜 := ℝ) (localFlow D.hf0 t) g y
+      (hinv t ht y hρy), hconst]
+  have hdiffρw : ∀ t ∈ Set.Ioo (-T₁) T₁, ∀ y ∈ Metric.ball x₀ ρw,
+      DifferentiableAt ℝ (localFlow D.hf0 t) y :=
+    fun t ht y hy ↦ hdiff t ht y (hsub_ρ hy)
+  exact flowsCommute_of_key D.hf0 D.hg0 hρw_pos hT₁ key hdiffρw
