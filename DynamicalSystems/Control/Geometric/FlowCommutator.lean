@@ -16,31 +16,35 @@ public import Mathlib.Analysis.Calculus.FDeriv.Basic
 
 This file formalises the classical identity: the Lie bracket of two vector
 fields is the infinitesimal (mixed-second-order) commutator of their flows, i.e. the
-`∂²/∂t∂s` derivative at `(0, 0)` of a commutator of flows. This is the
-bracket-direction bridge used by `Chow.chowInterior`: an iterated-bracket direction is
-realised as the derivative of a piecewise-constant-flow end-point map.
+`∂²/∂t∂s` derivative at `(0, 0)` of the difference of the two flow compositions. This
+identifies the value of the mixed second derivative — a prerequisite for, but not by
+itself a discharge of, the bracket-direction bridge used by `Chow.chowInterior`
+(which additionally needs the `k`-fold-bracket-to-flow-composition wiring).
 
 ## Attribution
 
 This identity is classical; no originality is claimed:
 
 * E. D. Sontag, *Mathematical Control Theory: Deterministic Finite Dimensional
-  Systems*, 2nd ed., Springer, 1998, Ch. 4 §4.2 (the bracket-as-commutator-of-flows
-  formula).
+  Systems*, 2nd ed., Springer, 1998, Ch. 4 §4.4 (the `Ad` operator and Lemma 4.4.2,
+  `∂ₜ Ad_{tX}Y = Ad_{tX}[X,Y]`; cf. Exercise 4.2.6 for the four-fold flow commutator).
 * A. J. Krener, *Differential Geometric Methods in Nonlinear Control*, in
   *Encyclopedia of Systems and Control*, Springer, 2015.
 * J. M. Lee, *Introduction to Smooth Manifolds*, 2nd ed., Springer, 2012,
-  Proposition 20.5 (the `∂²/∂t∂s` computation).
+  Ch. 9 and Ch. 20 (flows and the Lie derivative; the `∂²/∂t∂s` flow-commutator
+  computation).
 
 ## Scope and conventions
 
 We work locally on a complete real normed space `X` (flat, at a basepoint
 `x₀`), with the local flows `Rectification.localFlow` of `C¹` vector fields. The
-four-fold commutator `(Φₜ ∘ Ψₛ ∘ Φ₋ₜ ∘ Ψ₋ₛ)(x₀)` has the same mixed second derivative
-at `(0, 0)` as the difference of the two two-fold compositions
-`(Ψₛ ∘ Φₜ)(x₀) − (Φₜ ∘ Ψₛ)(x₀)` (the diagonal terms cancel); we formalise the latter,
-algebraically equivalent difference form, spelling each mixed partial with Mathlib
-`fderiv` iterated twice.
+definition we formalise is the difference of the two mixed second derivatives
+`∂²/∂t∂s|₍₀,₀₎ (Ψₛ ∘ Φₜ)(x₀) − ∂²/∂s∂t|₍₀,₀₎ (Φₜ ∘ Ψₛ)(x₀)`, spelling each mixed
+partial with Mathlib `fderiv` iterated twice (the diagonal terms of the two
+compositions cancel). The four-fold flow commutator `(Φₜ ∘ Ψₛ ∘ Φ₋ₜ ∘ Ψ₋ₛ)(x₀)` has
+this difference form as the **negative** of its mixed second derivative at `(0, 0)`:
+reversing the order of the two flows negates the bracket. (The swapped ordering
+`(Ψₛ ∘ Φₜ ∘ Ψ₋ₛ ∘ Φ₋ₜ)(x₀)` has the opposite sign.)
 
 ## A remark on the differentiation order
 
@@ -65,7 +69,9 @@ that expansion (`DΦ₀ = id`) is recorded separately as `flow_deriv_at_zero`.
 * `flowMixedSecond_eq`, `flowMixedSecondSwap_eq`: each mixed partial computes to the
   expected iterated derivative (`Dg(f)` and `Df(g)` respectively).
 * `bracket_eq_flowCommutator`: THE theorem — the infinitesimal commutator equals the
-  Lie bracket `Dg(f) − Df(g)` at `x₀`.
+  Lie bracket `Dg(f) − Df(g)` at `x₀`. This is a prerequisite only: it identifies the
+  value of the mixed second derivative but does not by itself discharge the `hBracket`
+  hypothesis of `Chow.chowInterior` (that needs the `k`-fold-to-flow-composition wiring).
 -/
 
 @[expose] public section
@@ -77,24 +83,25 @@ variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X
 
 /-- First mixed second derivative of the two-flow composition: for `C¹` fields `f` and
 `g` with local flows `Φ` and `Ψ`, this is `∂²/∂t∂s|₍₀,₀₎ (Ψₛ ∘ Φₜ)(x₀)`, spelled as
-`fderiv` iterated twice (Sontag, Ch. 4 §4.2; Lee, Prop. 20.5). -/
+`fderiv` iterated twice (Sontag, Ch. 4 §4.4; Lee, Ch. 9 and Ch. 20). -/
 noncomputable def flowMixedSecond (f g : X → X) (x₀ : X)
     (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀) : X :=
   fderiv ℝ (fun t : ℝ ↦ fderiv ℝ (fun s : ℝ ↦ localFlow hg s (localFlow hf t x₀)) 0 1) 0 1
 
 /-- Swapped mixed second derivative: `∂²/∂s∂t|₍₀,₀₎ (Φₜ ∘ Ψₛ)(x₀)`, spelled as `fderiv`
-iterated twice (Sontag, Ch. 4 §4.2; Lee, Prop. 20.5). -/
+iterated twice (Sontag, Ch. 4 §4.4; Lee, Ch. 9 and Ch. 20). -/
 noncomputable def flowMixedSecondSwap (f g : X → X) (x₀ : X)
     (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀) : X :=
   fderiv ℝ (fun s : ℝ ↦ fderiv ℝ (fun t : ℝ ↦ localFlow hf t (localFlow hg s x₀)) 0 1) 0 1
 
-/-- The infinitesimal commutator of the flows of `f` and `g` at `x₀`: the mixed second
-derivative `∂²/∂t∂s|₍₀,₀₎ (Ψₛ ∘ Φₜ)(x₀) − ∂²/∂s∂t|₍₀,₀₎ (Φₜ ∘ Ψₛ)(x₀)`. This is the
-algebraically equivalent difference form of the `∂²/∂t∂s` derivative of the four-fold
-flow commutator `(Φₜ ∘ Ψₛ ∘ Φ₋ₜ ∘ Ψ₋ₛ)(x₀)` (Sontag, Ch. 4 §4.2; Krener, Encyclopedia
-chapter; Lee, Prop. 20.5). The `dite` wrapper makes the definition total: off the `C¹`
-locus it is `0`, while `bracket_eq_flowCommutator` shows it equals the Lie bracket on
-the `C¹` locus. -/
+/-- The infinitesimal commutator of the flows of `f` and `g` at `x₀`: by definition the
+difference `∂²/∂t∂s|₍₀,₀₎ (Ψₛ ∘ Φₜ)(x₀) − ∂²/∂s∂t|₍₀,₀₎ (Φₜ ∘ Ψₛ)(x₀)` of the two
+mixed second derivatives of the two-fold flow compositions. This difference form is the
+**negative** of the mixed second derivative of the four-fold flow commutator
+`(Φₜ ∘ Ψₛ ∘ Φ₋ₜ ∘ Ψ₋ₛ)(x₀)` at `(0, 0)` (Sontag, Ch. 4 §4.4; Krener, Encyclopedia
+chapter; Lee, Ch. 9 and Ch. 20). The `dite` wrapper makes the definition total: off the
+`C¹` locus it is `0`, while `bracket_eq_flowCommutator` shows it equals the Lie bracket
+on the `C¹` locus. -/
 noncomputable def infinitesimalCommutator (f g : X → X) (x₀ : X) : X := by
   classical
   exact if hf : ContDiffAt ℝ 1 f x₀ then
@@ -118,7 +125,7 @@ theorem flow_deriv_at_zero (f : X → X) (x₀ : X) (hf : ContDiffAt ℝ 1 f x�
   simp
 
 /-- The first mixed partial computes to `Dg(f)`: `∂²/∂t∂s|₍₀,₀₎ (Ψₛ ∘ Φₜ)(x₀)` equals
-`fderiv ℝ g x₀ (f x₀)` (Lee, Prop. 20.5). The inner derivative in `s` is the flow
+`fderiv ℝ g x₀ (f x₀)` (Lee, Ch. 9 and Ch. 20). The inner derivative in `s` is the flow
 equation of `g`; the outer derivative in `t` is the chain rule along the flow of `f`. -/
 theorem flowMixedSecond_eq (f g : X → X) (x₀ : X)
     (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀) :
@@ -168,7 +175,7 @@ theorem flowMixedSecond_eq (f g : X → X) (x₀ : X)
     one_smul]
 
 /-- The swapped mixed partial computes to `Df(g)`: `∂²/∂s∂t|₍₀,₀₎ (Φₜ ∘ Ψₛ)(x₀)` equals
-`fderiv ℝ f x₀ (g x₀)` (Lee, Prop. 20.5). -/
+`fderiv ℝ f x₀ (g x₀)` (Lee, Ch. 9 and Ch. 20). -/
 theorem flowMixedSecondSwap_eq (f g : X → X) (x₀ : X)
     (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀) :
     flowMixedSecondSwap f g x₀ hf hg = fderiv ℝ f x₀ (g x₀) := by
@@ -216,12 +223,16 @@ theorem flowMixedSecondSwap_eq (f g : X → X) (x₀ : X)
   rw [hinner.fderiv_eq, hcomp.hasFDerivAt.fderiv, ContinuousLinearMap.toSpanSingleton_apply,
     one_smul]
 
-/-- **The Lie bracket as infinitesimal commutator of flows (Sontag, Ch. 4 §4.2; Krener,
-Encyclopedia chapter; Lee, Prop. 20.5):** for `C¹` vector fields `f` and `g`, the mixed
-second derivative of the flow commutator at `(0, 0)` equals the Lie bracket
-`Dg(f) − Df(g)` at `x₀`. This is the bracket-direction bridge: an iterated-bracket
-direction is realised as the derivative of a piecewise-constant-flow end-point map, as
-needed by `Chow.chowInterior`. -/
+/-- **The Lie bracket as infinitesimal commutator of flows (Sontag, Ch. 4 §4.4; Krener,
+Encyclopedia chapter; Lee, Ch. 9 and Ch. 20):** for `C¹` vector fields `f` and `g`, the
+mixed second derivative of the flow commutator at `(0, 0)` equals the Lie bracket
+`Dg(f) − Df(g)` at `x₀`.
+
+*Status:* this identifies the value of the mixed second derivative, a PREREQUISITE for
+the bracket-direction bridge. It does **not** by itself discharge the `hBracket`
+hypothesis of `Chow.chowInterior`: that additionally needs the
+`k`-fold-bracket-to-flow-composition wiring (the piecewise-constant end-point map),
+which is not built here. -/
 theorem bracket_eq_flowCommutator (f g : X → X) (x₀ : X)
     (hf : ContDiffAt ℝ 1 f x₀) (hg : ContDiffAt ℝ 1 g x₀) :
     infinitesimalCommutator f g x₀ = lieBracket f g x₀ := by
