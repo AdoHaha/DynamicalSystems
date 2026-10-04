@@ -179,7 +179,8 @@ theorem chowInterior [CompleteSpace X] [FiniteDimensional ℝ X]
     exact hReach
   exact ⟨E 0, mem_interior_iff_mem_nhds.mpr hmem⟩
 
-/-! ## G6: bracket directions in the end-point range (discharge of `hBracket`)
+/-! ## G6: bracket directions in the Hessian-level end-point range
+(partial decomposition of `hBracket`)
 
 Attribution (binding): E. D. Sontag, *Mathematical Control Theory: Deterministic Finite
 Dimensional Systems*, 2nd ed., Springer, 1998, Ch. 4 §4.3 (Theorem 9, p. 156); A. J. Krener,
@@ -188,7 +189,10 @@ Control*, Springer, 2nd ed. No originality is claimed. The reduction "the Lie br
 the mixed second derivative of the flow commutator, hence bracket directions lie in the
 range of an end-point map derivative" is classical (Sontag's proof of Theorem 9); G5
 (`FlowCommutator.bracket_eq_flowCommutator`) proved the bracket identity, and this section
-turns it into range memberships that discharge the `hBracket` hypothesis of `chowInterior`.
+turns it into range memberships for the Hessian-level commutator maps. Note carefully that
+this is only a DECOMPOSITION of G4's `hBracket` into a generator half (`hFirst`) and a
+bracket half (`hBridge`), not a discharge: the connection from the Hessian-level range
+proved here to the joint end-point derivative `L` is exactly the still-assumed `hBridge`.
 
 ## Where the second order lives
 
@@ -204,21 +208,34 @@ a (generically nonzero) parameter `t⁰`; here the Hessian-level ranges are inst
 into the joint derivative `L` by the explicit factorisation hypotheses `hFirst`/`hBridge`
 of `chowInterior_of_larc`.
 
-## What is (and is not) discharged
+## What is decomposed (and what remains assumed)
 
-* Discharged here, as range memberships: every generator direction `f i x₀`
+This section is an honest DECOMPOSITION of G4's `hBracket`
+(`accessibilityDistribution (Set.range f) x₀ ≤ L.range`) into two halves, NOT a discharge
+of it. In `chowInterior_of_larc` the two halves reappear as the wiring hypotheses
+`hFirst`/`hBridge`, and the conjunction `hFirst ∧ hBridge` is logically EQUIVALENT to
+`hBracket`: the proof below recombines them by induction over `InLieAlgebra` to derive
+`accessibilityDistribution (Set.range f) x₀ ≤ L.range` and feeds that to G4's
+`chowInterior`. The actual discharge — proving `hBridge` from the second-derivative /
+range relation, i.e. identifying the Hessian-level range below with the joint end-point
+derivative `L` (the Sontag-at-`t⁰` content) — remains the open step and is NOT done here.
+
+* Proved here, as range memberships only: every generator direction `f i x₀`
   (`generatorDirection_mem_range`: it is the time-`1` value of the single-flow outer
   derivative) and every Lie-bracket direction `lieBracket V W x₀` for `C¹` fields
   (`bracketDirection_mem_range`: it is the time-`1` value of the commutator outer
   derivative, via G5). The bracket half holds at *all* depths, since
-  `bracketDirection_mem_range` applies to any `C¹` pair.
-* Remaining as explicit wiring hypotheses in `chowInterior_of_larc`: `hFirst`/`hBridge`
-  (these first- and second-order ranges factor through the joint map derivative `L` —
-  the Sontag-at-`t⁰` content) and `hSmooth` (regularity closure: every element of the
-generated Lie algebra is `C¹` at `x₀`; this follows from smooth generators by induction
-  with `contDiff_top_lieBracket`). There is deliberately **no `hBracket` hypothesis**:
-  `accessibilityDistribution (Set.range f) x₀ ≤ L.range` is *derived* by induction over
-  `InLieAlgebra` and fed to G4's `chowInterior`.
+  `bracketDirection_mem_range` applies to any `C¹` pair. Crucially,
+  `bracketDirection_mem_range` only proves the bracket lies in the range of the
+  Hessian-level linear map `bracketCommutatorLinearMap`; the connection of that range to
+  the joint end-point derivative `L` is exactly the still-assumed `hBridge`.
+* Still assumed in `chowInterior_of_larc`: `hFirst`/`hBridge` (these first- and
+  second-order ranges factor through the joint map derivative `L` — the Sontag-at-`t⁰`
+  content; together equivalent to G4's `hBracket`) and `hSmooth` (regularity closure:
+  every element of the generated Lie algebra is `C¹` at `x₀`; this follows from smooth
+  generators by induction with `contDiff_top_lieBracket`). There is no *separate*
+  `hBracket` hypothesis: it is recovered from `hFirst`/`hBridge` by induction over
+  `InLieAlgebra` before being fed to G4's `chowInterior`.
 -/
 
 /-- Hessian-level linear map of the two-flow commutator at `x₀`: the difference of the
@@ -278,13 +295,19 @@ theorem generatorDirection_mem_range [CompleteSpace X] (g : X → X) (x₀ : X)
   rw [ContinuousLinearMap.coe_coe, hder.hasFDerivAt.fderiv,
     ContinuousLinearMap.toSpanSingleton_apply, one_smul]
 
-/-- **Unconditional Chow sufficiency (Krener; Sontag, Ch. 4 §4.3, Theorem 9, p. 156):**
-the Lie algebra rank condition at `x₀` implies the piecewise-constant reachable set has
-nonempty interior, with **no `hBracket` hypothesis**. The proof derives
+/-- **Chow sufficiency with the joint-map wiring `hFirst`/`hBridge` still assumed
+(Krener; Sontag, Ch. 4 §4.3, Theorem 9, p. 156):** the Lie algebra rank condition at `x₀`
+implies the piecewise-constant reachable set has nonempty interior, given the extra
+first- and second-order factorisation hypotheses `hFirst`/`hBridge`. This is an honest
+DECOMPOSITION of G4's `hBracket`, not a discharge: `hFirst ∧ hBridge` is logically
+EQUIVALENT to the `hBracket` hypothesis of `chowInterior`, and the actual discharge —
+proving `hBridge` from the second-derivative/range relation, i.e. relating the
+Hessian-level `bracketCommutatorLinearMap` range to the joint end-point derivative `L` —
+remains the open step. Concretely, the proof derives
 `accessibilityDistribution (Set.range f) x₀ ≤ L.range` by induction over `InLieAlgebra`
 — generators via `generatorDirection_mem_range` + `hFirst`, sums/scalar multiples since
 `L.range` is a submodule, brackets via `bracketDirection_mem_range` + `hBridge` — and
-feeds it to G4's `chowInterior`.
+feeds it to G4's `chowInterior`. In particular `hBracket` is NOT discharged here.
 
 The remaining hypotheses are the end-point map data (`E`, `L`, `hE`, `hReach`, as in G4),
 regularity (`hSmooth`: every Lie-algebra element is `C¹` at `x₀`, which follows from
