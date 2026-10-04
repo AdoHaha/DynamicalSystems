@@ -1,0 +1,115 @@
+Krener verification
+
+Base geometric-ralph commit: 451db05eff60098a4074dd50af51e06f3f283314
+Lean: 4.35.0-rc2
+Mathlib: 065356127b1dc0016f66b7283ce0ce2c4055aa55
+
+lake build DynamicalSystems.Control.Geometric.SimultaneousRectification
+Build completed successfully (2804 jobs).
+New seven source modules: no compiler/linter warnings.
+Existing Rectification and Frobenius messages replayed.
+
+lake env lean docs/krener-check.lean
+Exit status: 0
+Exact-type consumer, empty family, and two constant fields in three dimensions passed.
+
+Public contracts:
+@krenerLemma : ∀ {X : Type u_1} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X] [CompleteSpace X]
+  [FiniteDimensional ℝ X] {k : ℕ} {f : Fin k → X → X} {x₀ : X},
+  (∀ (i : Fin k), ContDiffAt ℝ 1 (f i) x₀) →
+    (LinearIndependent ℝ fun i => f i x₀) →
+      (∀ (i j : Fin k), FlowsCommuteLocally (f i) (f j) x₀) → SimultaneouslyRectifiable f x₀
+@simultaneousRectifyingChart_rectifies : ∀ {X : Type u_1} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X]
+  [inst_2 : CompleteSpace X] [inst_3 : FiniteDimensional ℝ X] {k : ℕ} {f : Fin k → X → X} {x₀ : X}
+  (hf : ∀ (i : Fin k), ContDiffAt ℝ 1 (f i) x₀) (hind : LinearIndependent ℝ fun i => f i x₀)
+  (hcomm : ∀ (i j : Fin k), FlowsCommuteLocally (f i) (f j) x₀) (i : Fin k),
+  ∀ p ∈ (simultaneousRectifyingChart hf hind hcomm).source,
+    HasDerivAt (fun t => ↑(simultaneousRectifyingChart hf hind hcomm) (Function.update p.1 i t, p.2))
+      (f i (↑(simultaneousRectifyingChart hf hind hcomm) p)) (p.1 i)
+@simultaneousRectifyingChart_contDiffOn : ∀ {X : Type u_1} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X]
+  [inst_2 : CompleteSpace X] [inst_3 : FiniteDimensional ℝ X] {k : ℕ} {f : Fin k → X → X} {x₀ : X}
+  (hf : ∀ (i : Fin k), ContDiffAt ℝ 1 (f i) x₀) (hind : LinearIndependent ℝ fun i => f i x₀)
+  (hcomm : ∀ (i j : Fin k), FlowsCommuteLocally (f i) (f j) x₀),
+  ContDiffOn ℝ 1 (↑(simultaneousRectifyingChart hf hind hcomm)) (simultaneousRectifyingChart hf hind hcomm).source
+@simultaneousRectifyingChart_symm_contDiffOn : ∀ {X : Type u_1} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X]
+  [inst_2 : CompleteSpace X] [inst_3 : FiniteDimensional ℝ X] {k : ℕ} {f : Fin k → X → X} {x₀ : X}
+  (hf : ∀ (i : Fin k), ContDiffAt ℝ 1 (f i) x₀) (hind : LinearIndependent ℝ fun i => f i x₀)
+  (hcomm : ∀ (i j : Fin k), FlowsCommuteLocally (f i) (f j) x₀),
+  ContDiffOn ℝ 1 (↑(simultaneousRectifyingChart hf hind hcomm).symm) (simultaneousRectifyingChart hf hind hcomm).target
+
+Final combined contribution recheck:
+The two redundant simp registrations on frameCombination_single and
+frameEquiv_single were removed. The simultaneous map and its zero lemma no
+longer carry an unused FiniteDimensional argument. These are linter/API
+cleanups; krenerLemma and the chart endpoints retain their exact contracts.
+Combined geometric target build: exit 0, 2808 jobs.
+Both exact consumer files were rerun successfully.
+lake lint -- DynamicalSystems.Control.Geometric.SimultaneousRectification DynamicalSystems.Control.Geometric.FrobeniusIntegrability
+Exit status: 0; both imported proof chains pass.
+
+Foundational dependency check: all 61 new declarations
+'frameCombination' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCombination_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCombination_single' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCombination_range' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCombination_ker' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameComplement' depends on axioms: [propext, Classical.choice, Quot.sound]
+'isCompl_frameComplement' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameEquiv' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameEquiv_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameEquiv_single' depends on axioms: [propext, Classical.choice, Quot.sound]
+'finCoordinatesSplit' depends on axioms: [propext, Classical.choice, Quot.sound]
+'finCoordinatesSplit_fst' depends on axioms: [propext, Classical.choice, Quot.sound]
+'finCoordinatesSplit_snd' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCoordinates' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frameCoordinates_single' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CommonFlowDomain.exists_of_contDiffAt_of_eventually' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CommonFlowDomain.nonempty_of_contDiffAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_differentiableAt_localFlow_spatial' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_hasDerivAt_localFlow_time' depends on axioms: [propext, Classical.choice, Quot.sound]
+'uniform_fderiv_localFlow_apply_onBox' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_fderiv_localFlow_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'hasFDerivAt_uncurry_coprod_of_continuous_left' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlow_continuousOn_product' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_continuousAt_localFlow_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_hasFDerivAt_localFlow_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_differentiableAt_localFlow_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'continuousOn_linearODE_family' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_continuousOn_fderiv_localFlow_spatial' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_continuousAt_fderiv_localFlow_spatial' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiffAt_localFlow_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_contDiffAt_localFlow_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'HasStrictFDerivAt.tendsto_fderiv_of_eventually_differentiableAt' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'HasStrictFDerivAt.eventually_isInvertible_fderiv_of_eventually_differentiableAt' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'HasStrictFDerivAt.exists_local_differentiable_chart' depends on axioms: [propext, Classical.choice, Quot.sound]
+'flowTimeCoordinate' depends on axioms: [propext, Classical.choice, Quot.sound]
+'flowTimeCoordinate_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowCompose' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowCompose_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowComposeLinear' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowComposeLinear_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowCompose_hasStrictFDerivAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'localFlowCompose_contDiffAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingMap' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingMap_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingMap_contDiffAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingMap_hasStrictFDerivAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_localFlowCompose_fderiv' depends on axioms: [propext, Classical.choice, Quot.sound]
+'eventually_simultaneousRectifyingMap_fderiv' depends on axioms: [propext, Classical.choice, Quot.sound]
+'FlowsCommuteLocally.eventually_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_simultaneousRectifyingChart' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_spec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'zero_mem_simultaneousRectifyingChart_source' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_differentiableAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_contDiffOn' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_symm_contDiffOn' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_fderiv' depends on axioms: [propext, Classical.choice, Quot.sound]
+'simultaneousRectifyingChart_rectifies' depends on axioms: [propext, Classical.choice, Quot.sound]
+'krenerLemma' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiff_infty_lieBracket' depends on axioms: [propext, Classical.choice, Quot.sound]

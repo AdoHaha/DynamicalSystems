@@ -1,0 +1,100 @@
+Smooth Frobenius verification
+
+Base geometric-ralph commit: 451db05eff60098a4074dd50af51e06f3f283314
+Krener prerequisite commit: 5363557a03de3bf47d34978082432b8332fbba57
+Lean: 4.35.0-rc2 (11acb17ec6b07a8f9e9173e6845197929540936b)
+Mathlib: 065356127b1dc0016f66b7283ce0ce2c4055aa55
+
+lake build DynamicalSystems.Control.Geometric.FrobeniusIntegrability
+Exit status: 0
+Build completed successfully (2803 jobs) for the initial full target.
+Final combined target build after linter repairs: exit 0, 2808 jobs.
+All four new Frobenius modules compiled without warnings.
+The final build includes both SimultaneousRectification and FrobeniusIntegrability.
+Existing Rectification and Frobenius warnings were replayed.
+
+lake env lean docs/frobenius-check.lean
+Exit status: 0
+The entire original proposition, stronger open-domain theorem, original
+within-derivative conclusion, constant coefficients, and zero-dimensional
+base all compile. The exact consumer also imports the full proof chain.
+
+lake env lean docs/krener-check.lean
+Exit status: 0 (rerun with the complete Frobenius contribution).
+
+Independent final interface audit:
+- The full proposition compiles with completeness and finite-dimensionality
+  instances quantified inside the target, without extra outer instances.
+- The stronger existence theorem compiles without an explicit CompleteSpace X.
+- All three endpoint declarations have only standard foundational dependencies.
+
+Source hygiene:
+- All 11 new proof modules contain no sorry/admit/custom-axiom declarations,
+  native_decide, nolint, or linter-disabling options.
+- All lines in those modules are at most 100 characters.
+- git diff --check passes.
+
+Full repository integration:
+lake build DynamicalSystems
+Exit status: 0; build completed successfully (3993 jobs).
+The umbrella import was rebuilt against the final proof sources and rechecked.
+Pre-existing compiler/linter warnings in other repository modules remain.
+
+Full-library acceptance gates:
+lake lint -- DynamicalSystems
+Exit status: 0.
+Running linter on specified modules: [DynamicalSystems]
+-- Linting passed for DynamicalSystems.
+
+lake exe axiom-audit --root DynamicalSystems --modules DynamicalSystems --json
+Exit status: 0.
+{"allowed":["propext","Classical.choice","Quot.sound"],"audited":5069,"axiomsUsed":["propext","Classical.choice","Quot.sound"],"ok":true,"root":"DynamicalSystems","violations":[]}
+
+Full Batteries linter:
+lake lint -- DynamicalSystems.Control.Geometric.SimultaneousRectification DynamicalSystems.Control.Geometric.FrobeniusIntegrability
+Exit status: 0
+Both imported geometric proof chains pass.
+Two redundant simp registrations and an unused finite-dimensionality parameter
+on the simultaneous map/zero lemma were removed after the first full linter run.
+No linter was suppressed, and both endpoint theorem contracts are unchanged.
+
+Public contracts (actual compiler output):
+@exists_local_solution_of_totalFderivCompat : ∀ {X : Type u_1} {Y : Type u_2} [inst : NormedAddCommGroup X]
+  [inst_1 : NormedSpace ℝ X] [inst_2 : NormedAddCommGroup Y] [inst_3 : NormedSpace ℝ Y] [CompleteSpace Y]
+  [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y] (g : X × Y → X →L[ℝ] Y),
+  ContDiff ℝ 1 g →
+    TotalFderivCompat g univ →
+      ∀ (x₀ : X) (z : Y), ∃ U, IsOpen U ∧ x₀ ∈ U ∧ ∃ w, w x₀ = z ∧ ∀ x ∈ U, HasFDerivAt w (g (x, w x)) x
+@exists_sol_of_fderiv_compat : ∀ {X : Type u_1} {Y : Type u_2} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X]
+  [inst_2 : NormedAddCommGroup Y] [inst_3 : NormedSpace ℝ Y] [CompleteSpace Y] [FiniteDimensional ℝ X]
+  [FiniteDimensional ℝ Y] (g : X × Y → X →L[ℝ] Y),
+  ContDiff ℝ ∞ g →
+    TotalFderivCompat g univ →
+      ∀ (x₀ : X) (z : Y),
+        ∃ U, IsOpen U ∧ x₀ ∈ U ∧ ∃ w, ContDiffOn ℝ ∞ w U ∧ w x₀ = z ∧ ∀ x ∈ U, HasFDerivAt w (g (x, w x)) x
+@frobeniusTheorem_holds : ∀ {X : Type u_1} {Y : Type u_2} [inst : NormedAddCommGroup X] [inst_1 : NormedSpace ℝ X]
+  [inst_2 : NormedAddCommGroup Y] [inst_3 : NormedSpace ℝ Y], frobeniusTheorem
+
+Foundational dependency check: all 17 new Frobenius declarations
+'affine_on_ball_of_hasFDerivAt_id' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_local_graph_parametrization' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_local_graph_solution' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frobeniusBaseChange_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiff_frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fderiv_frobeniusBaseChange_apply' depends on axioms: [propext, Classical.choice, Quot.sound]
+'curvature_frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'totalFderivCompat_frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'hasFDerivAt_solution_of_frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiffOn_solution_of_frobeniusBaseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_local_solution_of_baseChange' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiffOn_infty_of_hasFDerivAt_eq_on' depends on axioms: [propext, Classical.choice, Quot.sound]
+'contDiffOn_infty_of_hasFDerivAt_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_local_solution_of_totalFderivCompat' depends on axioms: [propext, Classical.choice, Quot.sound]
+'exists_sol_of_fderiv_compat' depends on axioms: [propext, Classical.choice, Quot.sound]
+'frobeniusTheorem_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+Combined contribution: the 61 Krener declarations in krener-validation.txt
+plus the 17 Frobenius declarations above make 78 audited new declarations.
+Every expected name was matched to its output record, and every dependency
+list is exactly [propext, Classical.choice, Quot.sound].
