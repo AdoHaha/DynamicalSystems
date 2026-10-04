@@ -19,7 +19,10 @@ fields is the infinitesimal (mixed-second-order) commutator of their flows, i.e.
 `∂²/∂t∂s` derivative at `(0, 0)` of the difference of the two flow compositions. This
 identifies the value of the mixed second derivative — a prerequisite for, but not by
 itself a discharge of, the bracket-direction bridge used by `Chow.chowInterior`
-(which additionally needs the `k`-fold-bracket-to-flow-composition wiring).
+(which additionally needs the `k`-fold-bracket-to-flow-composition wiring). The later
+G7 material is a flows-commute REDUCTION modulo the transport hypothesis `hTrans`; it
+does not close the residual gate, namely differentiable dependence of the flow on the
+initial condition (the variational equation), which is UNCHANGED and still open.
 
 ## Attribution
 
@@ -74,9 +77,11 @@ that expansion (`DΦ₀ = id`) is recorded separately as `flow_deriv_at_zero`.
   hypothesis of `Chow.chowInterior` (that needs the `k`-fold-to-flow-composition wiring).
 * `lieDerivative_along_flow` (G7): the pullback of `g` along the flow of `f` has time
   derivative `[f, g](x₀)` at `t = 0` (Path B: assumes the `t = 0` variational derivative).
-* `flowsCommute_of_bracketVanishing` (G7): `[f, g] = 0` ⇒ the local flows commute near `x₀`
-  (Path B: assumes the transported spatial variational facts; the integration argument is
-  fully proved). See the G7 section at the end of the file.
+* `flowsCommute_of_bracketVanishing` (G7): a flows-commute REDUCTION modulo the transport
+  hypothesis `hTrans`. Assuming `hdiff`/`hinv`/`hTrans` (together with `hbr : [f, g] = 0`),
+  the local flows commute near `x₀`; the integration argument is fully proved. The residual
+  gate (differentiable dependence of the flow on the initial condition — the variational
+  equation) is UNCHANGED and still open. See the G7 section at the end of the file.
 -/
 
 @[expose] public section
@@ -265,10 +270,14 @@ documented hypothesis:
 
 * `lieDerivative_along_flow` assumes `hVar : HasDerivAt (t ↦ DΦₜ(x₀)) (Df(x₀)) 0` (the
   `t = 0` variational derivative; the `t = 0` value `DΦ₀ = id` is `flow_deriv_at_zero`).
-* `flowsCommute_of_bracketVanishing` assumes the transport of this statement to every time
-  and base point in the flow box (`hdiff`, `hinv`, `hTrans`: spatial differentiability and
-  invertibility of the time-`t` flow, and the Lie-derivative identity at time `t`), and then
-  proves — with no further assumption — the *integration* argument: bracket zero ⇒
+* `flowsCommute_of_bracketVanishing` needs STRICTLY MORE than `hVar`: it assumes
+  `hdiff` (spatial differentiability of the time-`t` flow), `hinv` (invertibility of its
+  spatial derivative), and `hTrans` (the Lie-derivative identity at every time `t` and base
+  point in the flow box — the transported/`t`-indexed form of the variational input, i.e.
+  the variational equation in integral form). Of these `hTrans` is the load-bearing one.
+  Note that `lieDerivative_along_flow` establishes only the single `t = 0` instance and so
+  does NOT supply this theorem's variational input. Given `hdiff`/`hinv`/`hTrans`, the proof
+  is complete — with no further assumption — for the *integration* argument: bracket zero ⇒
   `(Φₜ)^* g = g` ⇒ `DΦₜ g = g ∘ Φₜ` ⇒ both `s ↦ Φₜ(Ψₛ x₀)` and `s ↦ Ψₛ(Φₜ x₀)` solve the
   `g`-ODE with the same initial value ⇒ they coincide (Mathlib ODE uniqueness).
 -/
@@ -352,16 +361,28 @@ theorem localFlow_continuousAt (f : X → X) (x₀ : X) (hf : ContDiffAt ℝ 1 f
     ContinuousAt (fun p : ℝ × X ↦ localFlow hf p.1 p.2) (0, x₀) :=
   (flowStrictFDerivAt hf).hasFDerivAt.continuousAt
 
-/-- **The flows-commute bridge (Sontag, Ch. 4 §4.2/§4.4; Lee, Cor. 20.6 and Thm 9.44).**
-If the Lie bracket `[f, g]` vanishes identically, then the local flows of `f` and `g` commute
-near `x₀`: there is `δ > 0` with `Φₜ(Ψₛ x₀) = Ψₛ(Φₜ x₀)` for all `|t|, |s| < δ`.
+/-- **The flows-commute REDUCTION modulo the transport hypothesis `hTrans` (Sontag,
+Ch. 4 §4.2/§4.4; Lee, Cor. 20.6 and Thm 9.44).**
+If the Lie bracket `[f, g]` vanishes identically, then — modulo the spatial variational
+hypotheses below — the local flows of `f` and `g` commute near `x₀`: there is `δ > 0` with
+`Φₜ(Ψₛ x₀) = Ψₛ(Φₜ x₀)` for all `|t|, |s| < δ`.
+
+This needs STRICTLY MORE than the `hVar` hypothesis of `lieDerivative_along_flow`: that
+theorem proves only the single `t = 0` variational derivative and does not supply the
+`t`-indexed variational input used here. The load-bearing hypothesis is `hTrans`.
+
+*Not yet wired:* this theorem is NOT yet connected to `FlowsCommuteLocally` (Frobenius.lean)
+or `SimultaneouslyRectifiable`, so the chain bracket `= 0` ⇒ flows commute ⇒ simultaneous
+rectification is not closed by this file.
 
 *Path B hypotheses* (the spatial variational theory of the flow, not in Mathlib):
 * `hdiff` — the time-`t` flow `Φₜ` is differentiable at every interior point of the flow box;
 * `hinv` — its derivative there is invertible;
-* `hTrans` — the Lie-derivative identity at an arbitrary time `t` and base point `y` in the
-  box: `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)` (the `t`-transported form of
-  `lieDerivative_along_flow`, Sontag Lemma 4.4.2).
+* `hTrans` — **the load-bearing hypothesis:** the Lie-derivative identity at an arbitrary
+  time `t` and base point `y` in the box:
+  `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)` (the `t`-transported form of
+  `lieDerivative_along_flow`, Sontag Lemma 4.4.2). Since `lieDerivative_along_flow` proves
+  this only at `t = 0`, it does not discharge `hTrans`.
 
 From these the proof is complete (no further assumption): (1) `[f, g] = 0` makes
 `τ ↦ (Φ_τ)^* g (y)` constant on `(-ε, ε)`, hence equal to its value `g y` at `τ = 0`
