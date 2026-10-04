@@ -889,3 +889,31 @@ theorem flowsCommute_of_uniformResiduals_onBox {f g : X → X} {x₀ : X}
     exact (hmem t (hdistT t ht).2.2 y (hsub₀ hy)).1
   exact flowsCommute_of_bracketVanishing_onBox f g x₀ D hρpos hTpos hbr
     hdiff hinv hTrans hFlow
+
+/-! ## G12: discharge of the uniform residuals (Hartman, Ch. V; Sontag, Ch. 4)
+
+The uniform-δ FLOW-INVARIANCE input `hFlow` was discharged unconditionally by
+`uniformFlowInvariance` in G11. The remaining VARIATIONAL residuals `hDiffInv`/`hTransU`
+of `flowsCommute_of_uniformResiduals_onBox` — restated uniformly but left undischarged in
+G11 — are discharged in G12 by the uniform variational theory across fibers proved in
+`FlowTransport.lean` (which lives downstream and therefore hosts the statements):
+
+* `uniformDifferentiability_onBox` (single `δ`, single smaller ball, every fiber at
+  once) promotes `eventually_differentiableAt_localFlow` to per-box data;
+* `uniformInvertibility_onBox` promotes `eventually_isInvertible_fderiv_localFlow`;
+* `uniformTransport_onBox` promotes `lieDerivative_along_flow_onBox` to a single-`δ`
+  transported identity `∂ₜ (Φₜ)^* g (y) = (Φₜ)^* [f, g] (y)`;
+* `flowsCommute_unconditional_onBox` closes the chain: bracket vanishing on the box
+  implies commuting near `x₀` with hypotheses only `CommonFlowDomain` plus bracket
+  vanishing — no residual variational hypotheses remain.
+
+The uniformity in all four comes from finite-dimensional compactness (one coefficient
+bound `CommonFlowDomain.uniform_fderiv_bound` over the compact box makes the tangent-ODE
+Picard time independent of the base point; the uniform Taylor remainder makes the
+Gronwall constant independent of the fiber), via the master lemma
+`uniformTangentSolution_onBox`. This section is intentionally prose-only: the
+statements live in `FlowTransport.lean` because this file cannot import it (import
+cycle through `VariationalEquation`). References: Hartman, *Ordinary Differential
+Equations*, Ch. V; Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4. No
+originality is claimed.
+-/
