@@ -37,6 +37,16 @@ Public contracts:
   (hcomm : ∀ (i j : Fin k), FlowsCommuteLocally (f i) (f j) x₀),
   ContDiffOn ℝ 1 (↑(simultaneousRectifyingChart hf hind hcomm).symm) (simultaneousRectifyingChart hf hind hcomm).target
 
+Final combined contribution recheck:
+The two redundant simp registrations on frameCombination_single and
+frameEquiv_single were removed. The simultaneous map and its zero lemma no
+longer carry an unused FiniteDimensional argument. These are linter/API
+cleanups; krenerLemma and the chart endpoints retain their exact contracts.
+Combined geometric target build: exit 0, 2808 jobs.
+Both exact consumer files were rerun successfully.
+lake lint -- DynamicalSystems.Control.Geometric.SimultaneousRectification DynamicalSystems.Control.Geometric.FrobeniusIntegrability
+Exit status: 0; both imported proof chains pass.
+
 Foundational dependency check: all 61 new declarations
 'frameCombination' depends on axioms: [propext, Classical.choice, Quot.sound]
 'frameCombination_apply' depends on axioms: [propext, Classical.choice, Quot.sound]

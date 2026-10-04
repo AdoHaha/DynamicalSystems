@@ -31,9 +31,14 @@ theorem `krenerLemma` and its chart construction live in `SimultaneousRectificat
   on the distinguished coordinate vectors. This compatibility interface does not
   include regularity of both directions. The simultaneous-chart construction
   supplies separate theorems proving `C¹` regularity on its source and target.
-* `frobeniusTheorem` remains a target definition for the compatible-PDE existence
-  statement and its requested regularity. The `C¹` simultaneous chart is an ingredient
-  for that further conclusion.
+* `frobeniusTheorem` records smooth compatible-PDE existence. The downstream theorem
+  `frobeniusTheorem_holds` in `FrobeniusIntegrability.lean` proves this proposition.
+  Its companion `exists_sol_of_fderiv_compat` supplies an open solution domain and
+  actual Fréchet derivatives throughout it.
+
+This is the local graph form of Frobenius integrability. Normalizing a general
+involutive frame to graph form and the separate Chow reachability arguments remain
+outside these conclusions.
 
 ## References
 
@@ -508,7 +513,7 @@ theorem involutive_iff_totalFderivCompat {k : ℕ}
     rw [e1, e2, h]
     exact (Submodule.span ℝ _).zero_mem
 
-/-- The Frobenius existence theorem (ported target statement).
+/-- The smooth Frobenius existence statement, retained as a proposition interface.
 
 Statement ported from Khavkine–Růžička, lean-dg-frobenius (Apache 2.0): their
 `exists_sol_of_fderiv_compat`, adapted from the `oNormedSpace`/`SmoothFunction`
@@ -516,12 +521,14 @@ bundle to plain `[NormedAddCommGroup] [NormedSpace ℝ] [CompleteSpace]`
 `[FiniteDimensional]` hypotheses. See also Krener, *Encyclopedia of Systems and
 Control*, 2nd ed., and Sontag, *Mathematical Control Theory*, 2nd ed., Ch. 4 §4.4.
 
-This remains a `Prop`-valued target definition. `SimultaneousRectification.lean`
-proves the finite-family `C¹` rectification theorem; constructing a smooth solution
-of this compatible PDE remains further work. The order `∞` matches the upstream
-`SmoothFunction` and `SmoothFunctionOn` definitions. In the current Mathlib order
-type, `⊤` means `ω` (analytic), which is a different target.
-No proof of this target is supplied by the definition. -/
+The theorem `frobeniusTheorem_holds` in `FrobeniusIntegrability.lean` proves this
+proposition. Its companion `exists_sol_of_fderiv_compat` gives a smooth solution on
+an open neighborhood with the prescribed full derivative at every point there.
+The proposition retains the original within-derivative interface.
+
+The order `∞` matches the upstream `SmoothFunction` and `SmoothFunctionOn`
+definitions. In the current Mathlib order type, `⊤` means `ω` (analytic), which
+is a different regularity requirement. -/
 def frobeniusTheorem : Prop :=
   ∀ (g : X × Y → X →L[ℝ] Y), ContDiff ℝ ∞ g → TotalFderivCompat g Set.univ →
     ∀ [CompleteSpace X] [CompleteSpace Y] [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y]

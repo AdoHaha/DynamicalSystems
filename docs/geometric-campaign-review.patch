@@ -1,0 +1,1536 @@
+diff --git a/automation/campaign_runner.py b/automation/campaign_runner.py
+index 4e8f565..d17868a 100644
+--- a/automation/campaign_runner.py
++++ b/automation/campaign_runner.py
+@@ -78,9 +78,14 @@ def load_state():
+     return {"schema": 1, "provider_limit_usd": 5, "tasks": {}, "runs": []}
+
+
++def owned_files(task):
++    """Exact acceptance scope, including supporting artifacts when explicitly listed."""
++    return list(dict.fromkeys(task["files"] + task.get("support_files", [])))
++
++
+ def file_hashes(task):
+     return {name: hashlib.sha256((WORKTREE / name).read_bytes()).hexdigest()
+-            if (WORKTREE / name).exists() else None for name in task["files"]}
++            if (WORKTREE / name).exists() else None for name in owned_files(task)}
+
+
+ def record_hashes():
+@@ -102,7 +107,7 @@ def record_hashes():
+         if item.get("status") != "accepted" or tid not in tasks:
+             continue
+         idx = order.get(item.get("commit"), -1)
+-        for name in tasks[tid]["files"]:
++        for name in owned_files(tasks[tid]):
+             if name not in latest or idx > latest[name][0]:
+                 latest[name] = (idx, tid, (item.get("hashes") or {}).get(name))
+     report = {"schema": 1, "generated": time.time(), "tasks": {}, "files": {}}
+@@ -111,7 +116,8 @@ def record_hashes():
+         if item.get("status") != "accepted" or tid not in tasks:
+             continue
+         report["tasks"][tid] = {"commit": item.get("commit"),
+-                                "files": {n: item.get("hashes", {}).get(n) for n in tasks[tid]["files"]}}
++                                "files": {n: item.get("hashes", {}).get(n)
++                                          for n in owned_files(tasks[tid])}}
+     for name, (idx, tid, expected) in sorted(latest.items()):
+         current = hashlib.sha256((INTEGRATION / name).read_bytes()).hexdigest() \
+             if (INTEGRATION / name).exists() else None
+@@ -251,8 +257,9 @@ You are the only proof writer, in an isolated worktree. This attempt has at most
+ The supervisor will stop the process at that deadline. Save incremental work and
+ leave a precise incomplete handoff if the whole task cannot be finished in time.
+ {lsp_note} Do NOT upgrade
+-dependencies, modify .lake packages, git commit/push, change root imports, or edit
+-files outside the OWNED FILES below. Scratch experiments belong in /tmp.
++dependencies, modify .lake packages, git commit/push, or edit files outside the
++OWNED FILES below. Root imports remain coordinator-owned unless this task explicitly
++lists the root file and requires its integration. Scratch experiments belong in /tmp.
+ This worktree already has a working pinned cache. Lean 4 artifacts are under
+ .lake/build/lib/lean and .lake/packages/mathlib/.lake/build/lib/lean, NOT directly
+ under lib. Use lake env lean / lake build to resolve them. Do not scan / or the
+@@ -282,7 +289,9 @@ Your system prompt lists a Lean skill but does not load it.
+ {skill_note}
+ {paper_note}
+
+-OWNED FILES: {json.dumps(task['files'])}
++OWNED FILES: {json.dumps(owned_files(task))}
++REQUIRED LEAN FILES: {json.dumps(task['files'])}
++SUPPORT FILES (owned, not scanned as proof sources): {json.dumps(task.get('support_files', []))}
+ BASELINE HASHES: {json.dumps(file_hashes(task))}
+ TARGET: {task['id']}
+ TASK: {task['instructions']}
+@@ -301,7 +310,9 @@ NEW EVIDENCE FOR THIS ATTEMPT: {evidence or 'First attempt; source excerpts and
+
+ def check_task(task):
+     log = []
+-    for name in task["files"]:
++    sources = task["files"]
++    modules = task["modules"]
++    for name in sources:
+         path = WORKTREE / name
+         if not path.is_file():
+             return False, f"Missing {name}"
+@@ -315,9 +326,31 @@ def check_task(task):
+         log.append(output)
+         if code:
+             return False, "\n".join(log)
++    # An umbrella module may be owned as support because it contains only imports.
++    # Build every requested module so its artifact reflects those import changes.
++    source_modules = {name.removesuffix(".lean").replace("/", ".") for name in sources}
++    extra_modules = [name for name in modules if name not in source_modules]
++    if extra_modules:
++        code, output = command(["lake", "build", *extra_modules])
++        log.append(output)
++        if code:
++            return False, "\n".join(log)
++    # Exact-type consumer probes are separate from declaration-name availability.
++    for name in task.get("lean_checks", []):
++        if name not in owned_files(task):
++            return False, f"Lean check is outside the task's owned files: {name}"
++        path = WORKTREE / name
++        if not path.is_file():
++            return False, f"Missing Lean acceptance check: {name}"
++        if re.search(r"\b(sorry|admit|proof_wanted|axiom|native_decide)\b", path.read_text()):
++            return False, f"Forbidden placeholder/trust token in Lean acceptance check: {name}"
++        code, output = command(["lake", "env", "lean", str(path)])
++        log.append(output)
++        if code:
++            return False, "\n".join(log)
+     with tempfile.TemporaryDirectory(prefix="linear-control-check-") as directory:
+         probe = Path(directory) / "Check.lean"
+-        probe.write_text("\n".join([f"import {m}" for m in task["modules"]] +
++        probe.write_text("\n".join([f"import {m}" for m in modules] +
+                                     [f"#check {d}" for d in task["required"]]) + "\n")
+         code, output = command(["lake", "env", "lean", str(probe)])
+         log.append(output)
+@@ -325,13 +358,13 @@ def check_task(task):
+             return False, "\n".join(log)
+     code, output = command(["lake", "exe", "axiom-audit",
+                             "--root", task.get("audit_root", CONFIG["audit_root"]),
+-                            "--modules", ",".join(task["modules"]), "--json"])
++                            "--modules", ",".join(modules), "--json"])
+     log.append(output)
+     if code:
+         return False, "\n".join(log)
+     # Verso `#doc` chapters generate an undocumented document object, so `docBlame`
+     # always fires on them; the chapter prose is linted by the manual build instead.
+-    lint_modules = [m for m in task["modules"] if not m.endswith(".Documentation")]
++    lint_modules = [m for m in modules if not m.endswith(".Documentation")]
+     if lint_modules:
+         code, output = command(["lake", "lint", "--", *lint_modules])
+         log.append(output)
+@@ -347,7 +380,7 @@ def run_task(task, state, args, window_deadline):
+         # Bring coordinator-owned imports/docs and prior reviewed commits into
+         # the worker before taking the next immutable task base.
+         git("merge", "--no-edit", CONFIG["integration_branch"])
+-    unexpected = set(changed_files()) - set(task["files"])
++    unexpected = set(changed_files()) - set(owned_files(task))
+     if unexpected:
+         raise RuntimeError(f"Worker has unrelated changes: {sorted(unexpected)}")
+     item = state["tasks"].setdefault(task["id"], {"status": "ready", "attempts": 0})
+@@ -402,7 +435,7 @@ def run_task(task, state, args, window_deadline):
+               "provider_errors": errors,
+               "usage_complete": proc.returncode == 0 and not stopped and malformed == 0 and not errors}
+     state["runs"].append(result)
+-    unexpected = set(changed_files()) - set(task["files"])
++    unexpected = set(changed_files()) - set(owned_files(task))
+     passed, diagnostics = (False, f"Out-of-scope edits: {sorted(unexpected)}") if unexpected else check_task(task)
+     (folder / "checks.log").write_text(diagnostics)
+     (folder / "handoff.md").write_text("\n".join(final_text))
+@@ -427,15 +460,18 @@ def review(task, state, args):
+         raise RuntimeError("Integration worktree is dirty; preserve and resolve its changes first.")
+     if git("rev-parse", "HEAD") != item["base"]:
+         raise RuntimeError("Worker base changed since dispatch.")
+-    if set(changed_files()) - set(task["files"]):
++    changes = changed_files()
++    if set(changes) - set(owned_files(task)):
+         raise RuntimeError("Out-of-scope changes prevent acceptance.")
+     if git("diff", "--cached", "--name-only"):
+         raise RuntimeError("Unexpected staged files; preserve them and inspect before committing.")
+     passed, diagnostics = check_task(task)
+     if not passed:
+         raise RuntimeError(diagnostics)
+-    print("Staging exact reviewed files: " + ", ".join(task["files"]), flush=True)
+-    git("add", "--", *task["files"])
++    if not changes:
++        raise RuntimeError("No reviewed changes to accept.")
++    print("Staging exact reviewed files: " + ", ".join(changes), flush=True)
++    git("add", "--", *changes)
+     git("commit", "-m", f"feat({CONFIG['name']}): {task['id']}")
+     commit = git("rev-parse", "HEAD")
+     item.update(status="needs_integration", worker_commit=commit)
+@@ -455,13 +491,52 @@ GAP_PATTERNS = [
+ ]
+
+
++def load_gap_ledger():
++    """Read the object schema expected by both gap commands, with useful errors."""
++    try:
++        data = json.loads(GAPS.read_text())
++    except (OSError, json.JSONDecodeError) as error:
++        raise ValueError(f"Invalid gap ledger {GAPS}: {error}") from error
++    prefix = f"Invalid gap ledger {GAPS}: "
++    if not isinstance(data, dict):
++        raise ValueError(prefix + "expected an object with a 'gaps' array, not a bare array")
++    if data.get("schema", 1) != 1:
++        raise ValueError(prefix + "unsupported schema (expected 1)")
++    if not isinstance(data.get("baseline", {}), dict):
++        raise ValueError(prefix + "'baseline' must be an object")
++    statuses = data.get("status_values", [])
++    if not isinstance(statuses, list) or any(not isinstance(s, str) or not s.strip()
++                                             for s in statuses):
++        raise ValueError(prefix + "'status_values' must be an array of nonempty strings")
++    if not isinstance(data.get("gaps"), list):
++        raise ValueError(prefix + "'gaps' must be an array (it may be empty)")
++    seen = set()
++    for index, gap in enumerate(data["gaps"]):
++        label = prefix + f"gaps[{index}]: "
++        if not isinstance(gap, dict):
++            raise ValueError(label + "expected an object")
++        for key in ("id", "status"):
++            if not isinstance(gap.get(key), str) or not gap[key].strip():
++                raise ValueError(label + f"'{key}' must be a nonempty string")
++        if gap["id"] in seen:
++            raise ValueError(label + f"duplicate id {gap['id']!r}")
++        seen.add(gap["id"])
++        for key in ("api", "resolution_task", "proposed_task", "next_step", "resolution"):
++            if gap.get(key) is not None and not isinstance(gap[key], str):
++                raise ValueError(label + f"'{key}' must be a string")
++        blocking = gap.get("blocking_tasks", [])
++        if not isinstance(blocking, list) or any(not isinstance(t, str) for t in blocking):
++            raise ValueError(label + "'blocking_tasks' must be an array of task ids")
++    return data
++
++
+ def harvest_gaps():
+     """Scan worker handoffs for API-absence statements not already in gaps.json.
+
+     Read-only: prints candidates for coordinator triage. A candidate still needs a
+     verified search before it becomes a gap with a disposition.
+     """
+-    existing = json.loads(GAPS.read_text())
++    existing = load_gap_ledger()
+     known = [g["api"].lower() for g in existing["gaps"] if g.get("api")]
+     known += [g["id"].replace("-", " ").lower() for g in existing["gaps"]]
+     seen, candidates = set(), []
+@@ -495,7 +570,7 @@ def report_gaps():
+     be resolved (developed / worked_around), explicitly out_of_scope, or carry
+     a next_step so the next loop can schedule it.
+     """
+-    data = json.loads(GAPS.read_text())
++    data = load_gap_ledger()
+     allowed = set(data.get("status_values", []))
+     problems = []
+     print(f"baseline: {data.get('baseline', {})}")
+@@ -543,6 +618,18 @@ def validate_tasks(strict=False):
+         seen.add(tid)
+         if not t.get("files"):
+             errors.append(f"{tid}: no owned files")
++        support = t.get("support_files", [])
++        if not isinstance(support, list) or any(not isinstance(v, str) or not v.strip()
++                                              for v in support):
++            errors.append(f"{tid}: support_files must be an array of nonempty strings")
++        checks = t.get("lean_checks", [])
++        if not isinstance(checks, list) or any(not isinstance(v, str) or not v.strip()
++                                             for v in checks):
++            errors.append(f"{tid}: lean_checks must be an array of nonempty strings")
++        elif isinstance(support, list) and all(isinstance(v, str) for v in support):
++            for name in checks:
++                if name not in owned_files(t):
++                    errors.append(f"{tid}: Lean check is not an owned file: {name}")
+         req = t.get("required") or []
+         if not req:
+             warnings.append(f"{tid}: required is empty (build+lint only, no acceptance theorem)")
+@@ -586,6 +673,11 @@ def main():
+     tasks = task_list()
+     if args.task and args.task not in {t["id"] for t in tasks}:
+         parser.error("Unknown task.")
++    if args.action in ("gaps", "run", "validate"):
++        try:
++            load_gap_ledger()
++        except ValueError as error:
++            parser.exit(1, f"{error}\n")
+     RUNTIME.mkdir(parents=True, exist_ok=True)
+     if args.action == "status":
+         state = load_state()
+diff --git a/automation/geometric_control/CONTRACT.md b/automation/geometric_control/CONTRACT.md
+index e263111..e74e467 100644
+--- a/automation/geometric_control/CONTRACT.md
++++ b/automation/geometric_control/CONTRACT.md
+@@ -1,9 +1,17 @@
+ # CONTRACT — geometric_control (mini continuation of sontag_book)
+
+ ## Ownership
+-- Worker edits only its task's `files`; never `DynamicalSystems.lean` (coordinator wires imports).
++- Worker edits only its task's `files` and explicit `support_files`.
++  Root imports stay coordinator-owned unless the task explicitly owns
++  `DynamicalSystems.lean` and requests integration.
+ - One writer per file; agy/pi-muse-authored tasks dispatched by coordinator only.
+ - Corrections = new `*-trim` tasks; accepted tasks never reopened.
++- `files` are required Lean sources. `support_files` are exact owned paths for docs
++  or an import-only root; they participate in acceptance hashes but are not scanned
++  as proof sources. List the root in `modules` to build its imports.
++- `lean_checks` lists owned Lean consumer probes that must exist and compile after
++  the module build. Use them to check exact theorem types; `required` names alone
++  only check availability. These probes also receive the proof-token scan.
+
+ ## Statement fidelity
+ - Sources: Krener encyclopedia chapter (printed pp. ~563–570) + Sontag Ch. 4 §4.1–4.5.
+diff --git a/automation/geometric_control/campaign.py b/automation/geometric_control/campaign.py
+index 43d623a..77eb914 100644
+--- a/automation/geometric_control/campaign.py
++++ b/automation/geometric_control/campaign.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Modern Sliding Mode Control theory book campaign entry point.
++"""Geometric-control campaign entry point.
+
+ Isolated from the other campaigns: its own config, tasks, state, worktrees,
+ branches, lock and audit root. The machinery is the shared
+diff --git a/automation/geometric_control/gaps.json b/automation/geometric_control/gaps.json
+index fe51488..d15105c 100644
+--- a/automation/geometric_control/gaps.json
++++ b/automation/geometric_control/gaps.json
+@@ -1 +1,87 @@
+-[]
++{
++  "schema": 1,
++  "baseline": {
++    "workspace_repository": "LiderMyHand/auto_automatyk",
++    "workspace_commit": "a24af23362101d31bf55e703292272251aee65ff",
++    "library_repository": "AdoHaha/DynamicalSystems",
++    "library_branch": "geometric-ralph",
++    "library_commit": "451db05eff60098a4074dd50af51e06f3f283314",
++    "scope": "Historical interfaces before G13/G14. The current contribution records below distinguish published G13, locally validated G14 being packaged, and open general frame normalization and Chow tasks."
++  },
++  "contribution": {
++    "branch": "prove-geometric-frobenius",
++    "base_commit": "451db05eff60098a4074dd50af51e06f3f283314",
++    "g13_commit": "5363557a03de3bf47d34978082432b8332fbba57",
++    "g13_publication_verified": true,
++    "g14_commit": null,
++    "publication_status": "prove-geometric-frobenius is published at the verified G13 commit. A separate locally validated G14 commit is being packaged on the same branch; integration will record its exact final source SHA."
++  },
++  "status_values": [
++    "proposed",
++    "scheduled",
++    "developed",
++    "worked_around",
++    "out_of_scope"
++  ],
++  "gaps": [
++    {
++      "id": "same-flows-nearby-starting-points",
++      "kind": "integration",
++      "status": "developed",
++      "api": "flowsCommute_unconditional_onBox; uniformTransport_onBox",
++      "detail": "G12 provides uniform variational ingredients on a smaller ball, but its final commutation theorem concludes only at x0. The joint chart uses the same chosen flows at x0 plus a transverse displacement and at intermediate flow points. Recentring the theorem alone does not identify independently chosen local flows.",
++      "resolution_task": "g13-simultaneous-rectification",
++      "blocking_tasks": ["g13-simultaneous-rectification"],
++      "resolution": "Published commit 5363557a03de3bf47d34978082432b8332fbba57 exports uniform_fderiv_localFlow_apply_onBox and eventually_fderiv_localFlow_apply; the chart consumes uniform field preservation for the same chosen flows.",
++      "next_step": "Preserve this interface and its Krener consumer when integrating G14."
++    },
++    {
++      "id": "simultaneous-rectifying-chart",
++      "kind": "proof",
++      "status": "developed",
++      "api": "simultaneousRectifyingChart; krenerLemma; SimultaneouslyRectifiable",
++      "detail": "The pre-G13 baseline has only the single-field base case and a Prop-valued target. The local contribution now supplies simultaneous coordinates for an arbitrary independent finite family.",
++      "resolution_task": "g13-simultaneous-rectification",
++      "blocking_tasks": ["g13-simultaneous-rectification"],
++      "resolution": "Published commit 5363557a03de3bf47d34978082432b8332fbba57 contains krenerLemma with only hf, hind and hcomm and the canonical SimultaneouslyRectifiable f x0 target.",
++      "next_step": "Rerun docs/krener-check.lean as a preserved G13 contract in the G14 gate."
++    },
++    {
++      "id": "rectifying-chart-c1-regularity",
++      "kind": "regularity",
++      "status": "developed",
++      "api": "C1 regularity and inverse regularity of the simultaneous chart",
++      "detail": "An OpenPartialHomeomorph and a strict derivative at its center give a local topological chart. Calling the whole chart a C1 diffeomorphism requires neighborhood regularity and an invertible derivative throughout the chosen source; these are distinct from the present target's directional fderiv equalities.",
++      "resolution_task": "g13-simultaneous-rectification",
++      "resolution": "Published commit 5363557a03de3bf47d34978082432b8332fbba57 contains simultaneousRectifyingChart_contDiffOn and simultaneousRectifyingChart_symm_contDiffOn, plus source-only trajectory rectification.",
++      "next_step": "Keep both C1 statements and the source-only trajectory theorem in the G14 regression consumer."
++    },
++    {
++      "id": "involutive-graph-frame-normalization",
++      "kind": "proof",
++      "status": "proposed",
++      "api": "commutingBasis_of_involutive: discharge the graph-form preamble",
++      "detail": "commutingBasis_of_involutive assumes hgraph. A general independent involutive frame still needs a constant coordinate splitting and a point-dependent normalized frame. This general-distribution extension is separate from the graph-connection target proved by G14.",
++      "next_step": "Author a separate graph-frame normalization slice, including local invertibility of the projected frame and the required regularity, then feed that constructed frame to commutingBasis_of_involutive."
++    },
++    {
++      "id": "frobenius-compatible-pde-existence",
++      "kind": "proof",
++      "status": "scheduled",
++      "api": "exists_sol_of_fderiv_compat; frobeniusTheorem_holds",
++      "detail": "The old port both lacked an inhabitant of frobeniusTheorem and used analytic top where upstream intended smooth infinity. G13 restores the intended statement; G14 constructs a differentiable graph solution, changes base coordinates, and bootstraps the total differential equation to smoothness on one open neighborhood.",
++      "proposed_task": "g14-smooth-frobenius",
++      "blocking_tasks": ["g14-smooth-frobenius"],
++      "contribution_status": "Locally validated exists_sol_of_fderiv_compat gives the smooth solution with actual derivatives, and frobeniusTheorem_holds proves the original corrected target. A separate G14 commit is being packaged on the already published prove-geometric-frobenius branch.",
++      "next_step": "Record G14's exact final source SHA, final gate and publication outcome on prove-geometric-frobenius before marking this integration entry developed."
++    },
++    {
++      "id": "chow-reachable-endpoint-bridge",
++      "kind": "proof",
++      "status": "proposed",
++      "api": "bracket_eq_flowCommutator; chowInterior_of_pointwise; reachable endpoint hypotheses",
++      "detail": "The existing mixed-partial bracket identity is not by itself the four-flow commutator expansion or a construction of admissible endpoint variations. The documented endpoint-direction and reachability hypotheses still require separate geometric proofs.",
++      "next_step": "Freeze the precise Chow or accessibility target, construct the admissible flow words and endpoint variations, and discharge its stated direction/range and reachability premises. Do not mark this closed merely because the variational or Krener theorem is proved."
++    }
++  ]
++}
+diff --git a/automation/geometric_control/ralph_loop.py b/automation/geometric_control/ralph_loop.py
+index bafdbb8..7c2c631 100644
+--- a/automation/geometric_control/ralph_loop.py
++++ b/automation/geometric_control/ralph_loop.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Bounded sequential Ralph loop for the Landau-book Pi campaign.
++"""Bounded sequential Ralph loop for the geometric-control Pi campaign.
+
+ Dispatches one dependency-ready task at a time via the campaign runner, which
+ performs the worker verification (build, lint, token scan, diagnostics, axiom
+@@ -67,6 +67,10 @@ def main() -> int:
+     args = parser.parse_args()
+     if args.window_seconds <= 0 or args.attempt_seconds <= 0 or args.poll_seconds <= 0:
+         parser.error("time limits must be positive")
++    gap_code = run_campaign("gaps")
++    if gap_code:
++        print(f"RALPH LOOP: gap validation exited {gap_code}; stopping", file=sys.stderr)
++        return gap_code
+
+     deadline = time.monotonic() + args.window_seconds
+     deps = dependencies()
+@@ -115,7 +119,10 @@ def main() -> int:
+                 return review_code
+             print(f"RALPH LOOP: {task_id} accepted by automated gate review", flush=True)
+         completed += 1
+-        run_campaign("gaps", "--harvest")
++        gap_code = run_campaign("gaps", "--harvest")
++        if gap_code:
++            print(f"RALPH LOOP: gap harvest exited {gap_code}; stopping", file=sys.stderr)
++            return gap_code
+     print(f"RALPH LOOP: window exhausted after {completed} task(s)")
+     return 0
+
+diff --git a/automation/geometric_control/supervise.py b/automation/geometric_control/supervise.py
+index b6c90ba..886f8c7 100644
+--- a/automation/geometric_control/supervise.py
++++ b/automation/geometric_control/supervise.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Autonomous supervisor for the MPC book campaign.
++"""Autonomous supervisor for the geometric-control campaign.
+
+ Dispatches dependency-ready tasks in manifest order and accepts them when the
+ automated campaign gate passes (build, `#check`, axiom-audit, lint, token scan).
+@@ -42,6 +42,10 @@ def main() -> int:
+     ap.add_argument("--attempt-seconds", type=int, default=3600)
+     ap.add_argument("--window-seconds", type=int, default=86400)
+     a = ap.parse_args()
++    gap_code = call("gaps")
++    if gap_code:
++        print(f"SUPERVISOR: gap validation exited {gap_code}; stopping", file=sys.stderr)
++        return gap_code
+     deadline = time.monotonic() + a.window_seconds
+     accepted = 0
+     while accepted < a.max_tasks and time.monotonic() < deadline:
+@@ -73,7 +77,10 @@ def main() -> int:
+             return 1
+         print(f"SUPERVISOR: accepted {task}", flush=True)
+         accepted += 1
+-        call("gaps", "--harvest")
++        gap_code = call("gaps", "--harvest")
++        if gap_code:
++            print(f"SUPERVISOR: gap harvest exited {gap_code}; stopping", file=sys.stderr)
++            return gap_code
+     print(f"SUPERVISOR: stopping (accepted {accepted})", flush=True)
+     return 0
+
+diff --git a/automation/geometric_control/tasks.json b/automation/geometric_control/tasks.json
+index c2aa7ac..692d029 100644
+--- a/automation/geometric_control/tasks.json
++++ b/automation/geometric_control/tasks.json
+@@ -604,14 +604,49 @@
+       "id": "g13-simultaneous-rectification",
+       "title": "G13: simultaneous rectification of commuting fields (krenerLemma proper)",
+       "files": [
+-        "DynamicalSystems/Control/Geometric/Frobenius.lean"
++        "DynamicalSystems/Control/Geometric/Frobenius.lean",
++        "DynamicalSystems/Control/Geometric/LieBrackets.lean",
++        "DynamicalSystems/Control/Geometric/FlowCommutator.lean",
++        "DynamicalSystems/Control/Geometric/FlowTransport.lean",
++        "DynamicalSystems/Control/Geometric/FrameComplement.lean",
++        "DynamicalSystems/Control/Geometric/FlowBox.lean",
++        "DynamicalSystems/Control/Geometric/JointFlow.lean",
++        "DynamicalSystems/Control/Geometric/MultiFlow.lean",
++        "DynamicalSystems/Control/Geometric/SimultaneousRectification.lean",
++        "DynamicalSystems/Control/Geometric/LocalDiffeomorph.lean",
++        "DynamicalSystems/Control/Geometric/FlowRegularity.lean"
+       ],
+       "modules": [
+-        "DynamicalSystems.Control.Geometric.Frobenius"
++        "DynamicalSystems.Control.Geometric.Frobenius",
++        "DynamicalSystems.Control.Geometric.LieBrackets",
++        "DynamicalSystems.Control.Geometric.FlowCommutator",
++        "DynamicalSystems.Control.Geometric.FlowTransport",
++        "DynamicalSystems.Control.Geometric.FrameComplement",
++        "DynamicalSystems.Control.Geometric.FlowBox",
++        "DynamicalSystems.Control.Geometric.JointFlow",
++        "DynamicalSystems.Control.Geometric.MultiFlow",
++        "DynamicalSystems.Control.Geometric.SimultaneousRectification",
++        "DynamicalSystems.Control.Geometric.LocalDiffeomorph",
++        "DynamicalSystems.Control.Geometric.FlowRegularity",
++        "DynamicalSystems"
++      ],
++      "support_files": [
++        "DynamicalSystems.lean",
++        "docs/krener-rectification.md",
++        "docs/krener-check.lean",
++        "docs/krener-validation.txt",
++        "docs/geometric-integration-review.md",
++        "docs/geometric-orchestration-review.md"
++      ],
++      "lean_checks": [
++        "docs/krener-check.lean"
+       ],
+       "required": [
+         "simultaneousRectifyingChart",
+-        "krenerLemma"
++        "krenerLemma",
++        "simultaneousRectifyingChart_contDiffOn",
++        "simultaneousRectifyingChart_symm_contDiffOn",
++        "simultaneousRectifyingChart_rectifies"
+       ],
+       "source_pages": {
+         "sontag": [
+@@ -622,7 +657,59 @@
+       "depends": [
+         "g12-trim"
+       ],
+-      "instructions": "(pi-muse-authored; REQUEST_G13_PROOF.md) Simultaneous rectification via commuting flows + IFT, unlocked by G12. No sorry/axiom/nolint."
++      "instructions": "(REQUEST_G13_PROOF.md; published checkpoint) G13 is published on prove-geometric-frobenius at verified commit 5363557a03de3bf47d34978082432b8332fbba57. Preserve krenerLemma's exact hf/hind/hcomm -> SimultaneouslyRectifiable signature, both C1 chart statements and source-only trajectory rectification. The task owns the listed modular construction, supporting review/validation documents, and coordinator-reviewed root imports. Existing-file changes are scoped to accurate integration docs, restoring the smooth ContDiff-infinity Frobenius target, and its explicit contDiff_infty_lieBracket helper. The full smooth target is handled separately by G14. Keep docs/krener-check.lean as the exact-type regression consumer. Required declaration names alone are not mathematical acceptance. No sorry/axiom/nolint."
++    },
++    {
++      "id": "g14-smooth-frobenius",
++      "title": "G14: smooth compatible-PDE existence and proof of frobeniusTheorem",
++      "files": [
++        "DynamicalSystems/Control/Geometric/FrobeniusGraph.lean",
++        "DynamicalSystems/Control/Geometric/FrobeniusCoordinates.lean",
++        "DynamicalSystems/Control/Geometric/FrobeniusRegularity.lean",
++        "DynamicalSystems/Control/Geometric/FrobeniusIntegrability.lean",
++        "DynamicalSystems/Control/Geometric/Frobenius.lean",
++        "DynamicalSystems/Control/Geometric/FrameComplement.lean",
++        "DynamicalSystems/Control/Geometric/MultiFlow.lean"
++      ],
++      "modules": [
++        "DynamicalSystems.Control.Geometric.FrobeniusGraph",
++        "DynamicalSystems.Control.Geometric.FrobeniusCoordinates",
++        "DynamicalSystems.Control.Geometric.FrobeniusRegularity",
++        "DynamicalSystems.Control.Geometric.FrobeniusIntegrability",
++        "DynamicalSystems.Control.Geometric.Frobenius",
++        "DynamicalSystems.Control.Geometric.FrameComplement",
++        "DynamicalSystems.Control.Geometric.MultiFlow",
++        "DynamicalSystems"
++      ],
++      "support_files": [
++        "DynamicalSystems.lean",
++        "docs/frobenius-check.lean",
++        "docs/frobenius-integrability.md",
++        "docs/frobenius-validation.txt",
++        "docs/geometric-campaign-review.patch",
++        "docs/krener-rectification.md",
++        "docs/krener-check.lean",
++        "docs/krener-validation.txt",
++        "docs/geometric-integration-review.md",
++        "docs/geometric-orchestration-review.md"
++      ],
++      "lean_checks": [
++        "docs/frobenius-check.lean",
++        "docs/krener-check.lean"
++      ],
++      "required": [
++        "exists_local_solution_of_totalFderivCompat",
++        "exists_sol_of_fderiv_compat",
++        "frobeniusTheorem_holds"
++      ],
++      "source_pages": {
++        "sontag": [164, 166],
++        "encyclopedia": [566, 567]
++      },
++      "depends": [
++        "g13-simultaneous-rectification"
++      ],
++      "instructions": "(REQUEST_G14_PROOF.md; explicitly authorized full-target continuation) Integrate and independently review the locally compiled smooth Frobenius construction. Preserve exists_sol_of_fderiv_compat's open-domain smooth solution with actual HasFDerivAt at every point, and frobeniusTheorem_holds as an inhabitant of the original corrected smooth target. Include only the narrow full-linter repairs to G13 helpers: drop two redundant simpNF registrations in FrameComplement and remove the unused FiniteDimensional parameter from simultaneousRectifyingMap and its zero lemma in MultiFlow. The exact Krener and Frobenius endpoint types stay unchanged. Compile both exact-type consumer files, run the full lake lint gate as well as the build and audit, and record the G14 commit and publication status on prove-geometric-frobenius. Keep the published G13 mathematical checkpoint separate. General involutive-frame normalization and the separate Chow bridges remain open. No sorry/axiom/nolint."
+     }
+   ],
+   "campaign": "geometric_control"
+diff --git a/automation/geometric_control/test_campaign_workflow.py b/automation/geometric_control/test_campaign_workflow.py
+new file mode 100644
+index 0000000..d9842c9
+--- /dev/null
++++ b/automation/geometric_control/test_campaign_workflow.py
+@@ -0,0 +1,258 @@
++"""Regression checks for geometric campaign ledgers, ownership and failure handling.
++
++No model, Lean installation, network or persistent campaign state is used.
++Run: python3 -m unittest discover -s automation/geometric_control -p 'test_*.py'
++"""
++from __future__ import annotations
++
++import contextlib
++import importlib.util
++import io
++import json
++import os
++from pathlib import Path
++import subprocess
++import sys
++import tempfile
++from types import SimpleNamespace
++import unittest
++from unittest.mock import patch
++
++
++HERE = Path(__file__).resolve().parent
++RUNNER_PATH = HERE.parent / "campaign_runner.py"
++
++
++def load_module(name, path):
++    spec = importlib.util.spec_from_file_location(name, path)
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++with patch.dict(os.environ, {"CAMPAIGN_DIR": str(HERE)}):
++    runner = load_module("campaign_runner_under_test", RUNNER_PATH)
++supervisor = load_module("geometric_supervisor_under_test", HERE / "supervise.py")
++ralph = load_module("geometric_ralph_under_test", HERE / "ralph_loop.py")
++
++
++EMPTY_LEDGER = {"schema": 1, "baseline": {}, "status_values": [], "gaps": []}
++
++
++class GapLedgerTests(unittest.TestCase):
++    def run_cli(self, raw, *args):
++        with tempfile.TemporaryDirectory() as folder:
++            path = Path(folder)
++            (path / "campaign.json").write_text(json.dumps({
++                "integration": "integration", "worktree": "worker", "audit_root": "Main"
++            }))
++            (path / "tasks.json").write_text('{"tasks": []}')
++            (path / "gaps.json").write_text(raw)
++            env = dict(os.environ, CAMPAIGN_DIR=str(path))
++            return subprocess.run([sys.executable, str(RUNNER_PATH), *args], env=env,
++                                  capture_output=True, text=True, check=False)
++
++    def test_valid_empty_object_supports_both_gap_commands(self):
++        for args in (("gaps",), ("gaps", "--harvest")):
++            with self.subTest(args=args):
++                result = self.run_cli(json.dumps(EMPTY_LEDGER), *args)
++                self.assertEqual(result.returncode, 0, result.stderr)
++                self.assertIn("All gaps", result.stdout)
++
++    def test_original_bare_array_failure_is_actionable(self):
++        for args in (("gaps",), ("gaps", "--harvest"), ("run",)):
++            with self.subTest(args=args):
++                result = self.run_cli("[]", *args)
++                self.assertEqual(result.returncode, 1)
++                self.assertIn("expected an object", result.stderr)
++                self.assertNotIn("Traceback", result.stderr)
++
++    def test_empty_or_malformed_ledgers_fail_before_dispatch(self):
++        invalid = ["", "{", "{}", '{"gaps": {}}',
++                   json.dumps(dict(EMPTY_LEDGER, status_values="scheduled")),
++                   json.dumps(dict(EMPTY_LEDGER, gaps=["missing object"])),
++                   json.dumps(dict(EMPTY_LEDGER, gaps=[{"id": "gap"}])),
++                   json.dumps(dict(EMPTY_LEDGER, gaps=[{"id": "gap", "status": "proposed",
++                                                       "api": ["wrong type"]}]))]
++        for raw in invalid:
++            with self.subTest(raw=raw):
++                result = self.run_cli(raw, "run")
++                self.assertEqual(result.returncode, 1)
++                self.assertIn("Invalid gap ledger", result.stderr)
++                self.assertNotIn("Traceback", result.stderr)
++
++    def test_unresolved_gap_still_requires_next_step(self):
++        data = dict(EMPTY_LEDGER, status_values=["proposed"],
++                    gaps=[{"id": "chart", "status": "proposed"}])
++        result = self.run_cli(json.dumps(data), "gaps")
++        self.assertEqual(result.returncode, 1)
++        self.assertIn("no next_step", result.stdout)
++
++    def test_campaign_ledger_and_manifest_validate(self):
++        with contextlib.redirect_stdout(io.StringIO()):
++            self.assertEqual(runner.report_gaps(), 0)
++            self.assertEqual(runner.validate_tasks(strict=True), 0)
++
++
++class LoopFailureTests(unittest.TestCase):
++    def test_supervisor_rejects_failed_ledger_before_dispatch(self):
++        with patch.object(supervisor, "call", return_value=7) as call, \
++                patch.object(supervisor, "status") as status, \
++                patch.object(sys, "argv", ["supervise.py"]), \
++                contextlib.redirect_stderr(io.StringIO()):
++            self.assertEqual(supervisor.main(), 7)
++            call.assert_called_once_with("gaps")
++            status.assert_not_called()
++
++    def test_ralph_rejects_failed_ledger_before_dispatch(self):
++        with patch.object(ralph, "run_campaign", return_value=7) as call, \
++                patch.object(ralph, "status") as status, \
++                patch.object(sys, "argv", ["ralph_loop.py"]), \
++                contextlib.redirect_stderr(io.StringIO()):
++            self.assertEqual(ralph.main(), 7)
++            call.assert_called_once_with("gaps")
++            status.assert_not_called()
++
++    def test_supervisor_propagates_harvest_failure_after_acceptance(self):
++        states = [{"chart": {"status": "ready"}}, {"chart": {"status": "needs_review"}}]
++        def command(*args):
++            return 9 if args == ("gaps", "--harvest") else 0
++        with patch.object(supervisor, "call", side_effect=command) as call, \
++                patch.object(supervisor, "status", side_effect=states), \
++                patch.object(sys, "argv", ["supervise.py", "--max-tasks", "2"]), \
++                contextlib.redirect_stdout(io.StringIO()), \
++                contextlib.redirect_stderr(io.StringIO()):
++            self.assertEqual(supervisor.main(), 9)
++            self.assertEqual(call.call_args.args, ("gaps", "--harvest"))
++            self.assertEqual(sum(c.args[0] == "run" for c in call.call_args_list), 1)
++
++    def test_ralph_propagates_harvest_failure_after_acceptance(self):
++        states = [{"tasks": {"chart": {"status": state}}}
++                  for state in ("ready", "needs_review", "needs_review")]
++        def command(*args):
++            return 9 if args == ("gaps", "--harvest") else 0
++        with patch.object(ralph, "run_campaign", side_effect=command) as call, \
++                patch.object(ralph, "status", side_effect=states), \
++                patch.object(ralph, "dependencies", return_value={"chart": []}), \
++                patch.object(sys, "argv", ["ralph_loop.py", "--auto-review"]), \
++                contextlib.redirect_stdout(io.StringIO()), \
++                contextlib.redirect_stderr(io.StringIO()):
++            self.assertEqual(ralph.main(), 9)
++            self.assertEqual(call.call_args.args, ("gaps", "--harvest"))
++            self.assertEqual(sum(c.args[0] == "run" for c in call.call_args_list), 1)
++
++
++class OwnedArtifactTests(unittest.TestCase):
++    def setUp(self):
++        self.directory = tempfile.TemporaryDirectory()
++        self.addCleanup(self.directory.cleanup)
++        self.work = Path(self.directory.name) / "worker"
++        self.work.mkdir()
++        self.integration = Path(self.directory.name) / "integration"
++        self.task = {
++            "id": "chart", "files": ["Main.lean"], "modules": ["Main", "Root"],
++            "support_files": ["Root.lean", "docs/note.md", "docs/extra.md"],
++            "required": ["mainResult"]
++        }
++        (self.work / "Main.lean").write_text("theorem mainResult : True := True.intro\n")
++        (self.work / "Root.lean").write_text("import Main\n")
++        self.addCleanup(patch.stopall)
++        patch.object(runner, "WORKTREE", self.work).start()
++        patch.object(runner, "INTEGRATION", self.integration).start()
++        patch.object(runner, "STATE", Path(self.directory.name) / "state.json").start()
++
++    def test_support_root_is_built_and_audited_without_scanning_docs_as_lean(self):
++        (self.work / "docs").mkdir()
++        (self.work / "docs/note.md").write_text("Review includes an axiom audit.\n")
++        commands, probes = [], []
++        def command(args, *unused, **kwargs):
++            commands.append(args)
++            if args[:3] == ["lake", "env", "lean"]:
++                probes.append(Path(args[3]).read_text())
++            return 0, "ok"
++        with patch.object(runner, "command", side_effect=command):
++            self.assertTrue(runner.check_task(self.task)[0])
++        self.assertIn(["lake", "build", "Root"], commands)
++        self.assertIn("import Root\n", probes[0])
++        audit = next(c for c in commands if c[:3] == ["lake", "exe", "axiom-audit"])
++        self.assertIn("Root", audit[audit.index("--modules") + 1].split(","))
++        lint = next(c for c in commands if c[:3] == ["lake", "lint", "--"])
++        self.assertIn("Root", lint)
++        self.assertIn("docs/note.md", runner.file_hashes(self.task))
++
++    def test_failed_exact_type_consumer_fails_the_gate(self):
++        (self.work / "docs").mkdir()
++        check = self.work / "docs/acceptance.lean"
++        check.write_text("import Main\nexample : False := mainResult\n")
++        task = dict(self.task, support_files=self.task["support_files"] +
++                    ["docs/acceptance.lean"], lean_checks=["docs/acceptance.lean"])
++        def command(args, *unused, **kwargs):
++            if args == ["lake", "env", "lean", str(check)]:
++                return 1, "type mismatch in exact acceptance contract"
++            return 0, "ok"
++        with patch.object(runner, "command", side_effect=command) as call:
++            passed, diagnostics = runner.check_task(task)
++        self.assertFalse(passed)
++        self.assertIn("type mismatch", diagnostics)
++        self.assertEqual(call.call_args.args[0], ["lake", "env", "lean", str(check)])
++
++    def test_missing_exact_type_consumer_is_not_silently_skipped(self):
++        task = dict(self.task, support_files=self.task["support_files"] +
++                    ["docs/acceptance.lean"], lean_checks=["docs/acceptance.lean"])
++        with patch.object(runner, "command", return_value=(0, "ok")):
++            passed, diagnostics = runner.check_task(task)
++        self.assertFalse(passed)
++        self.assertIn("Missing Lean acceptance check", diagnostics)
++
++    def git(self, *args, cwd=None):
++        result = subprocess.run(["git", *args], cwd=cwd or self.work,
++                                capture_output=True, text=True, check=False)
++        if result.returncode:
++            raise RuntimeError(result.stderr)
++        return result.stdout.strip()
++
++    def prepare_repositories(self):
++        self.git("init", "--initial-branch=worker")
++        self.git("config", "user.name", "Campaign test")
++        self.git("config", "user.email", "campaign-test@localhost")
++        self.git("add", "Main.lean", "Root.lean")
++        self.git("commit", "-m", "Baseline")
++        self.git("worktree", "add", "-b", "integration", str(self.integration))
++        (self.work / "Main.lean").write_text(
++            "theorem mainResult : True := True.intro\n-- Reviewed update.\n")
++        (self.work / "Root.lean").write_text("import Main\n-- Root integration.\n")
++        (self.work / "docs").mkdir()
++        (self.work / "docs/note.md").write_text("Reviewed support document.\n")
++        return {"tasks": {"chart": {
++            "status": "needs_review", "hashes": runner.file_hashes(self.task),
++            "base": self.git("rev-parse", "HEAD")
++        }}}
++
++    def test_acceptance_includes_support_without_staging_absent_support_paths(self):
++        state = self.prepare_repositories()
++        with patch.object(runner, "git", side_effect=self.git), \
++                patch.object(runner, "check_task", return_value=(True, "verified")), \
++                contextlib.redirect_stdout(io.StringIO()):
++            runner.review(self.task, state, SimpleNamespace(decision="accept", note="Reviewed"))
++        self.assertEqual(state["tasks"]["chart"]["status"], "accepted")
++        self.assertEqual((self.integration / "docs/note.md").read_text(),
++                         "Reviewed support document.\n")
++        self.assertIn("Root integration", (self.integration / "Root.lean").read_text())
++        self.assertFalse((self.integration / "docs/extra.md").exists())
++
++    def test_support_change_after_verification_requires_new_check(self):
++        state = self.prepare_repositories()
++        (self.work / "docs/note.md").write_text("Changed after review.\n")
++        with self.assertRaisesRegex(RuntimeError, "Files changed since verification"):
++            runner.review(self.task, state, SimpleNamespace(decision="accept", note="Reviewed"))
++
++    def test_support_scope_does_not_allow_unrelated_files(self):
++        state = self.prepare_repositories()
++        (self.work / "Outside.lean").write_text("theorem outside : True := True.intro\n")
++        with patch.object(runner, "git", side_effect=self.git), \
++                self.assertRaisesRegex(RuntimeError, "Out-of-scope changes"):
++            runner.review(self.task, state, SimpleNamespace(decision="accept", note="Reviewed"))
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/notes/geometric_control/reviews/PROMPT_GPT_PRO_KRENER.md b/notes/geometric_control/reviews/PROMPT_GPT_PRO_KRENER.md
+index 370318d..af92c5d 100644
+--- a/notes/geometric_control/reviews/PROMPT_GPT_PRO_KRENER.md
++++ b/notes/geometric_control/reviews/PROMPT_GPT_PRO_KRENER.md
+@@ -1,64 +1,122 @@
+-# TASK — simultaneous rectification of commuting vector fields (the Krener lemma)
+-
+-You are working in a Lean 4 + Mathlib repo (`auto_automatyk` workspace, library at
+-`DynamicalSystems/DynamicalSystems/`). **Work on the branch `geometric-ralph`** (already pushed to
+-the `AdoHaha/DynamicalSystems` fork) — it contains everything below. Your task is ONE theorem plus
+-a chart construction; the hard analysis (variational equation, flows-commute) is ALREADY DONE.
+-
+-## Background (1 paragraph)
+-
+-The campaign has formalised, on `geometric-ralph`, the local core of the differential-geometric
+-Frobenius theorem: rectification (flow-box), the "algebraic miracle" (involutive ⇒ commuting
+-basis), the infinitesimal commutator, the **variational equation** (`flow_deriv_firstOrder`), and —
+-just now — the **flows-commute bridge**:
+-
+-    flowsCommute_unconditional_onBox : CommonFlowDomain f g x₀ →
+-      (∀ y ∈ box, lieBracket f g y = 0) →
+-      ∃ δ, ∀ t s, |t| < δ → |s| < δ → Φₜ (Ψₛ y) = Ψₛ (Φₜ y)   (* bracket=0 ⇒ flows commute *)
+-
+-This is in `DynamicalSystems/Control/Geometric/FlowTransport.lean` (see also
+-`FlowCommutator.lean` for `CommonFlowDomain`, `uniformFlowInvariance`).
+-
+-## What remains: the Krener lemma (simultaneous rectification)
+-
+-Prove that `k` pointwise-linearly-independent, pairwise bracket-vanishing vector fields
+-`f : Fin k → X → X` are **simultaneously rectifiable**: there is a local diffeomorphism
+-`Ψ : (Fin k → ℝ) × Y → X` (`Y` = a complement of `span {f i x₀}`) with `Ψ 0 = x₀` such that each
+-coordinate line `t ↦ Ψ (Function.update tᵢ t)` is an integral curve of `f i` — all `k` fields
+-straightened at once. (G2 currently has only `krenerLemma_base`, the k=1 case; this is the general
+-`krenerLemma`.)
+-
+-## The classical route (everything it needs is already in the library)
+-
+-1. Define `F (t : Fin k → ℝ) (z : Y) = Φ₀^{t₀} ∘ … ∘ Φ_{k-1}^{t_{k-1}} (x₀ + ι z)`, where `Φᵢ` is
+-   `localFlow (hfᵢ)` and `ι : Y →L[ℝ] X` embeds the complement. Order is immaterial because the
+-   flows commute (G12).
+-2. `DF 0` is invertible: `∂F/∂tᵢ|₀ = f i x₀` (each flow has time derivative `f i` at 0 —
+-   `flowStrictFDerivAt`/`flow_deriv_at_zero`), `∂F/∂z|₀ = ι`, and together they span `X`. Apply
+-   `HasStrictFDerivAt.toOpenPartialHomeomorph` to get the local diffeo `Ψ`.
+-3. Trajectory rectification: each `t ↦ F (update tᵢ (tᵢ+t)) z` is an integral curve of `f i`
+-   (flow property + commutation). This is `krenerLemma`.
+-
+-## Read these first (exact paths, on `geometric-ralph`)
+-
+-- `DynamicalSystems/Control/Geometric/Rectification.lean` — `localFlow`, `flowStrictFDerivAt`,
+-  `flowComplement`/`flowEquiv` (the complement `Y`), `rectifyingChart`.
+-- `DynamicalSystems/Control/Geometric/FlowTransport.lean` — `flowsCommute_unconditional_onBox`,
+-  `uniformFlowInvariance`, `CommonFlowDomain`.
+-- `DynamicalSystems/Control/Geometric/LieBrackets.lean` — `lieBracket`.
+-- `DynamicalSystems/Control/Geometric/Frobenius.lean` — `krenerLemma_base` (the k=1 analogue),
+-  `SimultaneouslyRectifiable` (the target `Prop`).
+-
+-## Deliverables
+-
+-1. `simultaneousRectifyingChart` (the `OpenPartialHomeomorph`) and `krenerLemma` (the theorem),
+-   in `Frobenius.lean` (append a section) or a new `SimultaneousRectification.lean`.
+-2. A short note on what you proved and any residual hypotheses.
+-3. Tips for a less-powerful model to finish, if anything is left.
+-
+-## Constraints
+-
+-- No `sorry`/`admit`/`axiom`/`native_decide`/`proof_wanted` (avoid the words in prose); no `@[nolint]`.
+-- Honest docstrings; cite Krener (Encyclopedia of Systems and Control, 2nd ed.) and Sontag Ch. 4
+-  §4.2. No originality claim.
+-- Local, flat, finite-dimensional; match the existing `[CompleteSpace X] [FiniteDimensional ℝ X]` style.
++# G13 — simultaneous rectification: integration and acceptance contract
++
++**Status update:** G13 is published on `prove-geometric-frobenius` at verified
++commit `5363557a03de3bf47d34978082432b8332fbba57`, with the theorem and chart
++properties below. The user subsequently requested the full smooth Frobenius target,
++now locally validated in the separate [G14 contribution](REQUEST_G14_PROOF.md).
++A separate G14 commit is being packaged on the same branch; integration will
++record its exact final source SHA and final publication outcome.
++This document replaces the initial authoring prompt at `a24af233`.
++
++Repository branches are distinct: orchestration lives in
++`LiderMyHand/auto_automatyk:linear-control-ralph` and the Lean source baseline is
++`AdoHaha/DynamicalSystems:geometric-ralph`. G13 is already published on
++`prove-geometric-frobenius`, based on
++`451db05eff60098a4074dd50af51e06f3f283314`. Read the current source and preserve
++other agents' changes before operating on either worktree. G14 will be packaged
++as a separate commit on that existing branch.
++
++## Exact mathematical acceptance target
++
++The contribution proves the existing canonical target without an extra flow
++commutation, chart existence, derivative, transport, or invertibility premise:
++
++```lean
++import DynamicalSystems.Control.Geometric.SimultaneousRectification
++
++variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
++  [CompleteSpace X] [FiniteDimensional ℝ X]
++  {k : ℕ} {f : Fin k → X → X} {x₀ : X}
++
++example
++    (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀)
++    (hind : LinearIndependent ℝ (fun i => f i x₀))
++    (hcomm : ∀ i j, FlowsCommuteLocally (f i) (f j) x₀) :
++    SimultaneouslyRectifiable f x₀ :=
++  krenerLemma hf hind hcomm
++```
++
++`FlowsCommuteLocally` is the existing **local bracket-vanishing** predicate
++`∃ U ∈ 𝓝 x₀, ∀ x ∈ U, lieBracket f g x = 0`; it does not assume a flow identity.
++Independence is required at `x₀`, and `k` is arbitrary, including zero.
++
++## Chart and regularity results to preserve
++
++`simultaneousRectifyingChart hf hind hcomm` is an `OpenPartialHomeomorph` from
++`(Fin k → ℝ) × frameComplement (fun i => f i x₀)` into `X`.
++
++- `simultaneousRectifyingChart_zero`: the chart sends zero to `x₀`.
++- `zero_mem_simultaneousRectifyingChart_source`: zero belongs to its source.
++- `simultaneousRectifyingChart_contDiffOn`: the chart is `C¹` on its source.
++- `simultaneousRectifyingChart_symm_contDiffOn`: its inverse is `C¹` on its target.
++- `simultaneousRectifyingChart_fderiv`: each time coordinate vector maps to its
++  corresponding vector field throughout the source.
++- `simultaneousRectifyingChart_rectifies`: for `p` in the chart source,
++  `t ↦ Ψ (Function.update p.1 i t, p.2)` has derivative `f i (Ψ p)` at `p.1 i`.
++  Source membership is the only extra domain premise; the chart restriction
++  already supplies the required local-flow conditions.
++
++These regularity theorems justify calling this a `C¹` local diffeomorphism.
++The canonical finite-coordinate conclusion remains `SimultaneouslyRectifiable`.
++
++## Why the initial handoff was insufficient
++
++At the pre-G13 baseline, `flowsCommute_unconditional_onBox` concluded
++`Φ_t (Ψ_s x₀) = Ψ_s (Φ_t x₀)` only at `x₀`. Its statement did not export
++commutation for every nearby starting point. Replacing `x₀` by a free `y` in
++the abbreviated type overstated what the chart construction could consume.
++
++The contribution instead exports uniform field preservation for the same chosen
++flows and differentiates the finite composition directly. Do not reintroduce a
++per-point choice of unrelated local flows or assume a uniform radius from
++pointwise existence.
++
++## Module responsibilities and ownership
++
++Read these modules in `DynamicalSystems/Control/Geometric/`:
++
++1. `FrameComplement`: finite-frame splitting and coordinate equivalence.
++2. `FlowBox`: common domains and uniform field preservation.
++3. `JointFlow` and `FlowRegularity`: joint differentiation and `C¹` local flows.
++4. `MultiFlow`: finite composition, its strict derivative and coordinate identities.
++5. `LocalDiffeomorph`: restriction to a chart with invertible derivatives.
++6. `SimultaneousRectification`: the chart, its regularity and `krenerLemma`.
++
++The exact owned files and modules are in
++`automation/geometric_control/tasks.json`, task `g13-simultaneous-rectification`.
++They include the seven new modules, existing integration documentation in
++`Frobenius`, `FlowCommutator` and `FlowTransport`, the scoped `LieBrackets` repair,
++and coordinator-reviewed root imports and supporting documents. The manifest
++and this request must agree before another author is dispatched.
++
++## Scope after G13 and the separate G14 continuation
++
++The ported `frobeniusTheorem` remains the canonical target definition, and G14 now
++proves it with `frobeniusTheorem_holds`. Its stronger
++`exists_sol_of_fderiv_compat` theorem gives a smooth solution on an open domain
++with actual derivatives at every point. The G13 repair of `ContDiff ℝ ∞` /
++`ContDiffOn ℝ ∞` matches
++upstream `SmoothFunction`; on the pinned Mathlib, `⊤` at the new order type
++denotes analytic order `ω`, not smooth order `∞`. G14 supplies the additional
++graph construction and smoothness bootstrap; these results are not attributed to
++G13 alone. General involutive-frame normalization and Chow's reachable-endpoint
++and flow-word bridges remain separate open tasks.
++
++## Validation and deliverables
++
++- Compile `docs/krener-check.lean` against the final tree. It must check the exact
++  consumer type above, both `C¹` statements and the trajectory statement.
++- Build the affected modules and `DynamicalSystems`, run the standard dependency
++  audit and module lint, and record the final source commit and toolchain pins.
++- Retain `docs/krener-rectification.md`, `docs/krener-validation.txt`,
++  `docs/geometric-integration-review.md` and `docs/geometric-orchestration-review.md`.
++- Complete an independent semantic review of the exact statements. Required-name
++  checks alone do not establish mathematical acceptance.
++- Update the gap ledger from its baseline statuses only with the final resolution
++  declarations, validation and integration commit. Do not report that a remote
++  branch has changed before it has been updated and checked.
++
++Keep proofs free of `sorry`, `admit`, `axiom`, `native_decide`, `proof_wanted` and
++`@[nolint]`. Keep docstrings accurate; cite Krener, *Encyclopedia of Systems and
++Control*, 2nd ed., and Sontag Ch. 4 §4.2. Preserve attribution and make no
++originality claim.
+diff --git a/notes/geometric_control/reviews/REQUEST_G13_PROOF.md b/notes/geometric_control/reviews/REQUEST_G13_PROOF.md
+index 7a851fb..22d5dd4 100644
+--- a/notes/geometric_control/reviews/REQUEST_G13_PROOF.md
++++ b/notes/geometric_control/reviews/REQUEST_G13_PROOF.md
+@@ -1,68 +1,58 @@
+-# PROOF-AUTHORING request — G13 simultaneous rectification of commuting fields (krenerLemma proper)
+-
+-**Role:** AUTHOR (pi-muse). Edit only this file (APPEND, or create a sibling if cleaner). Do NOT
+-review; a deepseek-Pi reviewer will.
+-
+-**Edit ONLY:**
+-- `/home/igor/zabawy/auto_automatyk/.worktrees/geometric-worker/DynamicalSystems/Control/Geometric/Frobenius.lean`
+-  (append a `SimultaneousRectification` section; you may also create
+-  `Control/Geometric/SimultaneousRectification.lean` if that avoids import cycles — your call).
+-
+-## Context
+-G2 left `krenerLemma_base` (k=1) and `SimultaneouslyRectifiable` (target, unproved). G12 now closed
+-the flows-commute bridge: `flowsCommute_unconditional_onBox` (bracket=0 ⇒ flows commute, only
+-`CommonFlowDomain` data). This unlocks the classical proof of the **Krener lemma**: `k` pointwise-
+-independent pairwise-commuting vector fields are simultaneously rectifiable to the first `k`
+-coordinate fields.
+-
+-## The theorem (LOCAL, flat, finite-dimensional)
+-
+-Given `f : Fin k → X → X`, pointwise linearly independent near `x₀`, pairwise bracket-vanishing on
+-a common box (`∀ i j, ∀ y ∈ box, lieBracket (f i) (f j) y = 0`), there is a local diffeomorphism
+-(an `OpenPartialHomeomorph`) `Ψ : (Fin k → ℝ) × Y → X` (with `Y` a complement of
+-`span {f i x₀ | i}`) such that `Ψ 0 = x₀` and each coordinate line
+-`t ↦ Ψ (update tᵢ t)` is an integral curve of `f i` — i.e. all `k` fields are simultaneously
+-rectified (the trajectory-rectification form, mirroring `rectifyingChart_rectifies`).
+-
+-## The classical route (now unlocked by G12)
+-
+-1. Define the joint map `F (t : Fin k → ℝ) (z : Y) = (Φ₀^{t₀} ∘ Φ₁^{t₁} ∘ … ∘ Φ_{k-1}^{t_{k-1}}) (x₀ + ι z)`
+-   where `Φᵢ` is `localFlow (hfᵢ)` and `ι : Y →L[ℝ] X` embeds a complement of
+-   `span {f i x₀}`. Because the flows commute (G12), the composition order is immaterial.
+-2. `DF 0` is invertible: `∂F/∂tᵢ |₀ = f i x₀` (each flow has derivative `f i` at t=0, by
+-   `flowStrictFDerivAt`/`flow_deriv_at_zero`), and `∂F/∂z |₀ = ι`; together they span `X` (the
+-   independence + complement hypotheses). So `HasStrictFDerivAt F (invertible linear map) 0`, and
+-   `HasStrictFDerivAt.toOpenPartialHomeomorph` gives the local diffeo `Ψ`.
+-3. Trajectory rectification: for each `i`, the curve `t ↦ F (update tᵢ (tᵢ + t)) z` is an integral
+-   curve of `f i` (the flow property + commutation of the other flows), proving the simultaneous
+-   rectification statement.
+-
+-## REQUIRED declaration names (gate `#check`s exactly these)
+-- `simultaneousRectifyingChart` (the `OpenPartialHomeomorph`)
+-- `krenerLemma` (the simultaneous-rectification theorem)
+-
+-## Reuse pointers / traps
+-- Reuse `rectifyingChart`/`flowStrictFDerivAt`/`localFlow` (Rectification),
+-  `flowsCommute_unconditional_onBox` + `uniformFlowInvariance` + `CommonFlowDomain` (FlowTransport/
+-  FlowCommutator), `lieBracket` (LieBrackets), `flowComplement`/`flowEquiv` (Rectification, for the
+-  complement `Y`).
+-- `HasStrictFDerivAt.toOpenPartialHomeomorph` (IFT); `[CompleteSpace X] [FiniteDimensional ℝ X]`.
+-- The flows-commute hypothesis is now DISCHARGED by G12 from bracket-vanishing — so `krenerLemma`
+-  should take the bracket-vanishing hypothesis directly (not a raw flows-commute hypothesis), and
+-  use G12 internally. If you prefer, factor the chart construction to take a commuting-flows
+-  hypothesis and compose with G12.
+-- Mind the `Fin k` indexing and the `update`/`Function.update` for the coordinate lines.
+-
+-## Constraints
+-NO sorry/admit/axiom/native_decide/proof_wanted (avoid in prose); no @[nolint]. Cite Krener
+-(Encyclopedia 2nd ed.), Sontag Ch. 4 §4.2. Honest docstrings; no originality claim.
+-
+-## Self-checks
+-```sh
+-cd /home/igor/zabawy/auto_automatyk/.worktrees/geometric-worker
+-lake env lean <your file>
+-lake build <your module>
+-lake lint -- <your module>
+-grep -nE '\b(sorry|admit|axiom|native_decide|proof_wanted)\b' <your file>
+-```
+-Append `Status: DONE` to `notes/geometric_control/reviews/REVIEW_G13_PROOF.md`.
++# G13 integration and review request — simultaneous rectification
++
++The local proof contribution now supplies `krenerLemma`, the simultaneous chart,
++both `C¹` chart statements, and trajectory rectification from source membership.
++The mathematical acceptance contract is
++[PROMPT_GPT_PRO_KRENER.md](PROMPT_GPT_PRO_KRENER.md). Read its exact consumer type;
++do not restart the old authoring task or replace the target by a weaker one.
++
++## Worktree and ownership
++
++Use the configured geometric worker/integration worktrees from
++`automation/geometric_control/campaign.json`. The Lean source baseline is
++`AdoHaha/DynamicalSystems:geometric-ralph`; G13 is published on
++`prove-geometric-frobenius` at verified commit
++`5363557a03de3bf47d34978082432b8332fbba57`. Orchestration remains on
++`LiderMyHand/auto_automatyk:linear-control-ralph`.
++
++Read `git status` and coordinate a single writer. The exact allowed files and
++modules are the G13 entry in `automation/geometric_control/tasks.json`.
++All seven new Lean modules, the narrowly scoped existing-file integration repairs,
++root imports and named support documents are included. Required Lean files are
++compiled and audited; support files are hashed and owned without being scanned
++as Lean source. The umbrella module is built after its import changes.
++
++## Acceptance work
++
++1. Check the final theorem types against the contract. `hcomm` is local bracket
++   vanishing; no residual flow, transport, derivative, or chart premise is allowed.
++2. Compile `docs/krener-check.lean`, including the canonical
++   `SimultaneouslyRectifiable` consumer, forward/inverse `C¹` statements and
++   source-only trajectory rectification.
++3. Build the changed modules and the umbrella, run the standard dependency audit
++   and lint, and preserve their output with the final source commit and pins.
++4. Have a separate reviewer assess the exact types and domain restrictions.
++5. Record the integrated G13 resolution in the campaign ledger. Track the now
++   locally proved smooth compatible-PDE target under the separate G14 task;
++   general graph-frame normalization and the separate Chow bridges remain open.
++
++The port correction from `ContDiff ℝ ⊤` to `ContDiff ℝ ∞` restores the intended
++smooth Frobenius statement; it is not a proof of that statement. The new explicit
++`contDiff_infty_lieBracket` helper makes the smooth bracket API unambiguous.
++
++Write the integration evidence and any remaining issues in
++`REVIEW_G13_PROOF.md`; identify the actual source commit. Mark integration complete
++only after these checks and the semantic review, not on the existence of the
++required declaration names.
++
++## Full-target continuation
++
++After the user explicitly requested the full Frobenius target, the separate
++[G14 contribution](REQUEST_G14_PROOF.md) compiled both the smooth open-domain
++existence theorem and `frobeniusTheorem_holds`. G13's checkpoint
++`5363557a03de3bf47d34978082432b8332fbba57` is confirmed published on
++`prove-geometric-frobenius` from baseline `451db05`. A separate locally validated
++G14 commit is being packaged on the same branch; integration will record its exact
++final source SHA. Keep G14 ownership, validation and acceptance separate. The
++smooth compatible-PDE proof is no longer an open mathematical step. General frame
++normalization and Chow remain open.
+diff --git a/notes/geometric_control/reviews/REQUEST_G14_PROOF.md b/notes/geometric_control/reviews/REQUEST_G14_PROOF.md
+new file mode 100644
+index 0000000..777565f
+--- /dev/null
++++ b/notes/geometric_control/reviews/REQUEST_G14_PROOF.md
+@@ -0,0 +1,103 @@
++# G14 — smooth Frobenius: integration and acceptance contract
++
++The user explicitly extended the task from Krener's lemma to the full recorded
++Frobenius target. The local contribution has now compiled that proof. G14 remains
++a separate task from the G13 rectification checkpoint; its final source commit,
++validation and independent review must be recorded before integration is complete.
++
++G13 is confirmed published at `5363557a03de3bf47d34978082432b8332fbba57` on
++`AdoHaha/DynamicalSystems:prove-geometric-frobenius`, based on `geometric-ralph` at
++`451db05eff60098a4074dd50af51e06f3f283314`. A separate locally validated G14 commit
++is being packaged on the same existing branch. Integration will record its exact
++final source SHA and publication outcome.
++
++## Exact acceptance targets
++
++The first consumer checks the original target itself. Its completeness and
++finite-dimensionality binders remain inside the target proposition:
++
++```lean
++import DynamicalSystems.Control.Geometric.FrobeniusIntegrability
++
++open Set
++open scoped ContDiff
++
++variable {X Y : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
++  [NormedAddCommGroup Y] [NormedSpace ℝ Y]
++
++example : frobeniusTheorem (X := X) (Y := Y) :=
++  frobeniusTheorem_holds
++
++example [CompleteSpace Y] [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y]
++    (g : X × Y → X →L[ℝ] Y) (hg : ContDiff ℝ ∞ g)
++    (hc : TotalFderivCompat g univ) (x₀ : X) (z : Y) :
++    ∃ U : Set X, IsOpen U ∧ x₀ ∈ U ∧ ∃ w : X → Y,
++      ContDiffOn ℝ ∞ w U ∧ w x₀ = z ∧
++        ∀ x ∈ U, HasFDerivAt w (g (x, w x)) x :=
++  exists_sol_of_fderiv_compat g hg hc x₀ z
++```
++
++The stronger open-domain statement supplies actual Fréchet derivatives at every
++point. `frobeniusTheorem_holds` converts them to the original derivative-within
++form using openness of the solution domain. Do not replace either conclusion by
++mere existence of a target definition or add a solution hypothesis.
++
++## Construction and module ownership
++
++The G14 entry in `automation/geometric_control/tasks.json` owns:
++
++- `FrobeniusGraph.lean`: a local graph solution over finite real coordinates.
++- `FrobeniusCoordinates.lean`: change of base coordinates and compatibility.
++- `FrobeniusRegularity.lean`: smoothness bootstrap from the full differential equation.
++- `FrobeniusIntegrability.lean`: the open-domain theorem and the original target proof.
++- `Frobenius.lean`: accurate target/status documentation.
++- `FrameComplement.lean` and `MultiFlow.lean`: the narrowly scoped full-linter
++  repairs described below; the Krener and Frobenius endpoint types stay unchanged.
++- The root imports and the exact support files listed in the manifest.
++
++Support ownership includes `docs/geometric-orchestration-review.md` and
++`docs/geometric-campaign-review.patch`, which preserve this review and the AA
++campaign repairs alongside the Lean contribution.
++
++The full `lake lint --` gate, separate from compiler linters, found two redundant
++`simpNF` registrations in `FrameComplement` and an unused `FiniteDimensional`
++parameter in `MultiFlow`. The G14 packaging repair drops those two `@[simp]`
++attributes and removes that parameter from `simultaneousRectifyingMap` and its
++zero lemma. Preserve the published G13 mathematical checkpoint and record these
++small helper cleanups in the separate G14 commit. `docs/krener-validation.txt`
++is already owned support for the updated validation record.
++
++G13 gives the needed local flow construction. For the graph connection, the first
++coordinate block has derivative equal to the identity, producing a genuine graph
++solution. A linear base equivalence handles arbitrary finite-dimensional base
++spaces. The equation `Dw(x) = g(x, w(x))` then improves the solution's regularity
++repeatedly on the same open neighborhood; it is not necessary to assume a smooth
++solution or a fully smooth joint flow at the outset.
++
++The intended target is `C∞`: retain `ContDiff ℝ ∞` and `ContDiffOn ℝ ∞`.
++On the pinned Mathlib, `⊤` at order type `ℕ∞ω` denotes analytic order, which is a
++different statement. The proof follows the corrected smooth target from
++Khavkine–Růžička's `SmoothFunction` abbreviations.
++
++## Required validation and scope
++
++1. Compile `docs/frobenius-check.lean`, including both consumers above, against
++   the final tree. The G14 gate also recompiles `docs/krener-check.lean`.
++2. Build the four modules and the umbrella; run the standard dependency audit
++   and lint. Record the final source commit, Lean/Mathlib pins and exact outputs.
++3. Review the actual construction, smoothness bootstrap and absence of extra
++   premises independently. Keep this review separate from name-availability checks.
++4. Retain `docs/frobenius-integrability.md` and `docs/frobenius-validation.txt`;
++   update the existing Krener and integration review documents to the current status.
++5. Update the ledger with the G14 resolution commit and publication outcome.
++
++The **smooth compatible-PDE target is locally proved**. General normalization of
++an arbitrary involutive distribution to graph form and the separate Chow
++flow-word/reachable-endpoint bridges remain open. They are not extra premises of
++`frobeniusTheorem_holds`; they are further formulations and applications.
++
++Preserve attribution to Khavkine–Růžička, *lean-dg-frobenius*,
++[`Frobenius/Basic.lean`](https://github.com/igorkhavkine/lean-dg-frobenius/blob/d762d3d53ad36d5a5f91a8c3280f0a1a279dee06/Frobenius/Basic.lean)
++(Apache 2.0), and cite Krener, *Encyclopedia of Systems and Control*, second edition,
++and Sontag, Chapter 4 §4.4. Keep the established proof hygiene and make no
++originality claim.
+diff --git a/notes/geometric_control/reviews/REVIEW_GPT_PRO_INTEGRATION.md b/notes/geometric_control/reviews/REVIEW_GPT_PRO_INTEGRATION.md
+new file mode 100644
+index 0000000..fc00fa5
+--- /dev/null
++++ b/notes/geometric_control/reviews/REVIEW_GPT_PRO_INTEGRATION.md
+@@ -0,0 +1,266 @@
++# Review of geometric-control orchestration and the Krener handoff
++
++Reviewed `LiderMyHand/auto_automatyk` at
++`a24af23362101d31bf55e703292272251aee65ff` (also the observed head of
++`linear-control-ralph`) and the relevant interfaces in `AdoHaha/DynamicalSystems`
++at `451db05eff60098a4074dd50af51e06f3f283314` (`geometric-ralph`). This note reviews
++the handoff and workflow; it does not replace the separate proof audit.
++
++## Current contribution status: G13 and G14
++
++The user extended the work to the full recorded Frobenius target. Its locally
++compiled solution is tracked as the separate task `g14-smooth-frobenius`, with four
++new modules and the exact consumer `docs/frobenius-check.lean`. G13 is confirmed
++published at `5363557a03de3bf47d34978082432b8332fbba57` on
++`prove-geometric-frobenius` from baseline `451db05`. A separate locally validated
++G14 commit is being packaged on that same branch; integration will record its
++exact final source SHA and publication outcome.
++
++| Claim | Current mathematical status | Integration record |
++|---|---|---|
++| `krenerLemma` and both `C¹` chart statements | Proved and published | Verified G13 commit above on `prove-geometric-frobenius` |
++| `exists_sol_of_fderiv_compat` | Locally validated: smooth local graph solution on an open domain, with actual derivatives | Separate G14 commit being packaged on the same branch |
++| `frobeniusTheorem_holds : frobeniusTheorem` | Locally validated proof of the full corrected smooth target | Exact final G14 source SHA to be recorded by integration |
++| General involutive-frame normalization | Open extension beyond the graph-connection target | Future task |
++| Chow flow-word and reachable-endpoint bridges | Open | Future task |
++
++G14 is local and finite-dimensional. Its input is a smooth compatible graph
++connection; its solution passes through every prescribed point and is smooth on
++one open neighborhood. It does not assert a manifold-level global foliation.
++The remaining frame-normalization task is not a hidden premise of the proved
++compatible-PDE theorem.
++
++## Campaign repairs implemented after this review
++
++The accompanying patch fixes the executable gap-ledger and ownership defects
++described below. It adds schema validation with clear CLI failures, restores the
++geometric ledger as an object with explicit baseline-open mathematical tasks, and
++makes both loops stop on a failed preflight or post-acceptance gap report.
++
++G13 now owns the seven new modules, the scoped existing-file integration repairs,
++coordinator-reviewed root imports, and exact supporting documentation paths.
++The additive `support_files` field is backward-compatible: these files participate
++in ownership and acceptance hashes without being mistaken for Lean proof source.
++The requested umbrella module is built, so root imports cannot be accepted solely
++against an old compiled artifact. Acceptance stages the actual changed owned paths,
++without requiring every listed support artifact to exist.
++An explicit `lean_checks` entry makes `docs/krener-check.lean` mandatory and compiles
++it after the module build, so the exact-type consumer is part of acceptance.
++The separate G14 entry checks `docs/frobenius-check.lean` and reruns the Krener
++consumer; its own files and support artifacts are not folded into G13's scope.
++G14 also owns the narrow helper repairs found by the full `lake lint --` gate:
++two redundant `@[simp]` registrations are removed from `FrameComplement`, and
++the unused dimension parameter is removed from `simultaneousRectifyingMap` and
++its zero lemma in `MultiFlow`. These changes preserve the exact Krener and
++Frobenius endpoint types and are recorded after the published G13 checkpoint.
++
++Validation: 15 focused regression tests pass, including the original bare-array
++failure, empty and malformed JSON, a valid empty ledger, missing gap actions,
++both loop failure paths, missing/failing exact-type consumers, umbrella-module gate
++coverage, and real temporary Git
++worktree acceptance of root/support changes with another support path absent. Changes
++to support documents after verification still invalidate acceptance, and unrelated
++files remain rejected. `campaign.py gaps --harvest`, `campaign.py validate
++--strict`, and `git diff --check` also pass. The tests do not claim to recheck Lean
++mathematics or run a model campaign.
++
++The review's mathematical findings below are pinned historical observations.
++After the local G13 theorem compiled, its exact source was inspected and both
++authoring requests were replaced by one explicit integration contract: `krenerLemma`
++takes `hf`, `hind`, and local bracket vanishing `hcomm`, and proves the existing
++`SimultaneouslyRectifiable` target. The forward and inverse chart are `C¹`, and
++trajectory rectification needs only chart-source membership. The ledger records
++the verified published G13 resolutions and the locally validated G14 result being
++packaged as a separate commit on the same branch.
++The later G14 request records the now-proved smooth compatible-PDE theorem and
++the proof inhabiting the original target. The historical findings below explain
++the starting point and are not a claim that those completed proofs remain missing.
++
++## What worked
++
++The variational contribution received a substantial independent review pinned to
++its actual commit and toolchain. `PI_REVIEW_VAR.md` distinguishes the proved
++spatial derivative, operator ODE, and fixed-base-point transport from the still
++missing uniform hypotheses. The G10/G11 correction tasks preserve those
++distinctions, and `PI_REVIEW_G12.md` examines the quantifier order and the actual
++discharge of the residual premises. These are meaningful semantic reviews, not
++only build reports. The worker/integration separation and acceptance hash checks
++also protect the reviewed changes from unrelated edits.
++
++The problem is that the conclusions of these reviews are compressed too far in
++the next authoring prompt and are not reconciled into a reliable current status.
++
++## Findings and concrete repairs
++
++### 1. The G13 prompt advertises a stronger commutation interface than exists
++
++`PROMPT_GPT_PRO_KRENER.md`, lines 15–17, writes commutation at a variable `y`.
++The actual `flowsCommute_unconditional_onBox` at `FlowTransport.lean:821–827`
++concludes commutation **at the one base point `x₀`**. The uniform variational
++ingredients quantify over nearby points, but the final commutation theorem
++does not export that quantifier. `PI_REVIEW_G12.md` itself explicitly recognizes
++this at lines 137–138.
++
++The proposed joint-flow chart starts at `x₀ + ι z`, and its nested flow tails move
++the starting point further. Reapplying the theorem centered at each such point
++would use separately chosen local flows; agreement with the original base flows
++and the common time domain must then be justified. Thus “order is immaterial
++because G12” omits real integration work.
++
++Repair: put the **actual printed type** in the next prompt and make the missing
++consumer interface its own task. One route is uniform commutation of the same
++chosen flows on a smaller neighborhood. Another is to expose the uniform
++pushforward identity `DΦ_t(y) (g y) = g (Φ_t y)` from the existing transport
++proof, then differentiate the finite composition directly. The latter need not
++reorder all the flows.
++
++Sources: [G13 prompt](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/reviews/PROMPT_GPT_PRO_KRENER.md),
++[actual commutation theorem](https://github.com/AdoHaha/DynamicalSystems/blob/451db05eff60098a4074dd50af51e06f3f283314/DynamicalSystems/Control/Geometric/FlowTransport.lean),
++[G12 review](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/reviews/PI_REVIEW_G12.md).
++
++### 2. A permitted G13 solution can fail the ownership gate
++
++`REQUEST_G13_PROOF.md:7–9` permits a new sibling
++`SimultaneousRectification.lean`, as does the external prompt. However,
++`tasks.json:604–615` lists only `Frobenius.lean` and its module. The acceptance
++routine rejects any changed file outside `task.files`
++(`campaign_runner.py:430–431`), and the declaration probe imports only the listed
++modules. A worker following the modular option would therefore fail the gate.
++
++Repair: before dispatch, reconcile the permitted file/module set in the prompt
++and manifest. If the new module is chosen, list it in both and leave umbrella
++imports to the coordinator as usual. Avoid enforcing append-only changes when a
++small refactor is needed to expose a previously internal lemma.
++
++Sources: [G13 request](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/reviews/REQUEST_G13_PROOF.md),
++[task manifest](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/geometric_control/tasks.json),
++[runner](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/campaign_runner.py).
++
++### 3. The gap ledger is broken, and the loop ignores its failure
++
++`automation/geometric_control/gaps.json` is the JSON array `[]`. The generic
++runner expects an object with `status_values`, `baseline`, and `gaps`.
++Using the exact pinned files, both commands fail:
++
++```text
++campaign.py gaps
++  campaign_runner.py:499
++  AttributeError: 'list' object has no attribute 'get'
++
++campaign.py gaps --harvest
++  campaign_runner.py:465
++  TypeError: list indices must be integers or slices, not str
++```
++
++The reproduction invoked `campaign_runner.py` directly with `CAMPAIGN_DIR`
++pointing to the downloaded geometric-control directory; the wrapper's role is
++only to supply that directory. No Lean environment or worker state is required
++to trigger these failures. `supervise.py:76` and `ralph_loop.py:118` ignore the
++gap command's exit code, so this loses the ledger without stopping the loop.
++
++Repair: restore the expected object schema, enter the actual residual mathematical
++tasks, validate it before dispatch, and propagate a failed harvest/report command.
++A schema-only empty object is a valid emergency repair:
++
++```json
++{"schema": 1, "baseline": {}, "status_values": [], "gaps": []}
++```
++
++It should then be populated with the current chart construction, graph-frame
++normalization, compatible-PDE integration, and separate Chow bridge tasks.
++
++Sources: [gap file](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/geometric_control/gaps.json),
++[runner](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/campaign_runner.py),
++[supervisor](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/geometric_control/supervise.py).
++
++### 4. Required names do not freeze the mathematical acceptance target
++
++`campaign_runner.check_task` generates only `#check <name>` commands for required
++declarations (`:319–322`). This establishes availability, not that a theorem has
++the intended hypotheses, quantifiers, or conclusion. The earlier task list could
++accept a `Prop`-valued target definition or a conditional reduction, with semantic
++reviews later repairing the framing. The repeated G2/G6/G9/G10/G11 trim tasks
++show the resulting cost.
++
++Repair: keep the existing build and dependency audit, but add a short compiling
++consumer example for each mathematical acceptance target. For Krener it should
++end in the canonical `SimultaneouslyRectifiable f x₀` under the agreed C¹,
++independence, and local bracket hypotheses. Keep the allowed assumptions explicit.
++Record the printed type, dependency audit, source commit, and review artifact
++together. A declaration's existence and a completed mathematical claim should
++have separate status fields.
++
++The regularity target also needs precision. An `OpenPartialHomeomorph` is a
++topological chart, and a strict derivative at its center alone does not establish
++a C¹ diffeomorphism throughout its source. The existing target includes directional
++`fderiv` equalities but does not explicitly require an invertible derivative on the
++whole source or C¹ regularity of the inverse. Decide whether the accepted result
++is that exact target, a differentiable rectifying chart, or a C¹ local diffeomorphism,
++and state the additional regularity separately if it is proved.
++
++Sources: [runner](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/automation/campaign_runner.py),
++[canonical target](https://github.com/AdoHaha/DynamicalSystems/blob/451db05eff60098a4074dd50af51e06f3f283314/DynamicalSystems/Control/Geometric/Frobenius.lean).
++
++### 5. Current status is scattered among contradictory historical snapshots
++
++`FINAL_REPORT.md:24–27` still calls the variational equation the one remaining
++crux. `NEEDS_MAP.md` has an old upstream “empty scaffold” conclusion, later adds
++the corrective `ode`-branch finding, and ends at G10 even though the manifest
++includes G11–G13. `RESPONSE_VAR.md:12–14` calls the common-box argument “ONE final
++step” despite the accompanying detailed review also listing geometric construction
++and graph-form gaps. These are misleading entry points for the next agent.
++
++Repair: give the campaign one current, commit-pinned claim table, with columns for
++the exact statement, proved/deferred status, residual assumptions, next consumer,
++and review link. Preserve the existing narratives as historical snapshots with a
++clear superseded notice. Avoid “one final step” until an actual dependency list
++has a single open leaf. Keep `frobeniusTheorem` as a target definition until a
++theorem inhabits it; do not infer the Chow result from a partial bracket calculation.
++
++Sources: [final report](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/FINAL_REPORT.md),
++[needs map](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/NEEDS_MAP.md),
++[variational response](https://github.com/LiderMyHand/auto_automatyk/blob/a24af23362101d31bf55e703292272251aee65ff/notes/geometric_control/reviews/RESPONSE_VAR.md).
++
++### 6. The Frobenius port accidentally requested analytic rather than smooth regularity
++
++In the pinned Mathlib, differentiability orders have type `ℕ∞ω`: the notation
++`∞` means smooth order, while its top element is analytic order `ω`.
++The upstream `SmoothFunction` and `SmoothFunctionOn` abbreviations use `∞`.
++The ported `frobeniusTheorem` instead used `⊤` for both the input field and the
++solution, changing the intended regularity of the target.
++
++The local integration repair restores both occurrences to `∞`, corrects the
++`contDiff_top_lieBracket` description and exposes `contDiff_infty_lieBracket`.
++At the G13 checkpoint this repaired the statement and smooth API, while its
++`C¹` Krener chart alone did not prove the compatible-PDE existence target.
++G14 has now supplied that graph construction and the higher-regularity argument:
++`FrobeniusRegularity` bootstraps the total differential equation, and
++`FrobeniusIntegrability` proves both the smooth open-domain theorem and the
++original target. The analytic/smooth distinction remains important for preserving
++the intended statement in future ports.
++
++Sources: [pinned Mathlib order notation](https://github.com/leanprover-community/mathlib4/blob/065356127b1dc0016f66b7283ce0ce2c4055aa55/Mathlib/Analysis/Calculus/ContDiff/Defs.lean),
++[upstream smooth abbreviations and PDE statement](https://github.com/igorkhavkine/lean-dg-frobenius/blob/d762d3d53ad36d5a5f91a8c3280f0a1a279dee06/Frobenius/Basic.lean),
++[baseline port](https://github.com/AdoHaha/DynamicalSystems/blob/451db05eff60098a4074dd50af51e06f3f283314/DynamicalSystems/Control/Geometric/Frobenius.lean).
++
++## Proof decomposition used in the G13 contribution
++
++1. Generalize the singleton complement/equivalence to an independent finite family;
++   construct the joint flow map and prove its strict derivative at the origin.
++   This stage does not use commutation.
++2. Export a uniform pushforward identity for the same chosen local flows on a
++   smaller box. State all time/space quantifiers and membership requirements.
++3. Differentiate the finite composition in each time coordinate, control every
++   intermediate point, and restrict the chart source to the resulting neighborhood.
++4. Convert product coordinates to the canonical finite coordinate space and prove
++   the consumer example for `SimultaneouslyRectifiable`. State any stronger C¹
++   diffeomorphism claim separately.
++
++The compiled G13 contribution follows this decomposition and also proves both
++`C¹` chart statements. Keeping future tasks at this scale reduces the amount of
++domain bookkeeping and finite-index linear algebra one agent must discover at once.
++
++G14 likewise separates graph construction, base-coordinate change, smoothness
++bootstrap and final target assembly into four modules. Its task depends on G13
++and has its own exact consumer and review contract. This is the intended handling
++of the user's expanded mathematical scope.

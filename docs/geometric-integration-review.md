@@ -208,10 +208,12 @@ trusting the checked result.
 
 ## Resolved by the current contribution
 
-The implementation now supplies the general finite-family theorem
+The implementation now supplies both the general finite-family theorem
 `krenerLemma` in
-[`SimultaneousRectification.lean`](../DynamicalSystems/Control/Geometric/SimultaneousRectification.lean).
-Its hypotheses are the original local `C¹` assumptions, linear independence
+[`SimultaneousRectification.lean`](../DynamicalSystems/Control/Geometric/SimultaneousRectification.lean)
+and the smooth compatible-PDE theorem in
+[`FrobeniusIntegrability.lean`](../DynamicalSystems/Control/Geometric/FrobeniusIntegrability.lean).
+The Krener hypotheses are the original local `C¹` assumptions, linear independence
 at `x₀`, and pairwise `FlowsCommuteLocally`. There are no additional transport,
 flow-domain, derivative, or chart assumptions. The existing
 `SimultaneouslyRectifiable` definition is retained for compatibility.
@@ -226,7 +228,8 @@ The repairs address the review findings as follows:
 | Missing finite-family splitting | `frameComplement`, `frameEquiv`, and `frameCoordinates` supply the complement, the continuous linear splitting, and its conversion to the target's canonical `Fin n → ℝ` coordinates. |
 | Unrestricted inverse-function source | `exists_simultaneousRectifyingChart` restricts the chart to a neighborhood where all composition derivative identities hold. `simultaneousRectifyingChart_rectifies` requires only source membership for the coordinate-line statement. |
 | The common box requires manual construction | `CommonFlowDomain.exists_of_contDiffAt_of_eventually` constructs a closed regularity ball carrying any supplied local property, including bracket vanishing. The arbitrary positive `T` parameter is documented accurately. |
-| The Frobenius port used the analytic order | Both regularity orders in the pending `frobeniusTheorem` target are restored to `∞`, matching the upstream smooth statement. |
+| The Frobenius port used the analytic order | Both regularity orders in the `frobeniusTheorem` interface are restored to `∞`, matching the upstream smooth statement. |
+| The smooth compatible-PDE statement had no proof | `frobeniusTheorem_holds : frobeniusTheorem` now proves the full recorded proposition. `exists_sol_of_fderiv_compat` gives the stronger open-domain and `HasFDerivAt` formulation. |
 
 The supporting proofs are organized in
 [`FlowBox.lean`](../DynamicalSystems/Control/Geometric/FlowBox.lean),
@@ -240,12 +243,45 @@ The source headers and historical status passages in `Frobenius.lean`,
 results. They preserve the older reduction theorems' explicit premises and
 distinguish the smaller working balls from the original full-box premises.
 
-The compatible-PDE statement `frobeniusTheorem` is still a `Prop`-valued target.
-The new `C¹` simultaneous chart is a completed ingredient; constructing the
-smooth PDE solution and establishing the target's full conclusion remain
-separate work. The uniform-in-initial-state flow-commutation theorem is also
-not claimed by this contribution: the field-preservation route closes Krener
-without it.
+### Completion of the smooth compatible-PDE theorem
+
+`frobeniusTheorem` remains a `Prop`-valued interface, and
+`frobeniusTheorem_holds` supplies its proof. The construction is split into
+three mathematical steps and a final interface theorem:
+
+1. [`FrobeniusGraph.lean`](../DynamicalSystems/Control/Geometric/FrobeniusGraph.lean)
+   composes the graph fields' local flows to produce an integral
+   parametrization. Its horizontal derivative is the identity. The mean-value
+   theorem therefore makes its horizontal projection exactly `x₀ + t` on one
+   small ball. Translating the parameters and taking the vertical projection
+   yields a solution with `Dw(x) = g(x, w(x))` throughout an open neighborhood.
+2. [`FrobeniusCoordinates.lean`](../DynamicalSystems/Control/Geometric/FrobeniusCoordinates.lean)
+   proves the linear-coordinate transformation of the coefficient and
+   curvature and transfers the solution to any finite-dimensional real base
+   space. The result is not restricted to a particular `Fin k → ℝ` model.
+3. [`FrobeniusRegularity.lean`](../DynamicalSystems/Control/Geometric/FrobeniusRegularity.lean)
+   proves smoothness from the differential equation. The function and open
+   domain are fixed before induction on the derivative order. If `w` is
+   `Cⁿ`, composition with smooth `g` makes its prescribed derivative `Cⁿ`,
+   yielding `Cⁿ⁺¹`. Every finite order holds on the same domain, so `w` is
+   `C∞` there. Smooth dependence of the flow to every order is unnecessary.
+4. `FrobeniusIntegrability.lean` combines these results. The useful endpoint
+   `exists_sol_of_fderiv_compat` provides an open set `U` containing `x₀`,
+   a smooth function on `U`, its specified initial value, and an actual
+   `HasFDerivAt` proof at every `x ∈ U`. Choosing `s = U` makes
+   `interior s = s`; the within-derivative statement of `frobeniusTheorem`
+   follows at every point requested by its existing interface.
+
+The theorem has exactly the graph-compatibility scope of the ported statement:
+the coefficient is globally smooth, its curvature vanishes everywhere, and
+the solution is local through each prescribed point. It does not yet turn an
+arbitrary involutive frame into a graph connection. That normalization is the
+separate preamble identified in `commutingBasis_of_involutive`; the new linear
+base-coordinate transformation starts with a graph connection already given.
+The iterated-bracket realization and reachability hypotheses of the Chow
+development also remain separate. Uniform flow commutation over nearby
+initial states is not claimed: field preservation suffices for the completed
+Krener and compatible-PDE constructions.
 
 ## Baseline validation performed
 
@@ -266,3 +302,41 @@ the distinguished-point scope of the final commuting theorem.
 This validation concerns the geometric proof chain and the stated comparison
 commits. It does not establish unrelated parts of the entire repository or
 the still absent simultaneous-rectification theorem at that snapshot.
+
+## Final Frobenius interface audit
+
+An independent compiler check imported the built `FrobeniusIntegrability`
+module and checked the three endpoint declarations. The two existence
+theorems require finite-dimensional `X` and `Y` and completeness of `Y`; they
+do not require an additional explicit `CompleteSpace X` parameter. The
+coordinate construction uses the complete finite real-coordinate model, and
+the solution transfer uses its continuous linear equivalence with `X`.
+
+`frobeniusTheorem_holds` has only the real normed-space structures as outer
+parameters. Completeness and finite-dimensionality remain universally
+quantified inside the existing proposition, exactly as specified by
+`frobeniusTheorem`. A separately written example expanded the entire target
+statement, including these internal instance binders, and was discharged by
+`frobeniusTheorem_holds` with no additional outer instances. Another example
+checked the useful smooth existence theorem without an explicit
+`CompleteSpace X` hypothesis. Both compiled successfully.
+
+The proof of the within-derivative conclusion uses the openness of `U` at
+each `x ∈ U`, rewrites `interior U = U`, and applies the actual full derivative
+of `w`. Thus there is no unhandled boundary or differentiability convention
+in the final target. Independent dependency inspection of
+`exists_local_solution_of_totalFderivCompat`, `exists_sol_of_fderiv_compat`,
+and `frobeniusTheorem_holds` reported only `propext`, `Classical.choice`, and
+`Quot.sound` for all three.
+
+### Complete contribution verification
+
+The final tree passes `lake build DynamicalSystems` (3993 jobs), both exact
+consumer files, and `lake lint -- DynamicalSystems`. The standard project
+`axiom-audit` checks 5069 declarations and reports zero violations, with only
+`propext`, `Classical.choice`, and `Quot.sound` used. Individual dependency
+records also cover all 78 new declarations. The build replays existing
+compiler warnings in older files; all eleven new proof modules compile
+without warnings. The recorded commands and outputs are in
+[frobenius-validation.txt](frobenius-validation.txt) and
+[krener-validation.txt](krener-validation.txt).

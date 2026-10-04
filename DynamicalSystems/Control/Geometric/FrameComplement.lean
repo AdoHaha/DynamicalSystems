@@ -31,7 +31,7 @@ noncomputable def frameCombination (v : Fin k → X) : (Fin k → ℝ) →L[ℝ]
 @[simp] theorem frameCombination_apply (v : Fin k → X) (t : Fin k → ℝ) :
     frameCombination v t = ∑ i, t i • v i := rfl
 
-@[simp] theorem frameCombination_single (v : Fin k → X) (i : Fin k) (a : ℝ) :
+theorem frameCombination_single (v : Fin k → X) (i : Fin k) (a : ℝ) :
     frameCombination v (Pi.single i a) = a • v i :=
   Fintype.linearCombination_apply_single ℝ v i a
 
@@ -66,7 +66,7 @@ noncomputable def frameEquiv [FiniteDimensional ℝ X]
     frameEquiv v hv p = (∑ i, p.1 i • v i) + (p.2 : X) := by
   rfl
 
-@[simp] theorem frameEquiv_single [FiniteDimensional ℝ X]
+theorem frameEquiv_single [FiniteDimensional ℝ X]
     (v : Fin k → X) (hv : LinearIndependent ℝ v) (i : Fin k) (a : ℝ) :
     frameEquiv v hv (Pi.single i a, 0) = a • v i := by
   change frameCombination v (Pi.single i a) + 0 = a • v i

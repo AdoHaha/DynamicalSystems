@@ -230,7 +230,8 @@ The reviewed Frobenius target replaced upstream smoothness with `ContDiff ℝ �
 for the input and `ContDiffOn ℝ ⊤` for the solution. In the pinned Mathlib,
 `∞` denotes smoothness while `⊤`, also written `ω`, denotes analyticity. Upstream
 explicitly uses `∞`. The two annotations in `frobeniusTheorem` are restored to
-`∞`, matching its intended port. The target remains a `Prop`-valued definition.
+`∞`, matching its intended port. The target remains a `Prop`-valued interface and is now proved by
+`frobeniusTheorem_holds` in `FrobeniusIntegrability.lean`.
 
 The existing `contDiff_top_lieBracket` analytic signature is preserved and its
 description corrected. The new `contDiff_infty_lieBracket` explicitly records
@@ -240,34 +241,43 @@ Krener proof. Primary references are the pinned
 and
 [Mathlib differentiability orders](https://github.com/leanprover-community/mathlib4/blob/065356127b1dc0016f66b7283ce0ce2c4055aa55/Mathlib/Analysis/Calculus/ContDiff/FTaylorSeries.lean).
 
-## Next mathematical work
+## Frobenius target follow-through
 
-G13 itself has no residual analytic or geometric premise. The next Frobenius tasks
-should distinguish two goals.
+The follow-up in `FrobeniusIntegrability.lean` now proves the full recorded smooth
+Frobenius target:
 
-**For the current compatible-PDE target, the distribution is already in graph
-form.** Apply the Krener construction to the graph frame. Restrict the chart to
-the leaf with transverse coordinate zero. The first-coordinate projection of
-this leaf has invertible derivative at the base point, so another local inverse
-produces a graph `x ↦ (x,w(x))`. Its tangent identity gives
+```lean
+frobeniusTheorem_holds : frobeniusTheorem
+```
+
+The stronger theorem `exists_sol_of_fderiv_compat` constructs an open neighborhood
+`U` and a smooth solution `w` through the prescribed point, with actual
+`HasFDerivAt w (g (x, w x)) x` at every `x ∈ U`. The complete construction and its
+validation are described in [frobenius-integrability.md](frobenius-integrability.md).
+
+The proof reuses the finite-flow construction behind Krener. For the graph frame,
+the derivative of the leaf's horizontal projection is the identity. On a small
+ball that projection therefore equals `x₀ + t`, and the vertical component directly
+gives `w(x)`. This avoids a second inverse-function construction. Linear coordinate
+transport handles arbitrary finite-dimensional bases.
+
+The smoothness bootstrap is also proved: the equation
 
 \[
-Dw(x)=g(x,w(x)),\qquad w(x_0)=z.
+Dw(x)=g(x,w(x))
 \]
 
-This first yields a `C¹` solution. Smoothness can then be bootstrapped from the
-displayed derivative equation and smooth `g`: if `w` is `Cⁿ`, its derivative is
-`Cⁿ`, so `w` is `Cⁿ⁺¹`. This route does not require first proving that the entire
-flow is smooth to every order. It is a proposed continuation; the graph solution
-and bootstrap are not proved in this contribution.
+upgrades each finite regularity order on the same open set, giving smoothness when
+`g` is smooth. The proof does not require all-order smoothness of the flow itself.
 
-**For an arbitrary involutive distribution, there is an additional normalization
-step.** Choose linear coordinates transverse to the distribution at the base
-point, normalize the frame so its first block is the coordinate basis, and prove
-that the normalized frame remains in the same involutive distribution. The
-existing `commutingBasis_of_involutive` starts after that graph-form hypothesis.
+**The general involutive-distribution formulation has a separate normalization
+step.** One must still choose transverse coordinates for an arbitrary distribution,
+normalize its frame so its first block is the coordinate basis, and show that the
+normalized frame spans the same involutive distribution. The compatible-PDE target
+already starts in graph form, so this separate step is not a residual hypothesis of
+`frobeniusTheorem_holds`.
 
-The Chow development also retains its distinct finite-flow-commutator expansion
+The Chow development retains its distinct finite-flow-commutator expansion
 obligation. A statement about two mixed partial derivatives does not by itself
 supply the four-flow asymptotic expansion needed there.
 

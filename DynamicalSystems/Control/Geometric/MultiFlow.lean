@@ -104,12 +104,12 @@ theorem localFlowCompose_contDiffAt [FiniteDimensional ℝ X]
     exact houter.comp 0 hp
 
 /-- The map obtained by flowing once along each field from the complementary slice. -/
-noncomputable def simultaneousRectifyingMap [FiniteDimensional ℝ X]
+noncomputable def simultaneousRectifyingMap
     (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀) :
     ((Fin k → ℝ) × ↥(frameComplement (fun i => f i x₀))) → X :=
   localFlowCompose hf (frameComplement (fun i => f i x₀)).subtypeL (List.finRange k)
 
-@[simp] theorem simultaneousRectifyingMap_zero [FiniteDimensional ℝ X]
+@[simp] theorem simultaneousRectifyingMap_zero
     (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀) : simultaneousRectifyingMap hf 0 = x₀ :=
   localFlowCompose_zero hf _ _
 
