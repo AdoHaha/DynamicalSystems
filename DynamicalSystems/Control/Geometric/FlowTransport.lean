@@ -12,8 +12,11 @@ public import DynamicalSystems.Control.Geometric.VariationalEquation
 The spatial derivative of the flow is invertible near time zero. Differentiating
 its inverse and using the variational equation proves the transported
 Lie-derivative identity at every sufficiently small time, at the fixed initial
-point. These results make no claim about the entire original flow box or about
-uniformity in the initial point.
+point. These pre-G12 per-point results make no claim about the entire original
+flow box or about uniformity in the initial point; the G12 section below proves
+uniformity across fibers on a smaller concentric ball, closing the residual
+hypotheses of the box commuting reduction unconditionally
+(`flowsCommute_unconditional_onBox`).
 -/
 
 @[expose] public section

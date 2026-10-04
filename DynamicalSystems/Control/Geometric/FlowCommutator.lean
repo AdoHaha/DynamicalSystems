@@ -25,7 +25,7 @@ The companion `VariationalEquation.lean` proves differentiable dependence at the
 initial point and discharges `hVar` in finite dimensions. `FlowTransport.lean` proves
 the transported identity near time zero at that point.
 
-## What G10 and G11 deliver (and what they do not)
+## What G10, G11 and G12 deliver (and what they do not)
 
 The G10 material in this file and in `FlowTransport.lean` delivers the following
 items:
@@ -47,16 +47,24 @@ The G11 material added below delivers:
    remaining variational residuals `hDiffInv`/`hTransU` are restated uniformly but
    left UNDISCHARGED.
 
+The G12 material in `FlowTransport.lean` adds:
+
+5. the uniform variational theory across fibers on a smaller concentric ball
+   (`uniformTangentSolution_onBox`, `uniformDifferentiability_onBox`,
+   `uniformInvertibility_onBox`, `uniformTransport_onBox`), which discharges those
+   residuals, so that `flowsCommute_unconditional_onBox` CLOSES `[f, g] = 0 ⇒ flows
+   commute` on the box with hypotheses only `CommonFlowDomain` plus bracket
+   vanishing; the outstanding link is solely the wiring of that box statement into
+   `FlowsCommuteLocally` / simultaneous rectification.
+
 The uniform-δ FLOW-INVARIANCE part of the follow-up plan is therefore DONE: one time
 radius and one smaller ball work for every initial point at once, from joint
 continuity of the flows at `(0, x₀)`. The uniform VARIATIONAL discharge of the
-residual inputs `hDiffInv`/`hTransU` from `C¹` data alone remains OPEN: the per-fiber
-transport/invertibility/differentiability facts (`lieDerivative_along_flow_onBox`,
-`eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
-each carry their own `y`-dependent time neighbourhood and are only RE-STATED as
-uniform hypotheses. The Frobenius gate is unchanged: the reduction still assumes its
-transport hypotheses, and nothing in this file closes the chain `[f, g] = 0` ⇒ flows
-commute ⇒ simultaneous rectification.
+residual inputs `hDiffInv`/`hTransU` from `C¹` data alone is completed by G12 in
+`FlowTransport.lean`: on a smaller concentric ball a single time radius works for
+every fiber at once, and `flowsCommute_unconditional_onBox` removes the residuals
+from the hypotheses. The only remaining unclosed link is the wiring of that box
+statement into `FlowsCommuteLocally` / simultaneous rectification.
 
 ## Attribution
 
@@ -762,16 +770,16 @@ Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (the `Ad` operator and 
   in the initial point. The velocity bound from `CommonFlowDomain.uniform_fderiv_bound`
   is available for quantitative refinements but is not needed for existence. This
   discharges the `hFlow` input of the box reduction.
-* `flowsCommute_of_uniformResiduals_onBox` is the strongest honest form of the commuting
-  conclusion: bracket vanishing on the box plus residual hypotheses stated UNIFORMLY
+* `flowsCommute_of_uniformResiduals_onBox` is the strongest form of the commuting
+  conclusion that still takes the variational residuals as hypotheses: bracket
+  vanishing on the box plus residual hypotheses stated UNIFORMLY
   (a single `∀ᶠ t in 𝓝 0` outside, `∀ y` inside) yields commuting near `x₀` via the
   box reduction `flowsCommute_of_bracketVanishing_onBox` and `uniformFlowInvariance`.
-  Remaining gap (stated openly): discharging the uniform residuals `hDiffInv`/`hTransU`
-  from `C¹` data alone needs the uniform variational theory across fibers (spatial
-  derivative and transport identities for the COMMON flow at every `y` at once);
-  the per-fiber forms (`lieDerivative_along_flow_onBox`,
-  `eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
-  each carry their own `y`-dependent time neighbourhood and do not supply this.
+  Those residuals are themselves discharged in G12 (statements in `FlowTransport.lean`):
+  `uniformDifferentiability_onBox`, `uniformInvertibility_onBox` and
+  `uniformTransport_onBox` supply the uniform variational theory across fibers, so
+  `flowsCommute_unconditional_onBox` removes `hDiffInv`/`hTransU` from the hypotheses
+  entirely.
 -/
 
 /-- Uniform-δ flow invariance on the common box (Hartman, Ch. V; Sontag, Ch. 4): for
