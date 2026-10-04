@@ -11,31 +11,34 @@ public import Mathlib.LinearAlgebra.LinearIndependent.Basic
 public import Mathlib.LinearAlgebra.StdBasis
 public import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 
-/-! # Commuting vector fields: interface and the `k = 1` rectification base case
+/-! # Commuting vector fields and Frobenius interfaces
 
-This file formalises the commuting-fields **interface** (`FlowsCommuteLocally`) and the
-`k = 1` base case (`krenerLemma_base`) of Krener's rectification lemma. The simultaneous
-rectification of all `k` fields is recorded as a target definition
-(`SimultaneouslyRectifiable`) but is **not** proved here.
+This file defines local bracket vanishing (`FlowsCommuteLocally`), the coordinate
+interface `SimultaneouslyRectifiable`, and the graph-distribution compatibility
+condition. It also retains the one-field rectification lemmas. The general finite-family
+theorem `krenerLemma` and its chart construction live in `SimultaneousRectification.lean`.
 
-## Scope fence
+## Scope
 
-The bridge between commuting flows and vanishing Lie brackets (in either direction)
-is 600–1000 lines and absent from Mathlib. It is NOT proved here. Instead:
+* `FlowsCommuteLocally` records bracket vanishing on a neighbourhood of `x₀`.
+  `FlowTransport.lean` proves that the chosen flows commute at `x₀` for small times.
+  `FlowBox.lean` supplies uniform field preservation for those fixed flows, which
+  `SimultaneousRectification.lean` uses to differentiate the finite composition.
+* `krenerLemma_base` rectifies a single nonsingular field `f i₀` in the trajectory
+  form of `rectifyingChart_rectifies`. Its unused hypotheses `hind` and `hcomm` are
+  retained for interface stability. The general result is `krenerLemma` downstream.
+* `SimultaneouslyRectifiable` records an `OpenPartialHomeomorph` and its differential
+  on the distinguished coordinate vectors. This compatibility interface does not
+  include regularity of both directions. The simultaneous-chart construction
+  supplies separate theorems proving `C¹` regularity on its source and target.
+* `frobeniusTheorem` records smooth compatible-PDE existence. The downstream theorem
+  `frobeniusTheorem_holds` in `FrobeniusIntegrability.lean` proves this proposition.
+  Its companion `exists_sol_of_fderiv_compat` supplies an open solution domain and
+  actual Fréchet derivatives throughout it.
 
-* `FlowsCommuteLocally` is the **hypothesis interface**: pairwise bracket-vanishing
-  on a neighbourhood of `x₀`, which is what "commute" means at the infinitesimal
-  level. The classical flows-commute interpretation is documented, not proved.
-* `krenerLemma_base` proves only the **`k = 1` base case**: a single field `f i₀`
-  (nonsingular at `x₀`) admits a rectifying chart in the trajectory form of G1's
-  `rectifyingChart_rectifies`. It does **not** rectify the family simultaneously.
-  The hypotheses `hind` (linear independence) and `hcomm` (commutativity) are
-  **reserved** for the absent induction step and are not consumed by this theorem;
-  they are kept for interface stability.
-* `SimultaneouslyRectifiable` states the true Krener-lemma conclusion — a local
-  diffeomorphism whose inverse straightens all `k` fields to `e₁, …, e_k` at once.
-  It is NOT proved here; the transverse-slice descent and chart composition are
-  deferred.
+This is the local graph form of Frobenius integrability. Normalizing a general
+involutive frame to graph form and the separate Chow reachability arguments remain
+outside these conclusions.
 
 ## References
 
@@ -48,19 +51,18 @@ is 600–1000 lines and absent from Mathlib. It is NOT proved here. Instead:
 @[expose] public section
 
 open Set Metric
-open scoped Topology
+open scoped Topology ContDiff
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
 /-- Local commutativity hypothesis for two vector fields near `x₀`, expressed as
 pairwise bracket-vanishing on a neighbourhood of `x₀`.
 
-This is the interface form of "f and g commute": classically, commuting flows
-(`Fl_t ∘ Gs_s = Gs_s ∘ Fl_t` locally) is equivalent to `[f, g] = 0`, but that
-equivalence is not proved here. The local analytic ingredients are developed in
-`VariationalEquation.lean` and `FlowTransport.lean`; the common-domain and geometric
-construction steps remain. We take the bracket form — stated with `lieBracket` from
-`Control.Geometric.LieBrackets` — as the working hypothesis. -/
+This records the bracket side of the classical local flow-commutation equivalence.
+`FlowTransport.lean` proves commutation of the chosen flows at the distinguished
+point. `FlowBox.lean` proves uniform field preservation, which the general
+`krenerLemma` in `SimultaneousRectification.lean` uses with this hypothesis.
+The equivalence itself is not part of this definition. -/
 def FlowsCommuteLocally (f g : X → X) (x₀ : X) : Prop :=
   ∃ U ∈ 𝓝 x₀, ∀ x ∈ U, lieBracket f g x = 0
 
@@ -90,23 +92,24 @@ theorem flowsCommuteLocally_bracket_at {f g : X → X} {x₀ : X}
   let ⟨_, hU, hfg⟩ := h
   hfg x₀ (mem_of_mem_nhds hU)
 
-/-- Target statement of the full Krener lemma: simultaneous rectification of a commuting
-family of vector fields.
+/-- Coordinate-derivative interface for simultaneous rectification of a finite family.
 
-There is a local diffeomorphism `Φ` from coordinates `Fin n → ℝ` into `X` with `Φ 0 = x₀`
-whose inverse straightens all `k` fields `f i` at once to the standard coordinate fields
-`e₁, …, e_k`: the differential of `Φ` sends the `i`-th coordinate basis vector to `f i`
-(so the coordinate lines are the integral curves of all the fields simultaneously).
+There is an `OpenPartialHomeomorph` `Φ` from `Fin n → ℝ` into `X` with `Φ 0 = x₀`,
+whose differential sends each of the first `k` coordinate vectors to its field `f i`.
+`krenerLemma` in `SimultaneousRectification.lean` proves this proposition.
 
-**NOT proved here; the transverse-slice descent + chart composition is deferred.**
-The statement is recorded so that the final rectification theorem has a name. -/
+The interface retains its original statement and does not explicitly include
+differentiability or continuous differentiability of either direction. The construction
+`simultaneousRectifyingChart` has stronger companion results:
+`simultaneousRectifyingChart_contDiffOn`, `simultaneousRectifyingChart_symm_contDiffOn`,
+and `simultaneousRectifyingChart_rectifies`. -/
 def SimultaneouslyRectifiable {k : ℕ} (f : Fin k → X → X) (x₀ : X) : Prop :=
   ∃ (n : ℕ) (hn : k ≤ n) (Φ : OpenPartialHomeomorph (Fin n → ℝ) X),
     Φ 0 = x₀ ∧ 0 ∈ Φ.source ∧
       ∀ i : Fin k, ∀ z ∈ Φ.source,
         fderiv ℝ (Φ : (Fin n → ℝ) → X) z (Pi.single (Fin.castLE hn i) 1) = f i (Φ z)
 
-/-- k=1 base: rectifies one field only; simultaneous rectification is deferred.
+/-- The one-field rectification base, retained with its original interface.
 
 The `k = 1` base case of Krener's lemma. For a family `f : Fin k → X → X` of `C¹`
 vector fields that are pointwise linearly independent at `x₀` and pairwise
@@ -116,11 +119,10 @@ integral curves of `f i₀` (the trajectory-rectification form of G1's
 `rectifyingChart`). This rectifies ONE field only and makes no claim about the other
 fields of the family.
 
-The hypotheses `hind` (linear independence) and `hcomm` (commutativity) are
-**reserved** for the absent induction step and are not consumed by this theorem; they
-are kept for interface stability. The transverse-slice descent and chart composition
-needed for joint rectification are deferred; the target statement is
-`SimultaneouslyRectifiable`. -/
+The hypotheses `hind` (linear independence) and `hcomm` (commutativity) are not
+consumed by this theorem and are kept for interface stability. The general
+finite-family result `krenerLemma` in `SimultaneousRectification.lean` proves
+`SimultaneouslyRectifiable` and supplies one chart for all fields. -/
 theorem krenerLemma_base [CompleteSpace X] [FiniteDimensional ℝ X]
     {k : ℕ} {f : Fin k → X → X} {x₀ : X}
     (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀)
@@ -511,7 +513,7 @@ theorem involutive_iff_totalFderivCompat {k : ℕ}
     rw [e1, e2, h]
     exact (Submodule.span ℝ _).zero_mem
 
-/-- The Frobenius existence theorem (ported target statement).
+/-- The smooth Frobenius existence statement, retained as a proposition interface.
 
 Statement ported from Khavkine–Růžička, lean-dg-frobenius (Apache 2.0): their
 `exists_sol_of_fderiv_compat`, adapted from the `oNormedSpace`/`SmoothFunction`
@@ -519,15 +521,19 @@ bundle to plain `[NormedAddCommGroup] [NormedSpace ℝ] [CompleteSpace]`
 `[FiniteDimensional]` hypotheses. See also Krener, *Encyclopedia of Systems and
 Control*, 2nd ed., and Sontag, *Mathematical Control Theory*, 2nd ed., Ch. 4 §4.4.
 
-NOT proved here — the compatible-PDE integration (Khavkine–Růžička's Lemma 9) and
-the simultaneous-rectification route remain the outstanding step. The statement is
-recorded as a `Prop`-valued definition so that the target has a name without any
-outstanding proof obligation. -/
+The theorem `frobeniusTheorem_holds` in `FrobeniusIntegrability.lean` proves this
+proposition. Its companion `exists_sol_of_fderiv_compat` gives a smooth solution on
+an open neighborhood with the prescribed full derivative at every point there.
+The proposition retains the original within-derivative interface.
+
+The order `∞` matches the upstream `SmoothFunction` and `SmoothFunctionOn`
+definitions. In the current Mathlib order type, `⊤` means `ω` (analytic), which
+is a different regularity requirement. -/
 def frobeniusTheorem : Prop :=
-  ∀ (g : X × Y → X →L[ℝ] Y), ContDiff ℝ ⊤ g → TotalFderivCompat g Set.univ →
+  ∀ (g : X × Y → X →L[ℝ] Y), ContDiff ℝ ∞ g → TotalFderivCompat g Set.univ →
     ∀ [CompleteSpace X] [CompleteSpace Y] [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y]
       (x₀ : X) (z : Y), ∃ (s : Set X) (_ : s ∈ 𝓝 x₀) (w : X → Y),
-      ContDiffOn ℝ ⊤ w (interior s) ∧ w x₀ = z ∧
+      ContDiffOn ℝ ∞ w (interior s) ∧ w x₀ = z ∧
         ∀ x ∈ s, fderivWithin ℝ w (interior s) x = g (x, w x)
 
 end FrobeniusG8

@@ -21,6 +21,8 @@ import DynamicalSystems.Control.Geometric.FeedbackLinearization
 import DynamicalSystems.Control.Geometric.FlowCommutator
 import DynamicalSystems.Control.Geometric.VariationalEquation
 import DynamicalSystems.Control.Geometric.FlowTransport
+import DynamicalSystems.Control.Geometric.SimultaneousRectification
+import DynamicalSystems.Control.Geometric.FrobeniusIntegrability
 import DynamicalSystems.Control.Geometric.Rectification
 import DynamicalSystems.Control.MPC.Basic
 import DynamicalSystems.Control.MPC.Economic
