@@ -25,9 +25,9 @@ The companion `VariationalEquation.lean` proves differentiable dependence at the
 initial point and discharges `hVar` in finite dimensions. `FlowTransport.lean` proves
 the transported identity near time zero at that point.
 
-## What G10 delivers (and what it does not)
+## What G10 and G11 deliver (and what they do not)
 
-The G10 material in this file and in `FlowTransport.lean` delivers exactly three
+The G10 material in this file and in `FlowTransport.lean` delivers the following
 items:
 
 1. the `CommonFlowDomain` bundle — a genuine common time/spatial box on which both
@@ -39,11 +39,24 @@ items:
    flows-commute reduction, with `hdiff`/`hinv`/`hTrans`/`hFlow` stated on a working
    box inside the common domain instead of on the whole preselected Picard box.
 
-Steps 2–3 of the follow-up plan — the arbitrary-initial-point comparison, a radius
-that is uniform in the initial point, and the discharge of `hdiff`/`hinv`/`hTrans`
-from `C¹` data — are NOT implemented here. The Frobenius gate is unchanged: the
-reduction still assumes its transport hypotheses, and nothing in this file closes
-the chain `[f, g] = 0` ⇒ flows commute ⇒ simultaneous rectification.
+The G11 material added below delivers:
+
+4. the uniform-δ flow-invariance theorem `uniformFlowInvariance`, which discharges
+   the box-invariance input `hFlow` of the box reduction uniformly in the initial
+   point, and `flowsCommute_of_uniformResiduals_onBox`, the commuting reduction whose
+   remaining variational residuals `hDiffInv`/`hTransU` are restated uniformly but
+   left UNDISCHARGED.
+
+The uniform-δ FLOW-INVARIANCE part of the follow-up plan is therefore DONE: one time
+radius and one smaller ball work for every initial point at once, from joint
+continuity of the flows at `(0, x₀)`. The uniform VARIATIONAL discharge of the
+residual inputs `hDiffInv`/`hTransU` from `C¹` data alone remains OPEN: the per-fiber
+transport/invertibility/differentiability facts (`lieDerivative_along_flow_onBox`,
+`eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
+each carry their own `y`-dependent time neighbourhood and are only RE-STATED as
+uniform hypotheses. The Frobenius gate is unchanged: the reduction still assumes its
+transport hypotheses, and nothing in this file closes the chain `[f, g] = 0` ⇒ flows
+commute ⇒ simultaneous rectification.
 
 ## Attribution
 
@@ -594,8 +607,10 @@ theorem flowsCommute_of_bracketVanishing (f g : X → X) (x₀ : X)
 
 This section fixes a genuine common flow domain first, then states the box-localized
 commuting reduction together with the shared integration core it is built on. It is
-the G10 deliverable (steps 2–3 of the follow-up plan remain open; see the module
-header). References: Hartman, *Ordinary Differential Equations*, Ch. V
+the G10 deliverable; the later G11 section closes its uniform-δ flow-invariance
+part (`uniformFlowInvariance`) while the uniform variational discharge of the
+residual hypotheses remains open (see the module header). References: Hartman,
+*Ordinary Differential Equations*, Ch. V
 (differentiable dependence); Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4
 (the `Ad` operator and Lemma 4.4.2); Lee, *Introduction to Smooth Manifolds*,
 Cor. 20.6 and Thm 9.44. No originality is claimed.
@@ -722,24 +737,32 @@ theorem flowsCommute_of_bracketVanishing_onBox (f g : X → X) (x₀ : X)
     fun t ht y hy ↦ hdiff t ht y (hsub_ρ hy)
   exact flowsCommute_of_key D.hf0 D.hg0 hρw_pos hT₁ key hdiffρw
 
-/-! ## G11: uniform-δ flow invariance and unconditional commuting (GPT Pro step 3)
+/-! ## G11: uniform-δ flow invariance and uniform-residual commuting (GPT Pro step 3)
 
-This section discharges the uniform-δ gate stated by the G10 reviewers: the per-point
-transport/invertibility/differentiability data (`lieDerivative_along_flow_onBox`,
+This section addresses the uniform-δ gate raised by the G10 reviewers, but only
+partially, and the split is stated explicitly. The FLOW-INVARIANCE input `hFlow` of
+`flowsCommute_of_bracketVanishing_onBox` is fully discharged in uniform form by
+`uniformFlowInvariance`: joint continuity of the two local flows at `(0, x₀)` gives one
+time radius and one smaller ball that work for EVERY initial point at once. By
+contrast, the transport/invertibility/differentiability data are NOT discharged: the
+per-point facts (`lieDerivative_along_flow_onBox`,
 `eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
-are promoted to a UNIFORM time radius valid for every `y` in a smaller ball. The
-invariant is respected throughout: the common domain (`CommonFlowDomain`) is fixed
-FIRST, and only afterwards are the time radius and the working ball varied.
-References: Hartman, *Ordinary Differential Equations*, Ch. V (continuous dependence
-on initial data); Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (the `Ad`
-operator and Lemma 4.4.2). No originality is claimed.
+each carry their own `y`-dependent time neighbourhood, and are only RE-STATED in
+uniform form as the hypotheses `hDiffInv`/`hTransU` of
+`flowsCommute_of_uniformResiduals_onBox`, where they remain UNDISCHARGED. The invariant
+is respected throughout: the common domain (`CommonFlowDomain`) is fixed FIRST, and
+only afterwards are the time radius and the working ball varied. References: Hartman,
+*Ordinary Differential Equations*, Ch. V (continuous dependence on initial data);
+Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (the `Ad` operator and Lemma
+4.4.2). No originality is claimed.
 
 * `uniformFlowInvariance` is fully unconditional: joint continuity of each local flow
   at `(0, x₀)` (`localFlow_continuousAt`) yields one `δ > 0` and one smaller ball
   whose `δ`-time trajectories under BOTH flows stay in the common box, uniformly
   in the initial point. The velocity bound from `CommonFlowDomain.uniform_fderiv_bound`
-  is available for quantitative refinements but is not needed for existence.
-* `flowsCommute_unconditional_onBox` is the strongest honest form of the commuting
+  is available for quantitative refinements but is not needed for existence. This
+  discharges the `hFlow` input of the box reduction.
+* `flowsCommute_of_uniformResiduals_onBox` is the strongest honest form of the commuting
   conclusion: bracket vanishing on the box plus residual hypotheses stated UNIFORMLY
   (a single `∀ᶠ t in 𝓝 0` outside, `∀ y` inside) yields commuting near `x₀` via the
   box reduction `flowsCommute_of_bracketVanishing_onBox` and `uniformFlowInvariance`.
@@ -809,7 +832,7 @@ theory across fibers); the available per-fiber facts
 (`lieDerivative_along_flow_onBox`, `eventually_isInvertible_fderiv_localFlow`,
 `eventually_differentiableAt_localFlow`, `CommonFlowDomain.uniform_fderiv_bound`)
 do not supply the common neighbourhood. -/
-theorem flowsCommute_unconditional_onBox {f g : X → X} {x₀ : X}
+theorem flowsCommute_of_uniformResiduals_onBox {f g : X → X} {x₀ : X}
     (D : CommonFlowDomain f g x₀)
     (hbr : ∀ y ∈ Metric.closedBall x₀ D.r, lieBracket f g y = 0)
     (hDiffInv : ∀ᶠ t in 𝓝 (0 : ℝ), ∀ y ∈ Metric.ball x₀ D.r,
