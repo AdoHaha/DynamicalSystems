@@ -277,3 +277,262 @@ theorem commutingBasis_of_involutive {k : ℕ} {Y : Type*} [NormedAddCommGroup Y
     exact hcsum
   rw [← hc, hc0]
   simp
+
+/-! # G8: Frobenius theorem — curvature, compatibility, and the involutivity bridge
+
+This section ports the clean statements of Igor Khavkine and Jan Růžička's partial
+formalization of the Frobenius theorem (`github.com/igorkhavkine/lean-dg-frobenius`,
+branch `honza`, Apache 2.0). The ported declarations are `Curvature`,
+`TotalFderivCompat`, and `frobeniusTheorem`; each carries a docstring noting the port.
+Authors of the ported statements: Igor Khavkine, Jan Růžička. No originality is
+claimed for the ported material.
+
+The bridge lemma `involutive_iff_totalFderivCompat` (proved here) connects our
+formulation (involutivity via `lieBracket`, following Krener, *Encyclopedia of
+Systems and Control*, 2nd ed., and Sontag, *Mathematical Control Theory*, 2nd ed.,
+Ch. 4 §4.4) to theirs (vanishing of `Curvature`): for the graph distribution spanned
+by the vector fields `X_d (x, z) = (d, g (x, z) d)`, involutivity holds if and only
+if the curvature tensor vanishes.
+-/
+
+section FrobeniusG8
+
+variable {Y : Type*} [NormedAddCommGroup Y] [NormedSpace ℝ Y]
+
+/-- The Frobenius integrability tensor ("curvature") of a graph connection `g`.
+
+Statement ported from Khavkine–Růžička, lean-dg-frobenius (Apache 2.0).
+Here `g` is the "connection" (the distribution as a graph: the subspace at `(x, z)`
+is `{(d, g (x, z) d) : d ∈ X}`); `p = (x, z)` and `d1 d2 : X` are horizontal
+directions. See also Krener, *Encyclopedia of Systems and Control*, 2nd ed., and
+Sontag, *Mathematical Control Theory*, 2nd ed., Ch. 4 §4.4. -/
+noncomputable def Curvature (g : X × Y → X →L[ℝ] Y) (p : X × Y) (d1 d2 : X) : Y :=
+  fderiv ℝ g p (d1, 0) d2 + fderiv ℝ g p (0, g p d1) d2 -
+    (fderiv ℝ g p (d2, 0) d1 + fderiv ℝ g p (0, g p d2) d1)
+
+/-- The flatness/involutivity condition: vanishing of `Curvature` over `U`.
+
+Statement ported from Khavkine–Růžička, lean-dg-frobenius (Apache 2.0). See also
+Krener, *Encyclopedia of Systems and Control*, 2nd ed., and Sontag,
+*Mathematical Control Theory*, 2nd ed., Ch. 4 §4.4. -/
+def TotalFderivCompat (g : X × Y → X →L[ℝ] Y) (U : Set (X × Y)) : Prop :=
+  ∀ p ∈ U, ∀ d1 d2 : X, Curvature g p d1 d2 = 0
+
+/-- The graph vector field in horizontal direction `d`: `X_d (x, z) = (d, g (x, z) d)`.
+The graph distribution is spanned by these fields as `d` ranges over `X`. -/
+def graphField (g : X × Y → X →L[ℝ] Y) (d : X) : X × Y → X × Y :=
+  fun p => (d, g p d)
+
+/-- The graph frame: the finite family of graph fields over the coordinate directions
+`Pi.single i 1` of `Fin k → ℝ`, used to phrase involutivity of the graph distribution
+with our `InvolutiveDistribution`. -/
+noncomputable def graphFrame {k : ℕ} (g : (Fin k → ℝ) × Y → (Fin k → ℝ) →L[ℝ] Y) :
+    Fin k → ((Fin k → ℝ) × Y) → ((Fin k → ℝ) × Y) :=
+  fun i => graphField g (Pi.single i (1 : ℝ))
+
+/-- A graph field is differentiable wherever `g` is. -/
+theorem graphField_differentiableAt (g : X × Y → X →L[ℝ] Y) (d : X) (p : X × Y)
+    (hg : DifferentiableAt ℝ g p) : DifferentiableAt ℝ (graphField g d) p :=
+  (differentiableAt_const d).prodMk
+    ((ContinuousLinearMap.apply ℝ Y d).differentiableAt.comp p hg)
+
+/-- The Fréchet derivative of a graph field: the horizontal component is constant, so
+its derivative vanishes, and the vertical component is evaluation of `fderiv g`. -/
+theorem graphField_fderiv_apply (g : X × Y → X →L[ℝ] Y) (d : X) (p v : X × Y)
+    (hg : DifferentiableAt ℝ g p) :
+    fderiv ℝ (graphField g d) p v = (0, fderiv ℝ g p v d) := by
+  have h1 : HasFDerivAt (fun _ : X × Y => d) (0 : (X × Y) →L[ℝ] X) p :=
+    hasFDerivAt_const d p
+  have h2 : HasFDerivAt (fun p : X × Y => g p d)
+      ((ContinuousLinearMap.apply ℝ Y d).comp (fderiv ℝ g p)) p :=
+    (ContinuousLinearMap.apply ℝ Y d).hasFDerivAt.comp p hg.hasFDerivAt
+  have h := h1.prodMk h2
+  have hder := h.fderiv
+  rw [show (fun x : X × Y => ((fun _ : X × Y => d) x, (fun p : X × Y => g p d) x)) =
+      graphField g d from rfl] at hder
+  rw [hder]
+  simp only [ContinuousLinearMap.prod_apply, zero_apply,
+    ContinuousLinearMap.comp_apply, ContinuousLinearMap.apply_apply]
+
+/-- The Lie bracket of two graph fields is vertical, with vertical component exactly
+`Curvature`: the horizontal parts cancel since the horizontal components are constant.
+This computation is the bridge between our `lieBracket` formulation (Krener; Sontag
+Ch. 4 §4.4) and the Khavkine–Růžička curvature tensor (statement ported from
+Khavkine–Růžička, lean-dg-frobenius, Apache 2.0). -/
+theorem bracket_graphField (g : X × Y → X →L[ℝ] Y) (d1 d2 : X) (p : X × Y)
+    (hg : DifferentiableAt ℝ g p) :
+    lieBracket (graphField g d1) (graphField g d2) p = (0, Curvature g p d1 d2) := by
+  rw [lieBracket_apply, graphField_fderiv_apply g d2 _ _ hg,
+    graphField_fderiv_apply g d1 _ _ hg]
+  show (0, fderiv ℝ g p (d1, g p d1) d2) - (0, fderiv ℝ g p (d2, g p d2) d1) =
+    (0, Curvature g p d1 d2)
+  have s1 : ((d1, g p d1) : X × Y) = (d1, 0) + (0, g p d1) := by
+    rw [Prod.mk_add_mk, add_zero, zero_add]
+  have s2 : ((d2, g p d2) : X × Y) = (d2, 0) + (0, g p d2) := by
+    rw [Prod.mk_add_mk, add_zero, zero_add]
+  rw [s1, s2]
+  simp only [map_add, add_apply]
+  unfold Curvature
+  simp only [Prod.mk_sub_mk, sub_self]
+
+/-- `Curvature` is additive in its first horizontal argument. -/
+theorem Curvature_add_left (g : X × Y → X →L[ℝ] Y) (p : X × Y) (d1 d1' d2 : X) :
+    Curvature g p (d1 + d1') d2 = Curvature g p d1 d2 + Curvature g p d1' d2 := by
+  unfold Curvature
+  have h1 : ((d1 + d1', (0 : Y)) : X × Y) = (d1, 0) + (d1', 0) := by
+    rw [Prod.mk_add_mk, add_zero]
+  have h2 : g p (d1 + d1') = g p d1 + g p d1' := map_add _ _ _
+  have h3 : ((0 : X), g p (d1 + d1')) = (0, g p d1) + (0, g p d1') := by
+    rw [h2, Prod.mk_add_mk, add_zero]
+  rw [h1, h3]
+  simp only [map_add, add_apply]
+  abel
+
+/-- `Curvature` is additive in its second horizontal argument. -/
+theorem Curvature_add_right (g : X × Y → X →L[ℝ] Y) (p : X × Y) (d1 d2 d2' : X) :
+    Curvature g p d1 (d2 + d2') = Curvature g p d1 d2 + Curvature g p d1 d2' := by
+  unfold Curvature
+  have h1 : ((d2 + d2', (0 : Y)) : X × Y) = (d2, 0) + (d2', 0) := by
+    rw [Prod.mk_add_mk, add_zero]
+  have h2 : g p (d2 + d2') = g p d2 + g p d2' := map_add _ _ _
+  have h3 : ((0 : X), g p (d2 + d2')) = (0, g p d2) + (0, g p d2') := by
+    rw [h2, Prod.mk_add_mk, add_zero]
+  rw [h1, h3]
+  simp only [map_add, add_apply]
+  abel
+
+/-- `Curvature` is homogeneous in its first horizontal argument. -/
+theorem Curvature_smul_left (g : X × Y → X →L[ℝ] Y) (p : X × Y) (c : ℝ) (d1 d2 : X) :
+    Curvature g p (c • d1) d2 = c • Curvature g p d1 d2 := by
+  unfold Curvature
+  have h1 : ((c • d1, (0 : Y)) : X × Y) = c • (d1, 0) := by
+    rw [Prod.smul_mk, smul_zero]
+  have h2 : g p (c • d1) = c • g p d1 := map_smul _ _ _
+  have h3 : ((0 : X), g p (c • d1)) = c • ((0, g p d1) : X × Y) := by
+    rw [h2, Prod.smul_mk, smul_zero]
+  rw [h1, h3]
+  simp only [map_smul, smul_apply, smul_add, smul_sub]
+
+/-- `Curvature` is homogeneous in its second horizontal argument. -/
+theorem Curvature_smul_right (g : X × Y → X →L[ℝ] Y) (p : X × Y) (c : ℝ) (d1 d2 : X) :
+    Curvature g p d1 (c • d2) = c • Curvature g p d1 d2 := by
+  unfold Curvature
+  have h1 : ((c • d2, (0 : Y)) : X × Y) = c • (d2, 0) := by
+    rw [Prod.smul_mk, smul_zero]
+  have h2 : g p (c • d2) = c • g p d2 := map_smul _ _ _
+  have h3 : ((0 : X), g p (c • d2)) = c • ((0, g p d2) : X × Y) := by
+    rw [h2, Prod.smul_mk, smul_zero]
+  rw [h1, h3]
+  simp only [map_smul, smul_apply, smul_add, smul_sub]
+
+/-- `Curvature` vanishes when its first horizontal argument is zero. -/
+theorem Curvature_zero_left (g : X × Y → X →L[ℝ] Y) (p : X × Y) (d2 : X) :
+    Curvature g p 0 d2 = 0 := by
+  unfold Curvature
+  have z1 : ((0 : X), (0 : Y)) = (0 : X × Y) := rfl
+  have z2 : g p (0 : X) = 0 := map_zero _
+  rw [z1, z2, z1]
+  simp
+
+/-- `Curvature` vanishes when its second horizontal argument is zero. -/
+theorem Curvature_zero_right (g : X × Y → X →L[ℝ] Y) (p : X × Y) (d1 : X) :
+    Curvature g p d1 0 = 0 := by
+  unfold Curvature
+  have z1 : ((0 : X), (0 : Y)) = (0 : X × Y) := rfl
+  have z2 : g p (0 : X) = 0 := map_zero _
+  rw [z2, z1]
+  simp
+
+/-- `Curvature` distributes over finite sums in its first horizontal argument. -/
+theorem Curvature_sum_left {ι : Type*} [DecidableEq ι] (g : X × Y → X →L[ℝ] Y)
+    (p : X × Y) (d2 : X) (s : Finset ι) (e : ι → X) :
+    Curvature g p (∑ i ∈ s, e i) d2 = ∑ i ∈ s, Curvature g p (e i) d2 := by
+  refine Finset.induction_on s ?_ ?_
+  · simp [Curvature_zero_left]
+  · intro a t hat ih
+    rw [Finset.sum_insert hat, Finset.sum_insert hat, Curvature_add_left, ih]
+
+/-- `Curvature` distributes over finite sums in its second horizontal argument. -/
+theorem Curvature_sum_right {ι : Type*} [DecidableEq ι] (g : X × Y → X →L[ℝ] Y)
+    (p : X × Y) (d1 : X) (s : Finset ι) (e : ι → X) :
+    Curvature g p d1 (∑ i ∈ s, e i) = ∑ i ∈ s, Curvature g p d1 (e i) := by
+  refine Finset.induction_on s ?_ ?_
+  · simp [Curvature_zero_right]
+  · intro a t hat ih
+    rw [Finset.sum_insert hat, Finset.sum_insert hat, Curvature_add_right, ih]
+
+/-- Involutivity of the graph distribution is equivalent to vanishing curvature.
+
+This bridges our formulation (involutivity via `lieBracket`, following Krener,
+*Encyclopedia of Systems and Control*, 2nd ed., and Sontag, *Mathematical Control
+Theory*, 2nd ed., Ch. 4 §4.4) to the Khavkine–Růžička flatness condition
+`TotalFderivCompat` (statement ported from Khavkine–Růžička, lean-dg-frobenius,
+Apache 2.0). The proof computes `lieBracket` of the graph fields (whose vertical
+component is exactly `Curvature` by `bracket_graphField`), uses G3's
+`commutingBasis_of_involutive` for the forward direction, and bilinearity of
+`Curvature` to pass between coordinate directions and arbitrary horizontal vectors. -/
+theorem involutive_iff_totalFderivCompat {k : ℕ}
+    (g : (Fin k → ℝ) × Y → (Fin k → ℝ) →L[ℝ] Y)
+    (hg : ∀ p, DifferentiableAt ℝ g p) :
+    InvolutiveDistribution (graphFrame g) ↔ TotalFderivCompat g Set.univ := by
+  constructor
+  · intro hinv p _ d1 d2
+    have hdiff : ∀ i x, DifferentiableAt ℝ ((graphFrame g) i) x :=
+      fun i x => graphField_differentiableAt g _ x (hg x)
+    have hgraph : ∀ i x, (((graphFrame g) i x).1 = (Pi.single i (1 : ℝ) : Fin k → ℝ)) :=
+      fun i x => rfl
+    have hcomm := commutingBasis_of_involutive hdiff hgraph hinv
+    have hbasis : ∀ i j (q : (Fin k → ℝ) × Y),
+        Curvature g q (Pi.single i (1 : ℝ)) (Pi.single j (1 : ℝ)) = 0 := by
+      intro i j q
+      have h : lieBracket (graphField g (Pi.single i (1 : ℝ)))
+          (graphField g (Pi.single j (1 : ℝ))) q = 0 := hcomm i j q
+      rw [bracket_graphField g _ _ q (hg q)] at h
+      exact (Prod.mk_eq_zero.mp h).2
+    have hexpand : ∀ d : Fin k → ℝ, (∑ i : Fin k, d i • Pi.single i (1 : ℝ)) = d := by
+      intro d
+      have h := (Pi.basisFun ℝ (Fin k)).sum_repr d
+      simpa [Pi.basisFun_repr, Pi.basisFun_apply] using h
+    rw [← hexpand d1, Curvature_sum_left]
+    refine Finset.sum_eq_zero fun i _ => ?_
+    rw [← hexpand d2, Curvature_sum_right]
+    refine Finset.sum_eq_zero fun j _ => ?_
+    rw [Curvature_smul_left, Curvature_smul_right, hbasis i j p, smul_zero, smul_zero]
+  · intro hcompat i j x
+    have hcurv : Curvature g x (Pi.single i (1 : ℝ)) (Pi.single j (1 : ℝ)) = 0 :=
+      hcompat x (Set.mem_univ x) _ _
+    have h := bracket_graphField g (Pi.single i (1 : ℝ)) (Pi.single j (1 : ℝ)) x (hg x)
+    rw [hcurv] at h
+    have h0 : ((0, (0 : Y)) : (Fin k → ℝ) × Y) = 0 := rfl
+    rw [h0] at h
+    have e1 : graphFrame g i = graphField g (Pi.single i (1 : ℝ)) := rfl
+    have e2 : graphFrame g j = graphField g (Pi.single j (1 : ℝ)) := rfl
+    rw [e1, e2, h]
+    exact (Submodule.span ℝ _).zero_mem
+
+/-- The Frobenius existence theorem (ported target statement).
+
+Statement ported from Khavkine–Růžička, lean-dg-frobenius (Apache 2.0): their
+`exists_sol_of_fderiv_compat`, adapted from the `oNormedSpace`/`SmoothFunction`
+bundle to plain `[NormedAddCommGroup] [NormedSpace ℝ] [CompleteSpace]`
+`[FiniteDimensional]` hypotheses. See also Krener, *Encyclopedia of Systems and
+Control*, 2nd ed., and Sontag, *Mathematical Control Theory*, 2nd ed., Ch. 4 §4.4.
+
+NOT proved here — the compatible-PDE integration (Khavkine–Růžička's Lemma 9) and
+the simultaneous-rectification route remain the outstanding step. The statement is
+recorded as a `Prop`-valued definition so that the target has a name without any
+outstanding proof obligation. -/
+def frobeniusTheorem : Prop :=
+  ∀ (g : X × Y → X →L[ℝ] Y), ContDiff ℝ ⊤ g → TotalFderivCompat g Set.univ →
+    ∀ [CompleteSpace X] [CompleteSpace Y] [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y]
+      (x₀ : X) (z : Y), ∃ (s : Set X) (_ : s ∈ 𝓝 x₀) (w : X → Y),
+      ContDiffOn ℝ ⊤ w (interior s) ∧ w x₀ = z ∧
+        ∀ x ∈ s, fderivWithin ℝ w (interior s) x = g (x, w x)
+
+end FrobeniusG8
+
+#check @Curvature
+#check @TotalFderivCompat
+#check @involutive_iff_totalFderivCompat
+#check @frobeniusTheorem
+
