@@ -164,3 +164,26 @@ theorem lieDerivative_timeZero_onBox
     HasDerivAt (fun t : ℝ ↦ VectorField.pullback ℝ (localFlow (D.hf y hy) t) g y)
       (lieBracket f g y) 0 :=
   lieDerivative_along_flow_of_contDiffAt f g y (D.hf y hy) (D.hg y hy)
+
+/-! ## G11 projection: single-flow uniform invariance (Hartman, Ch. V; Sontag, Ch. 4)
+
+This is the one-flow projection of `uniformFlowInvariance` (proved in
+`FlowCommutator.lean` to avoid a module cycle: `FlowCommutator` cannot import this
+file). It records, for the `f`-flow alone, the uniform-δ conclusion used by the
+flow-agreement step: one radius works for every initial point of a smaller ball.
+-/
+
+omit [FiniteDimensional ℝ X] in
+/-- Single-flow projection of `uniformFlowInvariance`: on a `CommonFlowDomain`, one
+radius `δ > 0` works for every `y ∈ ball x₀ δ` at once — the `f`-flow stays in the
+box for `|t| < δ`, uniformly in `y`. -/
+theorem uniformFlowInvariance_f
+    {f g : X → X} {x₀ : X} (D : CommonFlowDomain f g x₀) :
+    ∃ δ > 0, ∀ t : ℝ, |t| < δ → ∀ y ∈ Metric.ball x₀ δ,
+      localFlow D.hf0 t y ∈ Metric.closedBall x₀ D.r := by
+  obtain ⟨δ, hδ, ρ, hρ, hmem⟩ := uniformFlowInvariance D
+  refine ⟨min δ ρ, lt_min hδ hρ, fun t ht y hy ↦ ?_⟩
+  have ht' : |t| < δ := lt_of_lt_of_le ht (min_le_left _ _)
+  have hy' : y ∈ Metric.ball x₀ ρ :=
+    Metric.ball_subset_ball (min_le_right _ _) hy
+  exact (hmem t ht' y hy').1

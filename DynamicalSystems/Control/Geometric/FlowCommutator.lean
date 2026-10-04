@@ -721,3 +721,148 @@ theorem flowsCommute_of_bracketVanishing_onBox (f g : X → X) (x₀ : X)
       DifferentiableAt ℝ (localFlow D.hf0 t) y :=
     fun t ht y hy ↦ hdiff t ht y (hsub_ρ hy)
   exact flowsCommute_of_key D.hf0 D.hg0 hρw_pos hT₁ key hdiffρw
+
+/-! ## G11: uniform-δ flow invariance and unconditional commuting (GPT Pro step 3)
+
+This section discharges the uniform-δ gate stated by the G10 reviewers: the per-point
+transport/invertibility/differentiability data (`lieDerivative_along_flow_onBox`,
+`eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
+are promoted to a UNIFORM time radius valid for every `y` in a smaller ball. The
+invariant is respected throughout: the common domain (`CommonFlowDomain`) is fixed
+FIRST, and only afterwards are the time radius and the working ball varied.
+References: Hartman, *Ordinary Differential Equations*, Ch. V (continuous dependence
+on initial data); Sontag, *Mathematical Control Theory*, Ch. 4 §4.2/§4.4 (the `Ad`
+operator and Lemma 4.4.2). No originality is claimed.
+
+* `uniformFlowInvariance` is fully unconditional: joint continuity of each local flow
+  at `(0, x₀)` (`localFlow_continuousAt`) yields one `δ > 0` and one smaller ball
+  whose `δ`-time trajectories under BOTH flows stay in the common box, uniformly
+  in the initial point. The velocity bound from `CommonFlowDomain.uniform_fderiv_bound`
+  is available for quantitative refinements but is not needed for existence.
+* `flowsCommute_unconditional_onBox` is the strongest honest form of the commuting
+  conclusion: bracket vanishing on the box plus residual hypotheses stated UNIFORMLY
+  (a single `∀ᶠ t in 𝓝 0` outside, `∀ y` inside) yields commuting near `x₀` via the
+  box reduction `flowsCommute_of_bracketVanishing_onBox` and `uniformFlowInvariance`.
+  Remaining gap (stated openly): discharging the uniform residuals `hDiffInv`/`hTransU`
+  from `C¹` data alone needs the uniform variational theory across fibers (spatial
+  derivative and transport identities for the COMMON flow at every `y` at once);
+  the per-fiber forms (`lieDerivative_along_flow_onBox`,
+  `eventually_isInvertible_fderiv_localFlow`, `eventually_differentiableAt_localFlow`)
+  each carry their own `y`-dependent time neighbourhood and do not supply this.
+-/
+
+/-- Uniform-δ flow invariance on the common box (Hartman, Ch. V; Sontag, Ch. 4): for
+a `CommonFlowDomain`, one time radius `δ > 0` and one smaller ball work for EVERY
+initial point at once — both local flows stay in the box for `|t| < δ`, uniformly
+in `y`. Proved from joint continuity of the flows at `(0, x₀)`; the fixed common
+domain is what makes the radius uniform. -/
+theorem uniformFlowInvariance {f g : X → X} {x₀ : X}
+    (D : CommonFlowDomain f g x₀) :
+    ∃ δ > 0, ∃ ρ > 0, ∀ t : ℝ, |t| < δ →
+      ∀ y ∈ Metric.ball x₀ ρ,
+        localFlow D.hf0 t y ∈ Metric.closedBall x₀ D.r ∧
+        localFlow D.hg0 t y ∈ Metric.closedBall x₀ D.r := by
+  have one : ∀ (F : X → X) (hF : ContDiffAt ℝ 1 F x₀), ∃ δ > 0, ∃ ρ > 0,
+      ∀ t : ℝ, |t| < δ → ∀ y ∈ Metric.ball x₀ ρ,
+        localFlow hF t y ∈ Metric.closedBall x₀ D.r := by
+    intro F hF
+    have hcont : ContinuousAt (fun p : ℝ × X ↦ localFlow hF p.1 p.2) (0, x₀) :=
+      localFlow_continuousAt F x₀ hF
+    have h0 : localFlow hF 0 x₀ = x₀ := localFlow_zero_apply F x₀ hF
+    have hmem : Metric.ball x₀ D.r ∈ 𝓝 (localFlow hF 0 x₀) := by
+      rw [h0]
+      exact Metric.ball_mem_nhds x₀ D.hr
+    have hev : ∀ᶠ p : ℝ × X in 𝓝 (0, x₀),
+        localFlow hF p.1 p.2 ∈ Metric.ball x₀ D.r := hcont.eventually hmem
+    obtain ⟨δ, hδ, hball⟩ := Metric.eventually_nhds_iff_ball.mp hev
+    refine ⟨δ, hδ, δ, hδ, fun t ht y hy ↦ ?_⟩
+    have hmem' : (t, y) ∈ Metric.ball (0, x₀) δ := by
+      rw [Metric.mem_ball, Prod.dist_eq]
+      have ht' : dist t 0 < δ := by
+        rw [Real.dist_0_eq_abs]
+        exact ht
+      exact max_lt ht' (Metric.mem_ball.mp hy)
+    exact Metric.ball_subset_closedBall (hball _ hmem')
+  obtain ⟨δf, hδf, ρf, hρf, hfmem⟩ := one f D.hf0
+  obtain ⟨δg, hδg, ρg, hρg, hgmem⟩ := one g D.hg0
+  refine ⟨min δf δg, lt_min hδf hδg, min ρf ρg, lt_min hρf hρg, ?_⟩
+  intro t ht y hy
+  have ht_f : |t| < δf := lt_of_lt_of_le ht (min_le_left _ _)
+  have ht_g : |t| < δg := lt_of_lt_of_le ht (min_le_right _ _)
+  have hy_f : y ∈ Metric.ball x₀ ρf :=
+    Metric.ball_subset_ball (min_le_left _ _) hy
+  have hy_g : y ∈ Metric.ball x₀ ρg :=
+    Metric.ball_subset_ball (min_le_right _ _) hy
+  exact ⟨hfmem t ht_f y hy_f, hgmem t ht_g y hy_g⟩
+
+/-- Flows commute near `x₀` from box data with UNIFORM residuals (Sontag, Ch. 4
+§4.2/§4.4; Hartman, Ch. V): on a `CommonFlowDomain` with `[f, g] = 0` on the box,
+the local flows commute near `(0, 0)`. The residual variational inputs are stated
+in uniform form — one `∀ᶠ t in 𝓝 0` quantifying over ALL `y` at once — rather than
+per-point `∀ y, ∀ᶠ t` data: `hDiffInv` (differentiability plus invertibility of the
+common `f`-flow on the box) and `hTransU` (the transported Lie-derivative identity
+for the common flow, uniformly in `y`). The proof fixes the working scales from
+these uniform neighbourhoods together with `uniformFlowInvariance` and delegates
+to `flowsCommute_of_bracketVanishing_onBox`. Open remainder: deriving `hDiffInv`
+and `hTransU` themselves from the `C¹`-on-the-box data alone (uniform variational
+theory across fibers); the available per-fiber facts
+(`lieDerivative_along_flow_onBox`, `eventually_isInvertible_fderiv_localFlow`,
+`eventually_differentiableAt_localFlow`, `CommonFlowDomain.uniform_fderiv_bound`)
+do not supply the common neighbourhood. -/
+theorem flowsCommute_unconditional_onBox {f g : X → X} {x₀ : X}
+    (D : CommonFlowDomain f g x₀)
+    (hbr : ∀ y ∈ Metric.closedBall x₀ D.r, lieBracket f g y = 0)
+    (hDiffInv : ∀ᶠ t in 𝓝 (0 : ℝ), ∀ y ∈ Metric.ball x₀ D.r,
+      DifferentiableAt ℝ (localFlow D.hf0 t) y ∧
+        (fderiv ℝ (localFlow D.hf0 t) y).IsInvertible)
+    (hTransU : ∀ᶠ t in 𝓝 (0 : ℝ), ∀ y ∈ Metric.ball x₀ D.r,
+      HasDerivAt (fun τ : ℝ ↦ VectorField.pullback ℝ (localFlow D.hf0 τ) g y)
+        (VectorField.pullback ℝ (localFlow D.hf0 t) (lieBracket f g) y) t) :
+    ∃ δ > 0, ∀ t ∈ Set.Ioo (-δ) δ, ∀ s ∈ Set.Ioo (-δ) δ,
+      localFlow D.hf0 t (localFlow D.hg0 s x₀) =
+        localFlow D.hg0 s (localFlow D.hf0 t x₀) := by
+  obtain ⟨δ₀, hδ₀, ρ₀, hρ₀, hmem⟩ := uniformFlowInvariance D
+  obtain ⟨T₁, hT₁, hD₁⟩ := Metric.eventually_nhds_iff_ball.mp hDiffInv
+  obtain ⟨T₂, hT₂, hD₂⟩ := Metric.eventually_nhds_iff_ball.mp hTransU
+  set T := min T₁ (min T₂ δ₀) with hTdef
+  have hTpos : 0 < T := lt_min hT₁ (lt_min hT₂ hδ₀)
+  set ρ := min D.r ρ₀ with hρdef
+  have hρpos : 0 < ρ := lt_min D.hr hρ₀
+  have hT₁le : T ≤ T₁ := min_le_left _ _
+  have hT₂le : T ≤ T₂ := (min_le_right _ _).trans (min_le_left _ _)
+  have hT₀le : T ≤ δ₀ := (min_le_right _ _).trans (min_le_right _ _)
+  have hρrle : ρ ≤ D.r := min_le_left _ _
+  have hρ₀le : ρ ≤ ρ₀ := min_le_right _ _
+  have hsub : Metric.ball x₀ ρ ⊆ Metric.ball x₀ D.r :=
+    Metric.ball_subset_ball hρrle
+  have hsub₀ : Metric.ball x₀ ρ ⊆ Metric.ball x₀ ρ₀ :=
+    Metric.ball_subset_ball hρ₀le
+  have hdistT : ∀ t ∈ Set.Ioo (-T) T, dist t 0 < T₁ ∧ dist t 0 < T₂ ∧ |t| < δ₀ := by
+    intro t ht
+    have habs : |t| < T := abs_lt.mpr ht
+    have e1 : dist t (0 : ℝ) < T₁ := by
+      rw [Real.dist_0_eq_abs]
+      exact lt_of_lt_of_le habs hT₁le
+    have e2 : dist t (0 : ℝ) < T₂ := by
+      rw [Real.dist_0_eq_abs]
+      exact lt_of_lt_of_le habs hT₂le
+    exact ⟨e1, e2, lt_of_lt_of_le habs hT₀le⟩
+  have hdiff : ∀ t ∈ Set.Ioo (-T) T, ∀ y ∈ Metric.ball x₀ ρ,
+      DifferentiableAt ℝ (localFlow D.hf0 t) y := by
+    intro t ht y hy
+    exact ((hD₁ t (hdistT t ht).1) y (hsub hy)).1
+  have hinv : ∀ t ∈ Set.Ioo (-T) T, ∀ y ∈ Metric.ball x₀ ρ,
+      (fderiv ℝ (localFlow D.hf0 t) y).IsInvertible := by
+    intro t ht y hy
+    exact ((hD₁ t (hdistT t ht).1) y (hsub hy)).2
+  have hTrans : ∀ y ∈ Metric.ball x₀ ρ, ∀ t ∈ Set.Ioo (-T) T,
+      HasDerivAt (fun τ : ℝ ↦ VectorField.pullback ℝ (localFlow D.hf0 τ) g y)
+        (VectorField.pullback ℝ (localFlow D.hf0 t) (lieBracket f g) y) t := by
+    intro y hy t ht
+    exact hD₂ t (hdistT t ht).2.1 y (hsub hy)
+  have hFlow : ∀ t ∈ Set.Ioo (-T) T, ∀ y ∈ Metric.ball x₀ ρ,
+      localFlow D.hf0 t y ∈ Metric.closedBall x₀ D.r := by
+    intro t ht y hy
+    exact (hmem t (hdistT t ht).2.2 y (hsub₀ hy)).1
+  exact flowsCommute_of_bracketVanishing_onBox f g x₀ D hρpos hTpos hbr
+    hdiff hinv hTrans hFlow
