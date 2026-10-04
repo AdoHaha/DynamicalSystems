@@ -9,11 +9,12 @@ public import DynamicalSystems.Control.Geometric.Rectification
 public import DynamicalSystems.Control.Geometric.LieBrackets
 public import Mathlib.LinearAlgebra.LinearIndependent.Basic
 
-/-! # Krener lemma: simultaneous rectification of commuting vector fields
+/-! # Commuting vector fields: interface and the `k = 1` rectification base case
 
-Given `k ≤ n` pointwise-independent, pairwise-commuting vector fields on a
-finite-dimensional real normed space, there is a local chart near `x₀` that
-straightens all `k` fields simultaneously to the first `k` coordinate fields.
+This file formalises the commuting-fields **interface** (`FlowsCommuteLocally`) and the
+`k = 1` base case (`krenerLemma_base`) of Krener's rectification lemma. The simultaneous
+rectification of all `k` fields is recorded as a target definition
+(`SimultaneouslyRectifiable`) but is **not** proved here.
 
 ## Scope fence
 
@@ -23,14 +24,16 @@ is 600–1000 lines and absent from Mathlib. It is NOT proved here. Instead:
 * `FlowsCommuteLocally` is the **hypothesis interface**: pairwise bracket-vanishing
   on a neighbourhood of `x₀`, which is what "commute" means at the infinitesimal
   level. The classical flows-commute interpretation is documented, not proved.
-* `krenerLemma` proves the **inductive base step** in full generality: for a family
-  `f : Fin k → X → X` of pointwise-independent, pairwise bracket-vanishing fields,
-  the distinguished field `f i₀` (nonsingular at `x₀`) admits a rectifying chart in
-  the trajectory form of G1's `rectifyingChart_rectifies`. The pairwise hypotheses
-  are part of the statement so the induction interface is stable; the remaining
-  work for the joint chart (rectify `f₁` to `e₁`, descend the other fields to the
-  transverse slice via `[e₁, fⱼ] = ∂₁fⱼ = 0`, recurse, compose charts) is
-  documented, not claimed.
+* `krenerLemma_base` proves only the **`k = 1` base case**: a single field `f i₀`
+  (nonsingular at `x₀`) admits a rectifying chart in the trajectory form of G1's
+  `rectifyingChart_rectifies`. It does **not** rectify the family simultaneously.
+  The hypotheses `hind` (linear independence) and `hcomm` (commutativity) are
+  **reserved** for the absent induction step and are not consumed by this theorem;
+  they are kept for interface stability.
+* `SimultaneouslyRectifiable` states the true Krener-lemma conclusion — a local
+  diffeomorphism whose inverse straightens all `k` fields to `e₁, …, e_k` at once.
+  It is NOT proved here; the transverse-slice descent and chart composition are
+  deferred.
 
 ## References
 
@@ -84,20 +87,38 @@ theorem flowsCommuteLocally_bracket_at {f g : X → X} {x₀ : X}
   let ⟨_, hU, hfg⟩ := h
   hfg x₀ (mem_of_mem_nhds hU)
 
-/-- Krener lemma, inductive base step (general `k` form).
+/-- Target statement of the full Krener lemma: simultaneous rectification of a commuting
+family of vector fields.
 
-Given a finite family `f : Fin k → X → X` of `C¹` vector fields that are pointwise
-linearly independent at `x₀` and pairwise bracket-vanishing near `x₀`, each
-nonsingular field admits a rectifying chart: for the distinguished index `i₀` there
-is an `OpenPartialHomeomorph` `Ψ` near `x₀` whose coordinate lines are integral
-curves of `f i₀` (the trajectory-rectification form of G1).
+There is a local diffeomorphism `Φ` from coordinates `Fin n → ℝ` into `X` with `Φ 0 = x₀`
+whose inverse straightens all `k` fields `f i` at once to the standard coordinate fields
+`e₁, …, e_k`: the differential of `Φ` sends the `i`-th coordinate basis vector to `f i`
+(so the coordinate lines are the integral curves of all the fields simultaneously).
 
-For `k = 1` this is exactly G1's `rectifyingChart`. The pairwise hypotheses
-(`hind`, `hcomm`) are recorded so the statement is the stable induction interface
-for the joint chart; the proof of the base step is the G1 chart. The descent of
-the remaining fields to the transverse slice and the chart composition are the
-deferred inductive step described in the module scope fence. -/
-theorem krenerLemma [CompleteSpace X] [FiniteDimensional ℝ X]
+**NOT proved here; the transverse-slice descent + chart composition is deferred.**
+The statement is recorded so that the final rectification theorem has a name. -/
+def SimultaneouslyRectifiable {k : ℕ} (f : Fin k → X → X) (x₀ : X) : Prop :=
+  ∃ (n : ℕ) (hn : k ≤ n) (Φ : OpenPartialHomeomorph (Fin n → ℝ) X),
+    Φ 0 = x₀ ∧ 0 ∈ Φ.source ∧
+      ∀ i : Fin k, ∀ z ∈ Φ.source,
+        fderiv ℝ (Φ : (Fin n → ℝ) → X) z (Pi.single (Fin.castLE hn i) 1) = f i (Φ z)
+
+/-- k=1 base: rectifies one field only; simultaneous rectification is deferred.
+
+The `k = 1` base case of Krener's lemma. For a family `f : Fin k → X → X` of `C¹`
+vector fields that are pointwise linearly independent at `x₀` and pairwise
+bracket-vanishing near `x₀`, the distinguished nonsingular field `f i₀` admits a
+rectifying chart: an `OpenPartialHomeomorph` `Ψ` near `x₀` whose coordinate lines are
+integral curves of `f i₀` (the trajectory-rectification form of G1's
+`rectifyingChart`). This rectifies ONE field only and makes no claim about the other
+fields of the family.
+
+The hypotheses `hind` (linear independence) and `hcomm` (commutativity) are
+**reserved** for the absent induction step and are not consumed by this theorem; they
+are kept for interface stability. The transverse-slice descent and chart composition
+needed for joint rectification are deferred; the target statement is
+`SimultaneouslyRectifiable`. -/
+theorem krenerLemma_base [CompleteSpace X] [FiniteDimensional ℝ X]
     {k : ℕ} {f : Fin k → X → X} {x₀ : X}
     (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀)
     (hind : LinearIndependent ℝ (fun i => f i x₀))
@@ -115,9 +136,10 @@ theorem krenerLemma [CompleteSpace X] [FiniteDimensional ℝ X]
   exact ⟨rectifyingChart (hf i₀) hv,
     fun z' t ht hz hmem => rectifyingChart_rectifies (hf i₀) hv z' t ht hz hmem⟩
 
-/-- Krener lemma, per-field corollary: every nonsingular field of a pairwise-commuting,
-pointwise-independent family admits its own rectifying chart. -/
-theorem krenerLemma_all [CompleteSpace X] [FiniteDimensional ℝ X]
+/-- Per-field corollary of the `k = 1` base case: every nonsingular field of a
+pairwise-commuting, pointwise-independent family admits its own rectifying chart. Each
+field is rectified separately, not simultaneously. -/
+theorem krenerLemma_base_all [CompleteSpace X] [FiniteDimensional ℝ X]
     {k : ℕ} {f : Fin k → X → X} {x₀ : X}
     (hf : ∀ i, ContDiffAt ℝ 1 (f i) x₀)
     (hind : LinearIndependent ℝ (fun i => f i x₀))
@@ -130,4 +152,4 @@ theorem krenerLemma_all [CompleteSpace X] [FiniteDimensional ℝ X]
           closedBall x₀ (localFlowRadius (hf i)) →
         ((t, z') : ℝ × ↥(flowComplement (f i x₀))) ∈ Ψ.source →
         HasDerivAt (fun s ↦ Ψ (s, z')) ((f i) (Ψ (t, z'))) t :=
-  krenerLemma hf hind hcomm i (hv i)
+  krenerLemma_base hf hind hcomm i (hv i)
