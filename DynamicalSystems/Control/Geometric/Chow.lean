@@ -34,10 +34,16 @@ first-order case (the bracket `[fᵢ, fⱼ]` as the `t`-derivative of the 4-segm
 flow) is not proved here either.
 
 What IS proved here is the FINAL open-mapping step: given `n` directions (each the
-derivative of a piecewise-constant-flow end-point map at `0`) spanning `X`, the joint
-end-point map `(t₁,…,tₙ) ↦ …` has a surjective strict derivative at `0`, hence
-`HasStrictFDerivAt.map_nhds_eq_of_surj` gives a neighbourhood of `x₀` in the image,
-so the reachable set has nonempty interior.
+derivative of a piecewise-constant-flow end-point map) spanning `X`, the joint end-point
+map `(t₁,…,tₙ) ↦ …` has a surjective strict derivative at the base parameter `0`, hence
+`HasStrictFDerivAt.map_nhds_eq_of_surj` gives a neighbourhood of its image point in the
+image, so the reachable set has nonempty interior.
+
+Statement fidelity (Sontag, Ch. 4 §4.3, Theorem 9): the classical end-point map `F` has
+surjective derivative at a parameter `t⁰` that is generically NON-ZERO, and the anchor
+`F(t⁰)` is a REACHABLE point, NOT the initial state `x₀`. This formalisation
+reparametrises the anchor to the base parameter `0` and takes the derivative-range
+condition as the explicit hypothesis `hBracket`.
 
 The *necessity* direction (rank `< n` implies empty interior, via Frobenius foliations)
 is a separate deferred item and is NOT attempted here.
@@ -79,7 +85,13 @@ curve segment `γ` of one of the fields (`γ'(t) = fᵢ (γ t)` on the segment b
 and `T`). This is the union over all horizons; the classical "within (small) time `T`"
 refinement is not tracked. In practice each segment curve is a local-flow line
 `t ↦ Rectification.localFlow hf t x` (see `localFlow_segment_hasDerivAt`, which shows
-such curves satisfy the segment predicate on the flow domain). -/
+such curves satisfy the segment predicate on the flow domain).
+
+Caveat: this is NOT the set reachable by arbitrary piecewise-constant controls of the
+driftless system `ẋ = Σ uᵢ fᵢ`. It is the Chow orbit of the individual flows: a
+concatenation of integral curves of the individual generators `fᵢ`, one generator per
+segment and with reverse time allowed (`T` may be negative), matching the `F`
+construction in Sontag, Ch. 4 §4.3. -/
 def reachableByPiecewiseConstant (f : Fin m → X → X) (x₀ : X) : Set X :=
   { y | ∃ n : ℕ, ∃ pts : Fin (n + 1) → X, ∃ idx : Fin n → Fin m,
     pts 0 = x₀ ∧
@@ -104,7 +116,6 @@ theorem localFlow_segment_hasDerivAt [CompleteSpace X]
     {T : ℝ} (hT : T ∈ Set.Ioo (-localFlowTime hg) (localFlowTime hg)) :
     ∀ t ∈ Set.uIcc (0 : ℝ) T,
       HasDerivAt (fun s ↦ localFlow hg s z) (g (localFlow hg t z)) t := by
-  have hε : 0 < localFlowTime hg := (getLocalFlowData hg).hε
   obtain ⟨hTlo, hThi⟩ := Set.mem_Ioo.mp hT
   intro t ht
   have hIoo : t ∈ Set.Ioo (-localFlowTime hg) (localFlowTime hg) := by
@@ -119,11 +130,14 @@ if the accessibility distribution of the control fields has full rank at `x₀`,
 set reachable by piecewise-constant controls has nonempty interior.
 
 The classical proof: full rank means `n` iterated Lie brackets of the `f i` evaluate to a
-basis of `X` at `x₀`; each iterated bracket direction is the derivative (at `t = 0`) of a
-finite piecewise-constant flow (a "commutator of flows"); so the joint end-point map
-`(t₁,…,tₙ) ↦ …` has surjective derivative at `0`; by the inverse-function / open-mapping
-theorem its image contains a neighbourhood of `x₀`. This formalisation proves the FINAL
-open-mapping step and takes the bracket-direction bridge as explicit hypotheses:
+basis of `X` at `x₀`; each iterated bracket direction is the derivative of a finite
+piecewise-constant flow (a "commutator of flows"). Sontag's end-point map `F` then has
+surjective derivative at a parameter `t⁰` that is generically NON-ZERO, and the image
+`F(t⁰)` is a REACHABLE point — not the initial state `x₀`; by the inverse-function /
+open-mapping theorem the image of `F` contains a neighbourhood of that reachable anchor.
+This formalisation proves the FINAL open-mapping step, reparametrises the classical
+anchor to the base parameter `0`, and takes the bracket-direction bridge as explicit
+hypotheses:
 
 * `hBracket` (deferred bridge, algebraic half): every accessibility direction lies in the
   range of the end-point map derivative — i.e. the iterated-bracket directions spanning
@@ -137,14 +151,13 @@ open-mapping step and takes the bracket-direction bridge as explicit hypotheses:
 
 Given these, `HasStrictFDerivAt.map_nhds_eq_of_surj` (the same tool S7's
 `localSurjectivity_of_controllable_linearization` used for the linearization) yields a
-neighbourhood of `x₀` contained in the reachable set, hence nonempty interior. The
+neighbourhood of `E 0` contained in the reachable set, hence nonempty interior. The
 necessity direction (via Frobenius foliations) is deferred and not attempted here. -/
 theorem chowInterior [CompleteSpace X] [FiniteDimensional ℝ X]
     (f : Fin m → X → X) (x₀ : X)
     (hRank : lieAlgebraRankCondition (Set.range f) x₀)
     (E : (Fin (Module.finrank ℝ X) → ℝ) → X)
     (L : (Fin (Module.finrank ℝ X) → ℝ) →L[ℝ] X)
-    (hE0 : E 0 = x₀)
     (hE : HasStrictFDerivAt E L 0)
     (hBracket : accessibilityDistribution (Set.range f) x₀ ≤ L.range)
     (hReach : ∀ᶠ t in 𝓝 (0 : Fin (Module.finrank ℝ X) → ℝ),
@@ -160,8 +173,7 @@ theorem chowInterior [CompleteSpace X] [FiniteDimensional ℝ X]
       _ ≤ Module.finrank ℝ L.range := Submodule.finrank_mono hBracket
   have hmap : Filter.map E (𝓝 (0 : Fin (Module.finrank ℝ X) → ℝ)) = 𝓝 (E 0) :=
     hE.map_nhds_eq_of_surj hLrange
-  rw [hE0] at hmap
-  have hmem : reachableByPiecewiseConstant f x₀ ∈ 𝓝 x₀ := by
+  have hmem : reachableByPiecewiseConstant f x₀ ∈ 𝓝 (E 0) := by
     rw [← hmap, Filter.mem_map]
     exact hReach
-  exact ⟨x₀, mem_interior_iff_mem_nhds.mpr hmem⟩
+  exact ⟨E 0, mem_interior_iff_mem_nhds.mpr hmem⟩
