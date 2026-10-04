@@ -57,8 +57,9 @@ pairwise bracket-vanishing on a neighbourhood of `x₀`.
 
 This is the interface form of "f and g commute": classically, commuting flows
 (`Fl_t ∘ Gs_s = Gs_s ∘ Fl_t` locally) is equivalent to `[f, g] = 0`, but that
-equivalence is NOT proved here (it needs the variational equation and is absent
-from Mathlib). We take the bracket form — stated with `lieBracket` from
+equivalence is not proved here. The local analytic ingredients are developed in
+`VariationalEquation.lean` and `FlowTransport.lean`; the common-domain and geometric
+construction steps remain. We take the bracket form — stated with `lieBracket` from
 `Control.Geometric.LieBrackets` — as the working hypothesis. -/
 def FlowsCommuteLocally (f g : X → X) (x₀ : X) : Prop :=
   ∃ U ∈ 𝓝 x₀, ∀ x ∈ U, lieBracket f g x = 0
@@ -535,4 +536,3 @@ end FrobeniusG8
 #check @TotalFderivCompat
 #check @involutive_iff_totalFderivCompat
 #check @frobeniusTheorem
-
