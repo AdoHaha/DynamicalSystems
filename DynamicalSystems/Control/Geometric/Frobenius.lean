@@ -8,6 +8,8 @@ module
 public import DynamicalSystems.Control.Geometric.Rectification
 public import DynamicalSystems.Control.Geometric.LieBrackets
 public import Mathlib.LinearAlgebra.LinearIndependent.Basic
+public import Mathlib.LinearAlgebra.StdBasis
+public import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 
 /-! # Commuting vector fields: interface and the `k = 1` rectification base case
 
@@ -153,3 +155,125 @@ theorem krenerLemma_base_all [CompleteSpace X] [FiniteDimensional ℝ X]
         ((t, z') : ℝ × ↥(flowComplement (f i x₀))) ∈ Ψ.source →
         HasDerivAt (fun s ↦ Ψ (s, z')) ((f i) (Ψ (t, z'))) t :=
   krenerLemma_base hf hind hcomm i (hv i)
+
+/-! # G3: the algebraic miracle — involutive implies commuting basis (flat local form)
+
+This section formalises the standard "commuting frame" reduction step in the proof of the
+Frobenius integrability theorem: an involutive distribution in graph form already has
+pairwise-vanishing Lie brackets. This is pure linear algebra plus the Leibniz rule
+(no flows, no ODEs).
+
+## References (binding attribution; these results are classical, not original)
+
+* Krener, A. J., "Differential Geometric Methods in Nonlinear Control", in
+  *Encyclopedia of Systems and Control*, 2nd ed., Springer, 2015, pp. ~566
+  (the "involutive" closed-under-bracket definition and the commuting-frame reduction).
+* Sontag, E. D., *Mathematical Control Theory: Deterministic Finite Dimensional Systems*,
+  2nd ed., Springer, 1998, Ch. 4 §4.2–§4.4.
+* Lee, J. M., *Introduction to Smooth Manifolds*, 2nd ed., Springer, 2012, Theorem 19.12
+  (the canonical textbook statement of the Frobenius theorem; cited as the standard
+  reference even though it is not in our corpus).
+-/ 
+
+/-- Pointwise involutivity of a finite family of vector fields: for every `i j` and `x`,
+the bracket `lieBracket (f i) (f j) x` lies in the pointwise span `span ℝ {f m x | m}`.
+
+This is the "closed under bracket" condition; it is Krener's "involutive" definition
+(Krener, *Encyclopedia of Systems and Control*, 2nd ed., pp. ~566; see also Sontag,
+*Mathematical Control Theory* 2nd ed., Ch. 4 §4.2–§4.4, and Lee, *Introduction to Smooth
+Manifolds*, Thm 19.12). Reuses `lieBracket` from `Control/Geometric/LieBrackets`. -/
+def InvolutiveDistribution {k : ℕ} (f : Fin k → X → X) : Prop :=
+  ∀ i j x, lieBracket (f i) (f j) x ∈ Submodule.span ℝ (Set.range fun m ↦ f m x)
+
+/-- The algebraic miracle (flat, finite-dimensional, local form): an involutive distribution
+in graph form is already pairwise commuting.
+
+Hypothesis `hgraph` says the distribution is in **graph form** over the first `k`
+coordinates: writing a point of `(Fin k → ℝ) × Y` as `(x₁, x')`, the projection of
+each `f i x` onto the first `k` coordinates is the constant `i`-th coordinate vector
+eᵢ (`Pi.single i 1`). Under this hypothesis and `InvolutiveDistribution f`, the fields
+are pairwise commuting: `∀ i j x, lieBracket (f i) (f j) x = 0`.
+
+*Proof (the miracle; Krener p. ~566; Sontag Ch. 4 §4.2–§4.4; Lee Thm 19.12):* the first
+`k` components of each `f i` are the constant eᵢ, so by `fderiv_const` /
+`HasFDerivAt.const` the first-`k` block of
+`lieBracket (f i) (f j) x = D(f j)(f i x) - D(f i)(f j x)` vanishes (derivative of a
+constant is zero); by involutivity the bracket lies in `span {f m x}`; in graph form the
+projection onto the first `k` coordinates is injective on that span (the eᵢ are linearly
+independent, via `Pi.basisFun`), so a vector in the span with zero first-`k` block is
+zero.
+
+*Documented gap:* `hgraph` is assumed rather than derived from a general involutive
+distribution. Classically graph form is obtained in two steps, neither of them formalised
+here: (1) choose coordinates near `x₀` in which the distribution `Δ` satisfies
+`Δ(x₀) = span{e₁, …, e_k}`; this is a constant linear change of coordinates, making `Δ`
+transverse to the complementary coordinate directions at `x₀`, and (2) pass to the unique
+frame of `Δ` whose first-`k` block is `e_i`; this is an `x`-dependent change of frame, not
+a change of coordinates. The passage from a general pointwise-independent involutive
+family to graph form is the missing preamble. -/
+theorem commutingBasis_of_involutive {k : ℕ} {Y : Type*} [NormedAddCommGroup Y]
+    [NormedSpace ℝ Y] {f : Fin k → ((Fin k → ℝ) × Y) → ((Fin k → ℝ) × Y)}
+    (hf : ∀ i x, DifferentiableAt ℝ (f i) x)
+    (hgraph : ∀ i x, ((f i x).1 = (Pi.single i (1 : ℝ) : Fin k → ℝ)))
+    (hinv : InvolutiveDistribution f) :
+    ∀ i j x, lieBracket (f i) (f j) x = 0 := by
+  have hfirst : ∀ (m : Fin k) (y : (Fin k → ℝ) × Y) (v : (Fin k → ℝ) × Y),
+      ((fderiv ℝ (f m) y v).1 = 0) := by
+    intro m y v
+    have hcomp : (fun z ↦ ((f m z).1)) = fun _ ↦ (Pi.single m (1 : ℝ) : Fin k → ℝ) :=
+      funext fun z ↦ hgraph m z
+    have h1 : HasFDerivAt (fun z : (Fin k → ℝ) × Y ↦ ((f m z).1))
+        (0 : ((Fin k → ℝ) × Y) →L[ℝ] (Fin k → ℝ)) y := by
+      rw [hcomp]
+      exact hasFDerivAt_const _ _
+    have hchain : HasFDerivAt (fun z : (Fin k → ℝ) × Y ↦ ((f m z).1))
+        ((ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y).comp (fderiv ℝ (f m) y)) y :=
+      (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y).hasFDerivAt.comp y (hf m y).hasFDerivAt
+    have heq : (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y).comp
+        (fderiv ℝ (f m) y) = 0 := by
+      rw [← hchain.fderiv, h1.fderiv]
+    have happ := congrArg
+      (fun L : ((Fin k → ℝ) × Y) →L[ℝ] (Fin k → ℝ) ↦ L v) heq
+    simpa using happ
+  intro i j x
+  have hproj : ((lieBracket (f i) (f j) x).1 : Fin k → ℝ) = 0 := by
+    rw [lieBracket_apply]
+    have e1 := hfirst j x (f i x)
+    have e2 := hfirst i x (f j x)
+    simp only [Prod.fst_sub, e1, e2, sub_self]
+  have hmem := hinv i j x
+  rw [Finsupp.mem_span_range_iff_exists_finsupp] at hmem
+  obtain ⟨c, hc⟩ := hmem
+  have hpush : (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y)
+      (c.sum fun m a ↦ a • f m x)
+      = c.sum (fun m a ↦ a • (Pi.single m (1 : ℝ) : Fin k → ℝ)) := by
+    change (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y)
+      (∑ m ∈ c.support, (c m) • f m x)
+      = ∑ m ∈ c.support, (c m) • (Pi.single m (1 : ℝ) : Fin k → ℝ)
+    rw [map_sum]
+    apply Finset.sum_congr rfl
+    intro m _
+    rw [map_smul]
+    congr 1
+    exact hgraph m x
+  have hfst0 : (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y)
+      (lieBracket (f i) (f j) x) = 0 := hproj
+  have hcsum : c.sum (fun m a ↦ a • (Pi.single m (1 : ℝ) : Fin k → ℝ)) = 0 := by
+    have harg := congrArg (ContinuousLinearMap.fst ℝ (Fin k → ℝ) Y) hc
+    rw [hpush, hfst0] at harg
+    exact harg
+  have hbasis_eq : (fun m : Fin k ↦ (Pi.single m (1 : ℝ) : Fin k → ℝ))
+      = ⇑(Pi.basisFun ℝ (Fin k)) := by
+    funext m
+    rw [Pi.basisFun_apply]
+  have hindep : LinearIndependent ℝ
+      (fun m : Fin k ↦ (Pi.single m (1 : ℝ) : Fin k → ℝ)) := by
+    rw [hbasis_eq]
+    exact (Pi.basisFun ℝ (Fin k)).linearIndependent
+  rw [linearIndependent_iff] at hindep
+  have hc0 : c = 0 := by
+    apply hindep
+    rw [Finsupp.linearCombination_apply]
+    exact hcsum
+  rw [← hc, hc0]
+  simp
