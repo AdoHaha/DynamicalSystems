@@ -3,7 +3,8 @@ Copyright (c) 2026 Igor Zubrycki. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Igor Zubrycki
 -/
-import DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricEulerLagrange
+import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
+import DynamicalSystems.OptimalControl.ContinuousTime.FirstVariationDifferentiation
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
 
 /-!

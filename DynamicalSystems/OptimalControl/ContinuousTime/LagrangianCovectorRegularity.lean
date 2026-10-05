@@ -5,7 +5,10 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricEulerLagrange
+public import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
+public import Mathlib.Analysis.Calculus.ContDiff.Basic
+public import Mathlib.Analysis.Calculus.ContDiff.Deriv
+public import Mathlib.Analysis.Calculus.FDeriv.Comp
 
 /-!
 # Continuity of the actual first-variation covectors

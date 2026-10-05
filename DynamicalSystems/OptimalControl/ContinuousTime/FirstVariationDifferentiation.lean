@@ -5,59 +5,30 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
+public import DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations
+public import DynamicalSystems.OptimalControl.ContinuousTime.LagrangianCovectorRegularity
 public import Mathlib.Analysis.Calculus.ParametricIntegral
 public import Mathlib.Analysis.Calculus.ContDiff.Basic
 public import Mathlib.Analysis.Calculus.FDeriv.Comp
 public import Mathlib.Analysis.Calculus.MeanValue
+public import Mathlib.Analysis.Calculus.Deriv.Prod
 
 /-!
-# K3 (partial): two-parameter strict differentiability and multiplier
+# Actual first-variation differentiation
 
-This module provides two pieces of the Kirk–Medhin K3 obligation; it does **not**
-complete K3.
+For an endpoint-preserving reference curve `x`, test directions `η`, `ξ`, and the
+two-parameter family `Γ(a,b)(t) = x t + a • η t + b • ξ t`, this module
+*differentiates the actual `cvFunctional` integrals* under the interval-integral
+sign.  The resulting derivative at `(0,0)` has components equal to the explicit
+`firstVariation` expressions.
 
-The existing interface
-`IsoperimetricVariation.exists_normal_multiplier_of_curve_family` extracts a
-normal multiplier from a constrained minimum, but it takes the strict Fréchet
-differentiability of the parameterized integral functionals as an input.  For an
-endpoint-preserving reference curve `x`, test directions `η`, `ξ`, and the
-two-parameter family `Γ(a,b)(t) = x t + a • η t + b • ξ t`, this module *derives*
-that input: it differentiates the actual `cvFunctional` integrals under the
-interval-integral sign, and the resulting derivative at `(0,0)` has components
-equal to the explicit `firstVariation` expressions.  The multiplier interface is
-then applicable to this genuinely feasible family.  The module therefore supplies
-(a) the strict two-parameter differentiability and (b) the common multiplier on
-the two-parameter family.
+The one-parameter corollary `hasDerivAt_cvFunctional_affine` identifies the actual
+cost derivative along an affine variation, with no endpoint restriction on the
+direction, with the generic `firstVariation`.
 
-**Historical note.**  An earlier revision of this module recorded the lifting from
-the two-parameter stationarity to `HasVanishingFirstVariation (fun t y v ↦ L t y v +
-λ * G t y v)` over *all* smooth endpoint-vanishing directions as *the open
-residual*, with the chain minimum → multiplier → augmented Euler–Lagrange *not
-closed in this module*.  That residual is now closed by
-`IsoperimetricVariation.exists_common_isoperimetricMultiplier` in
-`K3IsoperimetricLift.lean`, which fixes one multiplier and derives the identity for
-all C1 endpoint-zero directions (feeding
-`IsoperimetricVariation.augmentedEulerLagrangeWithin_of_isoperimetric` and
-`IsoperimetricVariation.augmentedEulerLagrange_of_isoperimetric`).  The theorem
-`_root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing` below is retained as a partial building
-block that consumes an augmented vanishing variation as an assumed hypothesis;
-it is not the final K3 endpoint.
-
-## Main results
-
-* `hasStrictFDerivAt_parameterFunctional`: strict Fréchet differentiability of
-  the two-parameter `cvFunctional` pair, with derivative the `firstVariation`.
-
-* `_root_.IsoperimetricVariation.isoperimetricMultiplier_exists`: a common multiplier extracted from a genuine
-  constrained minimum.  Its scope is the two-parameter family: for each fixed
-  pair `(η, ξ)`, the identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}`
-  only; the value is `η`-independent given `ξ`, and there is no single invocation
-  ranging over all test directions.
-
-* `_root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing`: the Euler–Lagrange equation for
-  `L + λ • G`, proved from an *assumed* augmented vanishing first variation (not
-  derived here from the two-parameter multiplier identity).
+The three linear-combination lemmas record that the augmented Lagrangian
+`L + λG` inherits joint `C¹` regularity and that its first variation splits
+linearly.
 -/
 
 @[expose] public section
@@ -67,11 +38,6 @@ open scoped Topology Interval
 
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-
-/-- The uncurried Lagrangian `(t, y, v) ↦ L t y v`, used to state joint `C¹`
-regularity in the state and velocity variables. -/
-noncomputable def uncurryLagrangian (L : ℝ → E → E → ℝ) : ℝ × E × E → ℝ :=
-  fun q ↦ L q.1 q.2.1 q.2.2
 
 /-- The two-parameter perturbation family `Γ(a,b)(t) = x t + (a • η t + b • ξ t)`. -/
 noncomputable def perturbedCurve (x η ξ : ℝ → E) (p : ℝ × ℝ) : ℝ → E :=
@@ -112,19 +78,6 @@ theorem parameterDerivative_ext (f : (ℝ × ℝ) →L[ℝ] ℝ) :
   conv_lhs => rw [hp]
   rw [map_add, map_smul, map_smul, parameterDerivative_apply]
   ring
-
-/-- The running part of the first variation `δJ(x; η)`, without the terminal term. -/
-noncomputable def firstVariationIntegrand (L : ℝ → E → E → ℝ) (x η : ℝ → E) (t : ℝ) : ℝ :=
-  (fderiv ℝ (fun y : E ↦ L t y (deriv x t)) (x t)) (η t)
-    + (fderiv ℝ (fun v : E ↦ L t (x t) v) (deriv x t)) (deriv η t)
-
-/-- `firstVariation` is the integral of `firstVariationIntegrand` plus the terminal
-term. -/
-theorem firstVariation_eq_integrand (L : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ)
-    (x η : ℝ → E) :
-    firstVariation L K T x η =
-      (∫ t in 0..T, firstVariationIntegrand L x η t) + (fderiv ℝ K (x T)) (η T) :=
-  rfl
 
 /-- The affine parameter velocity `q ↦ (q.1 • η t + q.2 • ξ t, q.1 • w t + q.2 • z t)`. -/
 noncomputable def affineDeriv (η ξ w z : ℝ → E) (t : ℝ) : (ℝ × ℝ) →L[ℝ] E × E :=
@@ -647,83 +600,85 @@ theorem perturbedCurve_zero (x η ξ : ℝ → E) : perturbedCurve x η ξ 0 = x
   funext t
   simp [perturbedCurve]
 
-/-- **One common isoperimetric multiplier for the actual two-parameter family.**
-Under a genuine constrained minimum of the actual `cvFunctional` integrals and the
-derived strict differentiability of the parameterized pair, the multiplier
-extracted from the `ξ` component is `-δJ[ξ] / δC[ξ]` and it annihilates the
-combined first variation.  The scope is precisely the fixed pair `(η, ξ)`: the
-identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}` only.  The value is
-`η`-independent given `ξ`, but each invocation fixes one `η` and there is no single
-invocation ranging over all test directions.  This is the multiplier interface
-applied to a genuinely feasible family; the differentiability premise is the
-derived `hasStrictFDerivAt_parameterFunctional`. -/
-theorem _root_.IsoperimetricVariation.isoperimetricMultiplier_exists
-    (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ)
-    (S : Set (ℝ → E)) (x η ξ : ℝ → E)
-    (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (hG : ContDiff ℝ 1 (uncurryLagrangian G))
-    (hK : ContDiff ℝ 1 K)
-    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hξ : ContDiff ℝ 1 ξ) (hT : 0 ≤ T)
-    (hΓ : ∀ p : ℝ × ℝ, perturbedCurve x η ξ p ∈ S)
-    (hopt : IsMinOn (cvFunctional L K T)
-      {y | y ∈ S ∧ cvFunctional G (fun _ ↦ 0) T y = cvFunctional G (fun _ ↦ 0) T x} x)
-    (hξreg : firstVariation G (fun _ ↦ 0) T x ξ ≠ 0) :
-    ∃ lam : ℝ, lam = -(firstVariation L K T x ξ) /
-        (firstVariation G (fun _ ↦ 0) T x ξ) ∧
-      ∀ p : ℝ × ℝ,
-        (parameterDerivative (firstVariation L K T x η) (firstVariation L K T x ξ)) p
-          + lam * (parameterDerivative (firstVariation G (fun _ ↦ 0) T x η)
-            (firstVariation G (fun _ ↦ 0) T x ξ)) p = 0 := by
-  have hJ := hasStrictFDerivAt_cvFunctional_perturbed L K T x η ξ hL hK hx hη hξ hT
-  have hC := hasStrictFDerivAt_cvFunctional_perturbed G (fun _ ↦ 0) T x η ξ hG
-    contDiff_const hx hη hξ hT
-  have hC' : parameterDerivative (firstVariation G (fun _ ↦ 0) T x η)
-      (firstVariation G (fun _ ↦ 0) T x ξ) ≠ 0 := by
-    intro h
-    apply hξreg
-    have := congrArg (fun f : (ℝ × ℝ) →L[ℝ] ℝ ↦ f (0, 1)) h
-    simpa using this
-  obtain ⟨lam, hlam⟩ := IsoperimetricVariation.exists_normal_multiplier_of_curve_family
-    L G K T S x (perturbedCurve x η ξ) (perturbedCurve_zero x η ξ) hΓ hopt _ _ hJ hC hC'
-  have hJξval : (parameterDerivative (firstVariation L K T x η) (firstVariation L K T x ξ))
-      (0, 1) = firstVariation L K T x ξ := by
-    simp [parameterDerivative]
-  have hCξval : (parameterDerivative (firstVariation G (fun _ ↦ 0) T x η)
-      (firstVariation G (fun _ ↦ 0) T x ξ)) (0, 1) =
-      firstVariation G (fun _ ↦ 0) T x ξ := by
-    simp [parameterDerivative]
-  have hlamξ := hlam (0, 1)
-  rw [hJξval, hCξval] at hlamξ
-  refine ⟨lam, ?_, hlam⟩
-  field_simp
-  linarith
+/-- Affine perturbation preserves continuous differentiability. -/
+theorem contDiff_perturbedCurve (x η ξ : ℝ → E)
+    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hξ : ContDiff ℝ 1 ξ)
+    (p : ℝ × ℝ) : ContDiff ℝ 1 (perturbedCurve x η ξ p) := by
+  exact hx.add ((hη.const_smul p.1).add (hξ.const_smul p.2))
 
-/-- **Augmented Euler–Lagrange from an assumed augmented vanishing variation.**
-Given a multiplier `lam` together with the *assumed* hypothesis that the augmented
-Lagrangian `L + lam • G` has vanishing first variation over all endpoint-vanishing
-perturbations, the augmented Lagrangian `L + lam • G` satisfies the Euler–Lagrange
-equation.  The conclusion is the pointwise ODE for `L + lam • G`; the proof applies
-the existing integration-by-parts / fundamental-lemma interface
-`eulerLagrange_of_firstVariation_zero` to the actual augmented spatial and velocity
-derivatives, with the momentum regularity and continuity checked explicitly.  This
-does **not** derive the augmented vanishing variation from the two-parameter
-multiplier identity of `_root_.IsoperimetricVariation.isoperimetricMultiplier_exists`; that lifting is the open
-residual. -/
-theorem _root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing
-    (L G : ℝ → E → E → ℝ) (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
-    (lam : ℝ) (hT : 0 < T)
-    (hvan : HasVanishingFirstVariation (fun t y v ↦ L t y v + lam * G t y v) K T x)
-    (hPderiv : ∀ t ∈ Set.Icc 0 T,
-      HasDerivAt (fun s ↦ fderiv ℝ (fun v : E ↦ L s (x s) v + lam * G s (x s) v)
-        (deriv x s)) (Q t) t)
-    (hPcont : Continuous (fun s ↦ fderiv ℝ (fun v : E ↦ L s (x s) v + lam * G s (x s) v)
-      (deriv x s)))
-    (hQcont : Continuous Q)
-    (hScont : Continuous (fun t ↦ fderiv ℝ
-      (fun y : E ↦ L t y (deriv x t) + lam * G t y (deriv x t)) (x t))) :
-    eulerLagrange (fun t y v ↦ L t y v + lam * G t y v) T x :=
-  eulerLagrange_of_firstVariation_zero _ K Q T x hT hvan hPderiv hPcont hQcont hScont
+/-- Both coordinates of an endpoint-vanishing perturbation preserve the actual
+fixed endpoints for every parameter, with no constraint value assumed. -/
+theorem perturbedCurve_mem_fixedEndpointC1Curves (T : ℝ) (x η ξ : ℝ → E)
+    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hξ : ContDiff ℝ 1 ξ)
+    (hη₀ : η 0 = 0) (hηT : η T = 0) (hξ₀ : ξ 0 = 0) (hξT : ξ T = 0)
+    (p : ℝ × ℝ) :
+    perturbedCurve x η ξ p ∈ fixedEndpointC1Curves T (x 0) (x T) := by
+  refine ⟨contDiff_perturbedCurve x η ξ hx hη hξ p, ?_, ?_⟩
+  · simp only [perturbedCurve, hη₀, hξ₀, smul_zero, add_zero]
+  · simp only [perturbedCurve, hηT, hξT, smul_zero, add_zero]
 
+/-- The joint C1 property is preserved by the actual augmented Lagrangian. -/
+theorem _root_.contDiff_lagrangian_add_smul (L G : ℝ → E → E → ℝ) (lam : ℝ)
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
+    (hG : ContDiff ℝ 1 (uncurryLagrangian G)) :
+    ContDiff ℝ 1 (uncurryLagrangian (fun t y v ↦ L t y v + lam * G t y v)) :=
+  hL.add (contDiff_const.mul hG)
 
-#check @hasStrictFDerivAt_parameterFunctional
-#check @IsoperimetricVariation.isoperimetricMultiplier_exists
-#check @IsoperimetricVariation.eulerLagrange_of_augmentedVanishing
+/-- The actual augmented first-variation density is the linear combination of
+the two original densities, by differentiating the actual Lagrangians. -/
+theorem _root_.firstVariationIntegrand_add_smul (L G : ℝ → E → E → ℝ) (lam : ℝ)
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
+    (hG : ContDiff ℝ 1 (uncurryLagrangian G)) (x η : ℝ → E) (t : ℝ) :
+    firstVariationIntegrand (fun t y v ↦ L t y v + lam * G t y v) x η t =
+      firstVariationIntegrand L x η t + lam * firstVariationIntegrand G x η t := by
+  have hA := _root_.contDiff_lagrangian_add_smul L G lam hL hG
+  have hLd := differentiableAt_lagrangian_slice L hL t (x t) (deriv x t)
+  have hGd := differentiableAt_lagrangian_slice G hG t (x t) (deriv x t)
+  unfold firstVariationIntegrand
+  rw [← fderiv_lagrangian_slice_apply _ hA, ← fderiv_lagrangian_slice_apply L hL,
+    ← fderiv_lagrangian_slice_apply G hG]
+  rw [fderiv_fun_add hLd (hGd.const_mul lam), fderiv_const_mul hGd lam]
+  simp only [add_apply, smul_apply, smul_eq_mul]
+
+/-- The actual first variation is linear in the running Lagrangian. Integrability
+of both original densities is proved from primitive C1 hypotheses. -/
+theorem _root_.firstVariation_add_smul (L G : ℝ → E → E → ℝ) (K : E → ℝ)
+    (lam T : ℝ) (x η : ℝ → E)
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
+    (hG : ContDiff ℝ 1 (uncurryLagrangian G))
+    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) :
+    firstVariation (fun t y v ↦ L t y v + lam * G t y v) K T x η =
+      firstVariation L K T x η + lam * firstVariation G (fun _ ↦ 0) T x η := by
+  have hLi : IntervalIntegrable (firstVariationIntegrand L x η) volume 0 T :=
+    (continuous_firstVariationIntegrand L x η hL hx hη).intervalIntegrable 0 T
+  have hGi : IntervalIntegrable (firstVariationIntegrand G x η) volume 0 T :=
+    (continuous_firstVariationIntegrand G x η hG hx hη).intervalIntegrable 0 T
+  simp only [firstVariation_eq_integrand,
+    _root_.firstVariationIntegrand_add_smul L G lam hL hG]
+  rw [intervalIntegral.integral_add hLi (hGi.const_mul lam),
+    intervalIntegral.integral_const_mul]
+  rw [(hasFDerivAt_const (0 : ℝ) (x T)).fderiv]
+  simp only [zero_apply, add_zero]
+  ring
+
+/-- The actual functional derivative along a one-parameter affine variation.
+No endpoint restriction is imposed on the direction; this also handles the
+nonzero local endpoint directions used in a corner variation. -/
+theorem _root_.hasDerivAt_cvFunctional_affine
+    (L : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x η : ℝ → E)
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (hK : ContDiff ℝ 1 K)
+    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hT : 0 ≤ T) :
+    HasDerivAt (fun ε : ℝ => cvFunctional L K T (fun t => x t + ε • η t))
+      (firstVariation L K T x η) 0 := by
+  have hd := (hasStrictFDerivAt_cvFunctional_perturbed
+    L K T x η (fun _ => 0) hL hK hx hη contDiff_const hT).hasFDerivAt
+  have hparam : HasDerivAt (fun ε : ℝ => (ε, (0 : ℝ))) (1, 0) 0 :=
+    (hasDerivAt_id (0 : ℝ)).prodMk (hasDerivAt_const (0 : ℝ) (0 : ℝ))
+  have h := hd.comp_hasDerivAt (f := fun ε : ℝ => (ε, (0 : ℝ))) 0 hparam
+  have hcurve : ∀ ε : ℝ, perturbedCurve x η (fun _ => 0) (ε, 0) =
+      (fun t => x t + ε • η t) := by
+    intro ε
+    funext t
+    change x t + (ε • η t + (0 : ℝ) • (0 : E)) = x t + ε • η t
+    simp only [smul_zero, add_zero]
+  simpa only [Function.comp_def, parameterDerivative_one_zero, hcurve] using h

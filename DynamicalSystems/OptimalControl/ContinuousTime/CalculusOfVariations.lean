@@ -984,6 +984,54 @@ theorem weierstrassErdmannEnergy
 
 end WeierstrassErdmann
 
+section Foundations
+
+variable [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-- The uncurried Lagrangian `(t, y, v) ↦ L t y v`, used to state joint `C¹`
+regularity in the state and velocity variables. -/
+noncomputable def uncurryLagrangian (L : ℝ → E → E → ℝ) : ℝ × E × E → ℝ :=
+  fun q ↦ L q.1 q.2.1 q.2.2
+
+/-- The running part of the first variation `δJ(x; η)`, without the terminal term. -/
+noncomputable def firstVariationIntegrand (L : ℝ → E → E → ℝ) (x η : ℝ → E) (t : ℝ) : ℝ :=
+  (fderiv ℝ (fun y : E ↦ L t y (deriv x t)) (x t)) (η t)
+    + (fderiv ℝ (fun v : E ↦ L t (x t) v) (deriv x t)) (deriv η t)
+
+/-- `firstVariation` is the integral of `firstVariationIntegrand` plus the terminal
+term. -/
+theorem firstVariation_eq_integrand (L : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ)
+    (x η : ℝ → E) :
+    firstVariation L K T x η =
+      (∫ t in 0..T, firstVariationIntegrand L x η t) + (fderiv ℝ K (x T)) (η T) :=
+  rfl
+
+/-- Globally continuously differentiable curves with the specified endpoint values. -/
+def fixedEndpointC1Curves (T : ℝ) (a b : E) : Set (ℝ → E) :=
+  {y | ContDiff ℝ 1 y ∧ y 0 = a ∧ y T = b}
+
+end Foundations
+
+open Set
+
+variable [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-- The original variational functional depends only on the curve on its horizon.
+Derivative values at the two endpoints do not affect its interval integral. -/
+theorem _root_.cvFunctional_eq_of_eqOn (L : ℝ → E → E → ℝ) (K : E → ℝ)
+    {T : ℝ} (hT : 0 < T) {x y : ℝ → E} (heq : EqOn x y (Icc 0 T)) :
+    cvFunctional L K T x = cvFunctional L K T y := by
+  unfold cvFunctional
+  rw [heq ⟨hT.le, le_rfl⟩]
+  congr 1
+  apply intervalIntegral.integral_congr_Ioo_of_le hT.le
+  intro t ht
+  have hn : x =ᶠ[𝓝 t] y := by
+    filter_upwards [Icc_mem_nhds ht.1 ht.2] with s hs
+    exact heq hs
+  change L t (x t) (deriv x t) = L t (y t) (deriv y t)
+  rw [heq ⟨ht.1.le, ht.2.le⟩, hn.deriv_eq]
+
 #check @IsPiecewiseC₁On
 #check @IsPiecewiseC1On
 #check @weierstrassErdmannMomentum

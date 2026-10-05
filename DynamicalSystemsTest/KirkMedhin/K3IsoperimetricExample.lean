@@ -5,7 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricLift
+public import DynamicalSystems.OptimalControl.ContinuousTime.IsoperimetricEulerLagrange
 public import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
 /-!

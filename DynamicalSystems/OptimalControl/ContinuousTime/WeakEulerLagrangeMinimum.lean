@@ -6,8 +6,8 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange
+public import DynamicalSystems.OptimalControl.ContinuousTime.FirstVariationDifferentiation
 public import Mathlib.Analysis.Calculus.LocalExtr.Basic
-public import Mathlib.Analysis.Calculus.Deriv.Prod
 
 /-!
 # Weak Euler–Lagrange equations from an actual curve minimum
@@ -26,28 +26,6 @@ open Set Filter MeasureTheory
 open scoped Interval Topology
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-
-/-- The actual functional derivative along a one-parameter affine variation.
-No endpoint restriction is imposed on the direction; this also handles the
-nonzero local endpoint directions used in a corner variation. -/
-theorem _root_.hasDerivAt_cvFunctional_affine
-    (L : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x η : ℝ → E)
-    (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (hK : ContDiff ℝ 1 K)
-    (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hT : 0 ≤ T) :
-    HasDerivAt (fun ε : ℝ => cvFunctional L K T (fun t => x t + ε • η t))
-      (firstVariation L K T x η) 0 := by
-  have hd := (hasStrictFDerivAt_cvFunctional_perturbed
-    L K T x η (fun _ => 0) hL hK hx hη contDiff_const hT).hasFDerivAt
-  have hparam : HasDerivAt (fun ε : ℝ => (ε, (0 : ℝ))) (1, 0) 0 :=
-    (hasDerivAt_id (0 : ℝ)).prodMk (hasDerivAt_const (0 : ℝ) (0 : ℝ))
-  have h := hd.comp_hasDerivAt (f := fun ε : ℝ => (ε, (0 : ℝ))) 0 hparam
-  have hcurve : ∀ ε : ℝ, perturbedCurve x η (fun _ => 0) (ε, 0) =
-      (fun t => x t + ε • η t) := by
-    intro ε
-    funext t
-    change x t + (ε • η t + (0 : ℝ) • (0 : E)) = x t + ε • η t
-    simp only [smul_zero, add_zero]
-  simpa only [Function.comp_def, parameterDerivative_one_zero, hcurve] using h
 
 /-- A genuine minimum among all C1 curves with the fixed endpoint values has
 zero actual first variation in every C1 endpoint-zero direction. -/

@@ -22,22 +22,6 @@ open TimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
-/-- The original variational functional depends only on the curve on its horizon.
-Derivative values at the two endpoints do not affect its interval integral. -/
-theorem _root_.cvFunctional_eq_of_eqOn (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    {T : ℝ} (hT : 0 < T) {x y : ℝ → E} (heq : EqOn x y (Icc 0 T)) :
-    cvFunctional L K T x = cvFunctional L K T y := by
-  unfold cvFunctional
-  rw [heq ⟨hT.le, le_rfl⟩]
-  congr 1
-  apply intervalIntegral.integral_congr_Ioo_of_le hT.le
-  intro t ht
-  have hn : x =ᶠ[𝓝 t] y := by
-    filter_upwards [Icc_mem_nhds ht.1 ht.2] with s hs
-    exact heq hs
-  change L t (x t) (deriv x t) = L t (y t) (deriv y t)
-  rw [heq ⟨ht.1.le, ht.2.le⟩, hn.deriv_eq]
-
 /-- A single actual minimum implies both corner conditions at every finite-context
 representation of every adjacent pair of C1 arcs. Representation is required only
 on the physical horizon; no claim of automatic partition extraction is hidden. -/

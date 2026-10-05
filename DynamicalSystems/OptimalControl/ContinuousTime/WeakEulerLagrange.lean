@@ -5,7 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.ContinuousTime.K3MomentumRegularity
+public import DynamicalSystems.OptimalControl.ContinuousTime.LagrangianCovectorRegularity
 public import Mathlib.Analysis.Calculus.ContDiff.Deriv
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 public import Mathlib.Topology.Order.ProjIcc
