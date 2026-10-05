@@ -1,11 +1,20 @@
+/-
+Copyright (c) 2026 Igor Zubrycki. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Igor Zubrycki
+-/
 import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
 import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgrammingMinPrincipleFromHJB
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteCornerMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.GeometricMinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricLift
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumFuel
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMPOnHorizon
+import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
 
-/-! The six compiled campaign scopes; general weak K4 remains pending. -/
+/-! Actual required declarations for all eight scoped campaign tasks.
+The full regular K3 and weak K4 endpoints are included. -/
 
 #check hjbMinimizing_of_residual
 #check hjbCostateEquation_of_residual
@@ -19,6 +28,11 @@ import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamil
 #check KirkMedhin.K1.integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference
 #check IsoperimetricVariation.exists_normal_multiplier
 #check IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family
+#check KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional
+#check KirkMedhin.K3.isoperimetricMultiplier_exists
+#check KirkMedhin.K3.exists_common_isoperimetricMultiplier
+#check KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric
+#check KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric
 #check KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost
 #check KirkMedhin.TimeReparametrization.cvFunctional_durationExchange
 #check KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves
@@ -26,6 +40,16 @@ import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamil
 #check MinimumFuel.scalar_minimizer_iff_switchingLaw
 #check MinimumFuel.box_minimizer_iff_switchingLaw
 #check MinimumFuel.hamiltonianMinimizing_iff_switchingLaw
+#check KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak
+#check KirkMedhin.FinitePiecewise.interior_EL_in_finite_context
+#check KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak
+#check KirkMedhin.FinitePiecewise.weierstrassErdmann_at_every_represented_corner
+#check KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+#check KirkMedhin.FinitePiecewise.interior_EL_in_timeSpliceContext
+#check KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext
+#check KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner
+#check KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min
+#check KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min
 
 #print axioms hjbMinimizing_of_residual
 #print axioms hjbCostateEquation_of_residual
@@ -39,6 +63,11 @@ import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamil
 #print axioms KirkMedhin.K1.integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference
 #print axioms IsoperimetricVariation.exists_normal_multiplier
 #print axioms IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family
+#print axioms KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional
+#print axioms KirkMedhin.K3.isoperimetricMultiplier_exists
+#print axioms KirkMedhin.K3.exists_common_isoperimetricMultiplier
+#print axioms KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric
+#print axioms KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric
 #print axioms KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost
 #print axioms KirkMedhin.TimeReparametrization.cvFunctional_durationExchange
 #print axioms KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves
@@ -46,3 +75,14 @@ import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamil
 #print axioms MinimumFuel.scalar_minimizer_iff_switchingLaw
 #print axioms MinimumFuel.box_minimizer_iff_switchingLaw
 #print axioms MinimumFuel.hamiltonianMinimizing_iff_switchingLaw
+#print axioms KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak
+#print axioms KirkMedhin.FinitePiecewise.interior_EL_in_finite_context
+#print axioms KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak
+#print axioms KirkMedhin.FinitePiecewise.weierstrassErdmann_at_every_represented_corner
+#print axioms KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+#print axioms KirkMedhin.FinitePiecewise.interior_EL_in_timeSpliceContext
+#print axioms KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext
+#print axioms
+  KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner
+#print axioms KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min
+#print axioms KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min

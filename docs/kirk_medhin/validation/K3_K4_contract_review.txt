@@ -1,0 +1,80 @@
+ROUND 3 CONTRACT REVIEW — K3 AND AUTONOMOUS FINITE-CONTEXT K4
+
+Verdict: PASS on the inspected mathematical contracts. No concrete K3 proof bug,
+hidden conclusion-like premise, or K4 autonomous feasibility/integrability defect
+found. This is a read-only semantic review of the files hashed below. The in-progress
+nonautonomous extension is not certified by this report.
+
+Concrete documentation / campaign issues to fix before advertising final closure:
+1. The pinned PROMPT_GPT_PRO_K3.md still repeats the invalid blanket rule that an
+   intermediate must be "strictly weaker" and that any hypothesis equivalent to the
+   conclusion is a gap. A proved substantive equivalence is valid; the actual defect
+   is supplying an unresolved target or equivalent residual instead of deriving it.
+   This stale rule contradicts the earlier campaign implication repair.
+2. tasks.json still lists only the partial K3 multiplier interface and describes
+   strict integral differentiation as open, even though that already landed in the
+   pinned baseline. It still leaves the generalized K4 name pending and does not
+   target the new full K3 or weak finite-context results. Root owns reconciliation.
+3. The prompt's latest update describes the old free-lambda/hvan wrapper under the
+   advertised final name; the baseline has already renamed that wrapper, and the new
+   K3IsoperimetricLift now supplies the required final name with all substantive
+   conclusions derived. Preserve that distinction when updating status.
+
+Exact checked scope boundaries:
+- K3 C1 theorem: joint global C1 L,G, C1 K,x, positive horizon, actual constrained
+  IsMinOn over globally C1 fixed-endpoint curves, and an explicit nonzero constraint
+  direction. One lambda is fixed before every C1 test. Feasible families and strict
+  derivatives of actual cvFunctional values are derived. No lambda, stationarity,
+  unknown momentum derivative or Euler–Lagrange equation is supplied.
+- WeakEulerLagrange derives actual momentum integral representation from C1 test
+  stationarity and continuous actual covectors. The scalar mean-subtracted primitive
+  test proves constancy of the residual; covector equality follows by testing every
+  state direction. No finite-dimensional, Hilbert or complete-state assumption hides
+  in this argument.
+- At horizon endpoints C1 data yield HasDerivWithinAt, not an unrestricted two-sided
+  HasDerivAt. K3's C1 endpoint correctly returns the raw within-horizon equation.
+  The exact existing eulerLagrange corollary uses primitive C2 L,G,x to discharge
+  two-sided momentum regularity. It must not be described as an unchanged C1-only
+  endpoint-inclusive theorem.
+- The existing HasVanishingFirstVariation class is genuinely all differentiable
+  endpoint-zero tests, not silently replaced by C1 tests. Its extension is derived
+  from the already proved within/interior equation: FTC for integrable density,
+  integral_undef otherwise. This matches the existing totalized integral definition;
+  it does NOT prove integrability or an actual Gateaux cost derivative for every
+  rough differentiable test. The extension source states this explicitly.
+- K4's inspected final theorem derives both momentum and energy matching from the
+  actual cvFunctional minimum. Actual spatial join displacements and duration
+  exchanges are proved feasible; subarc minima are obtained by real concatenation
+  and cancellation of the unchanged cost, not assumed. Actual interior EL and weak
+  du Bois–Reymond energy constancy are outputs. Only continuous velocities are
+  assumed; no velocity derivative or acceleration is supplied.
+- FinitePiecewiseC1 uses positive-duration globally C1 arc extensions and finitely
+  many matching joins. L is autonomous and C1. Integral integrability is proved by
+  induction on that actual class; join values are ignored only through equality on
+  open arcs and measure-zero endpoints, not by an undefined-integral shortcut.
+- The finite-context theorem quantifies an explicit SpliceContext around a selected
+  adjacent pair. This supports arbitrarily many represented prefix/suffix arcs.
+  It is not a partition-indexed extraction theorem for every adjacent pair of an
+  arbitrary inductive witness; no such extraction/associativity API is proved here.
+  State the result as matching at every represented finite-context corner.
+- The autonomous finite-context route satisfies the prompt's actual weak K4 core
+  (interior EL and du Bois–Reymond without differentiable velocity). Nonautonomous
+  costs are a separate theorem scope and must be reviewed after their final path
+  closes; the inspected autonomous formulas cannot simply be reused with global
+  time offsets suppressed.
+
+No mathematical residual remains for the stated K3 contracts or the inspected
+weak autonomous finite-context corner theorem. This does not certify unrelated
+campaign tasks (K2, K6–K8, measurable-control PMP, abnormal/endpoint constraints).
+
+Reviewed SHA-256 snapshots:
+9e775b0326e97bf46760dd01a395ee134ebd211ede97ec910c9f0fea75a54c39  work/round3/k3/DynamicalSystems/OptimalControl/ContinuousTime/K3IsoperimetricLift.lean
+1368391f0418242e5ac072025451ed11aaaa206c892a05de2f7e8611745446ac  work/round3/k3regular/DynamicalSystems/OptimalControl/ContinuousTime/K3MomentumRegularity.lean
+2035af77fb688d5768c67fd8eba89b8b14ec021406c5bca00ec26e3bcf3905a0  work/round3/k3extension/DynamicalSystems/OptimalControl/ContinuousTime/K3DifferentiableExtension.lean
+cb3ab17ec0e053b6b87fd8d52030db2aecf6addc218700d5b064deba6928db5e  work/round3/weak_el/DynamicalSystems/OptimalControl/ContinuousTime/WeakEulerLagrange.lean
+5c82d09e3b2b01d5d997ebea1e6d90772900f6240874e5d6b7a1bb49e96e3404  work/round3/k4/DynamicalSystems/OptimalControl/ContinuousTime/FinitePiecewiseVariations.lean
+66eb6bb5521bc59ef986b76a45bb0bb4de3757932ecd0bd73d6c57870e724116  work/round3/k4/DynamicalSystems/OptimalControl/ContinuousTime/WeakCornerConditions.lean
+de983db89956f72490e5e399fe7cec235d6c58bdf318299b72df1072e52a82cc  work/round3/k4/DynamicalSystems/OptimalControl/ContinuousTime/FiniteSpatialVariations.lean
+ed674293f444c8633424063b9075202afc684ff3cb6797f75c7d5e49877859ae  work/round3/dbr/DynamicalSystems/OptimalControl/ContinuousTime/DuBoisReymond.lean
+46e74e0404c66697f5ff8a6a000f4b44cca155a069e15d1e56739180746af7f8  work/round3/auto/notes/kirk_medhin/reviews/PROMPT_GPT_PRO_K3.md
+1133736c20823331711a0182fde43f28fb1a75209a3517ea7968c622f9efa43b  work/round3/auto/automation/kirk_medhin/tasks.json

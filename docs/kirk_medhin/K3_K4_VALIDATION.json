@@ -1,0 +1,2980 @@
+{
+  "schema_version": 1,
+  "result": "PASS",
+  "recorded_at_utc": "2026-10-05T15:48:38.404157+00:00",
+  "scope": "Completed regular scalar-isoperimetric K3 and weak finite-piecewise K4, including nonautonomous and original-predicate endpoints.",
+  "baseline": {
+    "dynamical_systems": {
+      "repository": "AdoHaha/DynamicalSystems",
+      "branch": "kirk_medhin-ralph",
+      "commit": "8aa45e412647755acdce9dc9d8bba5403388922d",
+      "tree": "2157fea4056c4f92092b9f8e91b85f61fe4e6337",
+      "git_blob_verified_source_files": 260,
+      "changed_existing_files": [
+        "DynamicalSystems.lean",
+        "DynamicalSystems/OptimalControl/ContinuousTime/K3IsoperimetricEulerLagrange.lean",
+        "docs/kirk_medhin/CampaignTargets.lean"
+      ]
+    },
+    "auto_automatyk": {
+      "repository": "LiderMyHand/auto_automatyk",
+      "branch": "master",
+      "commit": "bcd8d971b32b7f2c6d3d1ed17b3de27ed7d5eca3",
+      "tree": "f27d2ad8ff745b2b162f216e610553290ec2d36b"
+    }
+  },
+  "runtime": {
+    "lean_version": "4.35.0-rc2",
+    "lean_commit": "11acb17ec6b07a8f9e9173e6845197929540936b",
+    "mathlib_commit": "065356127b1dc0016f66b7283ce0ce2c4055aa55",
+    "compiler": "Stock native Lean; no compiler, elaborator, kernel, or axiom modifications.",
+    "host_compatibility": "A narrow startup shim resolves /proc/self/exe for the stock binary in this execution host.",
+    "validation_method": "Pinned native compiler build of the entire default-library and regression dependency closure, not a literal lake build invocation.",
+    "options": [
+      "autoImplicit=false",
+      "relaxedAutoImplicit=false",
+      "maxSynthPendingDepth=3",
+      "linter.flexible=true",
+      "linter.mathlibStandardSet=true",
+      "warn.sorry=true"
+    ]
+  },
+  "build": {
+    "project_modules": 262,
+    "failures": 0,
+    "new_implementation_modules": 19,
+    "new_regression_modules": 4,
+    "new_or_changed_mathematical_modules": 24,
+    "new_or_changed_mathematical_module_warnings": 0,
+    "observed_unchanged_module_warnings": 127,
+    "unchanged_modules_with_warnings": 25,
+    "exact_checked_closures_reused_in_final_pass": 243,
+    "reuse_rule": "Reuse only previously successful native compiler objects with identical recursive source-closure fingerprints and the same pinned runtime and options.",
+    "modules": [
+      {
+        "module": "DynamicalSystems",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8109fa66544d33f1940e56c0339ff54529bf45693fd22fc415d328ec695a346a",
+        "closure_fingerprint": "302ea89888cc3cf8c1b7e5c93721493e393ff1b99ff794a7bc7b681260df75b9",
+        "seconds": 4.863
+      },
+      {
+        "module": "DynamicalSystems.AdaptiveControl.BoundedGrowth",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "12cbb7e7336588e4f4a3ea2f6f9a38605079ce95e8358f8fbceca9839cd11c7c",
+        "closure_fingerprint": "42e27cd11e6265617356f4ba35962573c329dc746dbe22a03df24a543c8facd5",
+        "seconds": 17.109,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.AdaptiveControl.Direct",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0720434b978d25f43a7c83e48795933d8b8855d52ca807006d08d06385523495",
+        "closure_fingerprint": "29853ad580fe84a4b987bf0eff9a38918720b86e9d996b1c144c3031b4a3c566",
+        "seconds": 6.443,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.AdaptiveControl.PlantSynthesis",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b6728e70404cefff039fcf14fead33c5f57f7674f5ecbf4c5b6823fdb44d59bc",
+        "closure_fingerprint": "5efbc0ee4e32b5494a3d95d35d6357cb3b3ac14c98e45d864093c94326651e1d",
+        "seconds": 10.49,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.AdaptiveControl.RobustDirect",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "db7c2432b7519d5e19ddf245e6c135bffef2febc49be8dc6c34b753ea21e05a6",
+        "closure_fingerprint": "cf096140bc5479182f7ed3381adb09367d0c3a98b81ad121e4125b60ac6a1b0c",
+        "seconds": 13.79,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.AdaptiveControl.Switching",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0f1047c6a8ee2d27f97df31961b35d14df3f2e3ab75f9ead91c2ffc5d0f67a0a",
+        "closure_fingerprint": "239646167582946f218cd4291198887da3dfe03bdaabe0a5a1c826b68a83c5e2",
+        "seconds": 6.589,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Basic.Autonomous",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f0d9be27733e0cc1cd08167944e8438a55d0bdf5b18db45ee3d1bb20f355940e",
+        "closure_fingerprint": "24f91e3634111f4c1e71916ad9bed3f6d8dac85532ed21c1caee26c54d246bc8",
+        "seconds": 3.379,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Basic.ComparisonFunctions",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b4eabdcf183dd8437ee5924035921d9040fae4319528beda0c3314fec4fc0a83",
+        "closure_fingerprint": "78df3fc52c9f275cd04ccfd31e4124b08460cc0220fdb0f54557b366177c6c1d",
+        "seconds": 4.639,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Basic.LpLoc",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "dd5c969f45811ad096d78a619d3d953839cc43c0d065d79e1fefa906d940143c",
+        "closure_fingerprint": "4a36fc8c39dba23755ddcab0637e141b9a2e8c5002d97c06fa889ea0e7774cc1",
+        "seconds": 3.694,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Basic.NonAutonomous",
+        "exit_code": 0,
+        "seconds": 1.772,
+        "source_sha256": "f6e6a44fa08f8049b4434ee9f241928966960e4c52e002f0524a61a059902598",
+        "closure_fingerprint": "f1b658b05d63e754ed60abe47bca1f662701686dbe709d6a9be6a0bfd135ead1",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Basic.WithLp",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f0c66331e9db0fe4a70d0a4d0d388a4b7a2ce12bcc89660ab9236e3669eef5ff",
+        "closure_fingerprint": "84af2b6944a0e415ae9fcf1a90277817ea2d4c9ed9da749b37fb5c5322c31d90",
+        "seconds": 3.824,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Adaptive.MRAC",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "566c737f7f2679b4aacfeb9b2467aa6c73f2d2334c3b03c1a8bcc2ae0db06505",
+        "closure_fingerprint": "3f6b31772534f58eedd90247355a04752e981b77dfb4f07a2412090a39760cfd",
+        "seconds": 4.031,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Adaptive.RobustMRAC",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "77632823c2ae6e10eb34400341f235b42e5c7d190c6d5d4f058767747b83375a",
+        "closure_fingerprint": "d231e240adc28b04a350738aa599263aaaf530fc1c88daad0d1a7f08e8a5e6d5",
+        "seconds": 4.656,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Barrier",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ae0a19bd79b3b49d3846e753c7eb2ce3c0335a626bc9acee2fd866a546107772",
+        "closure_fingerprint": "571a82f2cb461f96ed5d04e4539b3701c31bd4e4dc3fc023fe5421a2e59efda8",
+        "seconds": 5.635,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d3f6398c429d596f5cfb93b37adbb16c5da35c229b7c0dcf5da3f54d0e21c61a",
+        "closure_fingerprint": "2f10634a076ded9b7c00c45d46bf936e3103a686e1dd048ecef788d4dc03e55e",
+        "seconds": 7.098,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Filtered",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f6f4958b37bf50c0e18245ea2f0a4e8ac5ca87f8ba0cbf58f09f586ca06edab3",
+        "closure_fingerprint": "48519ab6507c97d65d37d20786d97e7f9d9a3d6b5c165ca68bcb174b85655bf9",
+        "seconds": 4.283,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Robust",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "7ffe6f82ec9703496108e5e8a7f0c7b182c70f1170595b302d64139006ca2bc3",
+        "closure_fingerprint": "49e939aefb0a45f37faefedefba32da3338b1285bded2178f82c470b6de56a19",
+        "seconds": 3.227,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Saturated",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c2bc5fcb7ea30edf733a7e6d5f92696336e6c070017ca0b91eb5409c88bdb838",
+        "closure_fingerprint": "b74e87e4bebe228ca8d72fbea427c1e7d5aca7d2f6f2178a0486dfd32337f849",
+        "seconds": 6.914,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Backstepping.Tuning",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "cf487e26aea098eda6d53bfeefebdb67fb429bf178eb5ce1ccf7a098df1116f7",
+        "closure_fingerprint": "379daeef5b083b6179d78bbef4a849a9ec7524d86e083e49ce2bcdef456c4bd0",
+        "seconds": 3.683,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Calculus",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0205fd2c1bea4e3440b3958f01eda646bed046dac47b67b5686cfda2f558b22c",
+        "closure_fingerprint": "81d27cb0a0973b73d42b1bf74d4f550783c3d04f63eb129362bc127cf838ac8d",
+        "seconds": 7.822,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.ControlLyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "366d486d92c3beaa8a3f8d59b38a2eec4eca5c5697830205fa028a1dc5eef460",
+        "closure_fingerprint": "b1c90801fc5338416c3a22d6198701feb7804d6b6014da5fa7065492eaed76c9",
+        "seconds": 11.73,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.Accessibility",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "970dc63eb780b13fe1431392777908ff7d898576d5ded90b7bc37b350ea7b73d",
+        "closure_fingerprint": "ad877dc61694ca804f3bd8f5d6bc8efe6d474fc66d809bcace6a7f615a433015",
+        "seconds": 3.734,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.Chow",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "694bb4247f6dbd64c82e33ae5f9976a16da4405d99b64882dde554205e400f83",
+        "closure_fingerprint": "b7894b34c7228247528f5b4062a2a503c620d69428972c4af3ecd9a52f7fa987",
+        "seconds": 9.993,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FeedbackLinearization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "2915bb293c4c53a1e1b9ca8541f689419d71ad48666d326561bf154741ab9a6c",
+        "closure_fingerprint": "4bf743895775a5cf0d76b709778be2a7f022cf29ab4d2b9de42240b6cd7cd67a",
+        "seconds": 4.125,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowBox",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "4f9033eaf715b05dc941997c528e944eae08e6c9cacbd71a36da49a445c331ac",
+        "closure_fingerprint": "309fd481d587e07b35f8867228b6f6104c54ab09b84a638e0ea4257940ebb24d",
+        "seconds": 4.345,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowCommutator",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "72b46f265f9ddab89305d59ddabf59b97a48ff3157dc48115492ead030e60c12",
+        "closure_fingerprint": "b64f638c0d37f61e59490903a1bc07c8d5bc22d314de0a12de549a31eff929d2",
+        "seconds": 9.717,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowGronwall",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b4616cb5da83fe0b9eaed104e2357b419c015101cf8ece726ce21bd0cd278d04",
+        "closure_fingerprint": "10b9c0d38eca003968113ab8d333697c8124e51ffd547777ed7f161bc027e41f",
+        "seconds": 2.744,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowIncrement",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6861a3b777a1cab29f3654d16b41651227b6a323c1bb598b1b5bdcdc782909ba",
+        "closure_fingerprint": "ee1501274e88bfbe6ead48990c98a374d51ca3bef71398c90bdf65ff7214a8c3",
+        "seconds": 9.96,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowRegularity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d6f26da22ee51c5503df80ebf1183534906802ac67ae3e55322d10cb5529d58d",
+        "closure_fingerprint": "15b8a9012e625af193cbc1575a3fe4f95120d596302fa18ae9a302cea0babed9",
+        "seconds": 6.783,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FlowTransport",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "2dac6d64cef66ce497dff78ca4cb43a9493de87e00362597c5564d59287e8ab0",
+        "closure_fingerprint": "77cd4638ecc37903689482181fdb2a6b8b5cc2c7945b4691508c50f1da9a61b9",
+        "seconds": 22.907,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FrameComplement",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "305a4aff0583100996221d5abf0f78e9c965949fafc227b68238cf479e730499",
+        "closure_fingerprint": "5bc2bedf2545a006a6e417b3520d5c077f817fb48d452d3afee5619ebebf95aa",
+        "seconds": 4.754,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.Frobenius",
+        "exit_code": 0,
+        "warnings": 3,
+        "source_sha256": "5c04957b7758651e01646e8a59b534e604ea953ce699675fc618aed8d98befd7",
+        "closure_fingerprint": "c5b6cbce8bf13692df85836815e656ac84e37bfe3d666f9aec84907466bbc931",
+        "seconds": 6.273,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FrobeniusCoordinates",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c01dd29179b6045426e4ea92f750040dea302651f4c5ff378b4ea576a2a67c41",
+        "closure_fingerprint": "139680d3c34b03f46669d9d89ea21c087cb96fcfed45b25dbb35b5babf0ed5f9",
+        "seconds": 7.436,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FrobeniusGraph",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "777da9665e215dd39ff3bbe57636038ea32a0e7231ce8a2603305f9041e07828",
+        "closure_fingerprint": "6c7923a874a4668ed0269030e6c5134ef0967c4f763cc6e3fd0bdf4a6cb94749",
+        "seconds": 5.814,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FrobeniusIntegrability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d917b5c4f5303ed4aaaf0e6b2b5210b81ddb7aa2c205d54a437775484e83ac1e",
+        "closure_fingerprint": "75100514f1fcd2e07e4d363ed1365ae4898139babeb53515cf93b7dea66f1928",
+        "seconds": 2.825,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.FrobeniusRegularity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ef3a20d2e3b493379f9e55a9a1473c888f18f8000da5afbf14af31f1725ed67c",
+        "closure_fingerprint": "85698959f4ef6c2db15944a86274b1a31859f4612354fde6598e37b3af29ab8c",
+        "seconds": 2.26,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.JointFlow",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "365f2e0af7368f307c6971cbd6e547ae2be5c30dfdfc34dbc2a4e730c1f8bef9",
+        "closure_fingerprint": "2ba4637fb463e7c4d8f48c8fd6a8fea7fe20f276d859d5f2b7db8ddaf50f2611",
+        "seconds": 5.333,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.LieBrackets",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e0b623d1db3fe89a7502a8449a00e69b505b0a6a09744833e60f46c5397c5784",
+        "closure_fingerprint": "7791c8c58df5c04337b1dfadbea5ff2d35441159a53d7e35490bf26a3502905a",
+        "seconds": 2.516,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.LocalControllability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e1908a71f2918ed7ee141b00dbf189a7af056e852dab8aa4000f90e4369a0553",
+        "closure_fingerprint": "e4daf8891b4e8bac5842867f233dd9ee0b55b2013c9b6e2ef626fb834cf6cbec",
+        "seconds": 3.396,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.LocalDiffeomorph",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "bc4b53566ac39901703680e6526d8462dd5042cb26734deb5887d0d788c0e9b8",
+        "closure_fingerprint": "0d38759650336bce58e199af0e56a3a910ef98ee0ee6ab06493e7b661812c284",
+        "seconds": 2.297,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.MultiFlow",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1969fa071042a90fe2c94c1e5c533a75b347530aa55c71049761a6f80435429e",
+        "closure_fingerprint": "4dd4393865484294ec97c8a448857d30d9cc23439c51ce69c1ef47b8d20d4fae",
+        "seconds": 6.13,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.Rectification",
+        "exit_code": 0,
+        "warnings": 7,
+        "source_sha256": "a3cdb03f9785cd6218627647662ffb67a081274000770ee110b0c8108c793653",
+        "closure_fingerprint": "41f6d04177648d56bf641208086b83feeda5a43a3906f7ae40bba22f379a1159",
+        "seconds": 12.345,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.SimultaneousRectification",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6235c50522680d66fea1a910fe12a6c9907ca112fc3a354fb3075bc70769fe61",
+        "closure_fingerprint": "65982fd7fafa0dc331865561eee977b219ff7ddbfd9df21f1147b0670c4a822d",
+        "seconds": 4.632,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.SpatialVariational",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "17a10418a79ec6a5a75ad39328964edc489c32bef5ce4e1f1cafcdaae1e9edd1",
+        "closure_fingerprint": "b12544bff67fbea5b8841e5fd6f9e0aabaf22e9cb6ac3bb8864586c1ea23ef76",
+        "seconds": 8.5,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.TangentSolution",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "141a47ea83829355684bb2c55205919e56d5ca9f84e660bb3e55f22868c93845",
+        "closure_fingerprint": "425beca638cfc38dc53c4906dff9e9a726ec124012d867bc59aad61089ac45fc",
+        "seconds": 4.772,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.UniformTaylor",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "7594dcffe628e94918a199c6fb7b9c6cac85b392962c22a9bd2e2ddaf51a6bae",
+        "closure_fingerprint": "ade81c0f08a03bbb112e712a6b968e61d46c4f1456454d60a213b341799b2c03",
+        "seconds": 2.215,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.Geometric.VariationalEquation",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b9e54ff016e24a3ae19d271a7c15955b49d2576c268e70f73053183f46bc9d43",
+        "closure_fingerprint": "7feb2fd368eb4a9668b34be780ebb6652fde3de2cd8bd4ba5ab0d04e33ad39f8",
+        "seconds": 4.45,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0210b9ea0b1d29d44b8d5892f9ec77e0236efa7f26a1319b1a170f8bc474b8cf",
+        "closure_fingerprint": "6d0f34ceafe00c48f24bb2fb053f0f5f5114de7d7accf8c6fd2c27af4b596e70",
+        "seconds": 2.359,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Economic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8c46b754f96318efe3f3036ecd9d90afbb132490dffba731a161ddfdd2d5a360",
+        "closure_fingerprint": "cb06bfa859360cba5521a38783d7395797ec04d1f2bd381827b4d1b3b754e442",
+        "seconds": 12.265,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Estimation",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "56913d67edba7ed3ef8216608a94b59ed10087b07f542574eb4946c87f07a551",
+        "closure_fingerprint": "c109e57e5628e184bf0207809d92dd87d4368c9de1e64d714466680593913963",
+        "seconds": 4.082,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Robust",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "380b108dab0e74745908db1fb61397eb05204ba130845166521b7ed7588001a7",
+        "closure_fingerprint": "aeb73b13e836e265b778a74dc1af0cfcd87c5176abccbd076a69a885b9aac219",
+        "seconds": 2.897,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Stability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "860ccf617b4af5de4fe0be84c6c8babb987a0230ae35526feb1f9a31cfe55b6f",
+        "closure_fingerprint": "8ba7b035b6e2f861cd69349e1c0866108b505627a33d46dab48179b6da13c3c1",
+        "seconds": 5.141,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.MPC.Stochastic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "74f98c2adea7eb7115336b2606b7c54281fee117b8c344553997d97a483604e5",
+        "closure_fingerprint": "b7d80ff01bb32441af3c48751fb4a543b1b2af21c7f80684fe88c4f2da34584b",
+        "seconds": 3.075,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "409a704b3b00e644b3ce9e0aedf59c9d8deee9e45964f44d99e5e7427242cc6b",
+        "closure_fingerprint": "317b486491e979b54a49407730982b46a86fc559a3efb6a79303ab20a4e0abd9",
+        "seconds": 2.609,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Differentiator",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "3a514e0847fb275b8263c851688ed7ac1e62716e8113761b63680824ec782d7d",
+        "closure_fingerprint": "9409aae46a60b3c2c5d35aa891c785daf2f5c2df76186243c2a5e1d5653b6de6",
+        "seconds": 5.889,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Discrete",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b8ce52b5a529e625ce678a0797a97c61a8eab4511267c8c137d15e072e855678",
+        "closure_fingerprint": "1c0f56b5355c2aaf1324191e4c24b7eb4246a3b47e507e0361e76d616a8f0b27",
+        "seconds": 13.132,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.DiscreteMatrix",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f1b7afd35dc5bd3323e879acd9501e2f0e3301e4cae53313e68f3b723bd06248",
+        "closure_fingerprint": "536f0b918d754265b5a97ac21a8487369eab8c61adf55df3c081546c33517c5e",
+        "seconds": 14.31,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.DiscreteObserver",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8b1dbe0ce5137d6080ce0ba73f3a210df923e448a54417b97507ea51e2f9216b",
+        "closure_fingerprint": "74725fcb595c0155da82cad0d99dba200ae4a129ebe7be5ee49e3ef35e53c04b",
+        "seconds": 4.538,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Filippov",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "8ba3810263dc6e2800ecd0a70085cdd8530f5b384c5930e81b6ea8fbec04ce85",
+        "closure_fingerprint": "a8a97adbd73be1062405661ab9863f1c4d70236774470f1f5248b036d32e321d",
+        "seconds": 3.257,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.FilippovExistence",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "eb261abc060b6a3e0347bc6c86411c58a497c56c21bd0c56c509716f57f8cfc0",
+        "closure_fingerprint": "3205e6891316e96b11d808f56b5efb2aa5f004baf781c48bb8fb4c2f0954155c",
+        "seconds": 16.116,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.LMI",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d67806a51f83e3477b944c2daa11e813f40b2e729e2f7cf8ce67a2c7904c6690",
+        "closure_fingerprint": "fc86a07906f107dcd8db94fe8d9ccc7fc844dad0c18676a78b1bf7d6ecda1cd0",
+        "seconds": 5.684,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Observer",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "08d1f48285318c8af5287ef10c0e4700be686627832d3b2b66006f28bd512ec4",
+        "closure_fingerprint": "2ca7e4677d067f3863de7b62140ee6b28be82bbb96aca24613dd4bd098e93e76",
+        "seconds": 2.886,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.PacketLoss",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f52bdad77c93687bf6a3d3af4fd90ad4934b6bf2761a2f088a2b1cc7741f56d8",
+        "closure_fingerprint": "c56d07821b0d2e476e15f52e4854815b9a351a008c7f66f6275ba63ea7c31d68",
+        "seconds": 7.144,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Reaching",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e1383a90b79595a17cc3bd7d9de69730aff4a46bd92803de25f88f7ef207da02",
+        "closure_fingerprint": "b1c7d175ff3d4f25b3bad588d7fd66d16f00db1d603a9dd516107c39e2c3679c",
+        "seconds": 3.474,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Regularization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b68981fa316ea1f17856313bb7406d98fb8cf9f087eaf9c47e59e04dd14107b2",
+        "closure_fingerprint": "6d4932f6dcb3a3a311c806a3881e190d2db38fff156eaf693729a18b1fba41ad",
+        "seconds": 12.033,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Relay",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6037421debf562e2bad40aaa63ab80aac41cd4805f2d542b701d6e74aacaeebb",
+        "closure_fingerprint": "28caf2fadc7c03f5d8f05f33fd83865aa37ce9fefa3e05710c1d6fbb7650e7e4",
+        "seconds": 3.163,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.SecondOrder",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "7a53d7e37c4eb28529542067991f46d6b5c1ae124bef18d5c144c910fdb1bd01",
+        "closure_fingerprint": "f5cd43fee329e7d90ba386d1601721726402e9c753f7da720aa8f82430508aa2",
+        "seconds": 7.059,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Sector",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "91237e7b00d6530aad988bd747b1782a648e7410bcf79bb3c3d3a6b7f46b4fb9",
+        "closure_fingerprint": "b97162cbc193afb90f373ea30b0d6f7a400bb8cb6b870952eadc019a3e567710",
+        "seconds": 3.067,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.Sparse",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8a552f9716232f848959fb64ffa61e0d88ddfe46fdb22b7b3beb6217ddd3674c",
+        "closure_fingerprint": "e24912171c4145a95a1e94e93e408d9bbdc6f234b777d386d3bf01c6c86f3c2c",
+        "seconds": 4.71,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Control.SlidingMode.TwoDimensional",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ff1d73b1d2c1928b4216032a1fc00e49f7ce5ceb005dc559d90fd2195c352772",
+        "closure_fingerprint": "4b2868c49df8ca09ebad348262fdef019c722f3338190fae953ce0c74d403466",
+        "seconds": 6.944,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ConvexAnalysis.Conjugate",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "309216f660c9a5d17c488dffba62b43a42a2c57752f75aabf3bd48282b02f439",
+        "closure_fingerprint": "323d0dba26f2b96cbe9635f48b0bc24defe78e4564221353325bfd684a440ab2",
+        "seconds": 3.714,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ConvexAnalysis.Duality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "aec9ce199234cd23eb86f4c43f89b434b70317de18b4eafa9bf4d7fc9984d857",
+        "closure_fingerprint": "d5597f5dcb5fa9e28e73948f3fec4b214ff2381fc047cdcd117b5aa14867c1a7",
+        "seconds": 2.784,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ConvexAnalysis.Subdifferential",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "7e0263d129eb920052687b79bf864a25abe811c8c534b2a1a050efebd9488c04",
+        "closure_fingerprint": "9b69554c780f806d130bc33ccc93e782f8d5f8d08bbc85c1dc3919bd4595780d",
+        "seconds": 2.992,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "86ea4dbdf6b9eb83dedaa5832f0e30654605872296953f9cc74f847876e41a13",
+        "closure_fingerprint": "2c4205e19def253057971ff63d134d434d175e724481d9b309b68a24b3c9046f",
+        "seconds": 0.833,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.Comparison",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e3cf257234bac6023a6efa2e18fdd4576ca81b19506f318c1ea1bbbfbf33150a",
+        "closure_fingerprint": "c515586df8b8a22ef8132b8f1d304bc2d58008687396e1867734536e63e0e57f",
+        "seconds": 3.899,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.Convolution",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "51b4d0f7730e1eae535b1a4ba641029b7a0e6e7d15a2121a28e2a6f04d84f2a6",
+        "closure_fingerprint": "acff746328314439623079707f0420d58835ecb9d8a0210ae8a881d0c688ea6c",
+        "seconds": 5.838,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.DifferenceInclusion",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c7fe3a9f0b28d62f811262cb7419f95a3049b47393f8d7c364587a484905322c",
+        "closure_fingerprint": "9d70f5c9ee232065fb82aa66f40039f869dadfc3a3d0c937ed693afaa88d38ae",
+        "seconds": 1.232,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.Dissipative",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "a6ca941f2bbf6526330c3abf5bb5ecadf38100be2098b8ce39c2383164402d22",
+        "closure_fingerprint": "72d6ce9018720ac0ed5146055f7c85f285779cba9815b473fe462769102fb6f2",
+        "seconds": 1.449,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.ExpectedLyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "4961d486da83352e63515f3140e027ffad8c2e51e2d786723850a1931e98e632",
+        "closure_fingerprint": "91e2bec1c388104549456edfea54b2c02dade2808c9e29c29a68b1e9e1e1b19a",
+        "seconds": 3.248,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.Lyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "681c1f2fb6c983bac324098041228371dfa86b615ba7935bdb2c51a1365570ab",
+        "closure_fingerprint": "85ed3b795e3598c063fd5b9c98a952ceca2190f69a01609db553fd5f56384c54",
+        "seconds": 3.945,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.MatrixLyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "162ba31f896d4856ed50d06d6545df3bfcd6b20203c54f8407279b12bb976e0d",
+        "closure_fingerprint": "aaf98275d92bf117d6853447a3cc523e9f709a6befaa4aad6584104051769d8e",
+        "seconds": 7.605,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.DiscreteTime.UltimateBoundedness",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b39177f2ae79454cea18d168fc914f63416674ffa62c0ece4eb08f1650f4af75",
+        "closure_fingerprint": "ae8ea76fef38ab94891326a3ea82a5e07a316a7858488ca6ef11bec17b475509",
+        "seconds": 4.152,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Estimation.DeadZone",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0947be3e8adbb81de141d8c18c9eb1db23ab716d67616278291abeef845656fc",
+        "closure_fingerprint": "b812213852aef9937bad2ed77b535427f93bc98db226dc3d461b3fe9af18a406",
+        "seconds": 5.442,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Estimation.Normalization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "54125640738fc8ba77e86f1c490e5f3fcf165154ab92484b9d906aa2b2d431fc",
+        "closure_fingerprint": "a2fe8082d38abdd76f37371d50926e323698805be43fb3c48c4ed721d1b5b891",
+        "seconds": 4.006,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Estimation.Projection",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0dbe4063f79e8df8f15da150e4edbb5e9cc326b8e6d2caa7ce7f964e0a370c86",
+        "closure_fingerprint": "07b0ed80287bad46e88760b90288a4f2cb20e4e94d4ab9e1731813fb76f984f5",
+        "seconds": 5.073,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.Causal",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "11be6730deb629e394166c119e87a81c5ca2766e68a2932514a2eecc02cbd861",
+        "closure_fingerprint": "649f0f772de8f0fe47ec853923635806d56a332afe8f322ca8094e3953df36fb",
+        "seconds": 3.542,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.ClosedLoop",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ea6434a25c52ceb6df68aaba5a133bc11e899dfb1c013bb8df081bea65ca8a08",
+        "closure_fingerprint": "12401bd06670e523e319db4a02f599c2e537cc7646c55ed6e0f2ea4c368986db",
+        "seconds": 6.991,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.Dissipative",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "fd0887fa8f3429f18440e1c76388ec13cb406ff2f3730ad2c31ee394d9c80b29",
+        "closure_fingerprint": "c066567d26c802dad6af786855e0bb5a6d20e4ca35209c62c60f93b2d37ce1ef",
+        "seconds": 3.706,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.Example",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "33d34597252aea638b99f35815fe012edd3f20caffd68ab9c29dd5a0e112fdc8",
+        "closure_fingerprint": "3d7c7fa3c254986fd4d065c49f28b3205ddabbb7563740be87a67acbb0dab630",
+        "seconds": 2.756,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.ProdLp",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9c823b51c5fb4893bf1dce5274d361c5ea775e71ceba9438b5777c212a84e0fa",
+        "closure_fingerprint": "83fe35d3ec7a8228e9ec1863ed8efbbf9621acb38d26dee9b57400f98cb099aa",
+        "seconds": 3.806,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.Stability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "2a327aae6f34f0e3881b934799d344897c228f0cd5b03862723c0087f79be397",
+        "closure_fingerprint": "d3ec754430ff88d4017730879f41be0815aa2d81025d31ec00eb793665164615",
+        "seconds": 3.987,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.InputOutput.StateSpace",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c58ac1098a3b948bbc7efe70a1911416c758a809331c10be7f2824eafb18a3d9",
+        "closure_fingerprint": "4dcea6ad66b4f29d5a3c95257d82f873e56298f21c7652ccbbb7e39368ada0de",
+        "seconds": 4.51,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.ArbitraryControllerCriterion",
+        "exit_code": 0,
+        "warnings": 6,
+        "source_sha256": "6b9e5755e35d90ef40635bd3ccd5f7dcac6a463a349eeec778fc1ac62fe82d16",
+        "closure_fingerprint": "05512c8efc1a7f357f57bd4e938b854967b15c4b88ba1ec14684e935c0feabb3",
+        "seconds": 9.027,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.ArbitraryControllerResponse",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "be9ca306f26aba10f5d36d9426ac9d93693330c5ff76f3748294b2bb64ca4c7c",
+        "closure_fingerprint": "5d4661cfdfb200bf34d1b373d5362ed5c28c87add1155218f3357f320fbe9d2a",
+        "seconds": 2.672,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6661db4fbdf5de0fe73fdfc00e4a7032b9842e2c33b500164d86cd279eac3314",
+        "closure_fingerprint": "2b9087383f2a0f9f654a8bb988f1d8cad2737f916488070e300c5cc0f720d4d4",
+        "seconds": 2.577,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.ConditionedInvariant",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "69d8e3498ae60ba476c72f51c6a41292bae8195b4382b810d42e0af2a72cf1f4",
+        "closure_fingerprint": "6036ec81658853f33365adb1c2c72de732de75fd2c7168f1d0a75900c9735ceb",
+        "seconds": 5.189,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.ControlledInvariant",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "51243b8a41e95d450b7bef922d8797eac2a169be31135ba0fc6d14de571116ca",
+        "closure_fingerprint": "a33b33681d8ecbc792aa1e4dd26a9ee67b773ccabb0f477c610cf98430f9369a",
+        "seconds": 5.402,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.DisturbanceDecoupling",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "417a2ff85b34ef2a64375899d7c3c5f1855e1accf9cc5be84f326e9a143e6ddf",
+        "closure_fingerprint": "0c62bec351c41ab43028c75cb499e69de2dd5b1368a73e6dfe1e842fb6042bc7",
+        "seconds": 18.005,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Duality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "217b7beb9670883df08aae596bb36b0bf1b3b1b292bfac358bd1d81e40b2c2c0",
+        "closure_fingerprint": "cb48ffee0afdb38b2212f156bc3879106bae34517caa1a840bf7eeddc9a68f3d",
+        "seconds": 7.414,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.DynamicFeedback",
+        "exit_code": 0,
+        "warnings": 23,
+        "source_sha256": "06b086b0bad7f6a6a0d1a51ed9544574085a663b25db0183eaa3a934c3eb7e35",
+        "closure_fingerprint": "a7c4a823dae267f1bd91d1615a40eee2c5e0276ed8c4532b355b2692b171ed42",
+        "seconds": 147.878,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.DynamicFeedbackNecessity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0cf4ac0630074e8ecee682833936cb71e9ef8b90bb93ed8dc22d59c3fd6cacf9",
+        "closure_fingerprint": "ce2d5493ce32b12b11979190c9103d3fb68e55f7aa8aa0db141c0bfa54ebc7e1",
+        "seconds": 12.803,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainControllerAssembly",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f9213f100229855a7ef890cbe74ed1cae3812ee54e4e3d21ede449396a9cb63b",
+        "closure_fingerprint": "94cd87509fe41fa4296bf0aebba672b3406e66b07445fa5a4dba727755a78dfb",
+        "seconds": 11.336,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainControllerCriterion",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8e7f648e065798e7faf9d535869f0f268ca1c696309b6dd77f341a3bb11df5df",
+        "closure_fingerprint": "5c08644e318d415430cb688a48e62090beae626f22c67aee81d3c3cf61c0e629",
+        "seconds": 3.455,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainDuality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8fc229386e66539f19b71a697a37deae2031dd34f47a8a8b42e3d299aa324f0b",
+        "closure_fingerprint": "e0d56b485990e26b76d56038ea20bde492f72c2d2858722b2e2c05345adecc14",
+        "seconds": 13.363,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainExtendedPair",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "abd48f56bd8521ccc585b9e091c1c61ac863db3a3375425d4f0d49e4e3d96c3a",
+        "closure_fingerprint": "7fffcf276877b530f5081987898715f0bec4e13cb3c612d6458d14d4746d98f9",
+        "seconds": 5.6,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainInvariantPair",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "7a5fe96852d1493d12523e68a18141b9cf9693fb2846d60b2e01f68ef434b267",
+        "closure_fingerprint": "45320060d826e70800f9cd5169c35fc31a9c4e9727a00ab14e0e569218811a3b",
+        "seconds": 6.414,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainNecessity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6f12ce62810031247b4d87e54dffdc46a59f73f859ecf17942fb25c14cbbf6f2",
+        "closure_fingerprint": "1e69f6619a73f842b1c2988db6f85d62c13b817b95b44c91d1851812228d245f",
+        "seconds": 13.74,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainObserverGain",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d1c8c07fc684d1a42067ac901b37133c24a30ca391cb5c546ab3abf25bdfac30",
+        "closure_fingerprint": "3d9f3b4a76afe5d07fd0618a1ffb88f27328ec0441820d8ced133460f83e5fe0",
+        "seconds": 11.127,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainPBH",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ceb1ca71b37612954c934ba3a59c2d56270f3f010cab13166f11170d3e2de5e8",
+        "closure_fingerprint": "87eafcd8e610cc0ec41832ec5d334daed1fe631695b4de45789d363dc1577297",
+        "seconds": 16.189,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainQuotientFeedback",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "589fd231003a1a2555a32c23b4fbd2f7562dd80351d61f42df21a3619739678d",
+        "closure_fingerprint": "23d662109fcea2a20b9c63b15c8a906de425d6026f430cfec3aa784e31e3bd90",
+        "seconds": 7.384,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainSpectral",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c8c303bd9846ff07eaf385052bd329635c3bc20950d0c9f7898464e3080168e0",
+        "closure_fingerprint": "fd089515eb7adbdde4319408e95c7c98acca3323de8cc351a62ccb6d8b92df6c",
+        "seconds": 7.0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralDomainSpectrum",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "17fa1b42e0c3e239bddaf2c2fc522922d1996d2226bc55d584f2a290690e3a2f",
+        "closure_fingerprint": "b55ce178f1b4259af1c98c046c4eee9c043147d8fc08c687bbf5dd6ef4b9a98b",
+        "seconds": 8.827,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GeneralStabilityDomain",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b694bb343d59c585aa261799de051e17929cd66178977721da9767ea313597ab",
+        "closure_fingerprint": "933355019825c8cc51f441c8584c722e2bfb6dd53377e44f81a8b6023b60136b",
+        "seconds": 4.365,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GenericControllerDualResponse",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "0b59e1b834d8ff44d7d73c47701c9e6adb58b0510241000356444189203e686d",
+        "closure_fingerprint": "7233f0437aa935f8bff967b5f17926f9e88e39e730a1a8855ddc471ee6925bfe",
+        "seconds": 8.421,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GenericControllerDuality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e4ee328cf312d656f611c8d744a5938a98729e2da654446ffa9b4faecf23f756",
+        "closure_fingerprint": "54a0afb0e044e850c9cd2de47c941b45958d5e100d6e8929318e5a21bcc7a20d",
+        "seconds": 23.444,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.GenericControllerNecessity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8822863728eb6bd2b5a4dcedccfcee004cf5383b6b45f31001ad6362c0c6d8f3",
+        "closure_fingerprint": "d07a9b48366e85ed954b0969831c6c2fb6a903eafd10ff76d0fe654d3b1dd19a",
+        "seconds": 7.172,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Gramian",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "133e2a87b657e0483cc2a90dce4d25140882a573fb3fc4dab6390ffc86aea4b0",
+        "closure_fingerprint": "c45107f8634fb20e1ad0f026a2b8bd72277d40ea27502cedb5ea6f9509f04df9",
+        "seconds": 15.316,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Hautus",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "acc62570da6ed62f583f8a809431e3a84928900369a891f8f8968c85d2f53355",
+        "closure_fingerprint": "2dc8c615fabce44cbc35916e6bb9352306722c98b3ef38f0568935b2e79842ad",
+        "seconds": 7.633,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Kalman",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "5ee0942d6da1abeef491bab5a05b1991862edf605a5f3ce9b050d162fc2c9c8e",
+        "closure_fingerprint": "a6a65574dbefc6e9793ada8942848691fe6e555583c37f5641d83a5c39485b5e",
+        "seconds": 4.159,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.KalmanDecomposition",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "36c3a3774cd6b13ab866fe3dc48ea8ae56c6c9bce156ef3efb87035a42d067fd",
+        "closure_fingerprint": "2d4013e6e6f05d99bed8c6497d0671c6854ecea18b71a61046cade8d19f03655",
+        "seconds": 8.526,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.LyapunovEquation",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "89e2b61010a895134892c2962586eac458a3217293682e9ca318f3df75406ac7",
+        "closure_fingerprint": "580d31ae96a463483bbf935075cb74bf7cc2dddc8134185ffaae5dd4a62273d5",
+        "seconds": 22.716,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.MinimalPoleCancellation",
+        "exit_code": 0,
+        "warnings": 5,
+        "source_sha256": "de6b9c2b72e5b451559a46fd8f97618187429b9c74e7e519b64c666971619cc7",
+        "closure_fingerprint": "29365d600d7c685f473bc4997d174aef729f2587413fccae34edb480f354f1ec",
+        "seconds": 4.641,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.MinimalTransferPoles",
+        "exit_code": 0,
+        "warnings": 8,
+        "source_sha256": "af4ffba264553c3d7eea14875e5fd3a49bd4d79376f3f47fd6fc14110e5d9d3d",
+        "closure_fingerprint": "738ea748592b8652daa5fd8ed888a47f29bd2ba2c7e2b33bdbc8b481a3824213",
+        "seconds": 5.39,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Observer",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "cec851feb6566ea43e48e64230b0a01850fef6254277aa2c0ab0c87bd3c371d8",
+        "closure_fingerprint": "3e07014d90754df85092a9515d3d3958756a67573d0a28807e4808e88bcfbd5a",
+        "seconds": 7.361,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.PolePlacement",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "a3571b84e9e73073e0a8a12fa9f30930f7f057b3da7a50171444f0e25b62fb1d",
+        "closure_fingerprint": "7c3a2f979f6ed16623e0993016d477f88a891e2fdb577dde1a659add21c27cb4",
+        "seconds": 9.52,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Reachability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f0beb6da091e5a11b625fd099afe330d8706f10bcbe8e756c15e6296f27d9c5b",
+        "closure_fingerprint": "b7acfef0d91c239fd2f2292aa95743693d9c0273ee5d7802db9fb5eefced4ab7",
+        "seconds": 5.752,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.RealBohlTransport",
+        "exit_code": 0,
+        "warnings": 15,
+        "source_sha256": "5679b201c164c17f50a527b79576fcc0803d212cb00774c0b342ace07d2dae7a",
+        "closure_fingerprint": "6494b7c5b8e3bef94c4dc97041a3fc1f6d10507603def1d6d94e7eeb05c01d70",
+        "seconds": 20.259,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Stabilization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ac28a87e041f3f7d87c8618af0c3c036b3603a693386062564bc80e785c5d568",
+        "closure_fingerprint": "dca8dc65a59bec671688e78323cb6676221177a43d038bf163dff724c886768d",
+        "seconds": 68.674,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Subspaces",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "154b557cd10d342e6e3ab0ac00b2ffc332d0c538277f643550f2659cb332b09d",
+        "closure_fingerprint": "a5ea52be6080b0dc3eb092cbfebc93c8ac57cbbf795ab2ed08ccaecf8bb2cc31",
+        "seconds": 2.231,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Trajectories",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1a123e9af13708b106585e6b5074ba65948c194ab7bb016a7f1006a06427b5c3",
+        "closure_fingerprint": "29f3fb2913f2ac41675e15f58f7a01bf699df96c664f2cd602c3fc082ed2ed42",
+        "seconds": 4.803,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.Trajectory",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "a7a91d06e7c098ed2de63bccd3b47887670006b791797ae46af81de15f9a3aee",
+        "closure_fingerprint": "460bffc5a500d8a68dfcc967b89dda33dfec3001cbea6f44baba0342318d6bf5",
+        "seconds": 11.67,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferCoordinateBridge",
+        "exit_code": 0,
+        "warnings": 2,
+        "source_sha256": "c45eeafc0bf54b4f76bbe2503746418939e266aae88db988b6188f997da6c750",
+        "closure_fingerprint": "7582053a1f70b37fc273e79e5bd4b1498e92dc658f96cd1685008aa6c96609c9",
+        "seconds": 5.851,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferDenominatorRecurrence",
+        "exit_code": 0,
+        "warnings": 19,
+        "source_sha256": "52115b3c1042b221facca7143d4900f302315dd18bea7ee56811f21746f2faed",
+        "closure_fingerprint": "5143ede4a33ec09828ae23409e8f2f7ed20fdd4f283d785ea24613047059cd7c",
+        "seconds": 5.431,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferNumeratorDegree",
+        "exit_code": 0,
+        "warnings": 4,
+        "source_sha256": "94748a194fdb252cd63871c7a64eab29cbc7ade69de944af736987a5012d8b6a",
+        "closure_fingerprint": "f4f3f115e27577c942a211e0b22843ac865a4a511b6ff1a176bd1a566bb767ef",
+        "seconds": 4.273,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferPoleControllerCriterion",
+        "exit_code": 0,
+        "warnings": 6,
+        "source_sha256": "5b58abd8492e37070f9b7f9a3d11273f97039229c1ada3dfe75b88141a5f2f1e",
+        "closure_fingerprint": "a1dc938a73ec3a8d793e1ccf6686f1d68108d7c768627d06c192daf2358513b8",
+        "seconds": 8.412,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferPoleDecay",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "f0e1d71d682f4ff311e1b0ba5342f296cb4a7224a0113e2b3765eb5ff40e9a3d",
+        "closure_fingerprint": "682b469e5bf5e7f0b6a7813d3fff690ef62576bd8b83aa3265ea1322894349db",
+        "seconds": 5.222,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferPoleDomains",
+        "exit_code": 0,
+        "warnings": 5,
+        "source_sha256": "b46f76434d4be0a4e992d4ecc07076de6e092281545b18933190c9bd4098fd0e",
+        "closure_fingerprint": "c8c8124674bd3a31cc71fca07689f0583aca7b34e6687fe886b0e395028beb11",
+        "seconds": 6.141,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferPoleFeedthrough",
+        "exit_code": 0,
+        "warnings": 12,
+        "source_sha256": "fa92c56e777935bb9c7e33affccdd813dffe11fe3da893b77299d81e03e434f6",
+        "closure_fingerprint": "af61184b5bd2c140dae108efa34bd735bbe75aa06b5dc42bad493e9439d7fa15",
+        "seconds": 6.84,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferPoleStability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "272ccd8b78dc48ebc3b000f2b6c902c22a776cb5c8aef8df3dee66ec6ab4e60a",
+        "closure_fingerprint": "83bc6884af13fac5ed93c0bf60c780a2f1d38a9f5c251a075445b90d76179fa7",
+        "seconds": 5.338,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Linear.TransferRealizationEquality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "88f1716d5b97d06830571dc9a269100eac31672caa32c220061106abc2a9dc4b",
+        "closure_fingerprint": "4eb7e49dacc78759b37bcd433216cedfc0a5cc7faefc5f5a59af1e4b402e1495",
+        "seconds": 4.948,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.Calculus",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "78ef769a6d0a52eacea6918bcd127fc9c919d71475aec9b08c05b4b60c1af45a",
+        "closure_fingerprint": "4b4bb634bd0524f34003e05c2c8241f0e03c858b859309453ead550909878c5f",
+        "seconds": 8.705,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e3bbd509d2cdf8fc10ac527b5b5d05b7806b1a489b29d44ea002ef0b8930e97d",
+        "closure_fingerprint": "8803a19054f0700095b3b179fbc43350c896425a458ee9b37e1cbf31d92e40d4",
+        "seconds": 11.176,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.Calculus.Flow",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "a7c032a142a3e2ef288be791414066bcd711412e79555d1c34001b7859b8a9a4",
+        "closure_fingerprint": "ae5bafa9d8a057f9cf0f96b09b8f6148f3b4c2b3db91385bc3bc1b798cc3d0c4",
+        "seconds": 3.918,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "46024492673f4f8127d093447d175393dec0acc7ad7576ec958084715347a4bb",
+        "closure_fingerprint": "c636c7067fec13c0dd95583f10e4bf880034227d6d26b33218432cad617c6cfd",
+        "seconds": 6.334,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e50ada637938021ed63894fbe0aa16f87dfb9c3b4a7e6e565515ef87ba4476d8",
+        "closure_fingerprint": "5606e8200f906e6ced027adc6df39b82feb72b4ce999df1de09bbb4b70a67c9d",
+        "seconds": 8.636,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Global",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6849f26b7329420a6e2b7d0801358931035ba12f1b519dfe0ea45157fa0511a0",
+        "closure_fingerprint": "3e07b8ffffffabe6542f0c2be495b199df3d6641055c4d83b64beb32e87a77bf",
+        "seconds": 9.502,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Picard",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b8ced18566489f423c93622ba11229e84890c42be37157425e667fc4beae8f59",
+        "closure_fingerprint": "97f4242ccdf02fcf920c5d0ac99cda6a43a3ad980266754bd161db848e028959",
+        "seconds": 6.788,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.ExistUnique",
+        "exit_code": 0,
+        "seconds": 3.533,
+        "source_sha256": "43b4256cbd6ad49afad067b10703acf7bf7fb8015e3704dec1b97c6b1f619109",
+        "closure_fingerprint": "b2033613cfb08c70a62638435e603f8fee8f2845f5b60af30a0b0edfa7a66a01",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.FundamentalSolution",
+        "exit_code": 0,
+        "seconds": 3.047,
+        "source_sha256": "5d9cec3945b6da603bac5419995f97440652dd1404ac078c787180dcd5507d97",
+        "closure_fingerprint": "87c0d0b6516a31013758041358cbdc54d8e06afabd58ba17fbb18d6dbea56ab6",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence",
+        "exit_code": 0,
+        "seconds": 3.852,
+        "source_sha256": "eca8b5a22fa1c0aa0ae5734f8fb670294ff9f8ca4629df2fe3713d08a2ebce2f",
+        "closure_fingerprint": "bcc6b18b7d5eaedbfab2b81a2f639ce4aba0080b3eb3292faf775648c9d281c7",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear",
+        "exit_code": 0,
+        "seconds": 4.865,
+        "source_sha256": "691ce526b60c3a1693615716e361129381af1367b24de41896731727efbe5526",
+        "closure_fingerprint": "83892f151801afa8b350c8031f2d2a17acb61fdeb9cf28cdf66dec0da1536eff",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.NeedleDisplacement",
+        "exit_code": 0,
+        "seconds": 4.29,
+        "source_sha256": "911dbb2ee9cb85941e9b6fa3d12df92b5ff288c7027c4e13e5b86d8b55e2da97",
+        "closure_fingerprint": "dd75fd6b2eea4ee1952cc658b51eec544b7ba97eae19f653c0d66598bcee78a6",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation",
+        "exit_code": 0,
+        "seconds": 6.675,
+        "source_sha256": "43ac1a0f5da11c5c55a590dc89416acfed8b43c745733c0ab496e6582344fb23",
+        "closure_fingerprint": "1060661cd4f39d8618ec127cb1e82b080df800a4320fd6fa045943c3b5ff5913",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.StateTransition",
+        "exit_code": 0,
+        "seconds": 3.356,
+        "source_sha256": "2a175a4448acd5f35f318e941caa9916648c1e65a15eb150a6616a89d52f6f0d",
+        "closure_fingerprint": "fc18d259967af69a28da61b354be08ae26c59cf4296f3d02d1f4c28966c01079",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionExistence",
+        "exit_code": 0,
+        "seconds": 4.702,
+        "source_sha256": "0f18e670979e5e23294662365ab9b3f8eda619744efd951cab7128f387fa7ace",
+        "closure_fingerprint": "9156d40749fa45ee6974dc743a402282af230ef6e432f6bc610630a4b104b1b0",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise",
+        "exit_code": 0,
+        "seconds": 3.063,
+        "source_sha256": "de1dbf415f6d2a1b4aed538a8b07392e6c402564695af990a2bdbc627a063753",
+        "closure_fingerprint": "bb12242bd222844ba343ae0babde854a23e7805062650ae3c35d9078764e0896",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz",
+        "exit_code": 0,
+        "seconds": 4.387,
+        "source_sha256": "edc5f2aa25eabac3b536c5d43e7e3c9179e457f17434666bbb845c83f33f7db4",
+        "closure_fingerprint": "2461cdd791a67d2bb888e521ccc5d17b5266cb43d393095e65b1502ca1b0d9ad",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Dynamics.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c2fafd35e888533fdd02a56166b6708af92d0041cc7150d4aa4b2d87674d7a4f",
+        "closure_fingerprint": "e8f23e2a663caef406958766a1c0edd15faf70e25e09e0f391bb4260a9f32dae",
+        "seconds": 2.598,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "cc70e36f777ead79e548f6de48c9e2c5f7b2f72c1c07d0394abe7d9615fe5be0",
+        "closure_fingerprint": "3aae971ea3701ffbe5f3336ffc8613ea4f99c68e335935bc779033b5a5f58f52",
+        "seconds": 4.479,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9de38bb507fb3ac8c932b9ee8ee1520229796e314a3ea159770096c53d842232",
+        "closure_fingerprint": "ae3d16a58304d62d6688c980490bac54440466865dc5706d4ef8820aca76997b",
+        "seconds": 5.877,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Topology.Antitone",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b1e54915cd78bbbb1e6c0eda0cfe6b4e8037603115269d1b9935a528c3317224",
+        "closure_fingerprint": "2c1a5498b627efc6db22f561946aa659d9ae09196892d9164cdf4d4c72f5a9c0",
+        "seconds": 3.088,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Mathlib.Topology.LimitSet",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d319e56114efaa24a67324543261f77cfe6dcf3531304d9f5eb17b230ecaef59",
+        "closure_fingerprint": "1391d51be8f1ffe49cf66467f0fe60cf58018d278f76af3512ac1007533f1628",
+        "seconds": 2.648,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.NonSmooth.ChainRule",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ad2d70326dd6ba9be695e030278837db58e498e3b435fdb47e3ec87a0bf1cd97",
+        "closure_fingerprint": "51f0edccf8a5abed2b099f7ccb62f807330c21de94e4346e01c2d44787a9ffc5",
+        "seconds": 7.927,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.NonSmooth.Clarke",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "022170703d719f48d975db8907abf9a4eb7c787c54b7286a781c802a9b1471b6",
+        "closure_fingerprint": "e8be783887fc5dbcb9095d2c0148a654d640d92adc94ddb5ea23947c7b2e44d8",
+        "seconds": 4.052,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.NonSmooth.Lyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "3b8de3ec616a18fc2b66e1f984c4b266382812cb710998f46202395e33544293",
+        "closure_fingerprint": "b3562503fcc439cb29b6100f8e20223b495a8ba8793d8d16163fa644626b1c76",
+        "seconds": 14.628,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder",
+        "exit_code": 0,
+        "seconds": 3.88,
+        "source_sha256": "757fd1342382562bcf67ce18aa66e5b4451d902a996c144745f5176bf23ee1ef",
+        "closure_fingerprint": "d9aae9ce2c129d851e6316aa59c2b967540203cff6cc8c72fc64c322b89cc7d9",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence",
+        "exit_code": 0,
+        "seconds": 4.346,
+        "source_sha256": "1e80803893728e123bc3374015bdec2e419adc5a198cd8558f5847b596b4b929",
+        "closure_fingerprint": "4236ac98492833a9a9239e4ffb6d179fd8eddd58a21121e05efc5d07c39c5c1c",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.AdjointPairing",
+        "exit_code": 0,
+        "seconds": 4.589,
+        "source_sha256": "ca9a302138aeb2f78cc20c48be89350229989692b743612a0b43f1eb2635bf85",
+        "closure_fingerprint": "d0bea5ddd0335bc7a7b56ea07cbf4a8ba5bffa54697e1bdb5a634700939aae15",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate",
+        "exit_code": 0,
+        "seconds": 10.791,
+        "source_sha256": "c1496f475c034f084b1f6310c900bc32bb72526e6c64d692b30eadfddff959db",
+        "closure_fingerprint": "e96a43bafeee7f0f33e9be0235f23ade5b4c4e5470c871754c8f9c6dddadafbd",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.BolzaAugmentation",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "784cd9bad2543b243b626c7c822faf3b215db8881e1b9818745e6cb461705526",
+        "closure_fingerprint": "fea4b53670a4114859ea4b49c03102ba6b85785261369a4a4ee67e175fd1625b",
+        "seconds": 10.639,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.CalculusOfVariations",
+        "exit_code": 0,
+        "seconds": 8.724,
+        "source_sha256": "0413bbacc38840ecaa8793e69b931f13c6d563f339bf65c3f0777a1135b38ffd",
+        "closure_fingerprint": "4596e788855ab76dc205da033c55c2f2ba26d2db16e817577d4bb448f7fc9811",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers",
+        "exit_code": 0,
+        "seconds": 2.935,
+        "source_sha256": "cbc4c428616f980aa607b62f20fda2522655a4e270c400f73b04f2062ac6a36a",
+        "closure_fingerprint": "d38241a62b14565927ab63c9f159321525b705f8a8f46e6001de8fe06028a487",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.ContinuousOCP",
+        "exit_code": 0,
+        "seconds": 3.091,
+        "source_sha256": "3c399e150932781f6af5d4b2e223b0b03300e13b8780ee96511e2f8f764fc72e",
+        "closure_fingerprint": "504954f5c7dd794eaf9219747daf05471d98d83be281b2df2568c44d9158defa",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.CovectorPMPBridge",
+        "exit_code": 0,
+        "seconds": 3.336,
+        "source_sha256": "e254683f31486b00fe74efdf79d485d398cbeb3ef40dc0ca205650a4ee436e24",
+        "closure_fingerprint": "818db6b85b74daf3a76f9f04adc9ab50a3ae0bcf1d80d1218132887379e76f83",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.DuBoisReymond",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ed674293f444c8633424063b9075202afc684ff3cb6797f75c7d5e49877859ae",
+        "closure_fingerprint": "41bcd10a91b26452bd97f55c1fc7955c103dc697c3135b3a9fcb394984ff2f4c",
+        "seconds": 11.76,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b1160fbb9deab05adf8a66eb715e51fd99e8e63fd95e793e14f57052b1238a06",
+        "closure_fingerprint": "1f14a1ac1c585316ce0ec4d2d227b90815757ba631b96e912832872ee4aac3fb",
+        "seconds": 15.454,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgrammingMinPrincipleFromHJB",
+        "exit_code": 0,
+        "seconds": 2.375,
+        "source_sha256": "aa23488f41d3a7298c7c1c33e7736740b4cfcc0e62c7fa574c65f8fa5031acd7",
+        "closure_fingerprint": "62e1a012b3afc9a72e3ab169ad84b5dfd623bae90ad41e9569423ac60509b66b",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.FiniteCornerMinimumPrinciple",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "694922bbdaed422d4ac31dbbc5551316b774c70cb7574e97e83a9b98c421c88f",
+        "closure_fingerprint": "b28c2c800b129f3cb592a07f8ca321b765f06728ad6df77187387f09b42351ab",
+        "seconds": 4.058
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.FinitePiecewiseVariations",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c5675a07d8022614fabe239bbcf657b66841061a17372147a0039392cf8ccde3",
+        "closure_fingerprint": "c0260917560df0800130a6912d6aed9fd8081d84f4f9480170c4f655fee76c6b",
+        "seconds": 4.381,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.FiniteSpatialVariations",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1604797a3ce9da53744f925ccaa2f055d039d5dc0955e3c782e89a69c8ff188a",
+        "closure_fingerprint": "ac4fa73ee138462c5294e389a4999759003738b08db78e70539c268722c76833",
+        "seconds": 4.833
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.GeometricMinimumPrinciple",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "0200a22c314ee856f391055a69dd443a3d50ac714b73c5523fea675c4e913213",
+        "closure_fingerprint": "6f0755999b6925c06468ee1ef2af88b6bf673546893da572d53a2fd1bc8207b8",
+        "seconds": 5.006,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.GeometricNeedlePMP",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "1561091c84568349e4342a1a8e06711648254b4ca9497af5a75a294688b069a4",
+        "closure_fingerprint": "70a6049889ceadeb51da4f6cc8f12f01492dbe7bf5b7069a0d9a5d168797f4a3",
+        "seconds": 7.964,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.HJBResidualBridge",
+        "exit_code": 0,
+        "seconds": 3.604,
+        "source_sha256": "b30ffb6d77eba743ef2e206884ad43f619c451e777edb103d42f0bc437eedab4",
+        "closure_fingerprint": "95a19da056ac0376974760cbe1742669e0a36ffae06e6314a0897e9fe3653757",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.IntegralAdmissibility",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "58ac824cf7557a8e50f9bab412503096a3f2faa51fbdf017f338b7bbdf1ebf98",
+        "closure_fingerprint": "4fd9abc63a3170d6d43c26c5e271e3bd9a612ee871dcdcb9e081581f5e778622",
+        "seconds": 13.462,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.InverseOptimality",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "23d0ed606e42b5ec68fcc50f9bc552f5c99b076651df9480c039d1fb259dac5a",
+        "closure_fingerprint": "d2e3625c175b94f0c595c98ad947ddcf69acf3d888650d4191b4499b9371a3bd",
+        "seconds": 3.902,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.K3DifferentiableExtension",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "2035af77fb688d5768c67fd8eba89b8b14ec021406c5bca00ec26e3bcf3905a0",
+        "closure_fingerprint": "5a3cf88424aaa0ea578c9324e5451e5e92df71965e8d6a77fdab1bdadcc240be",
+        "seconds": 3.104,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricEulerLagrange",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e2c77dab22f56f4dd8d3da953b5cd3e6266f4183a2f5fc04cdebce1dcd52edc5",
+        "closure_fingerprint": "45c7ee36b5ca98187277dff0669703bd441e368309757fc24fdcd1d920c085d0",
+        "seconds": 11.122
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricLift",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9e775b0326e97bf46760dd01a395ee134ebd211ede97ec910c9f0fea75a54c39",
+        "closure_fingerprint": "54b639d32e62c4a1b9008db5e72418c4c5c34222365d57ab45563d3dfbf15a0c",
+        "seconds": 3.886
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.K3MomentumRegularity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1368391f0418242e5ac072025451ed11aaaa206c892a05de2f7e8611745446ac",
+        "closure_fingerprint": "f812c89812cc6bfaef8014cfae0d8ebb45e7374389405878152f5f4bb9f76b08",
+        "seconds": 4.861
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.LinearQuadratic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "3cf5cfa3d14e4ee742238acae4d983c49c99ac11991b98ccc6536e260ee4618b",
+        "closure_fingerprint": "7f96b90cafa191177b18a6e51421e64fc1f5abfae648e45fb98dd4e322326b41",
+        "seconds": 5.146,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.MinimumFuel",
+        "exit_code": 0,
+        "seconds": 4.676,
+        "source_sha256": "3605f9707970d23830c8ecb1272302b637506e88ee802cac0ed88c91061e95e9",
+        "closure_fingerprint": "0f101edbae85ed0a1cb874adc39f315189f20195927d50fd04859d8e282810e2",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple",
+        "exit_code": 0,
+        "seconds": 2.989,
+        "source_sha256": "e1daadb64f932f6c509364f5325dd2f42ee4e5e4f34ef6f70454e02c89d72cf3",
+        "closure_fingerprint": "e2346e746e3e93124be1c9952a59e9a4d7168d084cddc0a7c47576ba4d970c0b",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleCostIdentity",
+        "exit_code": 0,
+        "seconds": 4.766,
+        "source_sha256": "233bd082102b77cfa201c65e7905792a16150d82100d934bc769fdf33073f671",
+        "closure_fingerprint": "b805d3283af981f5cadcc019b715371d4b31ea1866ff05bf719d58a4c4637814",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleCostRemainder",
+        "exit_code": 0,
+        "seconds": 3.903,
+        "source_sha256": "86d8c89779bc08fff8854954e010ac39d2787214b9516389e2cb3ae48171275a",
+        "closure_fingerprint": "6ed44025b4b19940226365dcd92277a2e5bb52ead4e5932f2a7dc088cfc9b4ca",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleFamily",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "efec5ee28ea18a387dc7a50336c73b468f09146d676699c70d44476d6cffecdf",
+        "closure_fingerprint": "52eebee90bc216e46f5d3942702ecf62f31bf326d58e863833dc8d5e49e02b53",
+        "seconds": 5.596,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMP",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "195c46811125a3e9335e201df5fee1410cbf3cb16ee9f8e38efd74e60ddcea80",
+        "closure_fingerprint": "ea0055e5b4a8c86a802374a2e25a63aa71e45baa7d18fe8d2f0a501d6c4ba6fc",
+        "seconds": 6.125,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMPOnHorizon",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "31c6a215b083a0831d588b14985e464a2780cab9bdf8a687b0fb1bf137b49191",
+        "closure_fingerprint": "a004ce2596b906fe7037072f53a768375bc5ccc4fb3d9b37391093f6935ccdd1",
+        "seconds": 4.402,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleSeparation",
+        "exit_code": 0,
+        "seconds": 4.901,
+        "source_sha256": "ffe7e046b05e7180eb9ef32bc710ba5bdd8d18736af3563cf1f728bd3505427b",
+        "closure_fingerprint": "de31ce2d40b1e1f66e026daa044920c3b8a6317fe9da608a36bca47801cd0401",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleTerminalFamily",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "e5649277c1e71f035dfee8f9c43baeb521887bb0996cecbfcc172d0f8df9d08e",
+        "closure_fingerprint": "c2c4118b1f27f196d3919c50182bfc5e9dcef85d11890724a79e82a36a3e6d1f",
+        "seconds": 5.236,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleTrajectory",
+        "exit_code": 0,
+        "seconds": 3.603,
+        "source_sha256": "a27080d8944c930bbda91428956d7fe7f6e5f27668c926615b0155ae400d2b5a",
+        "closure_fingerprint": "248f1ab63af6913a7f676959980b21b58459bac5dd8308ca543057ca57cdefb1",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NeedleVariation",
+        "exit_code": 0,
+        "seconds": 3.812,
+        "source_sha256": "57c5384cf05400707e801a88e893ef1fc9068ba603c5cea9cae8390711377bb3",
+        "closure_fingerprint": "8c8f275627c5f5725ea883b99404df4593114a1a66b4b683027d106e8ec0c249",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousDuBoisReymond",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "80866dbea87837084ef47c869a0f7fb94599b03432138a195e87a787f9184812",
+        "closure_fingerprint": "69b52285b26db45282728f6391866098bebd42df74412f8fdc0e6b75624c5e66",
+        "seconds": 5.441
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteCornerConditions",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "23c459f769e01ed825f60bf927cb49c9a900de6fcf65f54436f7ec7f85e7d3a2",
+        "closure_fingerprint": "5530d123a9097e9a52c321a733b23a2bdd0d9abbd859b25a7ade90724a647ded",
+        "seconds": 5.701
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteCornerMinimumPrinciple",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "8c22f1c0eb85cb66d8f93e78e9be4ae05571999476cc647f0706aceade6c1b33",
+        "closure_fingerprint": "2c8d5b742743ce8569a02cd08e913b0205538683b45f4c6c291d3715c728b6a9",
+        "seconds": 4.998
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFinitePiecewiseVariations",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ef971bdd04a516d0c5a8b71eec0daa9ae9eda022c3c23b3e5e16c921c174de76",
+        "closure_fingerprint": "52e817f015c89a9f946c25b0828e9498fa57a63ebbb7ad51929a10bfef4abf3c",
+        "seconds": 4.681
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteSpatialVariations",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "64dd91f26e69ec736e76867f127af12c4addbac5085fea450c8ec6229a089f57",
+        "closure_fingerprint": "8f7a9384558095c5ae8360758843879ea48a617bca9dbd0514e172d5fda0b5c9",
+        "seconds": 5.222
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousTimeReparametrization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "23dc95cefa2c1533574a0e2beb876a21a11b7921e39f0f520db4a69453f099da",
+        "closure_fingerprint": "5c96baddb430fac5740b09ad7a0a209d7b0f6f76a87ab766d7f8b949471cad02",
+        "seconds": 5.046
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousTimeReparametrizationFamily",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6e7d48d53a0bf408c0c6c06f70b650c3a00c150fce5639a9281b59fb49459bf8",
+        "closure_fingerprint": "b49c13411c1dc6158b37318d3768a7e0957d0a1b7a829f6a50ed1e98a0a57b46",
+        "seconds": 4.005
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "2263102284f36c354d74259d00955469f6710ec3d58d75b41f9b2bd8af4b159b",
+        "closure_fingerprint": "815a411159b1f0c648db4e9447735e579ce8730f9830a02ad9e4300a6c33c8c6",
+        "seconds": 5.092,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1Extensions",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "80c9744a784b0ef0a26e0311cada779a803e27178d0c9afe59fc03ecfc4d96f5",
+        "closure_fingerprint": "bd8866cd2c7144969829322cd3f95d87e97328b19e3be7889ed8e45dc5f632d0",
+        "seconds": 12.712,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrinciple",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1d5f831a87cf08259c56b1761f4f7b128adaf2b73db4667e6ddb3356db125d97",
+        "closure_fingerprint": "05af7a43fabc17f5e3c93ee8011d062a4f5474f65c0b3297504314ba48dc9b89",
+        "seconds": 3.238
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension",
+        "exit_code": 0,
+        "warnings": 1,
+        "source_sha256": "c2a1ede672c18fb3f46c39595c66c63bf4741092f4b00502bf7143c2bf098b21",
+        "closure_fingerprint": "9aafd0cff27bc446e767d68d93e3356125fc4a7a121d431c50d73af576b65270",
+        "seconds": 4.066,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.TerminalNeedleSensitivity",
+        "exit_code": 0,
+        "seconds": 4.242,
+        "source_sha256": "ae98d9ae8482d8c174b9d570fccee6d8d2f3eb0985c28b75e8e8091f7f26446e",
+        "closure_fingerprint": "7e19bd026054564bc77033333ac5c9d095419e47e157d899a80cc8fc6093ed0f",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.TimeOptimal",
+        "exit_code": 0,
+        "seconds": 4.606,
+        "source_sha256": "ec9db231f7bd498600bfc830530f617f435157117574ef9d46372e806b024d9b",
+        "closure_fingerprint": "53a191832c7700f124ddb3b07c166bb354f850eff4cb034056d743d97a1745b8",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization",
+        "exit_code": 0,
+        "seconds": 5.873,
+        "source_sha256": "96f89744b781b6a0b9dd0a59c749f5aee1681fa3dadd1cd9b09674f7c3f80af0",
+        "closure_fingerprint": "d4ee16eef0c721a65cede85f52d3ab00f3eaa6226982bcf32fddf43865df3192",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily",
+        "exit_code": 0,
+        "seconds": 3.941,
+        "source_sha256": "3dea4999e2845077f2e199b8e603684c07f7046346e191cfaa2e2f1c9b7d8c19",
+        "closure_fingerprint": "e060af2a5c8f4b9bcf4a631b1978be9868960b115a9750641e47917602a23b92",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.Tracking",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9bfb03b6ef3271ccc80ebec481e3b6377b74a7c9bc1567a6b1b361df38c90a3e",
+        "closure_fingerprint": "4d7c6a70f7b64bf39fbfee46408a4a324bc6fdb86a6f1d842987659b555fb624",
+        "seconds": 4.611,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder",
+        "exit_code": 0,
+        "seconds": 3.725,
+        "source_sha256": "8771eb8a0ce6ca0383228a8adbca0606635be00c9fe4039953d11504f83e2946",
+        "closure_fingerprint": "4d973e6600bb929d65766e9169384ec4f6db7e4fe6dbbb676a64e9a3e134c3e0",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.UniformTaylorRemainder",
+        "exit_code": 0,
+        "seconds": 3.989,
+        "source_sha256": "ab063423dd321053bb87d8acce090420ce6298f41de7cea3da1bbd18f6d9bf7f",
+        "closure_fingerprint": "9d28db250302ac90e13dd88f0745b4f5891627eb6183911b215cdb50532025ff",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "dcac6d84b3cc97e7681343c4e10d98d31737b44d47c8c2615f0f62d9e0bd7daf",
+        "closure_fingerprint": "d1b48e0be856dd581c045dd601219bcd65c21aa1ddb5c1a3771a68f8dea9e560",
+        "seconds": 3.545,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "cb3ab17ec0e053b6b87fd8d52030db2aecf6addc218700d5b064deba6928db5e",
+        "closure_fingerprint": "22d961beef0e50947d77dd270cfaa9fc386deb36eff366bb8d32be7264c79ab6",
+        "seconds": 4.715
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "4bd78371e7f05eca546b46e11137aeb329e6a000a8a005ca2c8708d37bfda565",
+        "closure_fingerprint": "aa7c908c1c1ce49a6c32877b0de23302a899e7a9d4acc32d826eb723b0a58bf6",
+        "seconds": 3.781
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.FiniteHorizon",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e0039d3d7f9ab93715ba8bec37e538b45ee55cfafd25d67936d56cd17ae15c9f",
+        "closure_fingerprint": "a79df5a0a34005d28831c494b5de22e71945583264117e4dc19b473f6827e17e",
+        "seconds": 1.716,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.LQR",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e9ca8d5fa9645620c728faff725f49b51673daeff0206166e8583cc1ebd800f7",
+        "closure_fingerprint": "6b483ce411dbb5b9d9040208981b571a767dd184ed7843cd28d6c01d2e280a60",
+        "seconds": 4.308,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.OptimalControl.ValueFunction",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "4cbdc8433c1c3a1d325f39a611136c011c877df757e5185ae114dfda18b874aa",
+        "closure_fingerprint": "89f591227a0536524145a15fd86323cede40d4bd1d5bf071c9487e1bf96e2ec8",
+        "seconds": 2.864,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.Basic",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "3bad6ecf8f34951251fc7489d5f54ee452da23297f77beecd12750117575a2b6",
+        "closure_fingerprint": "5f5a29035c26738f57cc3c10f287de1ff0b586664cb22b448228cd81a82b6800",
+        "seconds": 2.157,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.Convergence",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "6c39bb78daf2976e41b7a36756ddcb9d2ae15526904147858fc89ea3e4e7ae23",
+        "closure_fingerprint": "eb774ebcf52ab3a75e5871fc557f5925bf8c8b2b0db717a0ca5706b4fde5b7f2",
+        "seconds": 4.499,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.Excitation",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "db2950fbeeff74b959a129d98602ff9b40f57a9fe03121be6938f52db95230b8",
+        "closure_fingerprint": "fbb0ed3b0df0d74e15003b852591229e777cccfad87ad55811b055bfbb88404e",
+        "seconds": 3.021,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.LyapunovAlgebra",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "868989d0cc981ec381d218d39e734ba2eee5334c417df0acd71425b84ef6851a",
+        "closure_fingerprint": "f90f783fc467bc45a2fe2cffaa5413ff004aaca581cb3ebb43b59f8cb48540b3",
+        "seconds": 3.605,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.RLS",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d905769db4422334edae0e5fc781d902c499c54e9b2db94d9ac4158f39e0746f",
+        "closure_fingerprint": "7f19ccc02a816a226ef6bb24f9dc0ff9203cf62edb2f1179e7012bce2ec5b5bb",
+        "seconds": 3.633,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.ParameterAdaptation.Stability",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "52c28ff426c0c8da09f2944a9dc2ebc2d5dc06fccacc8556ac8517f4e2521b4a",
+        "closure_fingerprint": "19778aa76c19ebb65b230c3c06672e5e4dcc5fe85fbc01ead7f601ed69516c73",
+        "seconds": 3.476,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Attraction",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "5af7fd9716fa7aa105daf64275522ceb4b759737f9aef29aa1469715ccf813a4",
+        "closure_fingerprint": "8e503e8603cfa653d32444189696ab84bd7b675c86ed4eaedbbd6725e03e62c9",
+        "seconds": 4.591,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Barbalat",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "442846958985e67228331ded100c87b47eccdeeca06b284cf85560d0686492f7",
+        "closure_fingerprint": "18a1c57efc2008768afc67750d80e259f75d45dceaf78fd15f6f595962d2560b",
+        "seconds": 6.489,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Basic",
+        "exit_code": 0,
+        "seconds": 1.433,
+        "source_sha256": "c922ae5f7ed9392153e42b6f911dde05f00e1e3ef0e93e50715ce7092e17d98a",
+        "closure_fingerprint": "6c1b4e710c6d454d76607f3e42b2a9025fb62e65e8430082a26b931362d65a59",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Comparison",
+        "exit_code": 0,
+        "seconds": 3.084,
+        "source_sha256": "b193bb1b9a70ed1d9525598bb1c32a63849e3d476c6da044a0e3f19aefdca782",
+        "closure_fingerprint": "50a8e77447c040e4a8b709c7906de195e7b02669239d52c8e935d5c40ee48fd1",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Definitions",
+        "exit_code": 0,
+        "seconds": 2.386,
+        "source_sha256": "f0562ef74558c909041f701a1218fb1fefa109f3a6edacdff919292958ea63c6",
+        "closure_fingerprint": "04c2bb3da7f106df2e14dfa89261881f52fadd6fb3274d9624895ec72b5e2405",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Equilibrium",
+        "exit_code": 0,
+        "seconds": 3.196,
+        "source_sha256": "bdfb7c7cce6b4014c186c6342cedb63482ade252311a4a29c5254c7c860ddaee",
+        "closure_fingerprint": "8b31d600ad5b9633e8f733111f709749688cb7a719faf99a1643219742867c8f",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Example",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "67e5b2848e324017d8f2ae76cb5dd7568582ac6058f8e60b89459642bd9dbe1a",
+        "closure_fingerprint": "fca2c8dc06e5adc46e018dc476a4d9f18d1ac41386e5cfb78c643328c6052166",
+        "seconds": 6.531,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.FiniteTime",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9ad48b59748731e0403f338fe7bb0b7e2975c6feab163a15d7277b8155e3bdc0",
+        "closure_fingerprint": "8a496b7492c197eaf6f8856010d8bfe7fa31c96c7233e9776f63e4ad99fdf445",
+        "seconds": 15.876,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.FiniteTimeLyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "1f518e3e534034480f4635c9a7e3155cd5339fee23159f668db9fe3cc3ae4c7f",
+        "closure_fingerprint": "1f625245ec33b14f0462bee9e6d749603a1c1c19b8e83a976d81c57228936b00",
+        "seconds": 5.725,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Floquet",
+        "exit_code": 0,
+        "seconds": 6.584,
+        "source_sha256": "b07833da3fe9b45af96111c9bba2e85b64ade38612a254530f6d80d1ea6e3f2b",
+        "closure_fingerprint": "6237349e5cedf49eede219d01cee599d6c021260aafd02bcf34575fa45d81627",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Hamiltonian",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "4d4c058d5ad5ea9e5c96b4088d02c95f6853d8c29ba2797dddb08e15e4d4eed7",
+        "closure_fingerprint": "1e0ec0c6535617d48b6d997b110eb7b06a58906d821eabd35f15e05b88748701",
+        "seconds": 7.576,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Homogeneity",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "35577d018095461b98e6b9c8d9e063964af6d5148d10f975943f000cdc241459",
+        "closure_fingerprint": "40de92c36c29f1ae5a94bc4b9379b1c9d631769e2ae45a2301d63c950a9130c0",
+        "seconds": 2.329,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.HomogeneityContraction",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "d6a61d905faccefb49e07357ae31044a9e62c1498a4b06af5474cf4b2ef54ac1",
+        "closure_fingerprint": "2df54e98164167d200bdd2b22099278dd94d0c85bdfe64b591f67afef85ccfbe",
+        "seconds": 5.09,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.HomogeneityFiniteTime",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "15b1a031079ca544b7108456012b5005835db3b420c0b869f6e453e35cca6461",
+        "closure_fingerprint": "8046620e5f7002ddb6217369da0ac4d33a5a8f241f8a1a0d019ab346b1d5b1a5",
+        "seconds": 8.0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.LaSalle",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "85f541f1d082bd97bf6218d973206ea7923f8182059bca89621880276f759817",
+        "closure_fingerprint": "d802097ca9ab4396c9d5daee2a22e44a7d83cdc39609c256000016f25fb8f483",
+        "seconds": 6.521,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Linearization",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "3b47ecc6afe0bca3393297699b75a29b104f4a22b5447bae7963a86b3ed36162",
+        "closure_fingerprint": "504713c4e30d7ef68107cbdc0f67b2a9900b9fd37ec8ab18a130aa86ced1e4cd",
+        "seconds": 3.574,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Lyapunov",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "628c7666444c90bd62031a61797d36bbab1b3049aed9ac42fb2e8452c5455a0b",
+        "closure_fingerprint": "c5c60948fb8db898c2992c51b8f417c1c7c7b0c7b89dc9c605fa999d8a5089ba",
+        "seconds": 9.355,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.Projection",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "b6b53da6a91f694069e7e37242af41da30b4f01ac4f10b1a4615c62f54cbaefb",
+        "closure_fingerprint": "9070a0d1e7dfc91024210ee187b7b3b8ef5f475efacc35e58ab2ff6c60cbe4a0",
+        "seconds": 2.34,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.RLCCircuit",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "9ef3a986270562509b09a64712f7b53163f81477bd55d80c209b2db1ae7fa8cb",
+        "closure_fingerprint": "c61ab0156bc446516e6ef1a151a16e4c1b6be98bd61a24801c65b29b38f7c84d",
+        "seconds": 5.869,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystems.Stability.UltimateBoundedness",
+        "exit_code": 0,
+        "seconds": 3.371,
+        "source_sha256": "ef3f86cd11ee01fb4b133156343e69d3cbd6bb915b50e31fabaab5d41456e3b4",
+        "closure_fingerprint": "dfca33d8f6f8e91b54b7ec1bfd7a24cb6330ff9dc19d1f58b74098454ab94598",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.K1PointwiseObstruction",
+        "exit_code": 0,
+        "seconds": 3.81,
+        "source_sha256": "389f6d15aa753035bc89d10c53caebcb1bb86903e97ad4800fe853da38e8a53c",
+        "closure_fingerprint": "62a548bbdfc974d88fbadca984a6c3860dfe72cd9589160df768b2887d6ec517",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.K1ProjectCounterexample",
+        "exit_code": 0,
+        "seconds": 2.65,
+        "source_sha256": "956cfc0d38129632ba9cc371b084fc386fa17b4d42e0d5db0180dc3d8e43e816",
+        "closure_fingerprint": "21e7430dfc959d70cbdf66e9fcf5465db547771e2e19ad5e80bff395f52eb1ae",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.K3IsoperimetricExample",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "552e405a75a849a2845b1c60b8d099da789c20910132dfb7fecadc2a61b7d5f7",
+        "closure_fingerprint": "20c9a40479cfe6f50eba50416d4c681b283d59135e7777a5cba71abc8f792e83",
+        "seconds": 3.199
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.NeedlePMPHorizonRegression",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "e23add722287c787d38ac45c9dfb5c7eb5fe135c1d60fd272fb9579606663cca",
+        "closure_fingerprint": "b2ea26b1203891bfefcd827493270fdc1f6f76d104933e8ace01848a8cb7d261",
+        "seconds": 5.301,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.NeedlePMPQuadraticExample",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c6f8452a487c68cc8da5235a718310b1aa81f86c1abc8218f0621c657770a2e6",
+        "closure_fingerprint": "86fd5e438c5d937cbaead30934c8272b83342322492bb90671900b1c662e0490",
+        "seconds": 4.181,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.NonautonomousDuBoisReymond",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "bd080e6e20bfdc7d5e63e92a5c46bbec9fae1914abb75bc5056e188ca2a5b8f2",
+        "closure_fingerprint": "dc61be0ad3854c3a7c476dc9b939ad2571c82a0f16c2e7f30bb51f87fea1cc17",
+        "seconds": 4.596
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.NonautonomousFlowOrder",
+        "exit_code": 0,
+        "seconds": 3.223,
+        "source_sha256": "98559c1012c0cd7550d61fa6cb07c1c52136f92285b92b59d1bf8d9ef06b8320",
+        "closure_fingerprint": "0ec897a6922c00a6b36adcedddd77cc89c986ab8f97d9e344e895437285c0d50",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.PMPNotSufficient",
+        "exit_code": 0,
+        "seconds": 2.443,
+        "source_sha256": "3ba55a2abf0d20684c9bad34480399d842151047b8edfdbfc350493acb08abdd",
+        "closure_fingerprint": "24048d2cbd201d8ca39171610990b0723fed1e6c24f6e615c9d2d4a90e7b7b5e",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.PointwisePMPObstruction",
+        "exit_code": 0,
+        "seconds": 3.325,
+        "source_sha256": "9db35ba59d9f6c736118a2c7943f1a7ad6d74c902e623db3597477d1132e0d98",
+        "closure_fingerprint": "24a20699e43ee4ed3820db3b448cff93efff89897db92e107f04274b9a244e36",
+        "warnings": 0,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "ceb3fbdfeb64a99165581cbaf35cef94360ed6cfe374d9b248421ad54532e22d",
+        "closure_fingerprint": "20f82e43d66219d452056cce634ee26433f1e0ffcbc72c5b6df60555e5df445e",
+        "seconds": 4.287,
+        "reused_exact_checked_closure": true
+      },
+      {
+        "module": "DynamicalSystemsTest.KirkMedhin.WeakEulerLagrangeEndpoint",
+        "exit_code": 0,
+        "warnings": 0,
+        "source_sha256": "c7c4dedc6e1669f40b9a74fd19f027028dcdc08f717ee875434fbfa508a9d2de",
+        "closure_fingerprint": "a290d71624bdee49f2f587d6aa28bd6e8c40292c8a116d57c25fefe6c8246c65",
+        "seconds": 3.69
+      }
+    ]
+  },
+  "axiom_audit": {
+    "method": "Lean.collectAxioms for every declaration owned by each scoped module, including private and generated declarations.",
+    "declarations": 355,
+    "modules": [
+      "DynamicalSystems.OptimalControl.ContinuousTime.DuBoisReymond",
+      "DynamicalSystems.OptimalControl.ContinuousTime.FiniteCornerMinimumPrinciple",
+      "DynamicalSystems.OptimalControl.ContinuousTime.FinitePiecewiseVariations",
+      "DynamicalSystems.OptimalControl.ContinuousTime.FiniteSpatialVariations",
+      "DynamicalSystems.OptimalControl.ContinuousTime.K3DifferentiableExtension",
+      "DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricEulerLagrange",
+      "DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricLift",
+      "DynamicalSystems.OptimalControl.ContinuousTime.K3MomentumRegularity",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousDuBoisReymond",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteCornerConditions",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteCornerMinimumPrinciple",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFinitePiecewiseVariations",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteSpatialVariations",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousTimeReparametrization",
+      "DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousTimeReparametrizationFamily",
+      "DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1Extensions",
+      "DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrinciple",
+      "DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions",
+      "DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange",
+      "DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum",
+      "DynamicalSystemsTest.KirkMedhin.K3IsoperimetricExample",
+      "DynamicalSystemsTest.KirkMedhin.NonautonomousDuBoisReymond",
+      "DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond",
+      "DynamicalSystemsTest.KirkMedhin.WeakEulerLagrangeEndpoint"
+    ],
+    "allowed_axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "unexpected_axioms": [],
+    "log": "validation/K3K4Audit.log"
+  },
+  "declaration_linters": {
+    "default_linters_per_module": 15,
+    "modules": 24,
+    "errors": 0,
+    "log": "validation/K3K4Audit.log"
+  },
+  "proof_dependency_checks": {
+    "checked_edges": 49,
+    "failures": 0,
+    "edges": [
+      [
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min",
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_original_piecewiseC1_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_original_piecewiseC1_min",
+        "KirkMedhin.PiecewiseC1Extensions.exists_global_arcs"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_original_piecewiseC1_min",
+        "KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner",
+        "KirkMedhin.FinitePiecewise.cvFunctional_eq_of_eqOn"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner",
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_in_timeSpliceContext"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_in_timeSpliceContext"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.TimeSpliceContext.timeAction_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_of_timeAction_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_of_timeAction_min",
+        "KirkMedhin.FinitePiecewise.interior_EL_of_timeAction_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_of_timeAction_min",
+        "KirkMedhin.FinitePiecewise.twoArc_firstVariation_zero_of_timeAction_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_momentum_eq_of_timeAction_min",
+        "KirkMedhin.FinitePiecewise.firstVariation_eq_boundary_of_interior_EL"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.interior_EL_of_timeAction_min",
+        "KirkMedhin.WeakCoV.eulerLagrange_hasDerivAt_of_fixedEndpoint_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.twoArc_firstVariation_zero_of_timeAction_min",
+        "KirkMedhin.WeakCoV.hasDerivAt_cvFunctional_affine"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.twoArc_firstVariation_zero_of_timeAction_min",
+        "KirkMedhin.FinitePiecewise.timeAction_concatenate"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.TimeSpliceContext.timeAction_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_in_timeSpliceContext",
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_of_timeAction_min_weak"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_of_timeAction_min_weak",
+        "KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_of_timeAction_min_weak",
+        "KirkMedhin.NonautonomousDuBoisReymond.corner_energy_eq_of_weak_dbr_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.corner_energy_eq_of_timeAction_min_weak",
+        "KirkMedhin.NonautonomousTimeReparametrization.fixedParameterCost_isLocalMin_of_ambient_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_all_duration_exchange_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min",
+        "KirkMedhin.NonautonomousTimeReparametrization.fixedParameterCost_isLocalMin_of_ambient_min"
+      ],
+      [
+        "KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min",
+        "KirkMedhin.FinitePiecewise.durationExchange_mem_fixedEndpointFinitePiecewiseC1Curves"
+      ],
+      [
+        "KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric",
+        "KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric"
+      ],
+      [
+        "KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric",
+        "KirkMedhin.K3.contDiff_momentumCovector_of_contDiff_two"
+      ],
+      [
+        "KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric",
+        "KirkMedhin.K3.exists_augmented_stationarity_of_isoperimetric"
+      ],
+      [
+        "KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric",
+        "KirkMedhin.WeakCoV.eulerLagrange_hasDerivWithinAt_of_firstVariation_zero"
+      ],
+      [
+        "KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric",
+        "hasVanishingFirstVariation_of_eulerLagrange_within"
+      ],
+      [
+        "KirkMedhin.K3.exists_augmented_stationarity_of_isoperimetric",
+        "KirkMedhin.K3.exists_common_isoperimetricMultiplier"
+      ],
+      [
+        "KirkMedhin.K3.exists_augmented_stationarity_of_isoperimetric",
+        "KirkMedhin.K3.firstVariation_augmented"
+      ],
+      [
+        "KirkMedhin.K3.exists_common_isoperimetricMultiplier",
+        "KirkMedhin.K3.isoperimetricMultiplier_exists"
+      ],
+      [
+        "KirkMedhin.K3.exists_common_isoperimetricMultiplier",
+        "KirkMedhin.K3.perturbedCurve_mem_fixedEndpointC1Curves"
+      ],
+      [
+        "KirkMedhin.K3.isoperimetricMultiplier_exists",
+        "KirkMedhin.K3.hasStrictFDerivAt_cvFunctional_perturbed"
+      ],
+      [
+        "KirkMedhin.K3.isoperimetricMultiplier_exists",
+        "IsoperimetricVariation.exists_normal_multiplier_of_curve_family"
+      ],
+      [
+        "KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional",
+        "KirkMedhin.K3.hasStrictFDerivAt_cvFunctional_perturbed"
+      ],
+      [
+        "KirkMedhin.K3.hasStrictFDerivAt_cvFunctional_perturbed",
+        "KirkMedhin.K3.hasStrictFDerivAt_perturbedIntegral"
+      ],
+      [
+        "KirkMedhin.WeakCoV.momentum_hasDerivWithinAt_of_stationary",
+        "KirkMedhin.WeakCoV.momentum_eq_add_integral_of_stationary"
+      ],
+      [
+        "KirkMedhin.WeakCoV.momentum_eq_add_integral_of_stationary",
+        "KirkMedhin.WeakCoV.eq_const_of_integral_mul_deriv_eq_zero"
+      ],
+      [
+        "KirkMedhin.WeakCoV.firstVariation_zero_of_fixedEndpoint_min",
+        "KirkMedhin.WeakCoV.hasDerivAt_cvFunctional_affine"
+      ],
+      [
+        "KirkMedhin.WeakCoV.hasDerivAt_cvFunctional_affine",
+        "KirkMedhin.K3.hasStrictFDerivAt_cvFunctional_perturbed"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_all_duration_exchange_min"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_all_duration_exchange_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.hat_integral_eq_of_duration_exchange_min"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_all_duration_exchange_min",
+        "KirkMedhin.DuBoisReymond.compensated_eq_of_hat_integral_eq"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.hat_integral_eq_of_duration_exchange_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.hasDerivAt_fixedParameterCost"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.hasDerivAt_fixedParameterCost",
+        "KirkMedhin.NonautonomousTimeReparametrization.hasDerivAt_movingArcCost"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.corner_energy_eq_of_weak_dbr_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.integral_weighted_energy_eq"
+      ],
+      [
+        "KirkMedhin.NonautonomousDuBoisReymond.corner_energy_eq_of_weak_dbr_min",
+        "KirkMedhin.NonautonomousDuBoisReymond.hasDerivAt_fixedParameterCost"
+      ],
+      [
+        "KirkMedhin.NonautonomousTimeReparametrization.fixedParameterCost_isLocalMin_of_ambient_min",
+        "KirkMedhin.NonautonomousTimeReparametrization.cvFunctional_durationExchange"
+      ],
+      [
+        "KirkMedhin.NonautonomousTimeReparametrization.cvFunctional_durationExchange",
+        "KirkMedhin.NonautonomousTimeReparametrization.cvFunctional_concatenate"
+      ]
+    ],
+    "log": "validation/K3K4ProofPaths.log"
+  },
+  "campaign": {
+    "tasks": 8,
+    "required_declarations": [
+      "hjbMinimizing_of_residual",
+      "hjbCostateEquation_of_residual",
+      "hjbPMPAssembly_of_residual",
+      "K1NeedlePMP.needleCostate_of_integralOptimality_smooth",
+      "K1NeedlePMPOnHorizon.needleCostate_of_integralOptimality_onHorizon",
+      "KirkMedhin.K1.exists_needle_endpointTangent_of_primitive_data",
+      "KirkMedhin.K1.integralOptimal_normal_covector_of_endpointTangents",
+      "KirkMedhin.K1.exists_normalized_hahnBanach_terminal_covector",
+      "KirkMedhin.K1.exists_geometricNormalPMP_of_primitive_data",
+      "KirkMedhin.K1.integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference",
+      "IsoperimetricVariation.exists_normal_multiplier",
+      "IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family",
+      "KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional",
+      "KirkMedhin.K3.isoperimetricMultiplier_exists",
+      "KirkMedhin.K3.exists_common_isoperimetricMultiplier",
+      "KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric",
+      "KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric",
+      "KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost",
+      "KirkMedhin.TimeReparametrization.cvFunctional_durationExchange",
+      "KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves",
+      "KirkMedhin.TimeReparametrization.corner_energy_eq_of_cvFunctional_min",
+      "MinimumFuel.scalar_minimizer_iff_switchingLaw",
+      "MinimumFuel.box_minimizer_iff_switchingLaw",
+      "MinimumFuel.hamiltonianMinimizing_iff_switchingLaw",
+      "KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak",
+      "KirkMedhin.FinitePiecewise.interior_EL_in_finite_context",
+      "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak",
+      "KirkMedhin.FinitePiecewise.weierstrassErdmann_at_every_represented_corner",
+      "KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min",
+      "KirkMedhin.FinitePiecewise.interior_EL_in_timeSpliceContext",
+      "KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext",
+      "KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner",
+      "KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min",
+      "KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min"
+    ],
+    "all_34_declared_and_standard_axioms_only": true,
+    "target_check_errors": 0,
+    "target_check_warnings": 0,
+    "strict_manifest_errors": 0,
+    "strict_manifest_warnings": 0,
+    "review_boundary_tests": 11,
+    "review_boundary_test_failures": 0,
+    "runtime_acceptance_records_modified": false,
+    "revised_source_files": [
+      {
+        "path": "automation/kirk_medhin/tasks.json",
+        "bytes": 17318,
+        "sha256": "348206f72a25231b3c35ca1ccdfdfe7f232b7bccf43b21a280a9564b53d4fa0f",
+        "git_blob_sha": "cf5b1fa439d80be0a806e614861f6741437f82c9"
+      },
+      {
+        "path": "automation/kirk_medhin/CONTRACT.md",
+        "bytes": 16844,
+        "sha256": "62fb784aa372f863d8b9f403a100043da4026d3254036150e41c6599e5150294",
+        "git_blob_sha": "e7f0f6b3e6b576416b42c351709b22d952629cf2"
+      },
+      {
+        "path": "automation/kirk_medhin/REUSE.md",
+        "bytes": 9534,
+        "sha256": "f9d5065e6612df2e2b1066cb1ada61199d4330ff8d8485fe0778dfeecf3aa78d",
+        "git_blob_sha": "8663318d90139e0d37679f1d1267c3e106b6ca59"
+      },
+      {
+        "path": "automation/kirk_medhin/README.md",
+        "bytes": 3739,
+        "sha256": "7cd041625e703b84c094e25a4335f42fd7c6623caca0aeeb35a722a0f7f811ca",
+        "git_blob_sha": "86bd3c130575b299164bbfa4bd5215a4219caa58"
+      },
+      {
+        "path": "notes/kirk_medhin/REMAINING.md",
+        "bytes": 8550,
+        "sha256": "7d255b8db3bdf0d5524d8a2aa2021565f597e9fb9f463f8ea0a6e09fe8a0a956",
+        "git_blob_sha": "a6d6d138fa0ecb523998ffb6ead8b6850cb5c9d4"
+      },
+      {
+        "path": "notes/kirk_medhin/CAMPAIGN_PLAN.md",
+        "bytes": 6214,
+        "sha256": "d77a9b63247f9c20bca2de7d71b4a5d072f954b9a0dfa744e915b189a4bb2e73",
+        "git_blob_sha": "8ea8fbe0f868ad5504460b7c7a9056a14a8f3b87"
+      },
+      {
+        "path": "notes/kirk_medhin/GAP_MAPPING.md",
+        "bytes": 10583,
+        "sha256": "f51d7fa77499d03b080990082333ced265aee907f5fc6882e1285c73c3d8fff5",
+        "git_blob_sha": "94c9dbbd10bde5c2d43576875ac9195211f0864e"
+      },
+      {
+        "path": "notes/kirk_medhin/reviews/PROMPT_GPT_PRO_K3.md",
+        "bytes": 8369,
+        "sha256": "e2316e00a67262d58eae00a138e3bca5cc9057c8842cb017a5d34f335116451e",
+        "git_blob_sha": "6b586c418ea6776d1b6467ce65600e52d0c71368"
+      },
+      {
+        "path": "notes/kirk_medhin/reviews/PROMPT_GPT_PRO_BRIEFING.md",
+        "bytes": 9146,
+        "sha256": "f4f36e5869a79b3a16ed33740047ca1aba26885fd41343b0be848c76885718a4",
+        "git_blob_sha": "da9921e54a33f9a869ec663672bbd07fae047649"
+      },
+      {
+        "path": "automation/kirk_medhin/tests/test_review_boundaries.py",
+        "bytes": 10265,
+        "sha256": "42fa92a1cd19b5500e82aa53f2c2e5d4d7ab74f11c02d0a6a07c0b0cb35019e0",
+        "git_blob_sha": "802911a92f89457bf31b8f0851f341c3801f2951"
+      }
+    ]
+  },
+  "semantic_review": {
+    "result": "PASS for the explicitly stated scopes",
+    "report": "K3_K4_REVIEW.txt",
+    "nature": "Independent source-level semantic review, complementary to native kernel checking."
+  },
+  "reproduce": "bash docs/kirk_medhin/check_k3_k4.sh",
+  "published_source_and_evidence_files": [
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/DuBoisReymond.lean",
+      "bytes": 12351,
+      "sha256": "ed674293f444c8633424063b9075202afc684ff3cb6797f75c7d5e49877859ae",
+      "git_blob_sha": "17ad3afb19be0c86ab1f5dd181d417a674191439"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/FiniteCornerMinimumPrinciple.lean",
+      "bytes": 3161,
+      "sha256": "694922bbdaed422d4ac31dbbc5551316b774c70cb7574e97e83a9b98c421c88f",
+      "git_blob_sha": "ddfd6800287213f384fa849f1d9e1edbd2c4b745"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/FinitePiecewiseVariations.lean",
+      "bytes": 14055,
+      "sha256": "c5675a07d8022614fabe239bbcf657b66841061a17372147a0039392cf8ccde3",
+      "git_blob_sha": "73ee25e12b469580e563faec8d2ec55a59ae254a"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/FiniteSpatialVariations.lean",
+      "bytes": 14221,
+      "sha256": "1604797a3ce9da53744f925ccaa2f055d039d5dc0955e3c782e89a69c8ff188a",
+      "git_blob_sha": "8bec38b1ce59a894acadc1b749b518f8e84748e7"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/K3DifferentiableExtension.lean",
+      "bytes": 5224,
+      "sha256": "2035af77fb688d5768c67fd8eba89b8b14ec021406c5bca00ec26e3bcf3905a0",
+      "git_blob_sha": "8caef8e2e3d5245431ed5df8597c0d65e8d094e8"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/K3IsoperimetricLift.lean",
+      "bytes": 11579,
+      "sha256": "9e775b0326e97bf46760dd01a395ee134ebd211ede97ec910c9f0fea75a54c39",
+      "git_blob_sha": "d8f688cb32fb66778f835fd814f31ac3c09148c3"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/K3MomentumRegularity.lean",
+      "bytes": 6374,
+      "sha256": "1368391f0418242e5ac072025451ed11aaaa206c892a05de2f7e8611745446ac",
+      "git_blob_sha": "e3e4f5859c7eba961c8ef943f5ef8de3561f4bde"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousDuBoisReymond.lean",
+      "bytes": 15266,
+      "sha256": "80866dbea87837084ef47c869a0f7fb94599b03432138a195e87a787f9184812",
+      "git_blob_sha": "4cd30e01e71d0520412e1d46ca15e48b4bf3badb"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteCornerConditions.lean",
+      "bytes": 9714,
+      "sha256": "23c459f769e01ed825f60bf927cb49c9a900de6fcf65f54436f7ec7f85e7d3a2",
+      "git_blob_sha": "14c54913146098ea6541d25f9899e110e75d9a4d"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteCornerMinimumPrinciple.lean",
+      "bytes": 2949,
+      "sha256": "8c22f1c0eb85cb66d8f93e78e9be4ae05571999476cc647f0706aceade6c1b33",
+      "git_blob_sha": "51ca0eb7ba4afb65ae34f7d2dd9863f59c8cfa47"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFinitePiecewiseVariations.lean",
+      "bytes": 13525,
+      "sha256": "ef971bdd04a516d0c5a8b71eec0daa9ae9eda022c3c23b3e5e16c921c174de76",
+      "git_blob_sha": "37f91a8b0faa63e8eb7482783a84f29563fed038"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteSpatialVariations.lean",
+      "bytes": 10141,
+      "sha256": "64dd91f26e69ec736e76867f127af12c4addbac5085fea450c8ec6229a089f57",
+      "git_blob_sha": "1e61b23dd017407f86ad0eec964ae9c61bd6a922"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousTimeReparametrization.lean",
+      "bytes": 9147,
+      "sha256": "23dc95cefa2c1533574a0e2beb876a21a11b7921e39f0f520db4a69453f099da",
+      "git_blob_sha": "69658a4782757a2fa20835ef7bd2ffbc4bb73eb6"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousTimeReparametrizationFamily.lean",
+      "bytes": 9836,
+      "sha256": "6e7d48d53a0bf408c0c6c06f70b650c3a00c150fce5639a9281b59fb49459bf8",
+      "git_blob_sha": "0bc1909abc47b13d08ccd3322ee94afdf8ffde2a"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/PiecewiseC1Extensions.lean",
+      "bytes": 7129,
+      "sha256": "80c9744a784b0ef0a26e0311cada779a803e27178d0c9afe59fc03ecfc4d96f5",
+      "git_blob_sha": "935298f7f2727d412e21970d0102cb6b114de074"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/PiecewiseC1MinimumPrinciple.lean",
+      "bytes": 5792,
+      "sha256": "1d5f831a87cf08259c56b1761f4f7b128adaf2b73db4667e6ddb3356db125d97",
+      "git_blob_sha": "dfb284b78e5b73880893de9d81e6dd92bccae07d"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/WeakCornerConditions.lean",
+      "bytes": 6495,
+      "sha256": "dcac6d84b3cc97e7681343c4e10d98d31737b44d47c8c2615f0f62d9e0bd7daf",
+      "git_blob_sha": "fe19dfef01c201a36f9f9f307b5a7fa0841f55bf"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/WeakEulerLagrange.lean",
+      "bytes": 12962,
+      "sha256": "cb3ab17ec0e053b6b87fd8d52030db2aecf6addc218700d5b064deba6928db5e",
+      "git_blob_sha": "4fed93bfdcd1551669065df60fd30a63232fe77e"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/WeakEulerLagrangeMinimum.lean",
+      "bytes": 5133,
+      "sha256": "4bd78371e7f05eca546b46e11137aeb329e6a000a8a005ca2c8708d37bfda565",
+      "git_blob_sha": "95040b0bd6725a62ded4e9923df6c4867f907ef4"
+    },
+    {
+      "path": "DynamicalSystemsTest/KirkMedhin/K3IsoperimetricExample.lean",
+      "bytes": 8048,
+      "sha256": "552e405a75a849a2845b1c60b8d099da789c20910132dfb7fecadc2a61b7d5f7",
+      "git_blob_sha": "c3a360fd5338bb2774b5edc0d0aebd5a9aeac037"
+    },
+    {
+      "path": "DynamicalSystemsTest/KirkMedhin/NonautonomousDuBoisReymond.lean",
+      "bytes": 6315,
+      "sha256": "bd080e6e20bfdc7d5e63e92a5c46bbec9fae1914abb75bc5056e188ca2a5b8f2",
+      "git_blob_sha": "b1ba9cd962a8dabfc2ad85f2beae74d170e03de9"
+    },
+    {
+      "path": "DynamicalSystemsTest/KirkMedhin/WeakDuBoisReymond.lean",
+      "bytes": 4633,
+      "sha256": "ceb3fbdfeb64a99165581cbaf35cef94360ed6cfe374d9b248421ad54532e22d",
+      "git_blob_sha": "70cabf531ca4f1c4d90c139f552489f28c1aa8a3"
+    },
+    {
+      "path": "DynamicalSystemsTest/KirkMedhin/WeakEulerLagrangeEndpoint.lean",
+      "bytes": 7872,
+      "sha256": "c7c4dedc6e1669f40b9a74fd19f027028dcdc08f717ee875434fbfa508a9d2de",
+      "git_blob_sha": "656a3f9ce5ecf39d88cce675ab93c71f29a6862f"
+    },
+    {
+      "path": "DynamicalSystems.lean",
+      "bytes": 13298,
+      "sha256": "8109fa66544d33f1940e56c0339ff54529bf45693fd22fc415d328ec695a346a",
+      "git_blob_sha": "278a2a3af4ce95f06b615409b75e2882457a4c57"
+    },
+    {
+      "path": "DynamicalSystems/OptimalControl/ContinuousTime/K3IsoperimetricEulerLagrange.lean",
+      "bytes": 40317,
+      "sha256": "e2c77dab22f56f4dd8d3da953b5cd3e6266f4183a2f5fc04cdebce1dcd52edc5",
+      "git_blob_sha": "ebf7758bd3105f0ded9a498032b175087e35fc1f"
+    },
+    {
+      "path": "docs/kirk_medhin/CampaignTargets.lean",
+      "bytes": 5796,
+      "sha256": "0329ad6f7dfc904b14928568f3165c618d09a89b217e44e3756bcabbaadbf2ba",
+      "git_blob_sha": "a260d02ee7cfa79a824c6a3d7e759259154439ee"
+    },
+    {
+      "path": "docs/kirk_medhin/K3_K4_COMPLETION.md",
+      "bytes": 14319,
+      "sha256": "ab05312ecc60f2a77510fab2ee0b7f78874fd4f165da53654be5eb79a358a759",
+      "git_blob_sha": "453064f581c620c3b07c30a359c5c938b5639e3d"
+    },
+    {
+      "path": "docs/kirk_medhin/K3K4Audit.lean",
+      "bytes": 7334,
+      "sha256": "7422eb839bd0437efd0322261c0f358b28bedfd37e5930cca24b724336f232f9",
+      "git_blob_sha": "7b62fe5bb9ac7c2da501647c2551aff46cc070df"
+    },
+    {
+      "path": "docs/kirk_medhin/K3K4ProofPaths.lean",
+      "bytes": 8757,
+      "sha256": "58479636d63b45b4d9b93a21ca73c58be6a12b4529157afa195e630a3c2360e7",
+      "git_blob_sha": "2da43c0b3b0246324d904a008fc2fe028623474f"
+    },
+    {
+      "path": "docs/kirk_medhin/check_k3_k4.sh",
+      "bytes": 1025,
+      "sha256": "c71c1ee1449c53a344a0dfc224f19d0b9c528b0b26fcd5eea585d46c4a52f494",
+      "git_blob_sha": "5e313392faca74e1d2cb5c7346adcf0a2b753056"
+    },
+    {
+      "path": "docs/kirk_medhin/K3_K4_REVIEW.txt",
+      "bytes": 9089,
+      "sha256": "177893c1aaeb675f71abef9036dd335754c50a0053576ab88592383e25f5ef0b",
+      "git_blob_sha": "6f4b4ab16e7bdc6a2ba7c4054a4a821beb5e3b30"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/K3_K4_contract_review.txt",
+      "bytes": 6479,
+      "sha256": "3595aa1a36137d5bc232b52af9bdc0d5de76f557966c77a81d017769aa0d397b",
+      "git_blob_sha": "25449aa63b69f4f4d148e2fbccf3f0e88549d896"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/K3K4Audit.log",
+      "bytes": 7445,
+      "sha256": "3b4c9b9dc375eef9dbe10f23c467ffae33d0353dbb827b174b80e3c2af08fd5f",
+      "git_blob_sha": "1845eb7545110e119cf7192deb7ce5894158c2e2"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/K3K4ProofPaths.log",
+      "bytes": 7865,
+      "sha256": "3d1805d01335392522a8837e101e176ce23ae80f52e83ff0229ed4fe7248b501",
+      "git_blob_sha": "9c33a4190a1f1edcba703b79ea4ab63110feeca0"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/CampaignTargets.log",
+      "bytes": 34510,
+      "sha256": "2b62e1ca124504f123296aaa04958322298551436e2bb371a77698b7aeb6e02a",
+      "git_blob_sha": "2ae56605297125a51ec316947f8dec6a832c7297"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/campaign-validate.log",
+      "bytes": 104,
+      "sha256": "ae7b9e76a7c42fc70f026bee15a8b26346ccb31c8f19504f579bc0e0940bf77d",
+      "git_blob_sha": "874bf7600395bdb701cbbe7c40eb2cb5ab17c43c"
+    },
+    {
+      "path": "docs/kirk_medhin/validation/campaign-tests.log",
+      "bytes": 1809,
+      "sha256": "155d0d95605e9d92bbe01cc150faa8dc068f9ace0a4e50adb901e842b7099353",
+      "git_blob_sha": "efe7732ef14b2f2171f3a9dfe38a56001551c618"
+    }
+  ]
+}
