@@ -20,7 +20,8 @@ the main `DynamicalSystems.lean` umbrella.
 | Full K3 in the exact existing endpoint-inclusive predicate | `KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric` | Primitive C2 `L,G,x`, C1 `K`, and the same optimum/regularity data. Returns one multiplier, `HasVanishingFirstVariation`, and the unchanged `eulerLagrange`. |
 | Interior Euler–Lagrange from the actual minimum | `KirkMedhin.WeakCoV.eulerLagrange_hasDerivAt_of_fixedEndpoint_min` | Jointly C1 `L`, C1 `K,x`, positive horizon, and the actual fixed-endpoint C1 minimum. Momentum differentiability is a conclusion. |
 | Autonomous weak du Bois–Reymond | `KirkMedhin.DuBoisReymond.energy_eq_of_cvFunctional_min` | C1 autonomous `L`, actual global arc derivative `∀ t, HasDerivAt x (v t) t`, continuous velocity, positive horizon, and actual fixed-endpoint piecewise C1 minimum. Energy is constant on the closed horizon. |
-| Nonautonomous weak du Bois–Reymond | `KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min` | Jointly C1 time-dependent `L`, actual global arc derivative `∀ t, HasDerivAt x (v t) t`, continuous velocity, positive horizon, and the actual ambient minimum. Returns the integrated energy law and its actual interior derivative. |
+| Nonautonomous weak du Bois–Reymond, **one-corner** class | `KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min` | Jointly C1 time-dependent `L`, actual global arc derivative `∀ t, HasDerivAt x (v t) t`, continuous velocity, positive horizon, and the actual minimum over the **one-corner** fixed-endpoint class `fixedEndpointPiecewiseC1Curves T (x 0) (x T)` (membership is a single `IsPiecewiseC₁On` with one interior cut and continuous one-sided velocities). Returns the integrated energy law and its actual interior derivative. |
+| Nonautonomous weak du Bois–Reymond, **finite-piecewise** class | `KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min` | The same C1 data and positive horizon, but the actual minimum is taken over the separate finite-piecewise class `fixedEndpointFinitePiecewiseC1Curves T (x 0) (x T)` (any finite number of matching corners). This is the stronger class used by the finite-corner and original-predicate endpoints below; the one-corner theorem is not a specialization of it. |
 | Original-predicate nonautonomous corner theorem | `KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min` | Existing `IsPiecewiseC₁On`, continuous one-sided velocities, jointly C1 `L`, actual minimum over the horizon-only finite-piecewise class, and complete real normed state space. Returns both momentum and energy matching. |
 | Original-predicate autonomous specialization | `KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min` | The preceding scope for an autonomous C1 Lagrangian, with the existing `energyCurve` in the conclusion. |
 | Every represented finite-context corner | `KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner` | Actual global minimum; any finite time-aware prefix/suffix context around adjacent C1 arcs; representation only needs to agree with the reference on the physical horizon. |
@@ -184,9 +185,10 @@ The script builds the default library, compiles the four regression modules in
 dependency order, then runs:
 
 - [K3K4Audit.lean](K3K4Audit.lean): exhaustive standard-axiom checking of every
-  declaration owned by the 23 new source modules and the existing strict-integral
-  K3 module, including private and generated declarations; all 15 default
-  declaration linters for every module.
+  declaration owned by the 20 source modules and 4 test modules (24 modules,
+  355 declarations in total, including the existing strict-integral K3 module),
+  including private and generated declarations; all 15 default declaration
+  linters for every module.
 - [K3K4ProofPaths.lean](K3K4ProofPaths.lean): 49 actual proof-term dependency checks
   across the multiplier lift, real functional derivatives, weak fundamental lemma,
   constructed variations, finite splices, and original-predicate endpoint.
@@ -216,6 +218,22 @@ explicit assumptions above. No unresolved mathematical construction is passed as
 a premise to the final theorems. The result concerns the stated fixed-endpoint
 variational classes. It does not change the previously scoped K1, K2, K5, or K6
 theorem contracts or claim a Sobolev/general measurable-control theorem.
+
+### Weak-K4 acceptance is carried by the `_weak` names
+
+Weak-K4 acceptance is carried by the declarations whose names record the weak
+route, not by the legacy strong adapter. The relevant endpoints are
+`KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min`,
+`KirkMedhin.FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min`,
+`KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak`, and
+`KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak`.
+The legacy
+`KirkMedhin.TimeReparametrization.corner_energy_eq_of_cvFunctional_min` is **not**
+a weak-K4 endpoint: its signature still takes velocity differentiability
+(`hvd₁`, `hvd₂`) and interior Euler–Lagrange equations (`hEL₁`, `hEL₂`) as
+hypotheses. It is retained only as an auxiliary strong adapter (and listed in
+`CampaignTargets.lean` for that purpose), and it must not be read as the evidence
+that discharges the weak-K4 obligation.
 
 A proved equivalence is legitimate mathematics. The relevant acceptance failure
 is supplying an unresolved object or the desired result under another name as an

@@ -30,12 +30,19 @@ then applicable to this genuinely feasible family.  The module therefore supplie
 (a) the strict two-parameter differentiability and (b) the common multiplier on
 the two-parameter family.
 
-The **open residual** is the lifting from this two-parameter stationarity to
-`HasVanishingFirstVariation (fun t y v ↦ L t y v + λ * G t y v)` over *all*
-smooth endpoint-vanishing directions.  This lifting is not derived here; the
-theorem `eulerLagrange_of_augmentedVanishing` below consumes such an augmented
-vanishing variation as an assumed hypothesis.  Consequently the chain
-minimum → multiplier → augmented Euler–Lagrange is **not** closed in this module.
+**Historical note.**  An earlier revision of this module recorded the lifting from
+the two-parameter stationarity to `HasVanishingFirstVariation (fun t y v ↦ L t y v +
+λ * G t y v)` over *all* smooth endpoint-vanishing directions as *the open
+residual*, with the chain minimum → multiplier → augmented Euler–Lagrange *not
+closed in this module*.  That residual is now closed by
+`KirkMedhin.K3.exists_common_isoperimetricMultiplier` in
+`K3IsoperimetricLift.lean`, which fixes one multiplier and derives the identity for
+all C1 endpoint-zero directions (feeding
+`KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric` and
+`KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric`).  The theorem
+`eulerLagrange_of_augmentedVanishing` below is retained as a partial building
+block that consumes an augmented vanishing variation as an assumed hypothesis;
+it is not the final K3 endpoint.
 
 ## Main results
 

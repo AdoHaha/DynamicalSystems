@@ -36,6 +36,13 @@ The full regular K3 and weak K4 endpoints are included. -/
 #check KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost
 #check KirkMedhin.TimeReparametrization.cvFunctional_durationExchange
 #check KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves
+-- Legacy strong adapter, NOT the weak-K4 endpoint: it takes velocity
+-- differentiability (`hvd₁`/`hvd₂`) and interior Euler–Lagrange (`hEL₁`/`hEL₂`)
+-- as hypotheses. Weak-K4 acceptance is carried by the `_weak` targets below
+-- (`FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak`,
+-- `FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak`,
+-- `NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min`) plus the
+-- finite-piecewise `FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min`.
 #check KirkMedhin.TimeReparametrization.corner_energy_eq_of_cvFunctional_min
 #check MinimumFuel.scalar_minimizer_iff_switchingLaw
 #check MinimumFuel.box_minimizer_iff_switchingLaw
