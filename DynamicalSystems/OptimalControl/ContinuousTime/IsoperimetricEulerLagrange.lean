@@ -209,10 +209,15 @@ perturbations, the augmented Lagrangian `L + lam • G` satisfies the Euler–La
 equation.  The conclusion is the pointwise ODE for `L + lam • G`; the proof applies
 the existing integration-by-parts / fundamental-lemma interface
 `eulerLagrange_of_firstVariation_zero` to the actual augmented spatial and velocity
-derivatives, with the momentum regularity and continuity checked explicitly.  This
-does **not** derive the augmented vanishing variation from the two-parameter
-multiplier identity of `_root_.IsoperimetricVariation.isoperimetricMultiplier_exists`; that lifting is the open
-residual. -/
+derivatives, with the momentum regularity and continuity checked explicitly.  The
+derivation of the augmented vanishing variation from the two-parameter
+multiplier identity is not assumed: it is carried out by
+`_root_.IsoperimetricVariation.exists_augmented_stationarity_of_isoperimetric`
+above, whose endpoint corollaries
+`augmentedEulerLagrangeWithin_of_isoperimetric` and
+`augmentedEulerLagrange_of_isoperimetric` are the unconditional isoperimetric
+Euler–Lagrange necessity theorems.  This theorem is the generic conditional bridge
+used when the augmented vanishing variation is supplied directly. -/
 theorem _root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing
     (L G : ℝ → E → E → ℝ) (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
     (lam : ℝ) (hT : 0 < T)

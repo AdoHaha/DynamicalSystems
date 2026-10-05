@@ -33,8 +33,9 @@ the running and terminal costs,
 
 which is definitionally `firstVariation`.  Classically this is the Gateaux
 derivative `d/dε |_{ε=0} J (x + ε • η)`; identifying the two requires
-differentiating under the interval integral, which is not formalised here (see
-the implementation notes).
+differentiating under the interval integral.  That identification is proved
+downstream in `DynamicalSystems.OptimalControl.ContinuousTime.FirstVariationDifferentiation`
+by `hasDerivAt_cvFunctional_affine` and `hasStrictFDerivAt_cvFunctional_perturbed`.
 
 The **Euler–Lagrange equation** is the pointwise ODE
 
@@ -75,15 +76,20 @@ only assumed differentiable (`HasDerivAt`), and integrability is carried by the
 hypotheses rather than baked into a structure, matching the relational style of
 `DynamicalSystems.OptimalControl.ContinuousTime.ContinuousOCP`.
 
-Two points are deliberately left out of scope.  First, the identification of
-`firstVariation` with the Gateaux derivative `d/dε |_{ε=0} J (x + ε • η)` would
-require differentiating the interval integral with respect to the perturbation
-parameter (Mathlib's `intervalIntegral.hasDerivAt_integral_of_dominated_loc_of_deriv_le`),
-and is not proved here.  Second, `eulerLagrange_of_firstVariation_zero` assumes
-that the velocity derivative curve `t ↦ ∂ᵥL t (x t) (x' t)` is already
-differentiable with some derivative `Q`; the du Bois-Reymond argument that would
-derive this differentiability from the vanishing first variation alone (via the
-fundamental-lemma variant for `η'`) is not formalised.
+Two points are deliberately left out of this foundation module and are supplied
+downstream.  First, the identification of `firstVariation` with the Gateaux
+derivative `d/dε |_{ε=0} J (x + ε • η)`, by differentiating the interval integral
+with respect to the perturbation parameter, is proved in
+`DynamicalSystems.OptimalControl.ContinuousTime.FirstVariationDifferentiation`
+(`hasDerivAt_cvFunctional_affine`, `hasStrictFDerivAt_cvFunctional_perturbed`).
+Second, `eulerLagrange_of_firstVariation_zero` assumes that the velocity
+derivative curve `t ↦ ∂ᵥL t (x t) (x' t)` is already differentiable with some
+derivative `Q`; the du Bois-Reymond argument that derives this differentiability
+from the vanishing first variation alone (via the fundamental-lemma variant for
+`η'`) is proved in `DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange`
+(`momentum_hasDerivWithinAt_of_stationary`,
+`eulerLagrange_hasDerivWithinAt_of_firstVariation_zero`) and, from a fixed-endpoint
+minimum, in `WeakEulerLagrangeMinimum`.
 -/
 
 @[expose] public section

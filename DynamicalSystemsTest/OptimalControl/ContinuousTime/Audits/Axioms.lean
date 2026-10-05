@@ -39,7 +39,11 @@ import DynamicalSystemsTest.Mathlib.Analysis.ODE.NonautonomousFlowOrder
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.NotSufficient
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.PointwiseRepresentative
 
-/-! Kernel dependency audit for the cumulative Kirk–Medhin handoff. -/
+/-! Kernel dependency audit of the optimal-control endpoints.
+
+`#print axioms` of the principal public declarations, the relocated examples,
+and the generic ODE/analysis support they rest on. Every audited declaration
+must depend only on `propext`, `Classical.choice`, and `Quot.sound`. -/
 
 #print axioms AutonomousFlow.toNonautonomousFlow
 #print axioms HJBResidualBridge.hjb_value_gradient_adjoint

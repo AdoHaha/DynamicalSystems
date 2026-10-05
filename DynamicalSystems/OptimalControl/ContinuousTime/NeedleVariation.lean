@@ -14,7 +14,7 @@ public import Mathlib.Topology.Order.Basic
 /-!
 # Needle variations and the costate derivation (BM ch.7)
 
-This module builds the missing needle-variation piece recorded as a derivation gap in
+This module builds the missing needle-variation piece recorded as a derivation location in
 `DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple`: the passage from
 optimality (`IsOptimalPair`) of a reference pair `(x₀, u₀)` to the existence of a
 costate satisfying the existing `costateEquation` predicate together with
@@ -238,6 +238,23 @@ theorem needlePerturbationFirstOrder (g : ℝ → X) (τ : ℝ) (hg : Continuous
         mul_le_mul_of_nonneg_left hnorm (le_of_lt (inv_pos.mpr hε0))
     _ = η / 2 := by rw [← mul_assoc, inv_mul_cancel₀ hεne, one_mul]
     _ < η := by linarith
+
+/-- The scalar average of a continuous function over a left needle converges
+    to its value at the needle endpoint. This is the real-valued case of
+    `needlePerturbationFirstOrder`, stated with multiplication rather than
+    scalar action. -/
+theorem tendsto_needleAverage (g : ℝ → ℝ) (τ : ℝ) (hg : Continuous g) :
+    Tendsto (fun ε : ℝ => ε⁻¹ * ∫ t in (τ - ε)..τ, g t)
+      (𝓝[>] 0) (𝓝 (g τ)) := by
+  have h := needlePerturbationFirstOrder g τ hg
+  have hsum : Tendsto
+      (fun ε : ℝ => ε⁻¹ * ((∫ t in (τ - ε)..τ, g t) - ε * g τ) + g τ)
+      (𝓝[>] 0) (𝓝 (g τ)) := by
+    simpa only [smul_eq_mul, zero_add] using h.add_const (g τ)
+  apply hsum.congr'
+  filter_upwards [self_mem_nhdsWithin] with ε hpos
+  have hne : ε ≠ 0 := ne_of_gt (show 0 < ε from hpos)
+  rw [mul_sub, ← mul_assoc, inv_mul_cancel₀ hne, one_mul, sub_add_cancel]
 
 /-- **Needle impulse for the control dynamics.** With the frozen reference state `x₀`,
 the short integral of the dynamics jump `f(·,x₀·,v) − f(·,x₀·,u₀·)` expands to first

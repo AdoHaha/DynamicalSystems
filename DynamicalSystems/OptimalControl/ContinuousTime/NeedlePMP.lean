@@ -1,6 +1,7 @@
 import DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedleFamily
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedleCostIdentity
+import DynamicalSystems.OptimalControl.ContinuousTime.NeedleVariation
 import DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder
 import DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 import DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
@@ -151,22 +152,6 @@ theorem hamiltonianMinimizing_of_positive_time_jumps
       mem_nhdsWithin_of_mem_nhds (Iio_mem_nhds hT)] with s hs hsT
     exact hpos s hs hsT.le v hv
   · exact hpos t hgt ht.2 v hv
-
-omit [CompleteSpace E] in
-/-- The scalar average of a continuous function over a left needle converges
-to its value at the needle endpoint. -/
-theorem tendsto_needleAverage (g : ℝ → ℝ) (τ : ℝ) (hg : Continuous g) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * ∫ t in (τ - ε)..τ, g t)
-      (𝓝[>] 0) (𝓝 (g τ)) := by
-  have h := needlePerturbationFirstOrder g τ hg
-  have hsum : Tendsto
-      (fun ε : ℝ => ε⁻¹ * ((∫ t in (τ - ε)..τ, g t) - ε * g τ) + g τ)
-      (𝓝[>] 0) (𝓝 (g τ)) := by
-    simpa only [smul_eq_mul, zero_add] using h.add_const (g τ)
-  apply hsum.congr'
-  filter_upwards [self_mem_nhdsWithin] with ε hpos
-  have hne : ε ≠ 0 := ne_of_gt (show 0 < ε from hpos)
-  rw [mul_sub, ← mul_assoc, inv_mul_cancel₀ hne, one_mul, sub_add_cancel]
 
 /-- The cost derivative is derived from the exact nonlinear cost identity.
 The error limit here refers to the explicitly defined Taylor/control errors;

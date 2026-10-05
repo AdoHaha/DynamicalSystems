@@ -5,16 +5,21 @@ Authors: Igor Zubrycki
 -/
 import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
 import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgrammingMinPrincipleFromHJB
-import DynamicalSystems.OptimalControl.ContinuousTime.FiniteCornerMinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteWeierstrassErdmann
 import DynamicalSystems.OptimalControl.ContinuousTime.GeometricMinimumPrinciple
-import DynamicalSystems.OptimalControl.ContinuousTime.K3IsoperimetricLift
+import DynamicalSystems.OptimalControl.ContinuousTime.IsoperimetricEulerLagrange
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumFuel
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMPOnHorizon
-import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdmann
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
 
-/-! Actual required declarations for all eight scoped campaign tasks.
-The full regular K3 and weak K4 endpoints are included. -/
+/-! Public-API probes for the optimal-control theory.
+
+`#check` of the principal public endpoints and assembly bridges: the HJB
+residual bridge, the finite-horizon and geometric PMP derivations, the
+isoperimetric multiplier and its Euler–Lagrange corollaries, the time
+reparametrization cost identities, the minimum-fuel switching laws, and the
+weak du Bois–Reymond / Weierstrass–Erdmann corner endpoints. -/
 
 #check hjbMinimizing_of_residual
 #check hjbCostateEquation_of_residual
