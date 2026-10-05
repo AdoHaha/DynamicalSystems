@@ -12,34 +12,45 @@ public import Mathlib.Analysis.Calculus.FDeriv.Comp
 public import Mathlib.Analysis.Calculus.MeanValue
 
 /-!
-# Full K3: actual isoperimetric multiplier and augmented Euler–Lagrange
+# K3 (partial): two-parameter strict differentiability and multiplier
 
-This module completes the K3 obligation of the Kirk–Medhin campaign.  The
-existing interface `IsoperimetricVariation.exists_normal_multiplier_of_curve_family`
-extracts a normal multiplier from a constrained minimum, but it takes the strict
-Fréchet differentiability of the parameterized integral functionals as an input.
+This module provides two pieces of the Kirk–Medhin K3 obligation; it does **not**
+complete K3.
 
-Here that input is *derived*.  For an endpoint-preserving reference curve `x`,
-test directions `η`, `ξ`, and the two-parameter family
-`Γ(a,b)(t) = x t + a • η t + b • ξ t`, we differentiate the actual
-`cvFunctional` integrals under the interval-integral sign.  The resulting
-derivative at `(0,0)` has components equal to the explicit `firstVariation`
-expressions, so the multiplier interface becomes applicable to a genuinely
-feasible family and produces one multiplier `λ` common to every test direction.
+The existing interface
+`IsoperimetricVariation.exists_normal_multiplier_of_curve_family` extracts a
+normal multiplier from a constrained minimum, but it takes the strict Fréchet
+differentiability of the parameterized integral functionals as an input.  For an
+endpoint-preserving reference curve `x`, test directions `η`, `ξ`, and the
+two-parameter family `Γ(a,b)(t) = x t + a • η t + b • ξ t`, this module *derives*
+that input: it differentiates the actual `cvFunctional` integrals under the
+interval-integral sign, and the resulting derivative at `(0,0)` has components
+equal to the explicit `firstVariation` expressions.  The multiplier interface is
+then applicable to this genuinely feasible family.  The module therefore supplies
+(a) the strict two-parameter differentiability and (b) the common multiplier on
+the two-parameter family.
 
-The final step applies the existing integration-by-parts / fundamental-lemma
-interface `eulerLagrange_of_firstVariation_zero` to the augmented Lagrangian
-`L + λ • G`, checking the momentum regularity and endpoint conditions
-explicitly.
+The **open residual** is the lifting from this two-parameter stationarity to
+`HasVanishingFirstVariation (fun t y v ↦ L t y v + λ * G t y v)` over *all*
+smooth endpoint-vanishing directions.  This lifting is not derived here; the
+theorem `eulerLagrange_of_augmentedVanishing` below consumes such an augmented
+vanishing variation as an assumed hypothesis.  Consequently the chain
+minimum → multiplier → augmented Euler–Lagrange is **not** closed in this module.
 
 ## Main results
 
 * `hasStrictFDerivAt_parameterFunctional`: strict Fréchet differentiability of
   the two-parameter `cvFunctional` pair, with derivative the `firstVariation`.
-* `isoperimetricMultiplier_exists`: one common multiplier for all test
-  directions, obtained from a genuine constrained minimum.
-* `augmentedEulerLagrange_of_isoperimetric`: the Euler–Lagrange equation for
-  `L + λ • G` from the isoperimetric stationary condition.
+
+* `isoperimetricMultiplier_exists`: a common multiplier extracted from a genuine
+  constrained minimum.  Its scope is the two-parameter family: for each fixed
+  pair `(η, ξ)`, the identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}`
+  only; the value is `η`-independent given `ξ`, and there is no single invocation
+  ranging over all test directions.
+
+* `eulerLagrange_of_augmentedVanishing`: the Euler–Lagrange equation for
+  `L + λ • G`, proved from an *assumed* augmented vanishing first variation (not
+  derived here from the two-parameter multiplier identity).
 -/
 
 @[expose] public section
@@ -633,11 +644,13 @@ theorem perturbedCurve_zero (x η ξ : ℝ → E) : perturbedCurve x η ξ 0 = x
 /-- **One common isoperimetric multiplier for the actual two-parameter family.**
 Under a genuine constrained minimum of the actual `cvFunctional` integrals and the
 derived strict differentiability of the parameterized pair, the multiplier
-extracted from the `ξ` component is `-δJ[ξ] / δC[ξ]`, *independent of the test
-direction* `η`, and it annihilates the combined first variation for every parameter
-`p`.  This is the multiplier interface applied to a genuinely feasible family;
-the differentiability premise is the derived
-`hasStrictFDerivAt_parameterFunctional`. -/
+extracted from the `ξ` component is `-δJ[ξ] / δC[ξ]` and it annihilates the
+combined first variation.  The scope is precisely the fixed pair `(η, ξ)`: the
+identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}` only.  The value is
+`η`-independent given `ξ`, but each invocation fixes one `η` and there is no single
+invocation ranging over all test directions.  This is the multiplier interface
+applied to a genuinely feasible family; the differentiability premise is the
+derived `hasStrictFDerivAt_parameterFunctional`. -/
 theorem isoperimetricMultiplier_exists
     (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ)
     (S : Set (ℝ → E)) (x η ξ : ℝ → E)
@@ -678,16 +691,18 @@ theorem isoperimetricMultiplier_exists
   field_simp
   linarith
 
-/-- **Augmented Euler–Lagrange from the isoperimetric multiplier condition.**
-Once the extracted multiplier `lam` annihilates the combined first variation of
-`L` and `G` for every endpoint-vanishing perturbation — the stationarity produced
-by `isoperimetricMultiplier_exists` (and its infinite-dimensional counterpart) —
-the augmented Lagrangian `L + lam • G` satisfies the Euler–Lagrange equation.
-The conclusion is the pointwise ODE for `L + lam • G`; the proof applies the
-existing integration-by-parts / fundamental-lemma interface
+/-- **Augmented Euler–Lagrange from an assumed augmented vanishing variation.**
+Given a multiplier `lam` together with the *assumed* hypothesis that the augmented
+Lagrangian `L + lam • G` has vanishing first variation over all endpoint-vanishing
+perturbations, the augmented Lagrangian `L + lam • G` satisfies the Euler–Lagrange
+equation.  The conclusion is the pointwise ODE for `L + lam • G`; the proof applies
+the existing integration-by-parts / fundamental-lemma interface
 `eulerLagrange_of_firstVariation_zero` to the actual augmented spatial and velocity
-derivatives, with the momentum regularity and continuity checked explicitly. -/
-theorem augmentedEulerLagrange_of_isoperimetric
+derivatives, with the momentum regularity and continuity checked explicitly.  This
+does **not** derive the augmented vanishing variation from the two-parameter
+multiplier identity of `isoperimetricMultiplier_exists`; that lifting is the open
+residual. -/
+theorem eulerLagrange_of_augmentedVanishing
     (L G : ℝ → E → E → ℝ) (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
     (lam : ℝ) (hT : 0 < T)
     (hvan : HasVanishingFirstVariation (fun t y v ↦ L t y v + lam * G t y v) K T x)
@@ -706,4 +721,4 @@ end KirkMedhin.K3
 
 #check @KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional
 #check @KirkMedhin.K3.isoperimetricMultiplier_exists
-#check @KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric
+#check @KirkMedhin.K3.eulerLagrange_of_augmentedVanishing
