@@ -515,3 +515,476 @@ theorem eulerLagrange_of_firstVariation_zero (L : ℝ → E → E → ℝ) (K : 
   exact hPderiv t ht
 
 end EulerLagrange
+
+/-! ## Weierstrass–Erdmann corner conditions
+
+This section formalises the first (and, for autonomous Lagrangians, the second)
+Weierstrass–Erdmann corner condition for a piecewise-`C¹` extremal, following Kirk,
+*Optimal Control Theory: An Introduction* (Dover, 2004), §4.4, and Liberzon,
+*Calculus of Variations and Optimal Control Theory* (2012), §4.4.
+
+Where `eulerLagrange_of_firstVariation_zero` treats a `C¹` extremal with
+endpoint-vanishing perturbations, the corner conditions generalise to a curve `x`
+that is `C¹` on each of `[0, τ]` and `[τ, T]` and continuous at the corner `τ`,
+while `deriv x` may jump there.  Integrating the first variation by parts
+separately on the two sub-intervals leaves boundary terms at `τ`; since the
+perturbation `η` is free at `τ` (it need only vanish at `0` and `T`), those terms
+can cancel for every admissible `η` only if the momentum
+`∂ᵥL τ (x τ) (x' τ)` is continuous across the corner.  For an autonomous
+Lagrangian the same argument applied to time reparametrisations gives continuity
+of the energy `⟪x', ∂ᵥL⟫ − L`.
+-/
+
+section WeierstrassErdmann
+
+variable [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-- A curve `x : ℝ → E` is piecewise-`C¹` on `[0, T]` with a single corner at `τ`:
+it is continuous on `[0, T]`, has left derivative `vL t` at every `t ∈ [0, τ]`
+(so `vL` is the genuine two-sided derivative on `[0, τ)`), and right derivative
+`vR t` at every `t ∈ [τ, T]`.  The one-sided derivatives `vL τ` and `vR τ` may
+differ: that jump is the corner (Kirk, *Optimal Control Theory*, Dover 2004,
+§4.4; Liberzon, *Calculus of Variations and Optimal Control Theory*, 2012,
+§4.4). -/
+def IsPiecewiseC₁On (x vL vR : ℝ → E) (T τ : ℝ) : Prop :=
+  0 < τ ∧ τ < T ∧ ContinuousOn x (Set.Icc 0 T) ∧
+    (∀ t ∈ Set.Icc 0 τ, HasDerivWithinAt x (vL t) (Set.Iic τ) t) ∧
+    (∀ t ∈ Set.Icc τ T, HasDerivWithinAt x (vR t) (Set.Ici τ) t)
+
+/-- ASCII alias for `IsPiecewiseC₁On` (the task statement spells it `IsPiecewiseC¹On`
+with a superscript `¹`, which is not a valid Lean identifier character; the subscript `₁`
+is the closest compilable spelling). -/
+abbrev IsPiecewiseC1On (x vL vR : ℝ → E) (T τ : ℝ) : Prop :=
+  IsPiecewiseC₁On x vL vR T τ
+
+/-- The momentum (velocity-derivative) curve `P(t) = ∂ᵥL t (x t) (v t)`, the
+Fréchet derivative of the Lagrangian in its velocity argument evaluated along
+the curve `x` with velocity field `v`. -/
+noncomputable def momentumCurve (L : ℝ → E → E → ℝ) (x v : ℝ → E) :
+    ℝ → E →L[ℝ] ℝ :=
+  fun t ↦ fderiv ℝ (fun w : E ↦ L t (x t) w) (v t)
+
+/-- The state-derivative curve `S(t) = ∂ₓL t (x t) (v t)`, the Fréchet derivative
+of the Lagrangian in its state argument evaluated along `x` with velocity `v`. -/
+noncomputable def stateDerivCurve (L : ℝ → E → E → ℝ) (x v : ℝ → E) :
+    ℝ → E →L[ℝ] ℝ :=
+  fun t ↦ fderiv ℝ (fun y : E ↦ L t y (v t)) (x t)
+
+/-- The energy curve `H(t) = ⟪v t, ∂ᵥL⟫ − L` for an autonomous Lagrangian
+`L : E → E → ℝ`, i.e. `H(t) = (∂ᵥL (x t) (v t)) (v t) − L (x t) (v t)`. -/
+noncomputable def energyCurve (L : E → E → ℝ) (x v : ℝ → E) : ℝ → ℝ :=
+  fun t ↦ (fderiv ℝ (fun w : E ↦ L (x t) w) (v t)) (v t) - L (x t) (v t)
+
+/-- The first variation split at the corner `τ`: the running-cost linearisation
+integrated separately over `[0, τ]` (with left velocity field `vL`) and
+`[τ, T]` (with right velocity field `vR`), plus the terminal term.  For a `C¹`
+curve (`vL = vR = deriv x`) this agrees with `firstVariation` up to the null
+set `{τ}`. -/
+noncomputable def firstVariation_piecewise (L : ℝ → E → E → ℝ) (K : E → ℝ)
+    (T τ : ℝ) (x vL vR η wL wR : ℝ → E) : ℝ :=
+  (∫ t in 0..τ, (stateDerivCurve L x vL t) (η t)
+      + (momentumCurve L x vL t) (wL t))
+    + (∫ t in τ..T, (stateDerivCurve L x vR t) (η t)
+        + (momentumCurve L x vR t) (wR t))
+    + (fderiv ℝ K (x T)) (η T)
+
+/-- A piecewise-`C¹` perturbation: `η` is continuous on `[0, T]`, vanishes at
+both endpoints (but is free at the corner `τ`), and has left derivative `wL`
+on `[0, τ]` and right derivative `wR` on `[τ, T]`. -/
+def IsPiecewisePerturbation (η wL wR : ℝ → E) (T τ : ℝ) : Prop :=
+  0 < τ ∧ τ < T ∧ ContinuousOn η (Set.Icc 0 T) ∧ η 0 = 0 ∧ η T = 0 ∧
+    (∀ t ∈ Set.Icc 0 τ, HasDerivWithinAt η (wL t) (Set.Iic τ) t) ∧
+    (∀ t ∈ Set.Icc τ T, HasDerivWithinAt η (wR t) (Set.Ici τ) t)
+
+/-- The (split) first variation vanishes on every admissible piecewise-`C¹`
+perturbation.  This is the corner-setting analogue of
+`HasVanishingFirstVariation`. -/
+def HasVanishingPiecewiseFirstVariation (L : ℝ → E → E → ℝ) (K : E → ℝ)
+    (T τ : ℝ) (x vL vR : ℝ → E) : Prop :=
+  ∀ η wL wR : ℝ → E, IsPiecewisePerturbation η wL wR T τ →
+    firstVariation_piecewise L K T τ x vL vR η wL wR = 0
+
+/-- A `C¹` curve is piecewise-`C¹` with any corner (both one-sided derivative
+fields can be taken to be `deriv x`). -/
+theorem isPiecewiseC1On_of_hasDerivAt {x : ℝ → E} {T τ : ℝ}
+    (h0 : 0 < τ) (hT : τ < T) (hcont : ContinuousOn x (Set.Icc 0 T))
+    (hderiv : ∀ t ∈ Set.Icc 0 T, HasDerivAt x (deriv x t) t) :
+    IsPiecewiseC₁On x (fun t ↦ deriv x t) (fun t ↦ deriv x t) T τ := by
+  refine ⟨h0, hT, hcont, ?_, ?_⟩
+  · intro t ht
+    exact ((hderiv t ⟨ht.1, le_trans ht.2 hT.le⟩).hasDerivWithinAt)
+  · intro t ht
+    exact ((hderiv t ⟨le_trans h0.le ht.1, ht.2⟩).hasDerivWithinAt)
+
+/-- **First Weierstrass–Erdmann corner condition** (Kirk, *Optimal Control
+Theory*, Dover 2004, §4.4; Liberzon, *Calculus of Variations and Optimal
+Control Theory*, 2012, §4.4): if the (split) first variation vanishes for every
+piecewise-`C¹` endpoint-vanishing perturbation, and each arc satisfies the
+Euler–Lagrange equation (`hEL₁`, `hEL₂`: these follow from the vanishing first
+variation on each sub-interval by the standard `eulerLagrange`-style argument,
+cf. `eulerLagrange_of_firstVariation_zero`), then the momentum is continuous
+across the corner: `∂ᵥL τ (x τ) (vL τ) = ∂ᵥL τ (x τ) (vR τ)`.
+
+The proof integrates by parts on `[0, τ]` and `[τ, T]`
+(`intervalIntegral.integral_deriv_mul_eq_sub_of_hasDerivAt`, which needs only
+interior differentiability plus endpoint continuity, hence no spurious
+two-sided hypothesis at the corner).  The bulk terms cancel by the arc-wise
+Euler–Lagrange equations, leaving `(P⁻ τ − P⁺ τ) (η τ)`; testing against the
+smooth bump `η = φ • e` with `φ τ = 1` supported in `(0, T)` forces
+`P⁻ τ = P⁺ τ`.  The continuity hypotheses are stated globally on `ℝ`, a mild
+over-strengthening of the books' interval-local regularity, matching the style
+of `eulerLagrange_of_firstVariation_zero`. -/
+theorem weierstrassErdmannMomentum
+    {L : ℝ → E → E → ℝ} {K : E → ℝ} {T τ : ℝ} {x vL vR : ℝ → E}
+    {Q₁ Q₂ : ℝ → E →L[ℝ] ℝ}
+    (hcorner : IsPiecewiseC₁On x vL vR T τ)
+    (hvan : HasVanishingPiecewiseFirstVariation L K T τ x vL vR)
+    (hP₁deriv : ∀ t ∈ Set.Ioo 0 τ, HasDerivAt (momentumCurve L x vL) (Q₁ t) t)
+    (hP₂deriv : ∀ t ∈ Set.Ioo τ T, HasDerivAt (momentumCurve L x vR) (Q₂ t) t)
+    (hEL₁ : ∀ t ∈ Set.Icc 0 τ, stateDerivCurve L x vL t = Q₁ t)
+    (hEL₂ : ∀ t ∈ Set.Icc τ T, stateDerivCurve L x vR t = Q₂ t)
+    (hS₁cont : Continuous (stateDerivCurve L x vL))
+    (hP₁cont : Continuous (momentumCurve L x vL))
+    (hQ₁cont : Continuous Q₁)
+    (hS₂cont : Continuous (stateDerivCurve L x vR))
+    (hP₂cont : Continuous (momentumCurve L x vR))
+    (hQ₂cont : Continuous Q₂) :
+    momentumCurve L x vL τ = momentumCurve L x vR τ := by
+  obtain ⟨h0τ, hτT, -, -, -⟩ := hcorner
+  apply ContinuousLinearMap.ext
+  intro e
+  -- A bump radius with `closedBall τ rOut ⊆ (0, T)`.
+  have hTτ : (0 : ℝ) < T - τ := sub_pos.mpr hτT
+  set rOut : ℝ := min τ (T - τ) / 2 with hrOut
+  have hmin_pos : (0 : ℝ) < min τ (T - τ) := lt_min h0τ hTτ
+  have hrOut_pos : 0 < rOut := by rw [hrOut]; linarith
+  have hrOut_τ : rOut ≤ τ / 2 := by
+    rw [hrOut]
+    have hmin : min τ (T - τ) ≤ τ := min_le_left _ _
+    linarith
+  have hrOut_T : rOut ≤ (T - τ) / 2 := by
+    rw [hrOut]
+    have hmin : min τ (T - τ) ≤ T - τ := min_le_right _ _
+    linarith
+  have hball : Metric.closedBall τ rOut ⊆ Set.Ioo 0 T := by
+    intro y hy
+    rw [Metric.mem_closedBall, Real.dist_eq] at hy
+    obtain ⟨hlo, hhi⟩ := abs_le.mp hy
+    rw [Set.mem_Ioo]
+    constructor <;> linarith
+  -- The smooth bump at the corner, equal to `1` at `τ`.
+  let φ : ContDiffBump τ := ⟨rOut / 2, rOut, by linarith, by linarith⟩
+  have hφrOut : φ.rOut = rOut := rfl
+  have hφrIn : φ.rIn = rOut / 2 := rfl
+  have hφ : ContDiff ℝ 1 (φ : ℝ → ℝ) := φ.contDiff
+  have hφd : Differentiable ℝ (φ : ℝ → ℝ) := hφ.differentiable (by norm_num)
+  have hφτ : (φ : ℝ → ℝ) τ = 1 := by
+    apply φ.one_of_mem_closedBall
+    rw [Metric.mem_closedBall, dist_self, hφrIn]
+    linarith
+  have hφsupp : tsupport (φ : ℝ → ℝ) ⊆ Set.Ioo 0 T := by
+    rw [φ.tsupport_eq, hφrOut]
+    exact hball
+  have hφ0 : (φ : ℝ → ℝ) 0 = 0 := by
+    by_contra hne
+    exact absurd (hφsupp (subset_closure (Function.mem_support.mpr hne))) (by simp)
+  have hφT : (φ : ℝ → ℝ) T = 0 := by
+    by_contra hne
+    exact absurd (hφsupp (subset_closure (Function.mem_support.mpr hne))) (by simp)
+  -- The test perturbation `η = φ • e`, free at `τ` with `η τ = e`.
+  have hηderiv : ∀ s, HasDerivAt (fun s : ℝ ↦ (φ : ℝ → ℝ) s • e)
+      (deriv (fun s : ℝ ↦ (φ : ℝ → ℝ) s • e) s) s := by
+    intro s
+    rw [deriv_smul_const hφd.differentiableAt e]
+    exact hφd.differentiableAt.hasDerivAt.smul_const e
+  have hadm : IsPiecewisePerturbation (fun s : ℝ ↦ (φ : ℝ → ℝ) s • e)
+      (fun s : ℝ ↦ deriv (φ : ℝ → ℝ) s • e)
+      (fun s : ℝ ↦ deriv (φ : ℝ → ℝ) s • e) T τ := by
+    refine ⟨h0τ, hτT, ?_, ?_, ?_, ?_, ?_⟩
+    · exact (hφd.continuous.smul continuous_const).continuousOn
+    · change (φ : ℝ → ℝ) 0 • e = 0
+      rw [hφ0, zero_smul]
+    · change (φ : ℝ → ℝ) T • e = 0
+      rw [hφT, zero_smul]
+    · intro t _
+      have h := (hηderiv t).hasDerivWithinAt (s := Set.Iic τ)
+      rwa [deriv_smul_const hφd.differentiableAt e] at h
+    · intro t _
+      have h := (hηderiv t).hasDerivWithinAt (s := Set.Ici τ)
+      rwa [deriv_smul_const hφd.differentiableAt e] at h
+  have hvan0 := hvan _ _ _ hadm
+  simp only [firstVariation_piecewise] at hvan0
+  rw [show (φ : ℝ → ℝ) T • e = 0 from by rw [hφT, zero_smul], map_zero,
+    add_zero] at hvan0
+  -- Clean scalar continuity facts.
+  have hS₁e : Continuous (fun t ↦ (stateDerivCurve L x vL t) e) :=
+    hS₁cont.clm_apply continuous_const
+  have hP₁e : Continuous (fun t ↦ (momentumCurve L x vL t) e) :=
+    hP₁cont.clm_apply continuous_const
+  have hQ₁e : Continuous (fun t ↦ (Q₁ t) e) :=
+    hQ₁cont.clm_apply continuous_const
+  have hS₂e : Continuous (fun t ↦ (stateDerivCurve L x vR t) e) :=
+    hS₂cont.clm_apply continuous_const
+  have hP₂e : Continuous (fun t ↦ (momentumCurve L x vR t) e) :=
+    hP₂cont.clm_apply continuous_const
+  have hQ₂e : Continuous (fun t ↦ (Q₂ t) e) :=
+    hQ₂cont.clm_apply continuous_const
+  -- Left arc: the split integral reduces to the `τ` boundary term.
+  have hleft : (∫ t in 0..τ, (stateDerivCurve L x vL t) ((φ : ℝ → ℝ) t • e)
+        + (momentumCurve L x vL t) (deriv (φ : ℝ → ℝ) t • e))
+      = (momentumCurve L x vL τ) e := by
+    have hcongr : (∫ t in 0..τ, (stateDerivCurve L x vL t) ((φ : ℝ → ℝ) t • e)
+          + (momentumCurve L x vL t) (deriv (φ : ℝ → ℝ) t • e))
+        = (∫ t in 0..τ, (stateDerivCurve L x vL t e) * (φ : ℝ → ℝ) t
+          + deriv (φ : ℝ → ℝ) t * ((momentumCurve L x vL t) e)) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      simp only [map_smul, smul_eq_mul]
+      ring
+    have hPe : ∀ t ∈ Set.Ioo (min 0 τ) (max 0 τ),
+        HasDerivAt (fun s ↦ (momentumCurve L x vL s) e) ((Q₁ t) e) t := by
+      intro t ht
+      rw [min_eq_left h0τ.le, max_eq_right h0τ.le] at ht
+      have h := (hP₁deriv t ht).clm_apply (hasDerivAt_const (x := t) e)
+      simpa only [map_zero, add_zero] using h
+    have hφu : ∀ t ∈ Set.Ioo (min 0 τ) (max 0 τ),
+        HasDerivAt (φ : ℝ → ℝ) (deriv (φ : ℝ → ℝ) t) t :=
+      fun t _ ↦ hφd.differentiableAt.hasDerivAt
+    have hui : IntervalIntegrable (deriv (φ : ℝ → ℝ)) volume 0 τ :=
+      hφ.continuous_deriv_one.continuousOn.intervalIntegrable
+    have hvi : IntervalIntegrable (fun t ↦ (Q₁ t) e) volume 0 τ :=
+      hQ₁e.continuousOn.intervalIntegrable
+    have hibp := intervalIntegral.integral_deriv_mul_eq_sub_of_hasDerivAt
+      hφd.continuous.continuousOn hP₁e.continuousOn hφu hPe hui hvi
+    have hELe : (∫ t in 0..τ, (stateDerivCurve L x vL t e) * (φ : ℝ → ℝ) t)
+        = ∫ t in 0..τ, ((Q₁ t) e) * (φ : ℝ → ℝ) t := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      have htI : t ∈ Set.Icc 0 τ := by
+        rwa [Set.uIcc_of_le h0τ.le] at ht
+      change (stateDerivCurve L x vL t e) * (φ : ℝ → ℝ) t
+        = ((Q₁ t) e) * (φ : ℝ → ℝ) t
+      rw [hEL₁ t htI]
+    have hI1 : IntervalIntegrable
+        (fun t ↦ (stateDerivCurve L x vL t e) * (φ : ℝ → ℝ) t) volume 0 τ :=
+      (hS₁e.mul hφd.continuous).continuousOn.intervalIntegrable
+    have hI2 : IntervalIntegrable
+        (fun t ↦ deriv (φ : ℝ → ℝ) t * ((momentumCurve L x vL t) e)) volume 0 τ :=
+      (hφ.continuous_deriv_one.mul hP₁e).continuousOn.intervalIntegrable
+    have hI3 : IntervalIntegrable
+        (fun t ↦ (φ : ℝ → ℝ) t * ((Q₁ t) e)) volume 0 τ :=
+      (hφd.continuous.mul hQ₁e).continuousOn.intervalIntegrable
+    have hcomm : (∫ t in 0..τ, ((Q₁ t) e) * (φ : ℝ → ℝ) t)
+        = ∫ t in 0..τ, (φ : ℝ → ℝ) t * ((Q₁ t) e) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      change ((Q₁ t) e) * (φ : ℝ → ℝ) t = (φ : ℝ → ℝ) t * ((Q₁ t) e)
+      ring
+    rw [hcongr, intervalIntegral.integral_add hI1 hI2, hELe, hcomm]
+    rw [hφτ, hφ0, one_mul, zero_mul, sub_zero] at hibp
+    rw [intervalIntegral.integral_add hI2 hI3] at hibp
+    linear_combination hibp
+  -- Right arc: the split integral reduces to minus the `τ` boundary term.
+  have hright : (∫ t in τ..T, (stateDerivCurve L x vR t) ((φ : ℝ → ℝ) t • e)
+        + (momentumCurve L x vR t) (deriv (φ : ℝ → ℝ) t • e))
+      = -((momentumCurve L x vR τ) e) := by
+    have hcongr : (∫ t in τ..T, (stateDerivCurve L x vR t) ((φ : ℝ → ℝ) t • e)
+          + (momentumCurve L x vR t) (deriv (φ : ℝ → ℝ) t • e))
+        = (∫ t in τ..T, (stateDerivCurve L x vR t e) * (φ : ℝ → ℝ) t
+          + deriv (φ : ℝ → ℝ) t * ((momentumCurve L x vR t) e)) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      simp only [map_smul, smul_eq_mul]
+      ring
+    have hPe : ∀ t ∈ Set.Ioo (min τ T) (max τ T),
+        HasDerivAt (fun s ↦ (momentumCurve L x vR s) e) ((Q₂ t) e) t := by
+      intro t ht
+      rw [min_eq_left hτT.le, max_eq_right hτT.le] at ht
+      have h := (hP₂deriv t ht).clm_apply (hasDerivAt_const (x := t) e)
+      simpa only [map_zero, add_zero] using h
+    have hφu : ∀ t ∈ Set.Ioo (min τ T) (max τ T),
+        HasDerivAt (φ : ℝ → ℝ) (deriv (φ : ℝ → ℝ) t) t :=
+      fun t _ ↦ hφd.differentiableAt.hasDerivAt
+    have hui : IntervalIntegrable (deriv (φ : ℝ → ℝ)) volume τ T :=
+      hφ.continuous_deriv_one.continuousOn.intervalIntegrable
+    have hvi : IntervalIntegrable (fun t ↦ (Q₂ t) e) volume τ T :=
+      hQ₂e.continuousOn.intervalIntegrable
+    have hibp := intervalIntegral.integral_deriv_mul_eq_sub_of_hasDerivAt
+      hφd.continuous.continuousOn hP₂e.continuousOn hφu hPe hui hvi
+    have hELe : (∫ t in τ..T, (stateDerivCurve L x vR t e) * (φ : ℝ → ℝ) t)
+        = ∫ t in τ..T, ((Q₂ t) e) * (φ : ℝ → ℝ) t := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      have htI : t ∈ Set.Icc τ T := by
+        rwa [Set.uIcc_of_le hτT.le] at ht
+      change (stateDerivCurve L x vR t e) * (φ : ℝ → ℝ) t
+        = ((Q₂ t) e) * (φ : ℝ → ℝ) t
+      rw [hEL₂ t htI]
+    have hI1 : IntervalIntegrable
+        (fun t ↦ (stateDerivCurve L x vR t e) * (φ : ℝ → ℝ) t) volume τ T :=
+      (hS₂e.mul hφd.continuous).continuousOn.intervalIntegrable
+    have hI2 : IntervalIntegrable
+        (fun t ↦ deriv (φ : ℝ → ℝ) t * ((momentumCurve L x vR t) e)) volume τ T :=
+      (hφ.continuous_deriv_one.mul hP₂e).continuousOn.intervalIntegrable
+    have hI3 : IntervalIntegrable
+        (fun t ↦ (φ : ℝ → ℝ) t * ((Q₂ t) e)) volume τ T :=
+      (hφd.continuous.mul hQ₂e).continuousOn.intervalIntegrable
+    have hcomm : (∫ t in τ..T, ((Q₂ t) e) * (φ : ℝ → ℝ) t)
+        = ∫ t in τ..T, (φ : ℝ → ℝ) t * ((Q₂ t) e) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      change ((Q₂ t) e) * (φ : ℝ → ℝ) t = (φ : ℝ → ℝ) t * ((Q₂ t) e)
+      ring
+    rw [hcongr, intervalIntegral.integral_add hI1 hI2, hELe, hcomm]
+    rw [hφT, hφτ, zero_mul, one_mul, zero_sub] at hibp
+    rw [intervalIntegral.integral_add hI2 hI3] at hibp
+    linear_combination hibp
+  -- The two `τ` boundary terms must cancel.
+  rw [hleft, hright] at hvan0
+  linarith
+
+/-- **Second Weierstrass–Erdmann corner condition** (Kirk, *Optimal Control
+Theory*, Dover 2004, §4.4; Liberzon, *Calculus of Variations and Optimal
+Control Theory*, 2012, §4.4): for an autonomous Lagrangian (no explicit `t`
+dependence), vanishing of the first variation under time reparametrisations
+forces the energy `H = ⟪v, ∂ᵥL⟫ − L` to be continuous across the corner.
+
+Here `hvan` packages the weak form of that time-reparametrisation first
+variation — the integrated product-rule identity on each arc — while `hcons₁`
+and `hcons₂` are the arc-wise energy-conservation laws (for autonomous `L`,
+Euler–Lagrange solutions have constant energy on each smooth arc).  The proof
+is the scalar analogue of `weierstrassErdmannMomentum`: with the bump
+`ψ = φ`, `ψ τ = 1`, the fundamental theorem of calculus
+(`intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le`) turns each arc
+integral into a `τ` boundary term, and the two must cancel.  The continuity
+hypotheses are stated globally on `ℝ`, as in `weierstrassErdmannMomentum`. -/
+theorem weierstrassErdmannEnergy
+    {L : E → E → ℝ} {T τ : ℝ} {x vL vR : ℝ → E} {D₁ D₂ : ℝ → ℝ}
+    (hcorner : IsPiecewiseC₁On x vL vR T τ)
+    (hH₁deriv : ∀ t ∈ Set.Ioo 0 τ, HasDerivAt (energyCurve L x vL) (D₁ t) t)
+    (hH₂deriv : ∀ t ∈ Set.Ioo τ T, HasDerivAt (energyCurve L x vR) (D₂ t) t)
+    (hcons₁ : ∀ t ∈ Set.Icc 0 τ, D₁ t = 0)
+    (hcons₂ : ∀ t ∈ Set.Icc τ T, D₂ t = 0)
+    (hH₁cont : Continuous (energyCurve L x vL))
+    (hH₂cont : Continuous (energyCurve L x vR))
+    (hD₁cont : Continuous D₁)
+    (hD₂cont : Continuous D₂)
+    (hvan : ∀ ψ : ℝ → ℝ, ContDiff ℝ 1 ψ → ψ 0 = 0 → ψ T = 0 →
+      (∫ t in 0..τ, (energyCurve L x vL t) * deriv ψ t + D₁ t * ψ t)
+        + (∫ t in τ..T, (energyCurve L x vR t) * deriv ψ t + D₂ t * ψ t) = 0) :
+    energyCurve L x vL τ = energyCurve L x vR τ := by
+  obtain ⟨h0τ, hτT, -, -, -⟩ := hcorner
+  -- A bump radius with `closedBall τ rOut ⊆ (0, T)`.
+  have hTτ : (0 : ℝ) < T - τ := sub_pos.mpr hτT
+  set rOut : ℝ := min τ (T - τ) / 2 with hrOut
+  have hmin_pos : (0 : ℝ) < min τ (T - τ) := lt_min h0τ hTτ
+  have hrOut_pos : 0 < rOut := by rw [hrOut]; linarith
+  have hball : Metric.closedBall τ rOut ⊆ Set.Ioo 0 T := by
+    intro y hy
+    rw [Metric.mem_closedBall, Real.dist_eq] at hy
+    obtain ⟨hlo, hhi⟩ := abs_le.mp hy
+    have hr1 : rOut ≤ τ / 2 := by
+      rw [hrOut]
+      have hmin : min τ (T - τ) ≤ τ := min_le_left _ _
+      linarith
+    have hr2 : rOut ≤ (T - τ) / 2 := by
+      rw [hrOut]
+      have hmin : min τ (T - τ) ≤ T - τ := min_le_right _ _
+      linarith
+    rw [Set.mem_Ioo]
+    constructor <;> linarith
+  -- The smooth time-reparametrisation bump, equal to `1` at `τ`.
+  let φ : ContDiffBump τ := ⟨rOut / 2, rOut, by linarith, by linarith⟩
+  have hφrOut : φ.rOut = rOut := rfl
+  have hφ : ContDiff ℝ 1 (φ : ℝ → ℝ) := φ.contDiff
+  have hφd : Differentiable ℝ (φ : ℝ → ℝ) := hφ.differentiable (by norm_num)
+  have hφτ : (φ : ℝ → ℝ) τ = 1 := by
+    apply φ.one_of_mem_closedBall
+    rw [Metric.mem_closedBall, dist_self, show φ.rIn = rOut / 2 from rfl]
+    linarith
+  have hφsupp : tsupport (φ : ℝ → ℝ) ⊆ Set.Ioo 0 T := by
+    rw [φ.tsupport_eq, hφrOut]
+    exact hball
+  have hφ0 : (φ : ℝ → ℝ) 0 = 0 := by
+    by_contra hne
+    exact absurd (hφsupp (subset_closure (Function.mem_support.mpr hne))) (by simp)
+  have hφT : (φ : ℝ → ℝ) T = 0 := by
+    by_contra hne
+    exact absurd (hφsupp (subset_closure (Function.mem_support.mpr hne))) (by simp)
+  have hvan0 := hvan (φ : ℝ → ℝ) hφ hφ0 hφT
+  -- Arc-wise energy conservation kills the bulk `D` terms in the variation.
+  have hD₁zero : (∫ t in 0..τ, D₁ t * (φ : ℝ → ℝ) t) = 0 := by
+    have hcongr0 : (∫ t in 0..τ, D₁ t * (φ : ℝ → ℝ) t) = ∫ _ in 0..τ, (0 : ℝ) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      have htI : t ∈ Set.Icc 0 τ := by
+        rwa [Set.uIcc_of_le h0τ.le] at ht
+      change D₁ t * (φ : ℝ → ℝ) t = 0
+      rw [hcons₁ t htI, zero_mul]
+    rw [hcongr0, intervalIntegral.integral_zero]
+  have hD₂zero : (∫ t in τ..T, D₂ t * (φ : ℝ → ℝ) t) = 0 := by
+    have hcongr0 : (∫ t in τ..T, D₂ t * (φ : ℝ → ℝ) t) = ∫ _ in τ..T, (0 : ℝ) := by
+      apply intervalIntegral.integral_congr
+      intro t ht
+      have htI : t ∈ Set.Icc τ T := by
+        rwa [Set.uIcc_of_le hτT.le] at ht
+      change D₂ t * (φ : ℝ → ℝ) t = 0
+      rw [hcons₂ t htI, zero_mul]
+    rw [hcongr0, intervalIntegral.integral_zero]
+  have hIH₁ : IntervalIntegrable
+      (fun t ↦ (energyCurve L x vL t) * deriv (φ : ℝ → ℝ) t) volume 0 τ :=
+    (hH₁cont.mul hφ.continuous_deriv_one).continuousOn.intervalIntegrable
+  have hID₁ : IntervalIntegrable (fun t ↦ D₁ t * (φ : ℝ → ℝ) t) volume 0 τ :=
+    (hD₁cont.mul hφd.continuous).continuousOn.intervalIntegrable
+  have hIH₂ : IntervalIntegrable
+      (fun t ↦ (energyCurve L x vR t) * deriv (φ : ℝ → ℝ) t) volume τ T :=
+    (hH₂cont.mul hφ.continuous_deriv_one).continuousOn.intervalIntegrable
+  have hID₂ : IntervalIntegrable (fun t ↦ D₂ t * (φ : ℝ → ℝ) t) volume τ T :=
+    (hD₂cont.mul hφd.continuous).continuousOn.intervalIntegrable
+  have e1 : (∫ t in 0..τ, (energyCurve L x vL t) * deriv (φ : ℝ → ℝ) t
+        + D₁ t * (φ : ℝ → ℝ) t)
+      = ∫ t in 0..τ, (energyCurve L x vL t) * deriv (φ : ℝ → ℝ) t := by
+    rw [intervalIntegral.integral_add hIH₁ hID₁, hD₁zero, add_zero]
+  have e2 : (∫ t in τ..T, (energyCurve L x vR t) * deriv (φ : ℝ → ℝ) t
+        + D₂ t * (φ : ℝ → ℝ) t)
+      = ∫ t in τ..T, (energyCurve L x vR t) * deriv (φ : ℝ → ℝ) t := by
+    rw [intervalIntegral.integral_add hIH₂ hID₂, hD₂zero, add_zero]
+  rw [e1, e2] at hvan0
+  -- Left arc: the integral reduces to the energy at `τ`.
+  have hleft : (∫ t in 0..τ, (energyCurve L x vL t) * deriv (φ : ℝ → ℝ) t)
+      = energyCurve L x vL τ := by
+    have hprod : ∀ t ∈ Set.Ioo 0 τ,
+        HasDerivAt (fun s ↦ (energyCurve L x vL s) * (φ : ℝ → ℝ) s)
+          ((energyCurve L x vL t) * deriv (φ : ℝ → ℝ) t) t := by
+      intro t ht
+      have htI : t ∈ Set.Icc 0 τ := ⟨le_of_lt ht.1, le_of_lt ht.2⟩
+      have h := (hH₁deriv t ht).mul hφd.differentiableAt.hasDerivAt
+      rwa [hcons₁ t htI, zero_mul, zero_add] at h
+    have hftc := intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le h0τ.le
+      (hH₁cont.mul hφd.continuous).continuousOn hprod hIH₁
+    simp only [Pi.mul_apply, hφτ, hφ0, mul_one, mul_zero, sub_zero] at hftc
+    linear_combination hftc
+  -- Right arc: the integral reduces to minus the energy at `τ`.
+  have hright : (∫ t in τ..T, (energyCurve L x vR t) * deriv (φ : ℝ → ℝ) t)
+      = -(energyCurve L x vR τ) := by
+    have hprod : ∀ t ∈ Set.Ioo τ T,
+        HasDerivAt (fun s ↦ (energyCurve L x vR s) * (φ : ℝ → ℝ) s)
+          ((energyCurve L x vR t) * deriv (φ : ℝ → ℝ) t) t := by
+      intro t ht
+      have htI : t ∈ Set.Icc τ T := ⟨le_of_lt ht.1, le_of_lt ht.2⟩
+      have h := (hH₂deriv t ht).mul hφd.differentiableAt.hasDerivAt
+      rwa [hcons₂ t htI, zero_mul, zero_add] at h
+    have hftc := intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le hτT.le
+      (hH₂cont.mul hφd.continuous).continuousOn hprod hIH₂
+    simp only [Pi.mul_apply, hφT, hφτ, mul_zero, mul_one, zero_sub] at hftc
+    linear_combination hftc
+  -- The two `τ` boundary terms must cancel.
+  rw [hleft, hright] at hvan0
+  linarith
+
+end WeierstrassErdmann
+
+#check @IsPiecewiseC₁On
+#check @IsPiecewiseC1On
+#check @weierstrassErdmannMomentum
+#check @weierstrassErdmannEnergy
