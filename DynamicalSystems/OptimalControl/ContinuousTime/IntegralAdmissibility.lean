@@ -18,7 +18,7 @@ open scoped Interval
 
 variable {X U : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
 
-/-- Integral dynamics admit continuous trajectories with finitely many corners.
+/-- Integral dynamics allow continuous trajectories with finitely many corners.
 Integrability of both the vector field and running cost excludes junk integrals.
 The control type need not carry measurable structure in this relational model. -/
 def IsIntegralAdmissiblePair (prob : ContinuousOCP X U) (x₀ : X)
