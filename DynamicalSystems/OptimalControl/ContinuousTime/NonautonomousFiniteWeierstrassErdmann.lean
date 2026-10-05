@@ -3,11 +3,11 @@ Copyright (c) 2026 Igor Zubrycki. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Igor Zubrycki
 -/
-import DynamicalSystems.OptimalControl.ContinuousTime.FiniteCornerMinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteWeierstrassErdmann
 import DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousFiniteCornerConditions
 
 /-!
-# Nonautonomous corner conditions at every represented finite corner
+# Nonautonomous Weierstrass–Erdmann at every represented finite corner
 
 A minimum of the original time-dependent functional implies both corner laws
 at every finite-context representation of an adjacent C1 pair. The actual

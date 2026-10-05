@@ -6,7 +6,7 @@ Authors: Igor Zubrycki
 import DynamicalSystems.OptimalControl.ContinuousTime.FiniteSpatialVariations
 
 /-!
-# Every represented finite corner of an actual minimum
+# Weierstrass–Erdmann at every represented finite corner
 
 The reference may be given independently of its piecewise representation and
 may differ outside the horizon. Every representation of a selected adjacent
