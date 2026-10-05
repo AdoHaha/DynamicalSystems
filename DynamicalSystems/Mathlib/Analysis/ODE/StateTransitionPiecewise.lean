@@ -7,6 +7,7 @@ module
 
 public import DynamicalSystems.Mathlib.Analysis.ODE.StateTransition
 public import Mathlib.MeasureTheory.Integral.DivergenceTheorem
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 
 /-!
 # Duhamel's formula for trajectories with switching points
@@ -19,7 +20,7 @@ set can in particular consist of the two endpoints of a needle interval.
 
 @[expose] public section
 
-open MeasureTheory
+open MeasureTheory Set
 open scoped Interval
 
 
@@ -45,6 +46,38 @@ theorem IsStateTransition.variationOfConstants_off_countable
     (hPc.clm_apply hxc)
     (fun r hr => hPhi.duhamel_cancellation (hx r hr)) hint
   simp only [hPhi.diag t, ContinuousLinearMap.id_apply] at hFTC
+  rw [hFTC]
+  abel
+
+
+omit [CompleteSpace X] in
+/-- The backward product cancellation for a right-differentiable trajectory. -/
+theorem duhamel_cancellation_right
+    {A : ℝ → X →L[ℝ] X} {P : ℝ → X →L[ℝ] X}
+    {b x : ℝ → X} {t : ℝ}
+    (hP : HasDerivAt P (-(P t).comp (A t)) t)
+    (hx : HasDerivWithinAt x (A t (x t) + b t) (Ici t) t) :
+    HasDerivWithinAt (fun s => P s (x s)) (P t (b t)) (Ici t) t := by
+  simpa [map_add] using hP.hasDerivWithinAt.clm_apply hx
+
+/-- Duhamel's formula using the actual right derivatives and the backward
+operator equation. This works at finite switching corners. -/
+theorem variationOfConstants_right_of_backward
+    {A : ℝ → X →L[ℝ] X} {P : ℝ → X →L[ℝ] X}
+    {b x : ℝ → X} {a t : ℝ}
+    (hat : a ≤ t) (hPt : P t = ContinuousLinearMap.id ℝ X)
+    (hP : ∀ s ∈ Icc a t, HasDerivAt P (-(P s).comp (A s)) s)
+    (hxc : ContinuousOn x (Icc a t))
+    (hx : ∀ s ∈ Ioo a t, HasDerivWithinAt x (A s (x s) + b s) (Ici s) s)
+    (hint : IntervalIntegrable (fun s => P s (b s)) volume a t) :
+    x t = P a (x a) + ∫ s in a..t, P s (b s) := by
+  have hPc : ContinuousOn P (Icc a t) :=
+    fun s hs => (hP s hs).continuousAt.continuousWithinAt
+  have hFTC := intervalIntegral.integral_eq_sub_of_hasDeriv_right_of_le
+    hat (hPc.clm_apply hxc)
+    (fun s hs => (duhamel_cancellation_right (hP s ⟨hs.1.le, hs.2.le⟩)
+      (hx s hs)).mono Ioi_subset_Ici_self) hint
+  simp only [hPt, ContinuousLinearMap.id_apply] at hFTC
   rw [hFTC]
   abel
 

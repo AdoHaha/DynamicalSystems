@@ -120,9 +120,13 @@ import DynamicalSystems.Linear.TransferPoleDomains
 import DynamicalSystems.Linear.TransferPoleFeedthrough
 import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Linear.TransferRealizationEquality
+import DynamicalSystems.Mathlib.Analysis.Asymptotics.Uniform
 import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
+import DynamicalSystems.Mathlib.Analysis.Calculus.TaylorRemainder
+import DynamicalSystems.Mathlib.Analysis.LocallyConvex.Separation
+import DynamicalSystems.Mathlib.Analysis.ODE.Adjoint
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Global
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Picard
@@ -135,10 +139,12 @@ import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransition
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
+import DynamicalSystems.Mathlib.Analysis.ODE.TerminalSensitivity
 import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement
+import DynamicalSystems.Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.NonSmooth.ChainRule
@@ -190,7 +196,6 @@ import DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1Extensions
 import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
-import DynamicalSystems.OptimalControl.ContinuousTime.TerminalNeedleSensitivity
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeOptimal
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily

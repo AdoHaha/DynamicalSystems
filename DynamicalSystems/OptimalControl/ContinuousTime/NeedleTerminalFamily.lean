@@ -1,5 +1,5 @@
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedleFamily
-import DynamicalSystems.OptimalControl.ContinuousTime.TerminalNeedleSensitivity
+import DynamicalSystems.Mathlib.Analysis.ODE.TerminalSensitivity
 
 /-!
 # Terminal tangent of the constructed feasible needle family

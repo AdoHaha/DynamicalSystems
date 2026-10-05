@@ -1,5 +1,6 @@
 import DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 import DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate
+import DynamicalSystems.Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.Analysis.Calculus.FDeriv.Prod
 
 /-!
@@ -41,13 +42,6 @@ theorem _root_.bolzaCostLift_totalCost (prob : ContinuousOCP X U) (x : ℝ → X
     continuousTotalCost (_root_.ContinuousOCP.bolzaToMayer prob) (_root_.bolzaCostLift prob x u) u =
       continuousTotalCost prob x u := by
   simp [continuousTotalCost, _root_.ContinuousOCP.bolzaToMayer, _root_.bolzaTerminalCost, _root_.bolzaCostLift]
-
-omit [NormedSpace ℝ X] [CompleteSpace X] in
-/-- Interval integrability of vector pairs from the two primitive components. -/
-theorem intervalIntegrable_pair {f : ℝ → ℝ} {g : ℝ → X} {a b : ℝ}
-    (hf : IntervalIntegrable f volume a b) (hg : IntervalIntegrable g volume a b) :
-    IntervalIntegrable (fun t => (f t, g t)) volume a b :=
-  ⟨hf.1.prodMk hg.1, hf.2.prodMk hg.2⟩
 
 /-- Every original integral-admissible trajectory has a genuinely admissible
 cost lift in the augmented Mayer problem. -/

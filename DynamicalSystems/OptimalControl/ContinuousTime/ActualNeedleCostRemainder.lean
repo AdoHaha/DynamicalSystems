@@ -5,7 +5,9 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.Mathlib.Analysis.Calculus.TaylorRemainder
 public import DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder
+public import DynamicalSystems.OptimalControl.ContinuousTime.UniformTaylorRemainder
 
 /-!
 # An actual nonlinear needle _root_.needleCostRemainder from primitive data

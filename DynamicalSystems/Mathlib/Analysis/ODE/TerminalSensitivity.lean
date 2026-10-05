@@ -1,74 +1,32 @@
-import DynamicalSystems.OptimalControl.ContinuousTime.UniformTaylorRemainder
-import DynamicalSystems.Mathlib.Analysis.ODE.StateTransition
+/-
+Copyright (c) 2026 Igor Zubrycki. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Igor Zubrycki
+-/
+module
+
+public import DynamicalSystems.Mathlib.Analysis.Asymptotics.Uniform
+public import DynamicalSystems.Mathlib.Analysis.Calculus.TaylorRemainder
+public import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
+public import Mathlib.Analysis.InnerProductSpace.Basic
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+public import Mathlib.Topology.Order.Compact
 
 /-!
-# Terminal sensitivity of actual needle trajectories
+# Terminal sensitivity of ODE trajectories
 
-The propagated first-order terminal displacement is derived from the actual
-post-needle ODE, uniform `O(ε)` displacement, the local needle jump, and
-continuous spatial derivatives. Duhamel cancellation is proved for right
-derivatives, allowing corners at the switching times. Only the terminal row
-of the state transition is needed; compact-interval propagators suffice.
+The propagated first-order terminal displacement of a trajectory subject to an
+initial perturbation, derived from the actual right ODE, uniform `O(ε)`
+displacement, a local jump, and continuous spatial derivatives. The hypotheses
+contain no control-theoretic data.
 -/
 
+@[expose] public section
 
 open Set Filter MeasureTheory
 open scoped Interval Topology
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
-
-omit [CompleteSpace E] in
-/-- The backward product cancellation for a right-differentiable trajectory. -/
-theorem duhamel_cancellation_right
-    {A : ℝ → E →L[ℝ] E} {P : ℝ → E →L[ℝ] E}
-    {b x : ℝ → E} {t : ℝ}
-    (hP : HasDerivAt P (-(P t).comp (A t)) t)
-    (hx : HasDerivWithinAt x (A t (x t) + b t) (Ici t) t) :
-    HasDerivWithinAt (fun s => P s (x s)) (P t (b t)) (Ici t) t := by
-  simpa [map_add] using hP.hasDerivWithinAt.clm_apply hx
-
-/-- Duhamel's formula using the actual right derivatives and the backward
-operator equation. This works at finite switching corners. -/
-theorem variationOfConstants_right_of_backward
-    {A : ℝ → E →L[ℝ] E} {P : ℝ → E →L[ℝ] E}
-    {b x : ℝ → E} {a t : ℝ}
-    (hat : a ≤ t) (hPt : P t = ContinuousLinearMap.id ℝ E)
-    (hP : ∀ s ∈ Icc a t, HasDerivAt P (-(P s).comp (A s)) s)
-    (hxc : ContinuousOn x (Icc a t))
-    (hx : ∀ s ∈ Ioo a t, HasDerivWithinAt x (A s (x s) + b s) (Ici s) s)
-    (hint : IntervalIntegrable (fun s => P s (b s)) volume a t) :
-    x t = P a (x a) + ∫ s in a..t, P s (b s) := by
-  have hPc : ContinuousOn P (Icc a t) :=
-    fun s hs => (hP s hs).continuousAt.continuousWithinAt
-  have hFTC := intervalIntegral.integral_eq_sub_of_hasDeriv_right_of_le
-    hat (hPc.clm_apply hxc)
-    (fun s hs => (duhamel_cancellation_right (hP s ⟨hs.1.le, hs.2.le⟩)
-      (hx s hs)).mono Ioi_subset_Ici_self) hint
-  simp only [hPt, ContinuousLinearMap.id_apply] at hFTC
-  rw [hFTC]
-  abel
-
-omit [CompleteSpace E] in
-/-- A uniformly bounded operator family preserves uniform first-order smallness. -/
-theorem _root_.UniformSmall.clm_apply
-    {r : ℝ → ℝ → E} {P : ℝ → E →L[ℝ] E} {s : Set ℝ} {B : ℝ}
-    (hr : UniformSmall r s) (hB : 0 ≤ B) (hP : ∀ t ∈ s, ‖P t‖ ≤ B) :
-    UniformSmall (fun ε t => P t (r ε t)) s := by
-  intro η hη
-  have hBp : 0 < B + 1 := by linarith
-  filter_upwards [hr (η / (B + 1)) (div_pos hη hBp), self_mem_nhdsWithin]
-    with ε hrε hpos
-  intro t ht
-  have hεpos : 0 < ε := hpos
-  calc
-    ‖P t (r ε t)‖ ≤ ‖P t‖ * ‖r ε t‖ := (P t).le_opNorm _
-    _ ≤ B * (η / (B + 1) * ε) :=
-      mul_le_mul (hP t ht) (hrε t ht) (norm_nonneg _) hB
-    _ = (η * ε) * (B / (B + 1)) := by ring
-    _ ≤ (η * ε) * 1 := by
-      apply mul_le_mul_of_nonneg_left _ (by positivity)
-      exact (div_le_one hBp).mpr (by linarith)
-    _ = _ := mul_one _
 
 /-- Actual terminal sensitivity from a local needle jump and the actual
 post-spike ODE. No flow derivative, sensitivity conclusion, or Duhamel
@@ -168,4 +126,3 @@ theorem terminal_tangent_of_right_ODE
   filter_upwards [self_mem_nhdsWithin] with ε hpos
   have hε : ε ≠ (0 : ℝ) := ne_of_gt hpos
   simp [smul_sub, smul_smul, hε]
-

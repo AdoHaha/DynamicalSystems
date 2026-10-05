@@ -28,7 +28,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.NeedleTerminalFamily
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedleTrajectory
 import DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 import DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
-import DynamicalSystems.OptimalControl.ContinuousTime.TerminalNeedleSensitivity
+import DynamicalSystems.Mathlib.Analysis.ODE.TerminalSensitivity
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
 import DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder
@@ -72,7 +72,7 @@ import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.Point
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.NeedleTrajectory
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
-#lint in DynamicalSystems.OptimalControl.ContinuousTime.TerminalNeedleSensitivity
+#lint in DynamicalSystems.Mathlib.Analysis.ODE.TerminalSensitivity
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder
