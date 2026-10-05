@@ -1,5 +1,4 @@
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple
-import DynamicalSystems.OptimalControl.ContinuousTime.AdjointPairing
 import DynamicalSystems.Mathlib.Analysis.ODE.Adjoint
 
 /-!

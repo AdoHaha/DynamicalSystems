@@ -7,7 +7,6 @@ import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
 import DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder
 import DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence
-import DynamicalSystems.OptimalControl.ContinuousTime.AdjointPairing
 import DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate
 import DynamicalSystems.OptimalControl.ContinuousTime.BolzaAugmentation
 import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
@@ -51,7 +50,6 @@ import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.Point
 #lint in DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence
-#lint in DynamicalSystems.OptimalControl.ContinuousTime.AdjointPairing
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.BolzaAugmentation
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers

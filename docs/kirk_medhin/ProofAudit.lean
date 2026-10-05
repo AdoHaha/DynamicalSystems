@@ -6,7 +6,6 @@ import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
 import DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder
 import DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence
-import DynamicalSystems.OptimalControl.ContinuousTime.AdjointPairing
 import DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate
 import DynamicalSystems.OptimalControl.ContinuousTime.BolzaAugmentation
 import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
