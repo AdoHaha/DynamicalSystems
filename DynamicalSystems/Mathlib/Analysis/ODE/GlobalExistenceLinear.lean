@@ -227,30 +227,46 @@ public theorem global_existence (h_lip : ∀ t, LipschitzWith K (f t))
   exact exists_global_of_exists_solution_Icc h_lip
     (exists_solution_Icc_of_linear_growth h_lip h' hC' hgrow)
 
-/-- Global existence of a flow for a globally Lipschitz, jointly continuous vector field of
-linear growth.
+/-- Global existence of a bundled non-autonomous flow for a globally Lipschitz, jointly
+continuous vector field whose value at zero is uniformly bounded.
 
-This version uses the bundled `NonAutonomousFlow` -/
-proof_wanted exists_nonAutonomousFlow (h_lip : ∀ t, LipschitzWith K (f t))
+The restart identity follows from uniqueness at the intermediate time. -/
+public theorem exists_nonAutonomousFlow (h_lip : ∀ t, LipschitzWith K (f t))
     (ht_bdd : ∀ t, ‖f t 0‖ ≤ C') (h' : Continuous f.uncurry) :
-    ∃ Φ : NonautonomousFlow ℝ E, ∀ t₀ x₀, IsIntegralCurve (Φ t₀ x₀) f
-  /-obtain ⟨Φ, hΦ⟩ := global_existence h_lip ht_bdd h'
-  have : ∀ (t₀ t₁ t₂ : ℝ) (x : E), Φ t₀ (Φ t₁ x t₂) t₁ = Φ t₀ x t₂ := by
+    ∃ Φ : NonautonomousFlow ℝ E, ∀ t₀ x₀, IsIntegralCurve (Φ t₀ x₀) f := by
+  obtain ⟨Φ, hΦ⟩ := global_existence h_lip ht_bdd h'
+  have hcomp : ∀ (t₀ t₁ t₂ : ℝ) (x : E), Φ t₁ (Φ t₀ x t₁) t₂ = Φ t₀ x t₂ := by
     intro t₀ t₁ t₂ x
-    set γ₁ := fun t₂ ↦ Φ t₀ (Φ t₁ x t₂) t₁ with hγ₁
-    set γ₂ := Φ t₀ x with hγ₂
-    suffices γ₁ = γ₂ by grind
-    have hγ₁_int : IsIntegralCurve γ₁ f := by
-      simp [hγ₁]
-      sorry
-    have hγ₂_int : IsIntegralCurve γ₂ f := by
-      sorry
-    have ht₀ : γ₁ t₀ = γ₂ t₀ := by
-      sorry
-    have h_lip : ∀ t : ℝ, LipschitzOnWith K (f t) Set.univ := by simpa
-    exact hγ₁_int.eq h_lip (by simp) hγ₂_int (by simp) ht₀
-  use ⟨Φ, (hΦ · · |>.2), this⟩
-  simpa using (hΦ · · |>.1)-/
+    have hcurves : Φ t₁ (Φ t₀ x t₁) = Φ t₀ x := by
+      exact IsIntegralCurve.eq (s := fun _ ↦ Set.univ) (t₀ := t₁)
+        (fun t ↦ (h_lip t).lipschitzOnWith)
+        (hΦ t₁ (Φ t₀ x t₁)).1 (fun _ ↦ Set.mem_univ _)
+        (hΦ t₀ x).1 (fun _ ↦ Set.mem_univ _)
+        (hΦ t₁ (Φ t₀ x t₁)).2
+    exact congrFun hcurves t₂
+  exact ⟨⟨Φ, fun t₀ x₀ ↦ (hΦ t₀ x₀).2, hcomp⟩, fun t₀ x₀ ↦ (hΦ t₀ x₀).1⟩
+
+omit [CompleteSpace E] in
+/-- A globally Lipschitz time-dependent vector field has at most one bundled global flow. -/
+public theorem unique_nonAutonomousFlow (h_lip : ∀ t, LipschitzWith K (f t))
+    {Φ₁ Φ₂ : NonautonomousFlow ℝ E}
+    (hΦ₁ : ∀ t₀ x₀, IsIntegralCurve (Φ₁ t₀ x₀) f)
+    (hΦ₂ : ∀ t₀ x₀, IsIntegralCurve (Φ₂ t₀ x₀) f) : Φ₁ = Φ₂ := by
+  ext t₀ x₀ t
+  have hcurves : Φ₁ t₀ x₀ = Φ₂ t₀ x₀ := by
+    exact IsIntegralCurve.eq (s := fun _ ↦ Set.univ) (t₀ := t₀)
+      (fun s ↦ (h_lip s).lipschitzOnWith)
+      (hΦ₁ t₀ x₀) (fun _ ↦ Set.mem_univ _)
+      (hΦ₂ t₀ x₀) (fun _ ↦ Set.mem_univ _)
+      (by simp)
+  exact congrFun hcurves t
+
+/-- The globally Lipschitz vector field admits exactly one bundled global flow. -/
+public theorem existsUnique_nonAutonomousFlow (h_lip : ∀ t, LipschitzWith K (f t))
+    (ht_bdd : ∀ t, ‖f t 0‖ ≤ C') (h' : Continuous f.uncurry) :
+    ∃! Φ : NonautonomousFlow ℝ E, ∀ t₀ x₀, IsIntegralCurve (Φ t₀ x₀) f := by
+  obtain ⟨Φ, hΦ⟩ := exists_nonAutonomousFlow h_lip ht_bdd h'
+  exact ⟨Φ, hΦ, fun Ψ hΨ ↦ unique_nonAutonomousFlow h_lip hΨ hΦ⟩
 
 attribute [fun_prop] LipschitzWith.continuous
 

@@ -19,8 +19,9 @@ public section
 variable {τ E F : Type*}
 
 variable (τ E) in
-/-- A non-autonomous flow is a map `u` from `τ × τ × E` to `E` such that `u t₀ t₀ x = x` and
-`u t₀ t₁ (u t₁ t₂ x) = u t₀ t₂ x`.
+/-- A non-autonomous flow is a map `u : τ → E → τ → E`. The value `u t₀ x t` is the
+state at time `t` of the solution starting from `x` at time `t₀`. It satisfies
+`u t₀ x t₀ = x` and `u t₁ (u t₀ x t₁) t₂ = u t₀ x t₂`.
 
 We do not impose any continuity property. -/
 structure NonautonomousFlow where
@@ -28,8 +29,8 @@ structure NonautonomousFlow where
   toFun : τ → E → τ → E
   /-- Consistency: the solution operator acts as the identity at initial time -/
   map_id (t₀ : τ) (x : E) : toFun t₀ x t₀ = x
-  /-- Semigroup property: the solution operator satisfies `Φ t₀ t₁ (Φ t₁ t₂ x) = Φ t₀ t₂ x` -/
-  map_comp (t₀ t₁ t₂ : τ) (x : E) : toFun t₀ (toFun t₁ x t₂) t₁ = toFun t₀ x t₂
+  /-- Restarting a solution at an intermediate time gives the original solution. -/
+  map_comp (t₀ t₁ t₂ : τ) (x : E) : toFun t₁ (toFun t₀ x t₁) t₂ = toFun t₀ x t₂
 
 attribute [coe] NonautonomousFlow.toFun
 
@@ -57,6 +58,15 @@ namespace NonautonomousFlow
 instance : CoeFun (NonautonomousFlow τ E) (fun _ ↦ τ → E → τ → E) where
   coe L := L.toFun
 
+@[ext]
+theorem ext {Φ₁ Φ₂ : NonautonomousFlow τ E} (h : ∀ t₀ x t, Φ₁ t₀ x t = Φ₂ t₀ x t) :
+    Φ₁ = Φ₂ := by
+  cases Φ₁
+  cases Φ₂
+  simp only [mk.injEq]
+  funext t₀ x t
+  exact h t₀ x t
+
 variable {Φ : NonautonomousFlow τ E}
 
 /-- A non-autonomous flow that satisfies `Φ (t₀ + s) x (t + s) = Φ t₀ x t` defines an autonomous
@@ -66,9 +76,10 @@ flow. -/
   toFun t x := Φ 0 x t
   map_id x := by simp
   map_comp t t' x := by
-    have : Φ 0 x t' = Φ t x (t + t') := by
-      simp [← h t 0 t' x, add_comm]
-    rw [this, map_comp]
+    calc
+      Φ 0 (Φ 0 x t') t = Φ t' (Φ 0 x t') (t + t') := by
+        simpa using (h t' 0 t (Φ 0 x t')).symm
+      _ = Φ 0 x (t + t') := Φ.map_comp 0 t' (t + t') x
 
 @[simp]
 theorem toFun_toAutonomousFlow [AddCommMonoid τ] (h : ∀ s t₀ t x, Φ (t₀ + s) x (t + s) = Φ t₀ x t) :
