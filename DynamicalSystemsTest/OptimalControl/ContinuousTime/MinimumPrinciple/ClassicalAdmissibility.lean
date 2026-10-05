@@ -2,7 +2,7 @@ import Mathlib.Analysis.Calculus.Darboux
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
 /-!
-# An obstruction to the requested K1 theorem
+# Classical admissibility with disconnected controls
 
 This file specializes the project's classical, everywhere-differentiable
 admissibility predicate to the smooth scalar problem

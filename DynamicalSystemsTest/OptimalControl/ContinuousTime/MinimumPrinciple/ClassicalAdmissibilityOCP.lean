@@ -1,7 +1,7 @@
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.ClassicalAdmissibility
 /-!
-# The K1 counterexample against the exact project predicates
+# The same obstruction against the exact project predicates
 
 The imported scalar proof is connected here to `ContinuousOCP`, `IsOptimalPair`,
 `costateEquation`, `HamiltonianMinimizing`, and `transversalityCondition` without

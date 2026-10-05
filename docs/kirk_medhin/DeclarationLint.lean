@@ -36,7 +36,7 @@ import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.Class
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.ClassicalAdmissibilityOCP
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.HorizonLocality
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.QuadraticCost
-import DynamicalSystemsTest.KirkMedhin.NonautonomousFlowOrder
+import DynamicalSystemsTest.Mathlib.Analysis.ODE.NonautonomousFlowOrder
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.NotSufficient
 import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.PointwiseRepresentative
 
@@ -79,6 +79,6 @@ import DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.Point
 #lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.ClassicalAdmissibilityOCP
 #lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.HorizonLocality
 #lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.QuadraticCost
-#lint in DynamicalSystemsTest.KirkMedhin.NonautonomousFlowOrder
+#lint in DynamicalSystemsTest.Mathlib.Analysis.ODE.NonautonomousFlowOrder
 #lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.NotSufficient
 #lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.MinimumPrinciple.PointwiseRepresentative
