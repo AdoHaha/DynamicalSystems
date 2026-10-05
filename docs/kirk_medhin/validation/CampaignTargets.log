@@ -1,0 +1,455 @@
+hjbMinimizing_of_residual.{u_1, u_2} {X : Type u_1} {U : Type u_2} [NormedAddCommGroup X] [InnerProductSpace ℝ X]
+  [CompleteSpace X] (prob : ContinuousOCP X U) (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
+  (hW : Differentiable ℝ fun z => W z.1 z.2)
+  (hHJB :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      ∀ (y : X), ∀ v ∈ prob.controlSet, 0 ≤ prob.L t y v + (fderiv ℝ (fun z => W z.1 z.2) (t, y)) (1, prob.f t y v))
+  (hattained :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      prob.L t (x t) (u t) + (fderiv ℝ (fun z => W z.1 z.2) (t, x t)) (1, prob.f t (x t) (u t)) = 0) :
+  HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u fun t => gradient (W t) (x t)
+hjbCostateEquation_of_residual.{u_1, u_2} {X : Type u_1} {U : Type u_2} [NormedAddCommGroup X] [InnerProductSpace ℝ X]
+  [CompleteSpace X] (prob : ContinuousOCP X U) (x₀ : X) (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
+  (hadm : IsAdmissiblePair prob x₀ x u) (hW : ContDiff ℝ 2 fun z => W z.1 z.2)
+  (hf : ∀ t ∈ Set.Icc 0 prob.T, DifferentiableAt ℝ (fun y => prob.f t y (u t)) (x t))
+  (hL : ∀ t ∈ Set.Icc 0 prob.T, DifferentiableAt ℝ (fun y => prob.L t y (u t)) (x t))
+  (hHJB :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      ∀ (y : X), ∀ v ∈ prob.controlSet, 0 ≤ prob.L t y v + (fderiv ℝ (fun z => W z.1 z.2) (t, y)) (1, prob.f t y v))
+  (hattained :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      prob.L t (x t) (u t) + (fderiv ℝ (fun z => W z.1 z.2) (t, x t)) (1, prob.f t (x t) (u t)) = 0) :
+  costateEquation prob.L prob.f prob.T x u fun t => gradient (W t) (x t)
+hjbPMPAssembly_of_residual.{u_1, u_2} {X : Type u_1} {U : Type u_2} [NormedAddCommGroup X] [InnerProductSpace ℝ X]
+  [CompleteSpace X] (prob : ContinuousOCP X U) (x₀ : X) (W : ℝ → X → ℝ) (x : ℝ → X) (u : ℝ → U)
+  (hadm : IsAdmissiblePair prob x₀ x u) (hW : ContDiff ℝ 2 fun z => W z.1 z.2)
+  (hf : ∀ t ∈ Set.Icc 0 prob.T, DifferentiableAt ℝ (fun y => prob.f t y (u t)) (x t))
+  (hL : ∀ t ∈ Set.Icc 0 prob.T, DifferentiableAt ℝ (fun y => prob.L t y (u t)) (x t))
+  (hHJB :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      ∀ (y : X), ∀ v ∈ prob.controlSet, 0 ≤ prob.L t y v + (fderiv ℝ (fun z => W z.1 z.2) (t, y)) (1, prob.f t y v))
+  (hattained :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      prob.L t (x t) (u t) + (fderiv ℝ (fun z => W z.1 z.2) (t, x t)) (1, prob.f t (x t) (u t)) = 0)
+  (hterminal : ∀ (y : X), W prob.T y = prob.K y) :
+  IsAdmissiblePair prob x₀ x u ∧
+    ∃ p,
+      costateEquation prob.L prob.f prob.T x u p ∧
+        transversalityCondition prob.K prob.T x p ∧ HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p
+K1NeedlePMP.needleCostate_of_integralOptimality_smooth.{u_1, u_2} {E : Type u_1} {U : Type u_2} [NormedAddCommGroup E]
+  [InnerProductSpace ℝ E] [CompleteSpace E] (prob : ContinuousOCP E U) (x_init : E) (x : ℝ → E) (u : ℝ → U)
+  (r : K1NeedlePMP.SmoothNeedleData prob x u) (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x_init x u) :
+  ∃ p,
+    costateEquation prob.L prob.f prob.T x u p ∧
+      transversalityCondition prob.K prob.T x p ∧ HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p
+K1NeedlePMPOnHorizon.needleCostate_of_integralOptimality_onHorizon.{u_1, u_2} {E : Type u_1} {U : Type u_2}
+  [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E] (prob : ContinuousOCP E U) (x₀ : E) (x : ℝ → E)
+  (u : ℝ → U) (r : K1NeedlePMPOnHorizon.SmoothNeedleDataOnHorizon prob x u)
+  (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x₀ x u) :
+  ∃ p,
+    costateEquation prob.L prob.f prob.T x u p ∧
+      transversalityCondition prob.K prob.T x p ∧ HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p
+KirkMedhin.K1.exists_needle_endpointTangent_of_primitive_data.{u_1, u_2} {X : Type u_1} {U : Type u_2}
+  [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X] (prob : ContinuousOCP X U) (x_init : X) (x : ℝ → X)
+  (u : ℝ → U) (τ : ℝ) (v : U) (r₀ : KirkMedhin.K1.BolzaBranchRegularity prob u)
+  (rv : KirkMedhin.K1.BolzaBranchRegularity prob fun x => v) (hx : IsIntegralCurve x fun t z => prob.f t z (u t))
+  (hinit : x 0 = x_init) (hu : ∀ t ∈ Set.Icc 0 prob.T, u t ∈ prob.controlSet) (hv : v ∈ prob.controlSet) (hτ₀ : 0 < τ)
+  (hτ : τ ≤ prob.T) (DL : ℝ → X → X →L[ℝ] ℝ) (Df : ℝ → X → X →L[ℝ] X)
+  (hDL : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.L t y (u t)) (DL t z) z)
+  (hDf : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.f t y (u t)) (Df t z) z)
+  (hDLc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => DL q.1 q.2) (t, x t))
+  (hDfc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => Df q.1 q.2) (t, x t)) (Φ : ℝ → ℝ → ℝ × X →L[ℝ] ℝ × X)
+  (hdiag : Φ prob.T prob.T = ContinuousLinearMap.id ℝ (ℝ × X))
+  (hback :
+    ∀ t ∈ Set.Icc 0 prob.T,
+      HasDerivAt (fun s => Φ prob.T s)
+        (-Φ prob.T t ∘SL KirkMedhin.K1.augmentedLinearCoefficient (DL t (x t)) (Df t (x t))) t) :
+  ∃ xε,
+    (∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0),
+        NeedleIntegralModel.IsIntegralAdmissiblePair prob x_init (xε ε) (needleControl u τ v ε)) ∧
+      Filter.Tendsto
+        (fun ε =>
+          ε⁻¹ •
+            (KirkMedhin.K1.costAugmentedEndpoint prob (xε ε) (needleControl u τ v ε) -
+              KirkMedhin.K1.costAugmentedEndpoint prob x u))
+        (nhdsWithin 0 (Set.Ioi 0))
+        (nhds ((Φ prob.T τ) (prob.L τ (x τ) v - prob.L τ (x τ) (u τ), prob.f τ (x τ) v - prob.f τ (x τ) (u τ))))
+KirkMedhin.K1.integralOptimal_normal_covector_of_endpointTangents.{u_1, u_2, u_3} {X : Type u_1} {U : Type u_2}
+  {ι : Type u_3} [NormedAddCommGroup X] [NormedSpace ℝ X] (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : ℝ → U)
+  (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x₀ x u) (DK : X →L[ℝ] ℝ)
+  (hK : HasFDerivAt prob.K DK (x prob.T)) (xε : ι → ℝ → ℝ → X) (uε : ι → ℝ → ℝ → U)
+  (hfeasible :
+    ∀ (i : ι),
+      ∀ᶠ (ε : ℝ) in nhdsWithin 0 (Set.Ioi 0), NeedleIntegralModel.IsIntegralAdmissiblePair prob x₀ (xε i ε) (uε i ε))
+  (g : ι → ℝ × X)
+  (htangent :
+    ∀ (i : ι),
+      Filter.Tendsto
+        (fun ε =>
+          ε⁻¹ •
+            (KirkMedhin.K1.costAugmentedEndpoint prob (xε i ε) (uε i ε) - KirkMedhin.K1.costAugmentedEndpoint prob x u))
+        (nhdsWithin 0 (Set.Ioi 0)) (nhds (g i))) :
+  ∃ q α,
+    q ≠ 0 ∧
+      0 < α ∧
+        (∀ y ∈ KirkMedhin.K1.endpointVariationCone g, 0 ≤ q y) ∧
+          q (1, 0) = α ∧ α⁻¹ • q = KirkMedhin.K1.terminalDifferential DK
+KirkMedhin.K1.exists_normalized_hahnBanach_terminal_covector.{u_1} {E : Type u_1} [TopologicalSpace E] [AddCommGroup E]
+  [Module ℝ E] [IsTopologicalAddGroup E] [ContinuousSMul ℝ E] (c : E →L[ℝ] ℝ) (e : E) (he : c e = 1) (C : Set E)
+  (hconvex : Convex ℝ C) (hzero : 0 ∈ C) (hdisjoint : Disjoint {y | c y < 0} C) :
+  ∃ q α, q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ C, 0 ≤ q y) ∧ q e = α ∧ α⁻¹ • q = c
+KirkMedhin.K1.exists_geometricNormalPMP_of_primitive_data.{u_1, u_2} {X : Type u_1} {U : Type u_2}
+  [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X] [FiniteDimensional ℝ X] (prob : ContinuousOCP X U)
+  (x_init : X) (x : ℝ → X) (u : ℝ → U) (hT : 0 < prob.T)
+  (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x_init x u) (r₀ : KirkMedhin.K1.BolzaBranchRegularity prob u)
+  (rtest : (v : U) → v ∈ prob.controlSet → KirkMedhin.K1.BolzaBranchRegularity prob fun x => v)
+  (hx : IsIntegralCurve x fun t z => prob.f t z (u t)) (DL : ℝ → X → X →L[ℝ] ℝ) (Df : ℝ → X → X →L[ℝ] X)
+  (hDL : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.L t y (u t)) (DL t z) z)
+  (hDf : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.f t y (u t)) (Df t z) z)
+  (hDLc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => DL q.1 q.2) (t, x t))
+  (hDfc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => Df q.1 q.2) (t, x t)) (DK : X →L[ℝ] ℝ)
+  (hK : HasFDerivAt prob.K DK (x prob.T)) :
+  ∃ Φ q α,
+    q ≠ 0 ∧
+      0 < α ∧
+        q (1, 0) = α ∧
+          α⁻¹ • q = KirkMedhin.K1.terminalDifferential DK ∧
+            (∀ y ∈ KirkMedhin.K1.endpointVariationCone (KirkMedhin.K1.needleEndpointGenerator prob x u Φ), 0 ≤ q y) ∧
+              (∀ t ∈ Set.Icc 0 prob.T,
+                  HasDerivAt (fun s => KirkMedhin.K1.propagatedStateCovector DK (Φ prob.T s))
+                    (-(DL t (x t) + KirkMedhin.K1.propagatedStateCovector DK (Φ prob.T t) ∘SL Df t (x t))) t) ∧
+                KirkMedhin.K1.propagatedStateCovector DK (Φ prob.T prob.T) = DK ∧
+                  ∀ t ∈ Set.Icc 0 prob.T,
+                    ∀ v ∈ prob.controlSet,
+                      0 ≤
+                        prob.L t (x t) v - prob.L t (x t) (u t) +
+                          (KirkMedhin.K1.propagatedStateCovector DK (Φ prob.T t))
+                            (prob.f t (x t) v - prob.f t (x t) (u t))
+KirkMedhin.K1.integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference.{u_1, u_2} {X : Type u_1} {U : Type u_2}
+  [NormedAddCommGroup X] [InnerProductSpace ℝ X] [CompleteSpace X] [FiniteDimensional ℝ X] (prob : ContinuousOCP X U)
+  (x_init : X) (x : ℝ → X) (u : ℝ → U) (hT : 0 < prob.T)
+  (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x_init x u) (r₀ : KirkMedhin.K1.BolzaBranchRegularity prob u)
+  (rtest : (v : U) → v ∈ prob.controlSet → KirkMedhin.K1.BolzaBranchRegularity prob fun x => v) (DL : ℝ → X → X →L[ℝ] ℝ)
+  (Df : ℝ → X → X →L[ℝ] X) (hDL : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.L t y (u t)) (DL t z) z)
+  (hDf : ∀ t ∈ Set.Icc 0 prob.T, ∀ (z : X), HasFDerivAt (fun y => prob.f t y (u t)) (Df t z) z)
+  (hDLc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => DL q.1 q.2) (t, x t))
+  (hDfc : ∀ t ∈ Set.Icc 0 prob.T, ContinuousAt (fun q => Df q.1 q.2) (t, x t)) (DK : X →L[ℝ] ℝ)
+  (hK : HasFDerivAt prob.K DK (x prob.T)) :
+  ∃ p,
+    costateEquation prob.L prob.f prob.T x u p ∧
+      transversalityCondition prob.K prob.T x p ∧ HamiltonianMinimizing prob.L prob.f prob.controlSet prob.T x u p
+IsoperimetricVariation.exists_normal_multiplier.{u_1} {V : Type u_1} [NormedAddCommGroup V] [NormedSpace ℝ V]
+  [CompleteSpace V] {J C : V → ℝ} {v₀ : V} {J' C' : V →L[ℝ] ℝ} (hmin : IsLocalMinOn J {v | C v = C v₀} v₀)
+  (hJ : HasStrictFDerivAt J J' v₀) (hC : HasStrictFDerivAt C C' v₀) (hregular : C' ≠ 0) : ∃ lam, J' + lam • C' = 0
+IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family.{u_1, u_2} {V : Type u_1} {E : Type u_2}
+  [NormedAddCommGroup V] [NormedSpace ℝ V] [CompleteSpace V] [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (S : Set (ℝ → E)) (x : ℝ → E) (Γ η : V → ℝ → E) (hΓ₀ : Γ 0 = x)
+  (hΓ : ∀ (v : V), Γ v ∈ S)
+  (hopt :
+    IsMinOn (cvFunctional L K T) {y | y ∈ S ∧ cvFunctional G (fun x => 0) T y = cvFunctional G (fun x => 0) T x} x)
+  (J' C' : V →L[ℝ] ℝ) (hJ : HasStrictFDerivAt (fun v => cvFunctional L K T (Γ v)) J' 0)
+  (hC : HasStrictFDerivAt (fun v => cvFunctional G (fun x => 0) T (Γ v)) C' 0) (hregular : C' ≠ 0)
+  (hJvariation : ∀ (v : V), J' v = firstVariation L K T x (η v))
+  (hCvariation : ∀ (v : V), C' v = firstVariation G (fun x => 0) T x (η v)) :
+  ∃ lam, ∀ (v : V), firstVariation L K T x (η v) + lam * firstVariation G (fun x => 0) T x (η v) = 0
+KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional.{u_1} {E : Type u_1} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x η ξ : ℝ → E) (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L))
+  (hG : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian G)) (hK : ContDiff ℝ 1 K) (hx : ContDiff ℝ 1 x)
+  (hη : ContDiff ℝ 1 η) (hξ : ContDiff ℝ 1 ξ) (hT : 0 ≤ T) :
+  HasStrictFDerivAt
+    (fun p =>
+      (cvFunctional L K T (KirkMedhin.K3.perturbedCurve x η ξ p),
+        cvFunctional G (fun x => 0) T (KirkMedhin.K3.perturbedCurve x η ξ p)))
+    ((KirkMedhin.K3.parameterDerivative (firstVariation L K T x η) (firstVariation L K T x ξ)).prod
+      (KirkMedhin.K3.parameterDerivative (firstVariation G (fun x => 0) T x η) (firstVariation G (fun x => 0) T x ξ)))
+    (0, 0)
+KirkMedhin.K3.isoperimetricMultiplier_exists.{u_1} {E : Type u_1} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (S : Set (ℝ → E)) (x η ξ : ℝ → E)
+  (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L)) (hG : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian G))
+  (hK : ContDiff ℝ 1 K) (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η) (hξ : ContDiff ℝ 1 ξ) (hT : 0 ≤ T)
+  (hΓ : ∀ (p : ℝ × ℝ), KirkMedhin.K3.perturbedCurve x η ξ p ∈ S)
+  (hopt :
+    IsMinOn (cvFunctional L K T) {y | y ∈ S ∧ cvFunctional G (fun x => 0) T y = cvFunctional G (fun x => 0) T x} x)
+  (hξreg : firstVariation G (fun x => 0) T x ξ ≠ 0) :
+  ∃ lam,
+    lam = -firstVariation L K T x ξ / firstVariation G (fun x => 0) T x ξ ∧
+      ∀ (p : ℝ × ℝ),
+        (KirkMedhin.K3.parameterDerivative (firstVariation L K T x η) (firstVariation L K T x ξ)) p +
+            lam *
+              (KirkMedhin.K3.parameterDerivative (firstVariation G (fun x => 0) T x η)
+                  (firstVariation G (fun x => 0) T x ξ))
+                p =
+          0
+KirkMedhin.K3.exists_common_isoperimetricMultiplier.{u_1} {E : Type u_1} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x : ℝ → E) (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L))
+  (hG : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian G)) (hK : ContDiff ℝ 1 K) (hx : ContDiff ℝ 1 x) (hT : 0 ≤ T)
+  (hopt :
+    IsMinOn (cvFunctional L K T)
+      {y |
+        y ∈ KirkMedhin.K3.fixedEndpointC1Curves T (x 0) (x T) ∧
+          cvFunctional G (fun x => 0) T y = cvFunctional G (fun x => 0) T x}
+      x)
+  (hregular : ∃ ξ, ContDiff ℝ 1 ξ ∧ ξ 0 = 0 ∧ ξ T = 0 ∧ firstVariation G (fun x => 0) T x ξ ≠ 0) :
+  ∃ lam,
+    ∀ (η : ℝ → E),
+      ContDiff ℝ 1 η → η 0 = 0 → η T = 0 → firstVariation L K T x η + lam * firstVariation G (fun x => 0) T x η = 0
+KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x : ℝ → E)
+  (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L)) (hG : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian G))
+  (hK : ContDiff ℝ 1 K) (hx : ContDiff ℝ 1 x) (hT : 0 < T)
+  (hopt :
+    IsMinOn (cvFunctional L K T)
+      {y |
+        y ∈ KirkMedhin.K3.fixedEndpointC1Curves T (x 0) (x T) ∧
+          cvFunctional G (fun x => 0) T y = cvFunctional G (fun x => 0) T x}
+      x)
+  (hregular : ∃ ξ, ContDiff ℝ 1 ξ ∧ ξ 0 = 0 ∧ ξ T = 0 ∧ firstVariation G (fun x => 0) T x ξ ≠ 0) :
+  ∃ lam,
+    HasVanishingFirstVariation (fun t y v => L t y v + lam * G t y v) K T x ∧
+      ∀ t ∈ Set.Icc 0 T,
+        HasDerivWithinAt (fun s => fderiv ℝ (fun v => L s (x s) v + lam * G s (x s) v) (deriv x s))
+          (fderiv ℝ (fun y => L t y (deriv x t) + lam * G t y (deriv x t)) (x t)) (Set.Icc 0 T) t
+KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric.{u_1} {E : Type u_1} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ) (x : ℝ → E) (hL : ContDiff ℝ 2 (KirkMedhin.K3.uncurryLagrangian L))
+  (hG : ContDiff ℝ 2 (KirkMedhin.K3.uncurryLagrangian G)) (hK : ContDiff ℝ 1 K) (hx : ContDiff ℝ 2 x) (hT : 0 < T)
+  (hopt :
+    IsMinOn (cvFunctional L K T)
+      {y |
+        y ∈ KirkMedhin.K3.fixedEndpointC1Curves T (x 0) (x T) ∧
+          cvFunctional G (fun x => 0) T y = cvFunctional G (fun x => 0) T x}
+      x)
+  (hregular : ∃ ξ, ContDiff ℝ 1 ξ ∧ ξ 0 = 0 ∧ ξ T = 0 ∧ firstVariation G (fun x => 0) T x ξ ≠ 0) :
+  ∃ lam,
+    HasVanishingFirstVariation (fun t y v => L t y v + lam * G t y v) K T x ∧
+      eulerLagrange (fun t y v => L t y v + lam * G t y v) T x
+KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+  (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t)
+  (hv₂ : Continuous v₂) {d₁ d₂ : ℝ} (hd₁ : 0 ≤ d₁) (hd₂ : 0 ≤ d₂) :
+  HasDerivAt (KirkMedhin.TimeReparametrization.actualCornerCost L x₁ x₂ d₁ d₂)
+    ((∫ (t : ℝ) in 0..d₂, energyCurve L x₂ v₂ t) / d₂ - (∫ (t : ℝ) in 0..d₁, energyCurve L x₁ v₁ t) / d₁) 0
+KirkMedhin.TimeReparametrization.cvFunctional_durationExchange.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (K : E → ℝ) (hL : Continuous (Function.uncurry L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+  (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t)
+  (hv₂ : Continuous v₂) {d₁ d₂ ε : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂) (hε : ε ∈ Set.Ioo (-d₁) d₂) :
+  cvFunctional (fun x => L) K (d₁ + d₂) (KirkMedhin.TimeReparametrization.durationExchange x₁ x₂ d₁ d₂ ε) =
+    KirkMedhin.TimeReparametrization.actualCornerCost L x₁ x₂ d₁ d₂ ε + K (x₂ d₂)
+KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves.{u_1} {E : Type u_1}
+  [NormedAddCommGroup E] [NormedSpace ℝ E] {x₁ v₁ x₂ v₂ : ℝ → E} (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t)
+  (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂) {d₁ d₂ ε : ℝ} (hd₁ : 0 < d₁)
+  (hd₂ : 0 < d₂) (hjoin : x₁ d₁ = x₂ 0) (hε : ε ∈ Set.Ioo (-d₁) d₂) :
+  KirkMedhin.TimeReparametrization.durationExchange x₁ x₂ d₁ d₂ ε ∈
+    KirkMedhin.TimeReparametrization.fixedEndpointPiecewiseC1Curves (d₁ + d₂) (x₁ 0) (x₂ d₂)
+KirkMedhin.TimeReparametrization.corner_energy_eq_of_cvFunctional_min.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+  (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t)
+  (hv₂ : Continuous v₂) {d₁ d₂ : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂) (hjoin : x₁ d₁ = x₂ 0)
+  (hvd₁ : ∀ t ∈ Set.Ico 0 d₁, DifferentiableAt ℝ v₁ t) (hvd₂ : ∀ t ∈ Set.Ico 0 d₂, DifferentiableAt ℝ v₂ t)
+  (hEL₁ :
+    ∀ t ∈ Set.Ico 0 d₁, HasDerivAt (fun s => fderiv ℝ (L (x₁ s)) (v₁ s)) (fderiv ℝ (fun y => L y (v₁ t)) (x₁ t)) t)
+  (hEL₂ :
+    ∀ t ∈ Set.Ico 0 d₂, HasDerivAt (fun s => fderiv ℝ (L (x₂ s)) (v₂ s)) (fderiv ℝ (fun y => L y (v₂ t)) (x₂ t)) t)
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K (d₁ + d₂))
+      (KirkMedhin.TimeReparametrization.fixedEndpointPiecewiseC1Curves (d₁ + d₂) (x₁ 0) (x₂ d₂))
+      (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂)) :
+  energyCurve L x₁ v₁ d₁ = energyCurve L x₂ v₂ 0
+MinimumFuel.scalar_minimizer_iff_switchingLaw {α M c u : ℝ} (hα : 0 < α) (hM : 0 ≤ M) :
+  MinimumFuel.IsScalarMinimizer α M c u ↔ MinimumFuel.SwitchingLaw α M c u
+MinimumFuel.box_minimizer_iff_switchingLaw.{u_1} {ι : Type u_1} [Fintype ι] (α M : ι → ℝ) (c u : EuclideanSpace ℝ ι)
+  (hα : ∀ (i : ι), 0 < α i) (hM : ∀ (i : ι), 0 ≤ M i) :
+  MinimumFuel.IsBoxMinimizer α M c u ↔ ∀ (i : ι), MinimumFuel.SwitchingLaw (α i) (M i) (c.ofLp i) (u.ofLp i)
+MinimumFuel.hamiltonianMinimizing_iff_switchingLaw.{u_1, u_2} {ι : Type u_1} {E : Type u_2} [Fintype ι]
+  [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E] (a : ℝ → E → E)
+  (B : ℝ → E → EuclideanSpace ℝ ι →L[ℝ] E) (ℓ : ℝ → E → ℝ) (α M : ι → ℝ) (T : ℝ) (x : ℝ → E)
+  (u : ℝ → EuclideanSpace ℝ ι) (p : ℝ → E) (hα : ∀ (i : ι), 0 < α i) (hM : ∀ (i : ι), 0 ≤ M i)
+  (hu : ∀ t ∈ Set.Icc 0 T, u t ∈ MinimumFuel.box M) :
+  HamiltonianMinimizing (fun t x u => ℓ t x + MinimumFuel.weightedL1 α u) (fun t x u => a t x + (B t x) u)
+      (MinimumFuel.box M) T x u p ↔
+    ∀ t ∈ Set.Icc 0 T,
+      ∀ (i : ι),
+        MinimumFuel.SwitchingLaw (α i) (M i) (((ContinuousLinearMap.adjoint (B t (x t))) (p t)).ofLp i) ((u t).ofLp i)
+KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+  (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t)
+  (hv₂ : Continuous v₂) {d₁ d₂ : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂) (hjoin : x₁ d₁ = x₂ 0)
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K (d₁ + d₂))
+      (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves (d₁ + d₂) (x₁ 0) (x₂ d₂))
+      (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂)) :
+  energyCurve L x₁ v₁ d₁ = energyCurve L x₂ v₂ 0
+KirkMedhin.FinitePiecewise.interior_EL_in_finite_context.{u_1} {E : Type u_1} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  (L : E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {x v : ℝ → E}
+  (hx : ∀ (t : ℝ), HasDerivAt x (v t) t) (hv : Continuous v) {d : ℝ} (hd : 0 < d) {T : ℝ} {A B : E}
+  {F : (ℝ → E) → ℝ → E} (ctx : KirkMedhin.FinitePiecewise.SpliceContext d (x 0) (x d) T A B F)
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K T) (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B)
+      (F x))
+  (t : ℝ) : t ∈ Set.Ioo 0 d → HasDerivAt (fun s => fderiv ℝ (L (x s)) (v s)) (fderiv ℝ (fun y => L y (v t)) (x t)) t
+KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+  (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁) (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t)
+  (hv₂ : Continuous v₂) {d₁ d₂ : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂) (hjoin : x₁ d₁ = x₂ 0) {T : ℝ} {A B : E}
+  {F : (ℝ → E) → ℝ → E} (ctx : KirkMedhin.FinitePiecewise.SpliceContext (d₁ + d₂) (x₁ 0) (x₂ d₂) T A B F)
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K T) (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B)
+      (F (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂))) :
+  fderiv ℝ (L (x₁ d₁)) (v₁ d₁) = fderiv ℝ (L (x₂ 0)) (v₂ 0) ∧ energyCurve L x₁ v₁ d₁ = energyCurve L x₂ v₂ 0
+KirkMedhin.FinitePiecewise.weierstrassErdmann_at_every_represented_corner.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (Function.uncurry L)) {T : ℝ} {A B : E} {x : ℝ → E}
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K T) (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B) x)
+  (x₁ v₁ x₂ v₂ : ℝ → E) :
+  (∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) →
+    Continuous v₁ →
+      (∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t) →
+        Continuous v₂ →
+          ∀ (d₁ d₂ : ℝ),
+            0 < d₁ →
+              0 < d₂ →
+                x₁ d₁ = x₂ 0 →
+                  ∀ (F : (ℝ → E) → ℝ → E),
+                    KirkMedhin.FinitePiecewise.SpliceContext (d₁ + d₂) (x₁ 0) (x₂ d₂) T A B F →
+                      Set.EqOn x (F (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂)) (Set.Icc 0 T) →
+                        fderiv ℝ (L (x₁ d₁)) (v₁ d₁) = fderiv ℝ (L (x₂ 0)) (v₂ 0) ∧
+                          energyCurve L x₁ v₁ d₁ = energyCurve L x₂ v₂ 0
+KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : ℝ → E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L))
+  {x v : ℝ → E} (hx : ∀ (t : ℝ), HasDerivAt x (v t) t) (hv : Continuous v) {T : ℝ} (hT : 0 < T)
+  (hmin :
+    IsMinOn (cvFunctional L K T) (KirkMedhin.TimeReparametrization.fixedEndpointPiecewiseC1Curves T (x 0) (x T)) x) :
+  (∀ t ∈ Set.Icc 0 T,
+      KirkMedhin.NonautonomousDuBoisReymond.energyCurve L x v t +
+          ∫ (s : ℝ) in 0..t, KirkMedhin.NonautonomousDuBoisReymond.timePartialCurve L x v s =
+        KirkMedhin.NonautonomousDuBoisReymond.energyCurve L x v 0) ∧
+    ∀ t ∈ Set.Ioo 0 T,
+      HasDerivAt (KirkMedhin.NonautonomousDuBoisReymond.energyCurve L x v)
+        (-KirkMedhin.NonautonomousDuBoisReymond.timePartialCurve L x v t) t
+KirkMedhin.FinitePiecewise.interior_EL_in_timeSpliceContext.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : ℝ → E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L))
+  {x v : ℝ → E} (hx : ∀ (t : ℝ), HasDerivAt x (v t) t) (hv : Continuous v) {start d : ℝ} (hd : 0 < d) {t0 T : ℝ}
+  {A B : E} {F : (ℝ → E) → ℝ → E} (ctx : KirkMedhin.FinitePiecewise.TimeSpliceContext start d (x 0) (x d) t0 T A B F)
+  (hmin :
+    IsMinOn (cvFunctional (fun t => L (t0 + t)) K T)
+      (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B) (F x))
+  (t : ℝ) :
+  t ∈ Set.Ioo 0 d →
+    HasDerivAt (fun s => fderiv ℝ (L (start + s) (x s)) (v s)) (fderiv ℝ (fun y => L (start + t) y (v t)) (x t)) t
+KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] (L : ℝ → E → E → ℝ) (K : E → ℝ) (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L))
+  {x₁ v₁ x₂ v₂ : ℝ → E} (hx₁ : ∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
+  (hx₂ : ∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂) {start d₁ d₂ : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂)
+  (hjoin : x₁ d₁ = x₂ 0) {t0 T : ℝ} {A B : E} {F : (ℝ → E) → ℝ → E}
+  (ctx : KirkMedhin.FinitePiecewise.TimeSpliceContext start (d₁ + d₂) (x₁ 0) (x₂ d₂) t0 T A B F)
+  (hmin :
+    IsMinOn (cvFunctional (fun t => L (t0 + t)) K T)
+      (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B)
+      (F (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂))) :
+  fderiv ℝ (L (start + d₁) (x₁ d₁)) (v₁ d₁) = fderiv ℝ (L (start + d₁) (x₂ 0)) (v₂ 0) ∧
+    (fderiv ℝ (L (start + d₁) (x₁ d₁)) (v₁ d₁)) (v₁ d₁) - L (start + d₁) (x₁ d₁) (v₁ d₁) =
+      (fderiv ℝ (L (start + d₁) (x₂ 0)) (v₂ 0)) (v₂ 0) - L (start + d₁) (x₂ 0) (v₂ 0)
+KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner.{u_1} {E : Type u_1}
+  [NormedAddCommGroup E] [NormedSpace ℝ E] (L : ℝ → E → E → ℝ) (K : E → ℝ)
+  (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L)) {T : ℝ} {A B : E} {x : ℝ → E}
+  (hmin : IsMinOn (cvFunctional L K T) (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1Curves T A B) x)
+  (x₁ v₁ x₂ v₂ : ℝ → E) :
+  (∀ (t : ℝ), HasDerivAt x₁ (v₁ t) t) →
+    Continuous v₁ →
+      (∀ (t : ℝ), HasDerivAt x₂ (v₂ t) t) →
+        Continuous v₂ →
+          ∀ (start d₁ d₂ : ℝ),
+            0 < d₁ →
+              0 < d₂ →
+                x₁ d₁ = x₂ 0 →
+                  ∀ (F : (ℝ → E) → ℝ → E),
+                    KirkMedhin.FinitePiecewise.TimeSpliceContext start (d₁ + d₂) (x₁ 0) (x₂ d₂) 0 T A B F →
+                      Set.EqOn x (F (KirkMedhin.TimeReparametrization.concatenate d₁ x₁ x₂)) (Set.Icc 0 T) →
+                        fderiv ℝ (L (start + d₁) (x₁ d₁)) (v₁ d₁) = fderiv ℝ (L (start + d₁) (x₂ 0)) (v₂ 0) ∧
+                          (fderiv ℝ (L (start + d₁) (x₁ d₁)) (v₁ d₁)) (v₁ d₁) - L (start + d₁) (x₁ d₁) (v₁ d₁) =
+                            (fderiv ℝ (L (start + d₁) (x₂ 0)) (v₂ 0)) (v₂ 0) - L (start + d₁) (x₂ 0) (v₂ 0)
+KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min.{u_1} {E : Type u_1} [NormedAddCommGroup E]
+  [NormedSpace ℝ E] [CompleteSpace E] (L : ℝ → E → E → ℝ) (K : E → ℝ)
+  (hL : ContDiff ℝ 1 (KirkMedhin.K3.uncurryLagrangian L)) {x vL vR : ℝ → E} {T τ : ℝ}
+  (hcorner : IsPiecewiseC₁On x vL vR T τ) (hvL : Continuous vL) (hvR : Continuous vR)
+  (hmin :
+    IsMinOn (cvFunctional L K T) (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1CurvesOn T (x 0) (x T)) x) :
+  fderiv ℝ (L τ (x τ)) (vL τ) = fderiv ℝ (L τ (x τ)) (vR τ) ∧
+    (fderiv ℝ (L τ (x τ)) (vL τ)) (vL τ) - L τ (x τ) (vL τ) = (fderiv ℝ (L τ (x τ)) (vR τ)) (vR τ) - L τ (x τ) (vR τ)
+KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min.{u_1} {E : Type u_1}
+  [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E] (L : E → E → ℝ) (K : E → ℝ)
+  (hL : ContDiff ℝ 1 (Function.uncurry L)) {x vL vR : ℝ → E} {T τ : ℝ} (hcorner : IsPiecewiseC₁On x vL vR T τ)
+  (hvL : Continuous vL) (hvR : Continuous vR)
+  (hmin :
+    IsMinOn (cvFunctional (fun x => L) K T)
+      (KirkMedhin.FinitePiecewise.fixedEndpointFinitePiecewiseC1CurvesOn T (x 0) (x T)) x) :
+  fderiv ℝ (L (x τ)) (vL τ) = fderiv ℝ (L (x τ)) (vR τ) ∧ energyCurve L x vL τ = energyCurve L x vR τ
+'hjbMinimizing_of_residual' depends on axioms: [propext, Classical.choice, Quot.sound]
+'hjbCostateEquation_of_residual' depends on axioms: [propext, Classical.choice, Quot.sound]
+'hjbPMPAssembly_of_residual' depends on axioms: [propext, Classical.choice, Quot.sound]
+'K1NeedlePMP.needleCostate_of_integralOptimality_smooth' depends on axioms: [propext, Classical.choice, Quot.sound]
+'K1NeedlePMPOnHorizon.needleCostate_of_integralOptimality_onHorizon' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.K1.exists_needle_endpointTangent_of_primitive_data' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.K1.integralOptimal_normal_covector_of_endpointTangents' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.K1.exists_normalized_hahnBanach_terminal_covector' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.K1.exists_geometricNormalPMP_of_primitive_data' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.K1.integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'IsoperimetricVariation.exists_normal_multiplier' depends on axioms: [propext, Classical.choice, Quot.sound]
+'IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.K3.isoperimetricMultiplier_exists' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.K3.exists_common_isoperimetricMultiplier' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.TimeReparametrization.hasDerivAt_actualCornerCost' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.TimeReparametrization.cvFunctional_durationExchange' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.TimeReparametrization.corner_energy_eq_of_cvFunctional_min' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'MinimumFuel.scalar_minimizer_iff_switchingLaw' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MinimumFuel.box_minimizer_iff_switchingLaw' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MinimumFuel.hamiltonianMinimizing_iff_switchingLaw' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.interior_EL_in_finite_context' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.weierstrassErdmann_at_every_represented_corner' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.interior_EL_in_timeSpliceContext' depends on axioms: [propext, Classical.choice, Quot.sound]
+'KirkMedhin.FinitePiecewise.weierstrassErdmann_in_timeSpliceContext' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]

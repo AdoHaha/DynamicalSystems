@@ -87,11 +87,11 @@ noncomputable def parameterDerivative (A B : ℝ) : (ℝ × ℝ) →L[ℝ] ℝ :
     parameterDerivative A B p = A * p.1 + B * p.2 := by
   simp [parameterDerivative]
 
-@[simp] theorem parameterDerivative_one_zero (A B : ℝ) :
+theorem parameterDerivative_one_zero (A B : ℝ) :
     parameterDerivative A B (1, 0) = A := by
   simp [parameterDerivative]
 
-@[simp] theorem parameterDerivative_zero_one (A B : ℝ) :
+theorem parameterDerivative_zero_one (A B : ℝ) :
     parameterDerivative A B (0, 1) = B := by
   simp [parameterDerivative]
 

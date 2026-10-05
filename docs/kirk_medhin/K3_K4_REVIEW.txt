@@ -1,0 +1,115 @@
+Final source-level semantic review of the completed delivery.
+The earlier report referenced below is archived at validation/K3_K4_contract_review.txt.
+The final report supersedes that report's autonomous-only K4 scope.
+
+Final independent semantic review: K3/K4 delivery amendment
+Date: 2026-10-05 UTC
+Reviewer: /root/fuel_and_constraints
+Verdict: PASS for the stated regular scalar K3 and weak finite-piecewise K4 scopes.
+No mathematical blocker found. This is source-level semantic review, distinct from
+the coordinator's exact-byte native compilation, axiom, and declaration-lint gates.
+It supplements K3_K4_contract_review.txt, whose earlier K4 snapshot was autonomous.
+
+Final K4 endpoints reviewed
+- KirkMedhin.FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min
+- KirkMedhin.FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min
+- KirkMedhin.FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner
+- KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+The spatial, duration-exchange, cost-splitting and finite-context paths that these
+endpoints invoke were inspected, not merely the final theorem statements.
+
+1. Actual original-predicate reference and ambient class.
+PiecewiseC1Extensions integrates the continuous left/right velocity fields into
+global C1 arcs. FTC proves equality with the original x on each closed arc using
+the ORIGINAL IsPiecewiseC₁On derivatives; x itself is not replaced by a supplied
+branch decomposition. The left endpoint, join, and terminal endpoint are derived.
+CompleteSpace E is explicit for these vector integrals, not a hidden premise.
+The final ambient class fixedEndpointFinitePiecewiseC1CurvesOn consists of curves
+with the fixed endpoints and an actual finite-C1 representative agreeing on Icc.
+The original reference has derived membership (the named membership theorem),
+so IsMinOn's lack of an intrinsic membership conjunct creates no vacuity loophole.
+Every constructed competitor belongs to this horizon-only class. The proof uses
+its ambient minimum to obtain the existing global-representative comparisons.
+cvFunctional_eq_of_eqOn identifies actual costs via local derivative equality on
+Ioo and endpoint equality for K. This legitimately ignores derivative values at
+the two measure-zero endpoints.
+
+Important API precision: original IsPiecewiseC₁On uses Iic τ on the left and Ici τ
+on the right. At 0 and T those sets contain neighborhoods, so this EXISTING
+predicate already entails two-sided endpoint differentiability. The adapter adds
+no global reference regularity beyond it. Saying simply 'no off-horizon reference
+restrictions' is too strong; saying the horizon-only competitor class has no
+off-horizon restrictions is correct. The revised campaign prose has been corrected.
+
+2. Nonautonomous physical clocks and sign.
+Actual rescaled cost evaluates the right arc at d1 + ε + (1-ε/d2)t, not at its
+unshifted local parameter. movingDensity differentiates r*L(t+(r-1)α,x,v/r),
+including the genuine time partial. At r=1 its derivative is α L_t - E for
+E = partial_v L[v] - L. Left scale 1+ε/d1 and right scale 1-ε/d2 give the correct
+hat weights, with the right affine shift α=t-d2. The resulting actual law is
+E(t)+integral_0^t L_t = E(0), hence E'=-L_t on Ioo; no false autonomous conservation
+claim is made. Weighted FTC then produces -E_left at the corner from the left
+integral and -E_right at the right-arc start from its integral. Fermat for the
+DERIVED duration minimum gives E_left=E_right.
+TimeSpliceContext tracks the hole's physical start. Appending preserves it;
+prepending changes the outside origin from t0 to t0-s. Actual subarc splitting
+uses t0+d1 on the right, so the context induction retains the same physical time.
+Both final corner covectors and energies are evaluated at start+d1 (or τ in the
+original-predicate adapter). No misplaced sign or origin was found.
+
+3. Feasibility, differentiation, integrability and noncircularity.
+Time variations and spatial variations are actual finite joined curves with
+proved endpoints and membership. Actual costs, not supplied first-variation or
+scalar-minimum residuals, produce the scalar minima. Primitive joint C1 L and
+continuous velocities give continuous cost/derivative densities; compact positive
+scale strips supply differentiation-under-the-integral domination. Finite cost
+integrability is proved inductively. Concatenation splits use interior equality
+and null endpoints only after integrability has been established. No K4 final
+conclusion relies on the nonintegrable-default value of the integral.
+Spatial variations derive first variation zero, weak momentum regularity, and
+interior EL. Boundary FTC for affine joined test directions then gives momentum
+matching. Time variations derive weak du Bois–Reymond independently of supplied
+EL/acceleration. Final wrappers assume no stationarity, EL, energy equation,
+unknown momentum derivative, feasible-family interface or scalar minimum.
+
+4. Scope retained.
+Joint C1 regularity is global in the stated Lagrangian variables. One-sided
+velocity fields have globally continuous extensions. The preferred adapter uses
+the exact original one-corner predicate in a complete real normed state space.
+The multiple-corner endpoints quantify every explicit finite-context representation
+of an adjacent pair; they do not claim an unproved automatic arbitrary-partition
+extraction theorem. Positive-duration, finitely joined C1 arcs and the actual
+fixed-endpoint ambient minimum are explicit. No arbitrary absolutely continuous,
+infinitely-many-corner, local-topology-minimum, constrained-corner, or free-time
+terminal theorem is claimed. Arbitrary K is harmless because endpoints are fixed.
+
+5. K3/campaign reconciliation checked.
+The previously reviewed K3 exact/C1 theorems remain unchanged semantically:
+actual constrained fixed-endpoint optimum + primitive regularity + one nonzero
+constraint direction -> one lambda before all C1 tests -> weak EL. The C1 theorem
+gives within derivatives; primitive C2 L,G,x discharges the original full-endpoint
+EL API. Exact HasVanishingFirstVariation over all differentiable tests retains
+its original totalized-integral semantics; it does not claim Gateaux regularity
+for every rough test. Each two-parameter family is in the C1 fixed-endpoint class;
+its parameter constraint level set, not all parameter pairs, supplies constrained
+feasibility. This wording was made precise in the revised campaign files.
+The eight-task manifest preserves seven old IDs, keeps the intermediate K3 task,
+adds full K3, and updates weak K4 to the exact final nonautonomous/original-predicate
+targets. All new source paths and required declaration names were checked against
+the integrated tree. The impossible strictly-weaker residual rule is removed;
+proved equivalence is allowed, unresolved supplied conclusions are not. No runtime
+acceptance record or unrelated K0–K8 completion is fabricated.
+
+Exact inspected source SHA256s (integrated tree):
+ed674293f444c8633424063b9075202afc684ff3cb6797f75c7d5e49877859ae  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/DuBoisReymond.lean
+23dc95cefa2c1533574a0e2beb876a21a11b7921e39f0f520db4a69453f099da  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousTimeReparametrization.lean
+6e7d48d53a0bf408c0c6c06f70b650c3a00c150fce5639a9281b59fb49459bf8  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousTimeReparametrizationFamily.lean
+ef971bdd04a516d0c5a8b71eec0daa9ae9eda022c3c23b3e5e16c921c174de76  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFinitePiecewiseVariations.lean
+80866dbea87837084ef47c869a0f7fb94599b03432138a195e87a787f9184812  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousDuBoisReymond.lean
+64dd91f26e69ec736e76867f127af12c4addbac5085fea450c8ec6229a089f57  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteSpatialVariations.lean
+23c459f769e01ed825f60bf927cb49c9a900de6fcf65f54436f7ec7f85e7d3a2  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteCornerConditions.lean
+8c22f1c0eb85cb66d8f93e78e9be4ae05571999476cc647f0706aceade6c1b33  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/NonautonomousFiniteCornerMinimumPrinciple.lean
+694922bbdaed422d4ac31dbbc5551316b774c70cb7574e97e83a9b98c421c88f  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/FiniteCornerMinimumPrinciple.lean
+80c9744a784b0ef0a26e0311cada779a803e27178d0c9afe59fc03ecfc4d96f5  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/PiecewiseC1Extensions.lean
+1d5f831a87cf08259c56b1761f4f7b128adaf2b73db4667e6ddb3356db125d97  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/PiecewiseC1MinimumPrinciple.lean
+0413bbacc38840ecaa8793e69b931f13c6d563f339bf65c3f0777a1135b38ffd  work/round3/integrated/DynamicalSystems/OptimalControl/ContinuousTime/CalculusOfVariations.lean
