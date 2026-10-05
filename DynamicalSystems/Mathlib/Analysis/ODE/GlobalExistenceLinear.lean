@@ -129,7 +129,7 @@ omit [CompleteSpace E] in
 /-- A priori bound (Grönwall): a solution of a vector field with linear growth
 `‖f t x‖ ≤ C * ‖x‖ + C'` on `[t₀ - T, t₀ + T]` stays in a ball whose radius depends only on
 `‖α t₀‖`, `C`, `C'` and `T`. -/
-theorem norm_le_gronwallBound_of_linear_growth (hC : 0 ≤ C) (hC' : 0 ≤ C')
+public theorem norm_le_gronwallBound_of_linear_growth (hC : 0 ≤ C) (hC' : 0 ≤ C')
     (h_bdd : ∀ t x, ‖f t x‖ ≤ C * ‖x‖ + C') {α : ℝ → E} {t₀ T : ℝ} (hT : 0 ≤ T)
     (hα : ∀ t ∈ Icc (t₀ - T) (t₀ + T), HasDerivWithinAt α (f t (α t)) (Icc (t₀ - T) (t₀ + T)) t) :
     ∀ t ∈ Icc (t₀ - T) (t₀ + T), ‖α t‖ ≤ gronwallBound ‖α t₀‖ C C' T := by

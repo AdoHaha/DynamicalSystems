@@ -5,11 +5,19 @@ Authors: Moritz Doll
 -/
 module
 
-public import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
+public import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitzUniqueness
 public import Mathlib.Analysis.ODE.Transform
 public import Mathlib.Dynamics.Flow
 
-/-! # Global existence of ODEs -/
+/-!
+# Fundamental solutions and complete vector fields
+
+This file contains the basic predicates, uniqueness, and the autonomous composition
+law. Continuous dependence is proved in `ContinuousDependence`, the inhomogeneous
+linear formula in `Duhamel`, and completeness under local Lipschitz and linear
+growth assumptions in `GlobalExistenceContinuation` (using the estimates and
+endpoint extension lemmas in `GlobalExistenceGrowth`).
+-/
 
 @[expose] public noncomputable section
 
@@ -40,34 +48,18 @@ theorem differentiableAt (hΦ : IsFundamentalSolution Φ f) (t₀ t : ℝ) (x₀
     DifferentiableAt ℝ (Φ t₀ x₀) t :=
   (hΦ.isIntegralCurve t₀ x₀ t).differentiableAt
 
-proof_wanted continuous (hΦ : IsFundamentalSolution Φ f)
-    (hf : UniformlyLocallyLipschitz f) (hf' : Continuous f) (t₀ : ℝ) :
-    Continuous (Φ t₀).uncurry
-
 theorem _root_.IsIntegralCurve.eq_of_uniformlyLocallyLipschitz
     {v : ℝ → E → E} {γ₁ γ₂ : ℝ → E} {t₀ : ℝ}
     (hf : UniformlyLocallyLipschitz v)
     (h1 : IsIntegralCurve γ₁ v) (h2 : IsIntegralCurve γ₂ v)
     (heq : γ₁ t₀ = γ₂ t₀) : γ₁ = γ₂ := by
-  have hclosed : IsClosed {s : ℝ | γ₁ s = γ₂ s} :=
-    isClosed_eq h1.continuous h2.continuous
-  have hopen : IsOpen {s : ℝ | γ₁ s = γ₂ s} := by
-    rw [isOpen_iff_mem_nhds]
-    intro s (hs : γ₁ s = γ₂ s)
-    obtain ⟨K, U, hU, hfK⟩ := hf s (γ₁ s)
-    have hU1 : ∀ᶠ s' in 𝓝 s, γ₁ s' ∈ U :=
-      h1.continuous.continuousAt.eventually_mem hU
-    have hU' : U ∈ 𝓝 (γ₂ s) := by rwa [hs.symm]
-    have hU2 : ∀ᶠ s' in 𝓝 s, γ₂ s' ∈ U :=
-      h2.continuous.continuousAt.eventually_mem hU'
-    have heq_ev := (h1.isIntegralCurveAt s).eventuallyEq hfK hU1 (h2.isIntegralCurveAt s) hU2 hs
-    exact heq_ev.mono (fun s' hs' ↦ hs')
-  have huniv : ∀ s : ℝ, γ₁ s = γ₂ s := by
-    suffices {s : ℝ | γ₁ s = γ₂ s} = Set.univ by simpa [Set.ext_iff]
-    refine isClopen_iff.mp ⟨hclosed, hopen⟩ |>.resolve_left ?_
-    have : t₀ ∈ ({s : ℝ | γ₁ s = γ₂ s} : Set ℝ) := heq
-    grind
-  grind
+  ext t
+  have h₀ : t₀ ∈ Set.Ioo (min t t₀ - 1) (max t t₀ + 1) :=
+    ⟨by linarith [min_le_right t t₀], by linarith [le_max_right t t₀]⟩
+  have ht : t ∈ Set.Ioo (min t t₀ - 1) (max t t₀ + 1) :=
+    ⟨by linarith [min_le_left t t₀], by linarith [le_max_left t t₀]⟩
+  exact IsIntegralCurveOn.eqOn_Ioo_of_uniformlyLocallyLipschitz hf h₀
+    (h1.isIntegralCurveOn _) (h2.isIntegralCurveOn _) heq ht
 
 theorem unique (hΦ : IsFundamentalSolution Φ f) (hΦ' : IsFundamentalSolution Φ' f)
     (hf : UniformlyLocallyLipschitz f) :
@@ -104,10 +96,6 @@ variable {g : ℝ → E}
 theorem duhamelOperator_initial (hX₀ : ∀ t₀, X t₀ t₀ = ContinuousLinearMap.id _ _)
     (t₀ : ℝ) (x₀ : E) : duhamelOperator X g t₀ x₀ t₀ = x₀ := by
   simp [duhamelOperator, hX₀ t₀]
-
-proof_wanted duhamelOperator_isIntegralCurve
-    (hX : ∀ t₀ t, deriv (X t₀ ·) t = L t ∘L X t₀ t) (t₀ : ℝ) (x₀ : E) (t : ℝ) :
-    deriv (duhamelOperator X g t₀ x₀) t = L t (duhamelOperator X g t₀ x₀ t) + g t
 
 end Linear
 
@@ -155,14 +143,6 @@ theorem contFlowAt_apply (hf : IsCompleteVectorField f) (t₀ : ℝ) (x₀ : E) 
   hf.contFlowAt t₀ x₀ t = hf.flowAt t₀ x₀ t := rfl
 
 end IsCompleteVectorField
-
-variable {f : ℝ → E → E}
-
-/-- This is a consequence of the global existence result for ODEs. -/
-proof_wanted UniformlyLocallyLipschitz.isCompleteVectorField (hf : UniformlyLocallyLipschitz f)
-    (hf' : Continuous f)
-    (hf'' : ∀ t, ∃ a b, ∀ x, ‖f t x‖ ≤ a + b * ‖x‖) :
-    IsCompleteVectorField f
 
 end NonAutonomous
 
@@ -230,50 +210,3 @@ theorem IsFundamentalSolution.add_apply
   rw [heq]
 
 end Autonomous
-
-/-
-namespace IsCompleteVectorField
-
-open scoped NNReal
-
-variable {x : E}
-variable {f : E → E}
-
-variable {K : ℝ≥0}
-
-/-- Every complete and Lipschitz vector field admits a global flow. -/
-def flow (hf : IsCompleteVectorField (fun _ ↦ f)) (h : LocallyLipschitz f) : Flow ℝ E where
-  toFun t x := hf.flowAt 0 x t
-  cont' :=
-    (hf.flowAt_isFundamentalSolution.continuous h.uniformlyLocallyLipschitz continuous_const 0).comp
-      continuous_swap
-  map_add' := by
-    intro t₀ t₁ x
-    apply (hf.flowAt_isFundamentalSolution |>.add_apply'' f h 0 t₀ t₁ x).symm
-  map_zero' := by simp
-
-/-@[fun_prop]
-theorem differentiable_flow (hf : IsCompleteVectorField f) (h : LipschitzWith K f) (x : E) :
-    Differentiable ℝ (hf.flow h · x) := by fun_prop-/
-
-@[simp]
-theorem deriv_flow (hf : IsCompleteVectorField (fun _ ↦ f)) (h : LocallyLipschitz f) (t : ℝ)
-    (x : E) :
-    deriv (hf.flow h · x) t = f (hf.flow h t x) :=
-  (hf.flowAt_isIntegralCurve 0 x t).deriv
-
-example (hf : IsCompleteVectorField (fun _ ↦ f)) (h : LocallyLipschitz f) (x : E) :
-    deriv (hf.flow h · x) 0 = f x := by
-  simp
-
-variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
-
-theorem deriv_comp_flow {v : E → F} (hv : Differentiable ℝ v)
-    (hf : IsCompleteVectorField (fun _ ↦ f))
-    (h : LocallyLipschitz f) (t : ℝ) (x : E) :
-    deriv (v <| hf.flow h · x) t = fderiv ℝ v (hf.flow h t x) (f <| hf.flow h t x) := calc
-  _ = (fderiv ℝ v (hf.flow h t x)) (deriv (hf.flow h · x) t) := by
-    apply fderiv_comp_deriv t (by fun_prop) (by fun_prop)
-  _ = _ := by rw [hf.deriv_flow]
-
-end IsCompleteVectorField -/

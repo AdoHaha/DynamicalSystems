@@ -9,8 +9,10 @@ public import DynamicalSystems.Mathlib.Analysis.ODE.ExistUnique
 
 /-! # Uniform locally Lipschitz functions
 
-In this file, we prove that an ODE `d/dt x = f(t, x)` admits a global fundamental solution
-if `f` satisfies `‖f t x‖ ≤ a t + b t * ‖x‖` for locally integrable `a` and `b`.
+This file defines uniform local Lipschitz continuity in the state, derives local
+Picard–Lindelöf existence, and records existence-interval predicates. Global
+existence under linear-growth bounds uniform on compact time intervals is
+proved in `GlobalExistenceContinuation`.
 -/
 
 

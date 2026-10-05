@@ -10,6 +10,7 @@ public import Mathlib.Analysis.ODE.Transform
 
 public import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence
 public import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
+public import DynamicalSystems.Mathlib.Analysis.ODE.CompleteFlow
 public import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
 public import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 
@@ -71,8 +72,30 @@ theorem Flow.isCompleteVectorField (hΦ : ∀ x, Differentiable ℝ (Φ · x)) :
   convert! this
   simp
 
-proof_wanted flow_congr (hΦ : ∀ x, Differentiable ℝ (Φ · x)) (hΦ' : ∀ x, Differentiable ℝ (Φ' · x))
-    (h : ∀ x, deriv (Φ · x) 0 = deriv (Φ' · x) 0) : Φ = Φ'
+/-- Each orbit of a differentiable flow is an integral curve of its generator. -/
+theorem Flow.isIntegralCurve (hΦ : ∀ x, Differentiable ℝ (Φ · x)) (x : E) :
+    IsIntegralCurve (Φ · x) (fun _ y ↦ deriv (Φ · y) 0) := by
+  intro t
+  exact (hΦ x t).hasDerivAt.congr_deriv
+    (Flow.deriv_eq_deriv_zero (Φ := Φ) (x := x) (t := t) (fun y ↦ hΦ y 0))
+
+/-- Two differentiable flows with the same locally Lipschitz generator agree.
+
+The local Lipschitz hypothesis supplies uniqueness of integral curves; equality
+of the derivatives at time zero alone does not provide that uniqueness argument. -/
+theorem flow_congr (hΦ : ∀ x, Differentiable ℝ (Φ · x))
+    (hΦ' : ∀ x, Differentiable ℝ (Φ' · x))
+    (h : ∀ x, deriv (Φ · x) 0 = deriv (Φ' · x) 0)
+    (hLip : LocallyLipschitz (fun x ↦ deriv (Φ · x) 0)) : Φ = Φ' := by
+  have hcurves : ∀ x, (Φ · x) = (Φ' · x) := by
+    intro x
+    have h₂ : IsIntegralCurve (Φ' · x) (fun _ y ↦ deriv (Φ · y) 0) := by
+      intro t
+      simpa only [h] using (Φ'.isIntegralCurve hΦ' x t)
+    exact (Φ.isIntegralCurve hΦ x).eq_of_uniformlyLocallyLipschitz
+      (t₀ := 0) hLip.uniformlyLocallyLipschitz h₂ (by simp)
+  ext t x
+  exact congrFun (hcurves x) t
 
 /-- A vector field `f : E → E` is called linearly bounded if it is differentiable and its derivative
 is uniformly bounded. -/
@@ -124,25 +147,20 @@ theorem isCompleteVectorField [CompleteSpace E] (hf : IsLinearlyBddVectorField f
   obtain ⟨Φ, hΦ⟩ := global_existence_autonomous hf.lipschitzWith
   exact ⟨Φ t₀ x₀, (hΦ t₀ x₀).2, (hΦ t₀ x₀).1⟩
 
-/- the following statements need the definition `IsCompleteVectorField.flow`
-
 /-- The flow of a linearly bounded vector field. -/
-def flow (hf : IsLinearlyBddVectorField f) : Flow ℝ E :=
+def flow [CompleteSpace E] (hf : IsLinearlyBddVectorField f) : Flow ℝ E :=
   hf.isCompleteVectorField.flow hf.lipschitzWith.locallyLipschitz
 
 @[simp]
-theorem deriv_flow (hf : IsLinearlyBddVectorField f) (t : ℝ) (x : E) :
+theorem deriv_flow [CompleteSpace E] (hf : IsLinearlyBddVectorField f) (t : ℝ) (x : E) :
     deriv (hf.flow · x) t = f (hf.flow t x) :=
   hf.isCompleteVectorField.deriv_flow hf.lipschitzWith.locallyLipschitz t x
 
-variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
-
-theorem deriv_comp_flow (hf : IsLinearlyBddVectorField f) {v : E → F} (hv : Differentiable ℝ v)
+theorem deriv_comp_flow [CompleteSpace E] (hf : IsLinearlyBddVectorField f)
+    {v : E → F} (hv : Differentiable ℝ v)
     (t : ℝ) (x : E) :
     deriv (v <| hf.flow · x) t = fderiv ℝ v (hf.flow t x) (f <| hf.flow t x) :=
   hf.isCompleteVectorField.deriv_comp_flow hv hf.lipschitzWith.locallyLipschitz t x
-
--/
 
 end IsLinearlyBddVectorField
 

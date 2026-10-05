@@ -362,7 +362,35 @@ theorem isLpStable_inputState (h_topRel : loop.topRel.IsGraph) (h_botRel : loop.
 
 /- Todo: finite gain stabilities are equivalent -/
 
-/- Todo: closed loop is causal -/
+/-- Truncate the input and output of each component to `S` before closing the feedback loop.
+
+This is an actual feedback connection on zero-extended prefixes.  Its input-state equations are
+`u₁ = e₁ - 1_S G₂(1_S u₂)` and `u₂ = e₂ + 1_S G₁(1_S u₁)` when the component relations are graphs.
+Global uniqueness of the untruncated connection does not imply uniqueness of these equations. -/
+protected def truncate (loop : SetRel.closedLoop α E F) (S : Set α) :
+    SetRel.closedLoop α E F where
+  topRel := {(u, y) | ∃ z, (S.indicator u, z) ∈ loop.topRel ∧ y = S.indicator z}
+  botRel := {(u, y) | ∃ z, (S.indicator u, z) ∈ loop.botRel ∧ y = S.indicator z}
+
+omit [MeasurableSpace α] in
+/-- Truncation preserves existence and uniqueness of each component's output. -/
+theorem isGraph_truncate_topRel (h : loop.topRel.IsGraph) (S : Set α) :
+    (loop.truncate S).topRel.IsGraph := by
+  intro u
+  obtain ⟨z, hz, huniq⟩ := h (S.indicator u)
+  refine ⟨S.indicator z, ⟨z, hz, rfl⟩, ?_⟩
+  rintro y ⟨z', hz', rfl⟩
+  rw [huniq z' hz']
+
+omit [MeasurableSpace α] in
+/-- Truncation preserves existence and uniqueness of each component's output. -/
+theorem isGraph_truncate_botRel (h : loop.botRel.IsGraph) (S : Set α) :
+    (loop.truncate S).botRel.IsGraph := by
+  intro u
+  obtain ⟨z, hz, huniq⟩ := h (S.indicator u)
+  refine ⟨S.indicator z, ⟨z, hz, rfl⟩, ?_⟩
+  rintro y ⟨z', hz', rfl⟩
+  rw [huniq z' hz']
 
 section IsCausal
 
@@ -370,51 +398,130 @@ variable [PseudoMetricSpace α]
 
 variable {s : ι → Set α} {p : ℝ≥0∞}
 
-/-- Proposition 1.2.9 in van der Schaft -/
-proof_wanted isCausal_inputState (h_topRel : loop.topRel.IsGraph) (h_botRel : loop.botRel.IsGraph)
+/-- Every locally `Lp` external input admits a locally `Lp` state solving the full feedback
+connection.  This signal-class compatibility is separate from well-posedness on arbitrary
+functions. -/
+def LocallyLpSolvable (loop : SetRel.closedLoop α E F) (p : ℝ≥0∞) (μ : Measure α) : Prop :=
+  ∀ e, MemLpLoc e p μ → ∃ u, (e, u) ∈ loop.inputState ∧ MemLpLoc u p μ
+
+/-- Uniqueness of the algebraic feedback equations on each admissible zero-extended prefix.
+
+Only uniqueness is required: existence for arbitrary truncated inputs is unnecessary.  The
+external prefix and both candidate states must be locally `Lp`.  In applications this condition
+can be verified by injectivity or contraction of the truncated feedback equations; it is not a
+causality assumption on the full solution operator. -/
+def HasUniqueTruncatedStates (loop : SetRel.closedLoop α E F) (s : ι → Set α)
+    (p : ℝ≥0∞) (μ : Measure α) : Prop :=
+  ∀ t ⦃e u v : α → E × F⦄, MemLpLoc e p μ → MemLpLoc u p μ → MemLpLoc v p μ →
+    (s t).indicator e = e →
+    (e, u) ∈ (loop.truncate (s t)).inputState →
+    (e, v) ∈ (loop.truncate (s t)).inputState → u = v
+
+/-- Full well-posedness of every truncated connection is a sufficient, stronger condition. -/
+theorem hasUniqueTruncatedStates_of_isGraph
+    (h : ∀ t, (loop.truncate (s t)).inputState.IsGraph) :
+    loop.HasUniqueTruncatedStates s p μ := by
+  intro t e u v _ _ _ _ hu hv
+  exact (h t).eq_of_mem hu hv
+
+/-- A locally `Lp` state of causal components restricts to a state of the truncated connection.
+This is the compatibility step between the original feedback equations and their prefix version. -/
+theorem mem_inputState_truncate (h_topRel : loop.topRel.IsGraph)
+    (h_botRel : loop.botRel.IsGraph) (h_topRel' : loop.topRel.IsCausal s p μ)
+    (h_botRel' : loop.botRel.IsCausal s p μ) {t : ι} (hs : MeasurableSet (s t))
+    {e u : α → E × F} (h : (e, u) ∈ loop.inputState) (hu : MemLpLoc u p μ) :
+    ((s t).indicator e, (s t).indicator u) ∈ (loop.truncate (s t)).inputState := by
+  have hu₁ : MemLpLoc (Prod.fst ∘ u) p μ := (memLpLoc_prod_iff.mp hu).1
+  have hu₂ : MemLpLoc (Prod.snd ∘ u) p μ := (memLpLoc_prod_iff.mp hu).2
+  obtain ⟨z₁, hz₁, _⟩ := h_topRel ((s t).indicator (Prod.fst ∘ u))
+  obtain ⟨z₂, hz₂, _⟩ := h_botRel ((s t).indicator (Prod.snd ∘ u))
+  have heq₁ := h_topRel'.causal t hz₁ h.1 (hu₁.indicator hs)
+    (h_topRel'.memLpLoc hz₁ (hu₁.indicator hs)) hu₁ (h_topRel'.memLpLoc h.1 hu₁)
+    (by simp)
+  have heq₂ := h_botRel'.causal t hz₂ h.2 (hu₂.indicator hs)
+    (h_botRel'.memLpLoc hz₂ (hu₂.indicator hs)) hu₂ (h_botRel'.memLpLoc h.2 hu₂)
+    (by simp)
+  constructor
+  · refine ⟨z₁, ?_, ?_⟩
+    · convert hz₁ using 2
+      ext x
+      by_cases hx : x ∈ s t <;> simp [hx]
+    · rw [heq₁]
+      ext x
+      by_cases hx : x ∈ s t <;> simp [hx]
+  · refine ⟨z₂, ?_, ?_⟩
+    · convert hz₂ using 2
+      ext x
+      by_cases hx : x ∈ s t <;> simp [hx]
+    · rw [heq₂]
+      ext x
+      by_cases hx : x ∈ s t <;> simp [hx]
+
+/-- A feedback connection is causal when the full connection is well-posed in the local `Lp`
+signal class and its algebraic equations have unique solutions on each prefix.
+
+The prefix uniqueness and signal-class assumptions are essential additions to the incomplete
+well-posedness claim sometimes used for feedback interconnections (cf. van der Schaft,
+Proposition 1.2.9).  Global graph uniqueness alone supplies neither assumption. -/
+theorem isCausal_inputState (h_topRel : loop.topRel.IsGraph) (h_botRel : loop.botRel.IsGraph)
     (h_topRel' : loop.topRel.IsCausal s p μ) (h_botRel' : loop.botRel.IsCausal s p μ)
-    (h : loop.inputState.IsGraph) :
-    loop.inputState.IsCausal s p μ
-  /-
-  informal proof:
-  have : (G₁ uₜ)ₜ = (G₁ u)ₜ
-  have : (G₂ uₜ)ₜ = (G₂ u)ₜ
+    (h : loop.inputState.IsGraph) (hs : ∀ t, MeasurableSet (s t))
+    (h_local : loop.LocallyLpSolvable p μ)
+    (h_prefix : loop.HasUniqueTruncatedStates s p μ) :
+    loop.inputState.IsCausal s p μ := by
+  constructor
+  · intro e u heu he
+    obtain ⟨v, hev, hv⟩ := h_local e he
+    rw [h.eq_of_mem heu hev]
+    exact hv
+  · intro t e u e' u' heu heu' he hu he' hu' hee'
+    have htu := mem_inputState_truncate h_topRel h_botRel h_topRel' h_botRel' (hs t) heu hu
+    have htu' := mem_inputState_truncate h_topRel h_botRel h_topRel' h_botRel' (hs t) heu' hu'
+    rw [← hee'] at htu'
+    exact h_prefix t (he.indicator (hs t)) (hu.indicator (hs t)) (hu'.indicator (hs t))
+      (by simp) htu htu'
 
-  inputState has graph given by (e, u + FG u)
-  Let e arbitrary, then there exists a unique u satisfying `G e = u`
-  Take `eₜ`, again there exists a unique `uᵗ`, have to show that `(uᵗ)ₜ = uₜ`, because then
-  `(G eₜ)ₜ = (uᵗ)ₜ = uₜ = (G e)ₜ`.
-
-  The rest follows if we assume that the *truncated* feedback connection is well-posed:
-  `(eₜ, uᵗ)` satisfies `(eₜ, uᵗ + FG uᵗ) ∈ inputState`
-  We have that `(u + FG u)ₜ = (uₜ + (FG uₜ)ₜ)`
-  -/
-  /-constructor
-  · intro e y hey he
-    simp only [mem_inputState] at hey
-    -- seems like we have to assume something here
-    have := h_topRel'.memLpLoc hey.1
-    sorry
-  · intro t e y e' y' hey hey' he hy he' hy' hee'
-    have htop := h_topRel'.causal t
-    have hbot := h_botRel'.causal t
-    sorry-/
-
-/-- Proposition 1.2.9 in van der Schaft -/
-proof_wanted isCausal_inputOutput (h_topRel : loop.topRel.IsGraph) (h_botRel : loop.botRel.IsGraph)
-    (h_topRel' : loop.topRel.IsCausal s p μ) (h_botRel' : loop.botRel.IsCausal s p μ)
-    (h : loop.inputOutput.IsGraph) :
-    loop.inputOutput.IsCausal s p μ /-:= by
+/-- Input-state causality implies input-output causality by the algebraic change of internal
+variables.  No extra regularity or well-posedness of the component relations is needed here. -/
+theorem isCausal_inputOutput_of_inputState (h : loop.inputState.IsCausal s p μ) :
+    loop.inputOutput.IsCausal s p μ := by
   constructor
   · intro e y hey he
-    simp only [mem_inputOutput] at hey
-    -- seems like we have to assume something here
-    have := h_topRel'.memLpLoc hey.1
-    sorry
-  · intro t e y e' y' hey hey' he hy he' hy' hee'
-    have htop := h_topRel'.causal t
-    have hbot := h_botRel'.causal t
-    sorry-/
+    have hloc := (h.memLpLoc (mem_inputState_of_mem_inputOutput hey) he).sub he
+    simp only [sub_sub_cancel_left] at hloc
+    rw [memLpLoc_prod_iff] at hloc ⊢
+    simp only [Pi.neg_apply, Function.comp_apply, Prod.neg_mk, neg_neg] at hloc
+    refine ⟨hloc.2, ?_⟩
+    convert hloc.1.neg using 1
+    ext x
+    simp
+  · intro t e y e' y' hey hey' he _ he' _ hee'
+    have hstate := mem_inputState_of_mem_inputOutput hey
+    have hstate' := mem_inputState_of_mem_inputOutput hey'
+    have huu' := h.causal t hstate hstate' he (h.memLpLoc hstate he)
+      he' (h.memLpLoc hstate' he') hee'
+    funext x
+    by_cases hx : x ∈ s t
+    · have heq := congrFun hee' x
+      have huq := congrFun huu' x
+      simp only [indicator_of_mem hx] at heq huq ⊢
+      have huq₁ := congrArg Prod.fst huq
+      have huq₂ := congrArg Prod.snd huq
+      simp only [Pi.sub_apply, heq, Function.comp_apply, Prod.fst_sub, sub_right_inj,
+        Prod.snd_sub, sub_neg_eq_add, add_right_inj] at huq₁ huq₂
+      exact Prod.ext huq₂ huq₁
+    · simp [hx]
+
+/-- Causality of the input-output connection under local `Lp` solvability and uniqueness of the
+truncated state equations.  The same conditions establish both state and output causality. -/
+theorem isCausal_inputOutput (h_topRel : loop.topRel.IsGraph) (h_botRel : loop.botRel.IsGraph)
+    (h_topRel' : loop.topRel.IsCausal s p μ) (h_botRel' : loop.botRel.IsCausal s p μ)
+    (h : loop.inputOutput.IsGraph) (hs : ∀ t, MeasurableSet (s t))
+    (h_local : loop.LocallyLpSolvable p μ)
+    (h_prefix : loop.HasUniqueTruncatedStates s p μ) :
+    loop.inputOutput.IsCausal s p μ :=
+  isCausal_inputOutput_of_inputState (isCausal_inputState h_topRel h_botRel h_topRel' h_botRel'
+    (isGraph_inputState h_topRel h_botRel h) hs h_local h_prefix)
 
 end IsCausal
 

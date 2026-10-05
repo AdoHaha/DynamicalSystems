@@ -79,6 +79,8 @@ jobs:
           # mk_all-check: false
       - name: Check axioms
         run: lake exe axiom-audit
+      - name: Check foundational repairs
+        run: bash scripts/check_foundations.sh
       - name: Build verso
         run: lake exe generate-docs
       - name: Setup pages

@@ -130,9 +130,14 @@ import DynamicalSystems.Mathlib.Analysis.ODE.Adjoint
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Global
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Picard
+import DynamicalSystems.Mathlib.Analysis.ODE.CompleteFlow
+import DynamicalSystems.Mathlib.Analysis.ODE.ContinuousDependence
+import DynamicalSystems.Mathlib.Analysis.ODE.Duhamel
 import DynamicalSystems.Mathlib.Analysis.ODE.ExistUnique
 import DynamicalSystems.Mathlib.Analysis.ODE.FundamentalSolution
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence
+import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceContinuation
+import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceGrowth
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 import DynamicalSystems.Mathlib.Analysis.ODE.NeedleDisplacement
 import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
@@ -141,6 +146,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransitionPiecewise
 import DynamicalSystems.Mathlib.Analysis.ODE.TerminalSensitivity
 import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitz
+import DynamicalSystems.Mathlib.Analysis.ODE.UniformlyLocallyLipschitzUniqueness
 import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement

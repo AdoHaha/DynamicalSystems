@@ -1,0 +1,77 @@
+Foundational repairs: validation record
+
+Base: b4e6a3663bc3ed6a65742d3b1461e83f2e04e33f
+Compiler: stock Lean 4.35.0-rc2 (11acb17ec6b07a8f9e9173e6845197929540936b)
+Mathlib: 065356127b1dc0016f66b7283ce0ce2c4055aa55
+Method: direct Lean compilation with dependency fingerprints and pinned cache.
+Canonical reproduction in an ordinary checkout: bash scripts/check_foundations.sh
+The implementation run did not execute Lake or Verso documentation generation.
+
+Library entry groups: 61 + 60 + 60 + 60 modules; all exited 0.
+Final DynamicalSystems umbrella: exit 0.
+Build succeeded (261 project modules inspected).
+Eight regression modules and aggregate audit: exit 0.
+Changed Lean source and test files: no compiler warnings.
+Unchanged downstream files emit existing style/deprecation warnings.
+
+Inspected 269 production Lean files: admit=0, axiom=0, proof_wanted=0, sorry=0.
+
+MemKI.surjective: [propext, Classical.choice, Quot.sound]
+MemKI.orderIso: [propext, Classical.choice, Quot.sound]
+MemKI.symm: [propext, Classical.choice, Quot.sound]
+ComparisonFunction.exists_memKI_le_of_coercive: [propext, Classical.choice, Quot.sound]
+ComparisonFunction.exists_memKI_sandwich_of_coercive: [propext, Classical.choice, Quot.sound]
+ComparisonFunction.exists_memKI_bounds_of_isCompact: [propext, Classical.choice, Quot.sound]
+ComparisonFunction.exists_memKI_bounds_on_closedBall: [propext, Classical.choice, Quot.sound]
+ComparisonFunction.exists_memKI_bounds_of_radiallyUnbounded: [propext, Classical.choice, Quot.sound]
+Flow.isIntegralCurve: [propext, Classical.choice, Quot.sound]
+flow_congr: [propext, Classical.choice, Quot.sound]
+IsLinearlyBddVectorField.flow: [propext, Classical.choice, Quot.sound]
+IsLinearlyBddVectorField.deriv_flow: [propext, Classical.choice, Quot.sound]
+IsLinearlyBddVectorField.deriv_comp_flow: [propext, Classical.choice, Quot.sound]
+UniformlyLocallyLipschitz.continuous_uncurry: [propext, Classical.choice, Quot.sound]
+UniformlyLocallyLipschitz.exists_lipschitzOnWith_closedBall_along: [propext, Classical.choice, Quot.sound]
+norm_le_mul_exp_of_norm_deriv_le_on_closedBall: [propext, Classical.choice, Quot.sound]
+continuous_uncurry_of_isIntegralCurve: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.continuous: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.continuous_of_uniformlyLocallyLipschitz: [propext, Classical.choice, Quot.sound]
+IsCompleteVectorField.flow: [propext, Classical.choice, Quot.sound]
+IsCompleteVectorField.hasDerivAt_flow: [propext, Classical.choice, Quot.sound]
+IsCompleteVectorField.deriv_comp_flow: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.linear_cocycle: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.isStateTransition: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.duhamelOperator_hasDerivAt: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.duhamelOperator_isIntegralCurve: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.duhamelOperator_deriv: [propext, Classical.choice, Quot.sound]
+IsFundamentalSolution.duhamelOperator_isFundamentalSolution: [propext, Classical.choice, Quot.sound]
+IsIntegralCurveOn.eqOn_Ioo_of_uniformlyLocallyLipschitz: [propext, Classical.choice, Quot.sound]
+locallyUniformLinearGrowth_of_continuous_bound: [propext, Classical.choice, Quot.sound]
+ODE.norm_le_gronwallBound_of_linear_growth_Ioo: [propext, Classical.choice, Quot.sound]
+ODE.lipschitzOnWith_of_linear_growth_Ioo: [propext, Classical.choice, Quot.sound]
+ODE.exists_tendsto_right_of_lipschitzOn: [propext, Classical.choice, Quot.sound]
+ODE.exists_extension_Ioo_right: [propext, Classical.choice, Quot.sound]
+ODE.exists_extension_Ioo: [propext, Classical.choice, Quot.sound]
+ODE.isCompleteVectorField_of_extension: [propext, Classical.choice, Quot.sound]
+UniformlyLocallyLipschitz.isCompleteVectorField: [propext, Classical.choice, Quot.sound]
+UniformlyLocallyLipschitz.isCompleteVectorField_of_continuous_uncurry: [propext, Classical.choice, Quot.sound]
+SetRel.closedLoop.mem_inputState_truncate: [propext, Classical.choice, Quot.sound]
+SetRel.closedLoop.isCausal_inputState: [propext, Classical.choice, Quot.sound]
+SetRel.closedLoop.isCausal_inputOutput_of_inputState: [propext, Classical.choice, Quot.sound]
+SetRel.closedLoop.isCausal_inputOutput: [propext, Classical.choice, Quot.sound]
+ComparisonFunctionTests.no_global_classK_lower_bound: [propext, Classical.choice, Quot.sound]
+ComparisonFunctionTests.decaying_local_bounds: [propext, Classical.choice, Quot.sound]
+ComparisonFunctionTests.quadratic_global_bounds: [propext, Classical.choice, Quot.sound]
+flow_eq_id_of_generator_zero: [propext, Classical.choice, Quot.sound]
+CompleteFlowRegression.constant_flow_apply: [propext, Classical.choice, Quot.sound]
+DuhamelTests.normalization_is_necessary: [propext, Classical.choice, Quot.sound]
+DuhamelTests.scalar_forced_fundamentalSolution: [propext, Classical.choice, Quot.sound]
+GlobalExistenceGrowthRegression.sin_square_complete: [propext, Classical.choice, Quot.sound]
+GlobalExistenceGrowthRegression.time_linear_complete: [propext, Classical.choice, Quot.sound]
+PointwiseGrowthObstruction.not_complete: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausality.scalarLoop_isGraph: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausality.scalarLoop_uniqueTruncatedStates: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausalityCounterexample.loop_isGraph: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausalityCounterexample.loop_locallyLpSolvable: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausalityCounterexample.loop_not_causal: [propext, Classical.choice, Quot.sound]
+ClosedLoopCausalityCounterexample.loop_output_not_causal: [propext, Classical.choice, Quot.sound]
+Foundational axiom audit passed for 58 declarations.
