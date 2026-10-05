@@ -16,16 +16,16 @@ intervals, retaining both the rescaled time and the shifted origin of the right 
 
 open MeasureTheory Set Filter
 open scoped Topology Interval
-open KirkMedhin.TimeReparametrization
+open TimeReparametrization
 
-namespace KirkMedhin.NonautonomousTimeReparametrization
+namespace NonautonomousTimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 /-- Split the actual nonautonomous cost at the concatenation corner. The right
 arc's Lagrangian is evaluated at physical time `s + t`. -/
 theorem cvFunctional_concatenate (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L))
+    (hL : Continuous (uncurryLagrangian L))
     {s T : ℝ} (hs : 0 < s) (hT : s < T) {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂) :
@@ -101,7 +101,7 @@ theorem fixedParameterArcCost_eq_actual (L : ℝ → E → E → ℝ)
 /-- Exact ambient cost of the actual duration-exchange competitor, including its
 fixed terminal penalty, expressed on the original reference intervals. -/
 theorem cvFunctional_durationExchange (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L)) {x₁ v₁ x₂ v₂ : ℝ → E}
+    (hL : Continuous (uncurryLagrangian L)) {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
     {d₁ d₂ ε : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂) (hε : ε ∈ Ioo (-d₁) d₂) :
@@ -134,7 +134,7 @@ theorem cvFunctional_durationExchange (L : ℝ → E → E → ℝ) (K : E → �
 /-- Ambient optimality implies a local minimum of the genuine fixed-parameter cost
 when the actual duration-exchange curves belong to the chosen feasible set. -/
 theorem fixedParameterCost_isLocalMin_of_ambient_min (L : ℝ → E → E → ℝ)
-    (K : E → ℝ) (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L))
+    (K : E → ℝ) (hL : Continuous (uncurryLagrangian L))
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -154,7 +154,7 @@ theorem fixedParameterCost_isLocalMin_of_ambient_min (L : ℝ → E → E → �
 /-- Actual fixed-endpoint piecewise-C1 optimality supplies the feasible family
 automatically; no scalar minimum or cost identity is assumed. -/
 theorem fixedParameterCost_isLocalMin_of_cvFunctional_min (L : ℝ → E → E → ℝ)
-    (K : E → ℝ) (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L))
+    (K : E → ℝ) (hL : Continuous (uncurryLagrangian L))
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -167,4 +167,4 @@ theorem fixedParameterCost_isLocalMin_of_cvFunctional_min (L : ℝ → E → E �
     (fun ε hε ↦ durationExchange_mem_fixedEndpointPiecewiseC1Curves
       hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin hε) hmin
 
-end KirkMedhin.NonautonomousTimeReparametrization
+end NonautonomousTimeReparametrization

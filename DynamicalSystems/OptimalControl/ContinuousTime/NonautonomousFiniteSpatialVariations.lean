@@ -17,7 +17,7 @@ represented by a finite surrounding context.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -25,21 +25,21 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 /-- Translating the physical time origin preserves joint C1 regularity. -/
 theorem contDiff_timeShift (L : ℝ → E → E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L)) (t0 : ℝ) :
-    ContDiff ℝ 1 (K3.uncurryLagrangian (fun t ↦ L (t0 + t))) := by
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (t0 : ℝ) :
+    ContDiff ℝ 1 (uncurryLagrangian (fun t ↦ L (t0 + t))) := by
   exact hL.comp ((contDiff_const.add contDiff_fst).prodMk contDiff_snd)
 
 /-- Genuine time-dependent finite-piecewise minimality implies the interior
 Euler–Lagrange equation on the selected C1 arc at its actual physical time. -/
 theorem interior_EL_of_timeAction_min
-    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L)) (t0 : ℝ)
+    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (t0 : ℝ)
     {T : ℝ} (hT : 0 < T) {x : ℝ → E} (hx : ContDiff ℝ 1 x)
     (hmin : IsMinOn (timeAction L t0 T)
       (fixedEndpointFinitePiecewiseC1Curves T (x 0) (x T)) x) :
     ∀ t ∈ Ioo 0 T,
       HasDerivAt (fun s ↦ fderiv ℝ (L (t0 + s) (x s)) (deriv x s))
         (fderiv ℝ (fun y ↦ L (t0 + t) y (deriv x t)) (x t)) t := by
-  apply WeakCoV.eulerLagrange_hasDerivAt_of_fixedEndpoint_min
+  apply WeakEulerLagrange.eulerLagrange_hasDerivAt_of_fixedEndpoint_min
     (fun t ↦ L (t0 + t)) (fun _ ↦ 0) T x (contDiff_timeShift L hL t0)
     contDiff_const hx hT
   intro y hy
@@ -53,7 +53,7 @@ theorem interior_EL_of_timeAction_min
 /-- Every C1 arc in a timed finite context satisfies the derived momentum ODE. -/
 theorem interior_EL_in_timeSpliceContext
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x v : ℝ → E} (hx : ∀ t, HasDerivAt x (v t) t) (hv : Continuous v)
     {start d : ℝ} (hd : 0 < d) {t0 T : ℝ} {A B : E}
     {F : (ℝ → E) → ℝ → E}
@@ -73,7 +73,7 @@ theorem interior_EL_in_timeSpliceContext
 /-- A true join displacement gives the sum of the time-offset first variations.
 Physical time is retained in both integrals. -/
 theorem twoArc_firstVariation_zero_of_timeAction_min
-    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L)) (t0 : ℝ)
+    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (t0 : ℝ)
     {d₁ d₂ : ℝ} (hd₁ : 0 < d₁) (hd₂ : 0 < d₂)
     {x₁ x₂ : ℝ → E} (hx₁ : ContDiff ℝ 1 x₁) (hx₂ : ContDiff ℝ 1 x₂)
     (hjoin : x₁ d₁ = x₂ 0)
@@ -87,10 +87,10 @@ theorem twoArc_firstVariation_zero_of_timeAction_min
   let f := fun ε : ℝ ↦
     timeAction L t0 d₁ (fun t ↦ x₁ t + ε • η₁ t) +
       timeAction L (t0 + d₁) d₂ (fun t ↦ x₂ t + ε • η₂ t)
-  have h₁ := WeakCoV.hasDerivAt_cvFunctional_affine
+  have h₁ := hasDerivAt_cvFunctional_affine
     (fun t ↦ L (t0 + t)) (fun _ ↦ 0) d₁ x₁ η₁ (contDiff_timeShift L hL t0)
     contDiff_const hx₁ hη₁ hd₁.le
-  have h₂ := WeakCoV.hasDerivAt_cvFunctional_affine
+  have h₂ := hasDerivAt_cvFunctional_affine
     (fun t ↦ L ((t0 + d₁) + t)) (fun _ ↦ 0) d₂ x₂ η₂
     (contDiff_timeShift L hL (t0 + d₁)) contDiff_const hx₂ hη₂ hd₂.le
   have hf : HasDerivAt f
@@ -122,7 +122,7 @@ theorem twoArc_firstVariation_zero_of_timeAction_min
 /-- Nonautonomous momentum matching from the actual finite-piecewise minimum,
 with only C1 state arcs and no acceleration or Euler–Lagrange premise. -/
 theorem corner_momentum_eq_of_timeAction_min
-    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L)) (t0 : ℝ)
+    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (t0 : ℝ)
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -161,7 +161,7 @@ theorem corner_momentum_eq_of_timeAction_min
 /-- Nonautonomous momentum matching in any actual finite surrounding context. -/
 theorem corner_momentum_eq_in_timeSpliceContext
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -178,4 +178,4 @@ theorem corner_momentum_eq_in_timeSpliceContext
     (timeAction_min_of_cvFunctional_min L K t0 (ctx.feasible href).2.1 hmin)
   exact corner_momentum_eq_of_timeAction_min L hL start hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin hm
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

@@ -22,7 +22,7 @@ reference is smooth. The obstruction is closure under needle perturbations,
 not differentiability of the problem data or a zero-duration edge case.
 -/
 
-namespace K1PointwiseObstruction
+namespace PMPExamples.ClassicalAdmissibility.ScalarModel
 
 open Set MeasureTheory
 open scoped Interval
@@ -140,4 +140,4 @@ theorem reference_has_no_normal_pmp :
   have hbad := hmin (3 / 4) (by norm_num) (-1) (Or.inl rfl)
   norm_num [hpq] at hbad
 
-end K1PointwiseObstruction
+end PMPExamples.ClassicalAdmissibility.ScalarModel

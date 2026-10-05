@@ -16,7 +16,7 @@ passing ambient optimality through a finite context to its distinguished subarc.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -76,14 +76,14 @@ private theorem timeIntegrable_concatenate_parts (L : ℝ → E → E → ℝ) (
 /-- A continuous time-dependent Lagrangian is integrable along each actual finite
 piecewise-C1 curve, at every physical start time. -/
 theorem IsFinitePiecewiseC1.timeIntervalIntegrable (L : ℝ → E → E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L)) {T : ℝ} {x : ℝ → E}
+    (hL : Continuous (uncurryLagrangian L)) {T : ℝ} {x : ℝ → E}
     (hx : IsFinitePiecewiseC1 T x) (t₀ : ℝ) :
     IntervalIntegrable (fun t ↦ L (t₀ + t) (x t) (deriv x t)) volume 0 T := by
   induction hx generalizing t₀ with
   | @smooth T x v hT hx hv =>
     have hc : Continuous x := continuous_iff_continuousAt.mpr fun t ↦ (hx t).continuousAt
     simpa only [funext (fun t ↦ (hx t).deriv), Function.comp_def, Pi.add_apply, id_eq,
-      KirkMedhin.K3.uncurryLagrangian] using
+      uncurryLagrangian] using
       (hL.comp ((continuous_const.add continuous_id).prodMk (hc.prodMk hv))).intervalIntegrable 0 _
   | join h₁ h₂ hj hi₁ hi₂ =>
     have hi := timeIntegrable_concatenate_parts L t₀ h₁.duration_pos h₂.duration_pos
@@ -92,7 +92,7 @@ theorem IsFinitePiecewiseC1.timeIntervalIntegrable (L : ℝ → E → E → ℝ)
 
 /-- Exact physical-time action split for two finite-piecewise arcs. -/
 theorem timeAction_concatenate (L : ℝ → E → E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L)) (t₀ : ℝ)
+    (hL : Continuous (uncurryLagrangian L)) (t₀ : ℝ)
     {d₁ d₂ : ℝ} {x₁ x₂ : ℝ → E}
     (h₁ : IsFinitePiecewiseC1 d₁ x₁) (h₂ : IsFinitePiecewiseC1 d₂ x₂) :
     timeAction L t₀ (d₁ + d₂) (concatenate d₁ x₁ x₂) =
@@ -144,7 +144,7 @@ theorem cvFunctional_min_of_timeAction_min (L : ℝ → E → E → ℝ) (K : E 
 
 /-- An actual replacement of the left arc preserves the physical-time right cost. -/
 theorem timeAction_min_left (L : ℝ → E → E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L)) (t₀ : ℝ)
+    (hL : Continuous (uncurryLagrangian L)) (t₀ : ℝ)
     {d₁ d₂ : ℝ} {x₁ x₂ : ℝ → E}
     (h₁ : IsFinitePiecewiseC1 d₁ x₁) (h₂ : IsFinitePiecewiseC1 d₂ x₂)
     (hjoin : x₁ d₁ = x₂ 0)
@@ -165,7 +165,7 @@ theorem timeAction_min_left (L : ℝ → E → E → ℝ)
 
 /-- Right-arc optimality uses its actual physical start time `t₀ + d₁`. -/
 theorem timeAction_min_right (L : ℝ → E → E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L)) (t₀ : ℝ)
+    (hL : Continuous (uncurryLagrangian L)) (t₀ : ℝ)
     {d₁ d₂ : ℝ} {x₁ x₂ : ℝ → E}
     (h₁ : IsFinitePiecewiseC1 d₁ x₁) (h₂ : IsFinitePiecewiseC1 d₂ x₂)
     (hjoin : x₁ d₁ = x₂ 0)
@@ -218,7 +218,7 @@ theorem TimeSpliceContext.feasible {start d t₀ T : ℝ} {a b A B : E}
 /-- Actual ambient optimality passes through any finite context to the hole,
 retaining the physical time at which its Lagrangian is evaluated. -/
 theorem TimeSpliceContext.timeAction_min (L : ℝ → E → E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L))
+    (hL : Continuous (uncurryLagrangian L))
     {start d t₀ T : ℝ} {a b A B : E} {F : (ℝ → E) → ℝ → E}
     (ctx : TimeSpliceContext start d a b t₀ T A B F)
     {x : ℝ → E} (hx : x ∈ fixedEndpointFinitePiecewiseC1Curves d a b)
@@ -247,7 +247,7 @@ theorem TimeSpliceContext.timeAction_min (L : ℝ → E → E → ℝ)
 physical-time action minimum in any actual finite surrounding context. -/
 theorem TimeSpliceContext.timeAction_min_of_cvFunctional_min
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : Continuous (KirkMedhin.K3.uncurryLagrangian L))
+    (hL : Continuous (uncurryLagrangian L))
     {start d T : ℝ} {a b A B : E} {F : (ℝ → E) → ℝ → E}
     (ctx : TimeSpliceContext start d a b 0 T A B F)
     {x : ℝ → E} (hx : x ∈ fixedEndpointFinitePiecewiseC1Curves d a b)
@@ -255,8 +255,8 @@ theorem TimeSpliceContext.timeAction_min_of_cvFunctional_min
       (fixedEndpointFinitePiecewiseC1Curves T A B) (F x)) :
     IsMinOn (timeAction L start d) (fixedEndpointFinitePiecewiseC1Curves d a b) x := by
   apply ctx.timeAction_min L hL hx
-  apply KirkMedhin.FinitePiecewise.timeAction_min_of_cvFunctional_min L K 0
+  apply FinitePiecewise.timeAction_min_of_cvFunctional_min L K 0
     (ctx.feasible hx).2.1
   simpa only [zero_add] using hmin
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

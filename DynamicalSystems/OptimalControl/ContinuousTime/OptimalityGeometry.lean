@@ -19,7 +19,6 @@ The analytic limit and feasibility are explicit inputs; neither a Hamiltonian
 inequality nor a separation hypothesis is an input to the optimality theorems.
 -/
 
-namespace KirkMedhin.K1
 
 open Set Filter MeasureTheory
 open scoped Topology
@@ -173,7 +172,7 @@ theorem exists_normalized_terminal_covector_on_generators
     ∃ (q : E →L[ℝ] ℝ) (α : ℝ),
       q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ endpointVariationCone g, 0 ≤ q y) ∧
       q e = α ∧ α⁻¹ • q = c := by
-  exact exists_normalized_hahnBanach_terminal_covector c e he
+  exact _root_.exists_normalized_positive_multiple_separating_negative_halfspace c e he
     (endpointVariationCone g) (endpointVariationCone g).convex
     (endpointVariationCone g).zero_mem
     (endpointVariationCone_disjoint_terminal_descent c g hg)
@@ -191,20 +190,20 @@ noncomputable def costAugmentedEndpoint (prob : ContinuousOCP X U)
   (∫ t in 0..prob.T, prob.L t (x t) (u t), x prob.T)
 
 /-- The ordinary Bolza cost expressed as a terminal objective on augmented state. -/
-def augmentedTerminalCost (K : X → ℝ) (y : ℝ × X) : ℝ := y.1 + K y.2
+def _root_.bolzaTerminalCost (K : X → ℝ) (y : ℝ × X) : ℝ := y.1 + K y.2
 
 omit [NormedAddCommGroup X] [NormedSpace ℝ X] in
 @[simp]
-theorem augmentedTerminalCost_endpoint (prob : ContinuousOCP X U)
+theorem _root_.bolzaTerminalCost_endpoint (prob : ContinuousOCP X U)
     (x : ℝ → X) (u : ℝ → U) :
-    augmentedTerminalCost prob.K (costAugmentedEndpoint prob x u) =
+    _root_.bolzaTerminalCost prob.K (costAugmentedEndpoint prob x u) =
       continuousTotalCost prob x u := rfl
 
 /-- Differentiating the actual augmented terminal objective produces `(1, DK)`. -/
-theorem hasFDerivAt_augmentedTerminalCost
+theorem _root_.hasFDerivAt_bolzaTerminalCost
     (K : X → ℝ) (DK : X →L[ℝ] ℝ) (y : ℝ × X)
     (hK : HasFDerivAt K DK y.2) :
-    HasFDerivAt (augmentedTerminalCost K) (terminalDifferential DK) y := by
+    HasFDerivAt (_root_.bolzaTerminalCost K) (_root_.bolzaTerminalDifferential DK) y := by
   exact (ContinuousLinearMap.fst ℝ ℝ X).hasFDerivAt.add
     (hK.comp y (ContinuousLinearMap.snd ℝ ℝ X).hasFDerivAt)
 
@@ -223,15 +222,15 @@ theorem integralOptimal_endpointGenerator_nonneg
       (fun ε => ε⁻¹ • (costAugmentedEndpoint prob (xε ε) (uε ε) -
         costAugmentedEndpoint prob x u))
       (𝓝[>] (0 : ℝ)) (𝓝 g)) :
-    0 ≤ terminalDifferential DK g := by
+    0 ≤ _root_.bolzaTerminalDifferential DK g := by
   apply integralOptimal_costSlope_nonneg prob x₀ x u hopt xε uε hfeasible
-  have hΨ := hasFDerivAt_augmentedTerminalCost prob.K DK
+  have hΨ := _root_.hasFDerivAt_bolzaTerminalCost prob.K DK
     (costAugmentedEndpoint prob x u) hK
   have hlim := terminalCost_costSlope_of_endpointTangent_punctured
-    (augmentedTerminalCost prob.K) (terminalDifferential DK)
+    (_root_.bolzaTerminalCost prob.K) (_root_.bolzaTerminalDifferential DK)
     (fun ε => costAugmentedEndpoint prob (xε ε) (uε ε))
     (costAugmentedEndpoint prob x u) g hΨ htangent
-  simpa only [augmentedTerminalCost_endpoint] using hlim
+  simpa only [_root_.bolzaTerminalCost_endpoint] using hlim
 
 /-- Complete optimality-to-separation connection for an indexed family of actual
 endpoint tangents. Convexity, the cone, disjointness, and the normalized separator
@@ -251,9 +250,9 @@ theorem integralOptimal_normal_covector_of_endpointTangents
       (𝓝[>] (0 : ℝ)) (𝓝 (g i))) :
     ∃ (q : (ℝ × X) →L[ℝ] ℝ) (α : ℝ),
       q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ endpointVariationCone g, 0 ≤ q y) ∧
-      q (1, 0) = α ∧ α⁻¹ • q = terminalDifferential DK := by
+      q (1, 0) = α ∧ α⁻¹ • q = _root_.bolzaTerminalDifferential DK := by
   apply exists_normalized_terminal_covector_on_generators
-    (terminalDifferential DK) (1, 0) (by simp) g
+    (_root_.bolzaTerminalDifferential DK) (1, 0) (by simp) g
   intro i
   exact integralOptimal_endpointGenerator_nonneg prob x₀ x u hopt DK hK
     (xε i) (uε i) (hfeasible i) (g i) (htangent i)
@@ -272,15 +271,15 @@ theorem integralOptimal_normal_covector_of_costSlopes
     (hslope : ∀ i, Tendsto
       (fun ε => ε⁻¹ *
         (continuousTotalCost prob (xε i ε) (uε i ε) - continuousTotalCost prob x u))
-      (𝓝[>] (0 : ℝ)) (𝓝 (terminalDifferential DK (g i)))) :
+      (𝓝[>] (0 : ℝ)) (𝓝 (_root_.bolzaTerminalDifferential DK (g i)))) :
     ∃ (q : (ℝ × X) →L[ℝ] ℝ) (α : ℝ),
       q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ endpointVariationCone g, 0 ≤ q y) ∧
-      q (1, 0) = α ∧ α⁻¹ • q = terminalDifferential DK := by
+      q (1, 0) = α ∧ α⁻¹ • q = _root_.bolzaTerminalDifferential DK := by
   apply exists_normalized_terminal_covector_on_generators
-    (terminalDifferential DK) (1, 0) (by simp) g
+    (_root_.bolzaTerminalDifferential DK) (1, 0) (by simp) g
   intro i
   exact integralOptimal_costSlope_nonneg prob x₀ x u hopt
-    (xε i) (uε i) (hfeasible i) (terminalDifferential DK (g i)) (hslope i)
+    (xε i) (uε i) (hfeasible i) (_root_.bolzaTerminalDifferential DK (g i)) (hslope i)
 
 /-- The Hamiltonian jump inequality is obtained from the extracted and normalized
 Hahn–Banach multiplier. Membership of each propagated jump in the cone follows
@@ -305,7 +304,7 @@ theorem integralOptimal_hahnBanach_needle_inequality
       xε uε hfeasible (fun i => Φ i (ΔL i, Δf i)) htangent
   intro i
   have hmem := mem_endpointVariationCone (fun j => Φ j (ΔL j, Δf j)) i
-  have hnonneg' : 0 ≤ terminalDifferential DK (Φ i (ΔL i, Δf i)) := by
+  have hnonneg' : 0 ≤ _root_.bolzaTerminalDifferential DK (Φ i (ΔL i, Δf i)) := by
     rw [← hnormalize]
     simp only [smul_apply, smul_eq_mul]
     exact mul_nonneg (inv_nonneg.mpr hα.le) (hnonneg _ hmem)
@@ -313,4 +312,3 @@ theorem integralOptimal_hahnBanach_needle_inequality
 
 end AugmentedEndpointOptimality
 
-end KirkMedhin.K1

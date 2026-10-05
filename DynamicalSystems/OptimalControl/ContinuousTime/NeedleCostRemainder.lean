@@ -31,7 +31,6 @@ input.
 open Set Filter MeasureTheory
 open scoped Topology Interval
 
-namespace K1NeedleCost
 
 section Normed
 
@@ -49,7 +48,7 @@ def controlIncrementError (Fv F₀ : E → G) (x y : E) : G :=
 
 /-- A spatial derivative modulus on the actual segment gives a Taylor bound.
 The derivative at intermediate points is supplied and checked through
-`HasFDerivAt`; no Taylor remainder estimate is assumed. -/
+`HasFDerivAt`; no Taylor _root_.needleCostRemainder estimate is assumed. -/
 theorem norm_taylorError_le_of_derivative_bound
     {F : E → G} {D : E → E →L[ℝ] G} {A : E →L[ℝ] G} {x y : E} {b : ℝ}
     (hD : ∀ z ∈ segment ℝ x y, HasFDerivAt F (D z) z)
@@ -93,15 +92,15 @@ variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 
 /-- The scalar error left after the exact adjoint cancellation, split into
 the nominal Taylor error and the short-interval control-increment error. -/
-noncomputable def remainder (rK : ℝ → ℝ) (rL cL : ℝ → ℝ → ℝ)
+noncomputable def _root_.needleCostRemainder (rK : ℝ → ℝ) (rL cL : ℝ → ℝ → ℝ)
     (rf cf : ℝ → ℝ → E) (p : ℝ → E) (T τ ε : ℝ) : ℝ :=
   rK ε + (∫ t in 0..T, rL ε t + inner ℝ (p t) (rf ε t)) +
     ∫ t in (τ - ε)..τ, cL ε t + inner ℝ (p t) (cf ε t)
 
-/-- A finite-parameter bound for the actual remainder terms. The derivative
+/-- A finite-parameter bound for the actual _root_.needleCostRemainder terms. The derivative
 lemmas above provide the nominal/terminal quadratic hypotheses; branch
 Lipschitz bounds provide the shrinking-interval hypotheses. -/
-theorem norm_remainder_le_quadratic
+theorem _root_.norm_needleCostRemainder_le_quadratic
     {d rf cf : ℝ → ℝ → E} {rK : ℝ → ℝ} {rL cL : ℝ → ℝ → ℝ}
     {p : ℝ → E} {T τ ε C P Bf BL BK Df DL : ℝ}
     (hT : 0 ≤ T) (hε : 0 < ε) (ha : 0 ≤ τ - ε) (hτ : τ ≤ T)
@@ -114,7 +113,7 @@ theorem norm_remainder_le_quadratic
     (hrK : ‖rK ε‖ ≤ BK * ‖d ε T‖ ^ 2)
     (hcf : ∀ t ∈ Icc (τ - ε) τ, ‖cf ε t‖ ≤ Df * ‖d ε t‖)
     (hcL : ∀ t ∈ Icc (τ - ε) τ, ‖cL ε t‖ ≤ DL * ‖d ε t‖) :
-    ‖remainder rK rL cL rf cf p T τ ε‖ ≤
+    ‖_root_.needleCostRemainder rK rL cL rf cf p T τ ε‖ ≤
       ((BK + T * (BL + P * Bf)) * C ^ 2 + (DL + P * Df) * C) * ε ^ 2 := by
   have hTmem : T ∈ Icc (0 : ℝ) T := ⟨hT, le_rfl⟩
   have hsquare (t : ℝ) (ht : t ∈ Icc 0 T) : ‖d ε t‖ ^ 2 ≤ (C * ε) ^ 2 :=
@@ -193,4 +192,3 @@ theorem tendsto_scaled_of_quadratic_bound
 
 end InnerProduct
 
-end K1NeedleCost

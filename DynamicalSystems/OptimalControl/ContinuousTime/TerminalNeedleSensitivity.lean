@@ -11,9 +11,8 @@ derivatives, allowing corners at the switching times. Only the terminal row
 of the state transition is needed; compact-interval propagators suffice.
 -/
 
-namespace KirkMedhin
 
-open Set Filter MeasureTheory K1NeedleCost
+open Set Filter MeasureTheory
 open scoped Interval Topology
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
@@ -51,7 +50,7 @@ theorem variationOfConstants_right_of_backward
 
 omit [CompleteSpace E] in
 /-- A uniformly bounded operator family preserves uniform first-order smallness. -/
-theorem uniformSmall_clm_apply
+theorem _root_.UniformSmall.clm_apply
     {r : ℝ → ℝ → E} {P : ℝ → E →L[ℝ] E} {s : Set ℝ} {B : ℝ}
     (hr : UniformSmall r s) (hB : 0 ≤ B) (hP : ∀ t ∈ s, ‖P t‖ ≤ B) :
     UniformSmall (fun ε t => P t (r ε t)) s := by
@@ -103,7 +102,7 @@ theorem terminal_sensitivity_of_right_ODE
   obtain ⟨B, hB⟩ := isCompact_Icc.exists_bound_of_continuousOn hPc
   have hsmall : UniformSmall (fun ε t => Phi T t (r ε t)) (uIcc τ T) := by
     rw [uIcc_of_le hτT]
-    exact uniformSmall_clm_apply hr (le_max_right B 0)
+    exact _root_.UniformSmall.clm_apply hr (le_max_right B 0)
       (fun t ht => (hB t ht).trans (le_max_left B 0))
   have hrem := hsmall.tendsto_scaled_integral
   have hAc : ContinuousOn (fun t => D t (x t)) (Icc τ T) := by
@@ -170,4 +169,3 @@ theorem terminal_tangent_of_right_ODE
   have hε : ε ≠ (0 : ℝ) := ne_of_gt hpos
   simp [smul_sub, smul_smul, hε]
 
-end KirkMedhin

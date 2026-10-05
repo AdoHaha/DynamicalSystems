@@ -12,7 +12,6 @@ running integral lifts every original integral-admissible competitor. Therefore
 original integral optimality implies augmented integral optimality.
 -/
 
-namespace KirkMedhin.K1
 
 open Set Filter MeasureTheory
 open scoped Interval Topology
@@ -20,28 +19,28 @@ open scoped Interval Topology
 variable {X U : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
 
 /-- The Mayer problem obtained by adjoining actual accumulated running cost. -/
-def augmentedProblem (prob : ContinuousOCP X U) : ContinuousOCP (ℝ × X) U where
+def _root_.ContinuousOCP.bolzaToMayer (prob : ContinuousOCP X U) : ContinuousOCP (ℝ × X) U where
   T := prob.T
   f t y v := (prob.L t y.2 v, prob.f t y.2 v)
   L _ _ _ := 0
-  K := augmentedTerminalCost prob.K
+  K := _root_.bolzaTerminalCost prob.K
   controlSet := prob.controlSet
 
 /-- Lift a trajectory by accumulating its actual running cost from time zero. -/
-noncomputable def costLift (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U)
+noncomputable def _root_.bolzaCostLift (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U)
     (t : ℝ) : ℝ × X := (∫ s in 0..t, prob.L s (x s) (u s), x t)
 
 omit [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X] in
 @[simp]
-theorem costLift_terminal (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U) :
-    costLift prob x u prob.T = costAugmentedEndpoint prob x u := rfl
+theorem _root_.bolzaCostLift_terminal (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U) :
+    _root_.bolzaCostLift prob x u prob.T = costAugmentedEndpoint prob x u := rfl
 
 omit [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X] in
 @[simp]
-theorem costLift_totalCost (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U) :
-    continuousTotalCost (augmentedProblem prob) (costLift prob x u) u =
+theorem _root_.bolzaCostLift_totalCost (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U) :
+    continuousTotalCost (_root_.ContinuousOCP.bolzaToMayer prob) (_root_.bolzaCostLift prob x u) u =
       continuousTotalCost prob x u := by
-  simp [continuousTotalCost, augmentedProblem, augmentedTerminalCost, costLift]
+  simp [continuousTotalCost, _root_.ContinuousOCP.bolzaToMayer, _root_.bolzaTerminalCost, _root_.bolzaCostLift]
 
 omit [NormedSpace ℝ X] [CompleteSpace X] in
 /-- Interval integrability of vector pairs from the two primitive components. -/
@@ -52,16 +51,16 @@ theorem intervalIntegrable_pair {f : ℝ → ℝ} {g : ℝ → X} {a b : ℝ}
 
 /-- Every original integral-admissible trajectory has a genuinely admissible
 cost lift in the augmented Mayer problem. -/
-theorem integralAdmissible_costLift
+theorem _root_.integralAdmissible_bolzaCostLift
     (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : ℝ → U)
     (hT : 0 ≤ prob.T)
     (hadm : NeedleIntegralModel.IsIntegralAdmissiblePair prob x₀ x u) :
     NeedleIntegralModel.IsIntegralAdmissiblePair
-      (augmentedProblem prob) (0, x₀) (costLift prob x u) u := by
+      (_root_.ContinuousOCP.bolzaToMayer prob) (0, x₀) (_root_.bolzaCostLift prob x u) u := by
   rcases hadm with ⟨hinit, hctrl, hfi, hint, hLi⟩
   have hpair := intervalIntegrable_pair hLi hfi
   refine ⟨?_, hctrl, hpair, ?_, ?_⟩
-  · simp [costLift, hinit]
+  · simp [_root_.bolzaCostLift, hinit]
   · intro t ht
     have ht' : t ∈ Icc 0 prob.T := ht
     have hsub : uIcc 0 t ⊆ uIcc 0 prob.T := by
@@ -90,7 +89,7 @@ theorem integralAdmissible_of_augmented
     (prob : ContinuousOCP X U) (x₀ : X) (y : ℝ → ℝ × X) (u : ℝ → U)
     (hT : 0 ≤ prob.T)
     (hadm : NeedleIntegralModel.IsIntegralAdmissiblePair
-      (augmentedProblem prob) (0, x₀) y u) :
+      (_root_.ContinuousOCP.bolzaToMayer prob) (0, x₀) y u) :
     NeedleIntegralModel.IsIntegralAdmissiblePair prob x₀ (fun t => (y t).2) u := by
   rcases hadm with ⟨hinit, hctrl, hfi, hint, _hLi⟩
   have hstate : IntervalIntegrable (fun t => prob.f t (y t).2 (u t)) volume 0 prob.T :=
@@ -118,8 +117,8 @@ theorem augmented_totalCost_eq_of_admissible
     (prob : ContinuousOCP X U) (x₀ : X) (y : ℝ → ℝ × X) (u : ℝ → U)
     (hT : 0 ≤ prob.T)
     (hadm : NeedleIntegralModel.IsIntegralAdmissiblePair
-      (augmentedProblem prob) (0, x₀) y u) :
-    continuousTotalCost (augmentedProblem prob) y u =
+      (_root_.ContinuousOCP.bolzaToMayer prob) (0, x₀) y u) :
+    continuousTotalCost (_root_.ContinuousOCP.bolzaToMayer prob) y u =
       continuousTotalCost prob (fun t => (y t).2) u := by
   have hz := (ContinuousLinearMap.fst ℝ ℝ X).intervalIntegral_comp_comm hadm.2.2.1
   change (∫ s in 0..prob.T, prob.L s (y s).2 (u s)) =
@@ -128,19 +127,19 @@ theorem augmented_totalCost_eq_of_admissible
   change (y prob.T).1 = 0 +
     (∫ s in 0..prob.T, (prob.L s (y s).2 (u s), prob.f s (y s).2 (u s))).1 at heq
   rw [zero_add, ← hz] at heq
-  simp [continuousTotalCost, augmentedProblem, augmentedTerminalCost, heq]
+  simp [continuousTotalCost, _root_.ContinuousOCP.bolzaToMayer, _root_.bolzaTerminalCost, heq]
 
 /-- Integral optimality transfers to the augmented Mayer problem by comparing
 with every augmented competitor through its original admissible projection. -/
-theorem integralOptimal_costLift
+theorem _root_.integralOptimal_bolzaCostLift
     (prob : ContinuousOCP X U) (x₀ : X) (x : ℝ → X) (u : ℝ → U)
     (hT : 0 ≤ prob.T)
     (hopt : NeedleIntegralModel.IsIntegralOptimalPair prob x₀ x u) :
     NeedleIntegralModel.IsIntegralOptimalPair
-      (augmentedProblem prob) (0, x₀) (costLift prob x u) u := by
-  refine ⟨integralAdmissible_costLift prob x₀ x u hT hopt.1, ?_⟩
+      (_root_.ContinuousOCP.bolzaToMayer prob) (0, x₀) (_root_.bolzaCostLift prob x u) u := by
+  refine ⟨_root_.integralAdmissible_bolzaCostLift prob x₀ x u hT hopt.1, ?_⟩
   intro y v hy
-  rw [costLift_totalCost, augmented_totalCost_eq_of_admissible prob x₀ y v hT hy]
+  rw [_root_.bolzaCostLift_totalCost, augmented_totalCost_eq_of_admissible prob x₀ y v hT hy]
   exact hopt.2 (fun t => (y t).2) v
     (integralAdmissible_of_augmented prob x₀ y v hT hy)
 
@@ -151,7 +150,7 @@ theorem costAugmentedEndpoint_eq_terminal_of_admissible
     (prob : ContinuousOCP X U) (x₀ : X) (y : ℝ → ℝ × X) (u : ℝ → U)
     (hT : 0 ≤ prob.T)
     (hadm : NeedleIntegralModel.IsIntegralAdmissiblePair
-      (augmentedProblem prob) (0, x₀) y u) :
+      (_root_.ContinuousOCP.bolzaToMayer prob) (0, x₀) y u) :
     costAugmentedEndpoint prob (fun t => (y t).2) u = y prob.T := by
   have hz := (ContinuousLinearMap.fst ℝ ℝ X).intervalIntegral_comp_comm hadm.2.2.1
   change (∫ s in 0..prob.T, prob.L s (y s).2 (u s)) =
@@ -165,12 +164,12 @@ theorem costAugmentedEndpoint_eq_terminal_of_admissible
 omit [CompleteSpace X] in
 /-- A classical nominal solution lifts to a classical nominal augmented solution
 when the actual running-cost trajectory is continuous. -/
-theorem isIntegralCurve_costLift
+theorem _root_.isIntegralCurve_bolzaCostLift
     (prob : ContinuousOCP X U) (x : ℝ → X) (u : ℝ → U)
     (hx : IsIntegralCurve x (fun t z => prob.f t z (u t)))
     (hL : Continuous (fun q : ℝ × X => prob.L q.1 q.2 (u q.1))) :
-    IsIntegralCurve (costLift prob x u)
-      (fun t y => (augmentedProblem prob).f t y (u t)) := by
+    IsIntegralCurve (_root_.bolzaCostLift prob x u)
+      (fun t y => (_root_.ContinuousOCP.bolzaToMayer prob).f t y (u t)) := by
   have hc : Continuous (fun t => prob.L t (x t) (u t)) :=
     hL.comp (continuous_id.prodMk hx.continuous)
   intro t
@@ -183,7 +182,7 @@ theorem hasFDerivAt_augmented_dynamics
     (DL : X →L[ℝ] ℝ) (Df : X →L[ℝ] X)
     (hL : HasFDerivAt (fun z => prob.L t z v) DL y.2)
     (hf : HasFDerivAt (fun z => prob.f t z v) Df y.2) :
-    HasFDerivAt (fun z => (augmentedProblem prob).f t z v)
+    HasFDerivAt (fun z => (_root_.ContinuousOCP.bolzaToMayer prob).f t z v)
       (augmentedLinearCoefficient DL Df) y :=
   (hL.comp y (ContinuousLinearMap.snd ℝ ℝ X).hasFDerivAt).prodMk
     (hf.comp y (ContinuousLinearMap.snd ℝ ℝ X).hasFDerivAt)
@@ -205,4 +204,3 @@ theorem continuousAt_augmented_spatial_derivative
   exact (ContinuousLinearMap.prodL ℝ).continuousAt.comp
     ((hLc.clm_comp continuousAt_const).prodMk (hfc.clm_comp continuousAt_const))
 
-end KirkMedhin.K1

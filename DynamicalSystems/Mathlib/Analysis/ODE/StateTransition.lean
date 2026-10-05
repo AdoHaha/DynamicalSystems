@@ -34,7 +34,6 @@ Chapter 7; Sontag, Mathematical Control Theory (1998), Chapter 9.5.
 open MeasureTheory
 open scoped Interval
 
-namespace KirkMedhin
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
 
@@ -76,7 +75,7 @@ theorem fundamentalPair_left_inverse
 
 /-- A one-sided inverse of an endomorphism is a two-sided inverse in finite
 dimension. This is the sole use of finite dimensionality in the construction. -/
-theorem clm_comp_eq_id_comm [FiniteDimensional ℝ X]
+theorem _root_.ContinuousLinearMap.comp_eq_id_comm_of_finiteDimensional [FiniteDimensional ℝ X]
     {P Q : X →L[ℝ] X} (h : P.comp Q = ContinuousLinearMap.id ℝ X) :
     Q.comp P = ContinuousLinearMap.id ℝ X := by
   have hlin : P.toLinearMap.comp Q.toLinearMap = LinearMap.id :=
@@ -101,7 +100,7 @@ theorem isStateTransition_of_fundamentalPair [FiniteDimensional ℝ X]
   have hVU : ∀ r, (V r).comp (U r) = ContinuousLinearMap.id ℝ X :=
     fundamentalPair_left_inverse hU0 hV0 hU hV
   have hUV : ∀ r, (U r).comp (V r) = ContinuousLinearMap.id ℝ X :=
-    fun r => clm_comp_eq_id_comm (hVU r)
+    fun r => _root_.ContinuousLinearMap.comp_eq_id_comm_of_finiteDimensional (hVU r)
   refine ⟨hUV, ?_, ?_, ?_⟩
   · intro s t
     unfold transitionOfFundamentalPair
@@ -225,6 +224,5 @@ theorem IsStateTransition.variationOfConstants_of_continuous [CompleteSpace X]
     continuous_iff_continuousAt.mpr (fun r => (hPhi.backward t r).continuousAt)
   exact (hP.clm_apply hb).intervalIntegrable s t
 
-end KirkMedhin
 
 end

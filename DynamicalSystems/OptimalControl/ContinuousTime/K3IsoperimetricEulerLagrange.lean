@@ -35,12 +35,12 @@ the two-parameter stationarity to `HasVanishingFirstVariation (fun t y v ↦ L t
 λ * G t y v)` over *all* smooth endpoint-vanishing directions as *the open
 residual*, with the chain minimum → multiplier → augmented Euler–Lagrange *not
 closed in this module*.  That residual is now closed by
-`KirkMedhin.K3.exists_common_isoperimetricMultiplier` in
+`IsoperimetricVariation.exists_common_isoperimetricMultiplier` in
 `K3IsoperimetricLift.lean`, which fixes one multiplier and derives the identity for
 all C1 endpoint-zero directions (feeding
-`KirkMedhin.K3.augmentedEulerLagrangeWithin_of_isoperimetric` and
-`KirkMedhin.K3.augmentedEulerLagrange_of_isoperimetric`).  The theorem
-`eulerLagrange_of_augmentedVanishing` below is retained as a partial building
+`IsoperimetricVariation.augmentedEulerLagrangeWithin_of_isoperimetric` and
+`IsoperimetricVariation.augmentedEulerLagrange_of_isoperimetric`).  The theorem
+`_root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing` below is retained as a partial building
 block that consumes an augmented vanishing variation as an assumed hypothesis;
 it is not the final K3 endpoint.
 
@@ -49,13 +49,13 @@ it is not the final K3 endpoint.
 * `hasStrictFDerivAt_parameterFunctional`: strict Fréchet differentiability of
   the two-parameter `cvFunctional` pair, with derivative the `firstVariation`.
 
-* `isoperimetricMultiplier_exists`: a common multiplier extracted from a genuine
+* `_root_.IsoperimetricVariation.isoperimetricMultiplier_exists`: a common multiplier extracted from a genuine
   constrained minimum.  Its scope is the two-parameter family: for each fixed
   pair `(η, ξ)`, the identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}`
   only; the value is `η`-independent given `ξ`, and there is no single invocation
   ranging over all test directions.
 
-* `eulerLagrange_of_augmentedVanishing`: the Euler–Lagrange equation for
+* `_root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing`: the Euler–Lagrange equation for
   `L + λ • G`, proved from an *assumed* augmented vanishing first variation (not
   derived here from the two-parameter multiplier identity).
 -/
@@ -65,7 +65,6 @@ it is not the final K3 endpoint.
 open MeasureTheory Set Filter Metric
 open scoped Topology Interval
 
-namespace KirkMedhin.K3
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -658,7 +657,7 @@ identity holds for all `p ∈ ℝ × ℝ`, i.e. on `span{η,ξ}` only.  The valu
 invocation ranging over all test directions.  This is the multiplier interface
 applied to a genuinely feasible family; the differentiability premise is the
 derived `hasStrictFDerivAt_parameterFunctional`. -/
-theorem isoperimetricMultiplier_exists
+theorem _root_.IsoperimetricVariation.isoperimetricMultiplier_exists
     (L G : ℝ → E → E → ℝ) (K : E → ℝ) (T : ℝ)
     (S : Set (ℝ → E)) (x η ξ : ℝ → E)
     (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (hG : ContDiff ℝ 1 (uncurryLagrangian G))
@@ -707,9 +706,9 @@ the existing integration-by-parts / fundamental-lemma interface
 `eulerLagrange_of_firstVariation_zero` to the actual augmented spatial and velocity
 derivatives, with the momentum regularity and continuity checked explicitly.  This
 does **not** derive the augmented vanishing variation from the two-parameter
-multiplier identity of `isoperimetricMultiplier_exists`; that lifting is the open
+multiplier identity of `_root_.IsoperimetricVariation.isoperimetricMultiplier_exists`; that lifting is the open
 residual. -/
-theorem eulerLagrange_of_augmentedVanishing
+theorem _root_.IsoperimetricVariation.eulerLagrange_of_augmentedVanishing
     (L G : ℝ → E → E → ℝ) (K : E → ℝ) (Q : ℝ → E →L[ℝ] ℝ) (T : ℝ) (x : ℝ → E)
     (lam : ℝ) (hT : 0 < T)
     (hvan : HasVanishingFirstVariation (fun t y v ↦ L t y v + lam * G t y v) K T x)
@@ -724,8 +723,7 @@ theorem eulerLagrange_of_augmentedVanishing
     eulerLagrange (fun t y v ↦ L t y v + lam * G t y v) T x :=
   eulerLagrange_of_firstVariation_zero _ K Q T x hT hvan hPderiv hPcont hQcont hScont
 
-end KirkMedhin.K3
 
-#check @KirkMedhin.K3.hasStrictFDerivAt_parameterFunctional
-#check @KirkMedhin.K3.isoperimetricMultiplier_exists
-#check @KirkMedhin.K3.eulerLagrange_of_augmentedVanishing
+#check @hasStrictFDerivAt_parameterFunctional
+#check @IsoperimetricVariation.isoperimetricMultiplier_exists
+#check @IsoperimetricVariation.eulerLagrange_of_augmentedVanishing

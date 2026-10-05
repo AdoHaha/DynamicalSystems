@@ -17,7 +17,7 @@ Splitting and replacing an arc therefore permits additional corners.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -285,4 +285,4 @@ theorem durationExchange_mem_fixedEndpointFinitePiecewiseC1Curves
   have ht : (d₁ + ε) + (d₂ - ε) = d₁ + d₂ := by ring
   simpa only [ht, durationExchange] using h
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

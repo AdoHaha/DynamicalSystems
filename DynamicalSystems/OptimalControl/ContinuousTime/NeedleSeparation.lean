@@ -24,7 +24,6 @@ first-order variation set from strict terminal-cost descent must be proved from 
 needle endpoint expansion and optimality.  It is not supplied by Hahn–Banach.
 -/
 
-namespace KirkMedhin.K1
 
 open Set
 
@@ -70,7 +69,7 @@ Only convexity and membership of zero are required; callers may use any cone of
 attainable first-order endpoint variations.  The disjointness assumption is the
 endpoint-expansion/optimality obligation, stated in a form that does not mention a
 Hamiltonian or an already selected multiplier. -/
-theorem exists_hahnBanach_terminal_covector
+theorem _root_.exists_positive_multiple_separating_negative_halfspace
     (c : E →L[ℝ] ℝ) (e : E) (he : c e = 1)
     (C : Set E) (hconvex : Convex ℝ C) (hzero : (0 : E) ∈ C)
     (hdisjoint : Disjoint {y | c y < 0} C) :
@@ -102,14 +101,14 @@ theorem exists_hahnBanach_terminal_covector
 
 /-- The multiplier extracted by Hahn–Banach can be normalized to evaluate to one on
 `e`.  The normalized multiplier equals the terminal differential. -/
-theorem exists_normalized_hahnBanach_terminal_covector
+theorem _root_.exists_normalized_positive_multiple_separating_negative_halfspace
     (c : E →L[ℝ] ℝ) (e : E) (he : c e = 1)
     (C : Set E) (hconvex : Convex ℝ C) (hzero : (0 : E) ∈ C)
     (hdisjoint : Disjoint {y | c y < 0} C) :
     ∃ (q : E →L[ℝ] ℝ) (α : ℝ),
       q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ C, 0 ≤ q y) ∧ q e = α ∧ α⁻¹ • q = c := by
   obtain ⟨q, hqzero, hqe, hnonneg, hmultiple⟩ :=
-    exists_hahnBanach_terminal_covector c e he C hconvex hzero hdisjoint
+    _root_.exists_positive_multiple_separating_negative_halfspace c e he C hconvex hzero hdisjoint
   refine ⟨q, q e, hqzero, hqe, hnonneg, rfl, ?_⟩
   calc
     (q e)⁻¹ • q = (q e)⁻¹ • ((q e) • c) :=
@@ -123,12 +122,12 @@ section AugmentedState
 variable {X : Type*} [TopologicalSpace X] [AddCommGroup X] [Module ℝ X]
 
 /-- The differential of `z + K(x)` at the reference endpoint. -/
-def terminalDifferential (DK : X →L[ℝ] ℝ) : (ℝ × X) →L[ℝ] ℝ :=
+def _root_.bolzaTerminalDifferential (DK : X →L[ℝ] ℝ) : (ℝ × X) →L[ℝ] ℝ :=
   ContinuousLinearMap.fst ℝ ℝ X + DK.comp (ContinuousLinearMap.snd ℝ ℝ X)
 
 @[simp]
-theorem terminalDifferential_apply (DK : X →L[ℝ] ℝ) (y : ℝ × X) :
-    terminalDifferential DK y = y.1 + DK y.2 := rfl
+theorem _root_.bolzaTerminalDifferential_apply (DK : X →L[ℝ] ℝ) (y : ℝ × X) :
+    _root_.bolzaTerminalDifferential DK y = y.1 + DK y.2 := rfl
 
 /-- Free-terminal-state normality in augmented coordinates.  The extracted terminal
 covector has the strictly positive cost-coordinate coefficient `α`; its normalized
@@ -143,27 +142,27 @@ theorem exists_normal_augmented_terminal_covector
     (hdisjoint : Disjoint {y : ℝ × X | y.1 + DK y.2 < 0} C) :
     ∃ (q : (ℝ × X) →L[ℝ] ℝ) (α : ℝ),
       q ≠ 0 ∧ 0 < α ∧ (∀ y ∈ C, 0 ≤ q y) ∧ q (1, 0) = α ∧
-      α⁻¹ • q = terminalDifferential DK := by
-  exact exists_normalized_hahnBanach_terminal_covector
-    (terminalDifferential DK) (1, 0) (by simp) C hconvex hzero hdisjoint
+      α⁻¹ • q = _root_.bolzaTerminalDifferential DK := by
+  exact _root_.exists_normalized_positive_multiple_separating_negative_halfspace
+    (_root_.bolzaTerminalDifferential DK) (1, 0) (by simp) C hconvex hzero hdisjoint
 
 /-- The state part of the terminal differential pulled back by an **augmented**
 state-transition operator.  In a Bolza problem the augmented dynamics are `(L,f)`,
 so this state covector includes the running-cost contribution. -/
 def propagatedStateCovector (DK : X →L[ℝ] ℝ)
     (Φ : (ℝ × X) →L[ℝ] (ℝ × X)) : X →L[ℝ] ℝ :=
-  ((terminalDifferential DK).comp Φ).comp (ContinuousLinearMap.inr ℝ ℝ X)
+  ((_root_.bolzaTerminalDifferential DK).comp Φ).comp (ContinuousLinearMap.inr ℝ ℝ X)
 
 /-- If the augmented transition preserves a pure change of accumulated cost, the
 normalized pulled-back covector still has cost-coordinate coefficient one. -/
 theorem augmented_pullback_apply
     (DK : X →L[ℝ] ℝ) (Φ : (ℝ × X) →L[ℝ] (ℝ × X))
     (hcost : Φ (1, 0) = (1, 0)) (z : ℝ) (x : X) :
-    terminalDifferential DK (Φ (z, x)) =
+    _root_.bolzaTerminalDifferential DK (Φ (z, x)) =
       z + propagatedStateCovector DK Φ x := by
-  let q : (ℝ × X) →L[ℝ] ℝ := (terminalDifferential DK).comp Φ
+  let q : (ℝ × X) →L[ℝ] ℝ := (_root_.bolzaTerminalDifferential DK).comp Φ
   have he : q (1, 0) = 1 := by
-    change terminalDifferential DK (Φ (1, 0)) = 1
+    change _root_.bolzaTerminalDifferential DK (Φ (1, 0)) = 1
     rw [hcost]
     simp
   have hsplit : (z, x) = z • (1, (0 : X)) + (0, x) := by
@@ -189,7 +188,7 @@ theorem hahnBanach_needle_inequality
     0 ≤ ΔL + propagatedStateCovector DK Φ Δf := by
   obtain ⟨q, α, _hqzero, hα, hnonneg, _hcoefficient, hnormalized⟩ :=
     exists_normal_augmented_terminal_covector DK C hconvex hzero hdisjoint
-  have hc : 0 ≤ terminalDifferential DK (Φ (ΔL, Δf)) := by
+  have hc : 0 ≤ _root_.bolzaTerminalDifferential DK (Φ (ΔL, Δf)) := by
     rw [← hnormalized]
     simp only [smul_apply, smul_eq_mul]
     exact mul_nonneg (inv_nonneg.2 hα.le) (hnonneg _ hgenerator)
@@ -197,4 +196,3 @@ theorem hahnBanach_needle_inequality
 
 end AugmentedState
 
-end KirkMedhin.K1

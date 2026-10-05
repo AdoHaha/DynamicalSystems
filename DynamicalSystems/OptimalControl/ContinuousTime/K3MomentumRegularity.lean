@@ -22,7 +22,6 @@ The final two lemmas give `C¹` regularity of the same covectors from primitive
 
 @[expose] public section
 
-namespace KirkMedhin.K3
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -113,4 +112,3 @@ theorem contDiff_momentumCovector_of_contDiff_two (L : ℝ → E → E → ℝ) 
     (contDiff_const (c := (0 : E →L[ℝ] ℝ).prod (ContinuousLinearMap.inr ℝ E E)))
   simpa only [fderiv_lagrangian_velocity_eq L hLone, Function.comp_apply] using hcomp
 
-end KirkMedhin.K3

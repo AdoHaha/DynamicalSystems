@@ -16,7 +16,7 @@ pair by a finite surrounding context inherits both corner conditions.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -24,7 +24,7 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 /-- The original variational functional depends only on the curve on its horizon.
 Derivative values at the two endpoints do not affect its interval integral. -/
-theorem cvFunctional_eq_of_eqOn (L : ℝ → E → E → ℝ) (K : E → ℝ)
+theorem _root_.cvFunctional_eq_of_eqOn (L : ℝ → E → E → ℝ) (K : E → ℝ)
     {T : ℝ} (hT : 0 < T) {x y : ℝ → E} (heq : EqOn x y (Icc 0 T)) :
     cvFunctional L K T x = cvFunctional L K T y := by
   unfold cvFunctional
@@ -59,7 +59,7 @@ theorem weierstrassErdmann_at_every_represented_corner
   have href := concatenate_mem_fixedEndpointFinitePiecewiseC1Curves
     (.smooth hd₁ hx₁ hv₁) (.smooth hd₂ hx₂ hv₂) hjoin
   have hT := (ctx.feasible href).2.2.duration_pos
-  have hcost := cvFunctional_eq_of_eqOn (fun _ ↦ L) K hT hrep
+  have hcost := _root_.cvFunctional_eq_of_eqOn (fun _ ↦ L) K hT hrep
   apply weierstrassErdmann_of_cvFunctional_min_weak L K hL hx₁ hv₁ hx₂ hv₂
     hd₁ hd₂ hjoin ctx
   intro y hy
@@ -68,4 +68,4 @@ theorem weierstrassErdmann_at_every_represented_corner
   rw [← hcost]
   exact hmin hy
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

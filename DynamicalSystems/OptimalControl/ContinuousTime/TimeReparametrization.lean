@@ -20,7 +20,7 @@ reference interval. This file derives the parameter derivative of this integral.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.TimeReparametrization
+namespace TimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -357,4 +357,4 @@ theorem actualCornerCost_isLocalMin_of_optimal_duration
   filter_upwards [Ioo_mem_nhds (neg_neg_of_pos hd₁) hd₂] with ε hε
   exact (add_le_add_iff_right (K (x₂ d₂))).mp (hmin ε hε)
 
-end KirkMedhin.TimeReparametrization
+end TimeReparametrization

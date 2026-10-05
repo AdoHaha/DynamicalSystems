@@ -15,7 +15,7 @@ why a theorem from the present `IsOptimalPair` to the existing all-times
 `HamiltonianMinimizing` cannot hold without such extra hypotheses.
 -/
 
-namespace KirkMedhin.K1.PointwiseObstruction
+namespace PMPExamples.PointwiseRepresentative
 
 open Set MeasureTheory Filter
 open scoped Interval
@@ -88,4 +88,4 @@ theorem optimal_without_pointwise_pmp :
   rintro ⟨p, hp⟩
   exact no_pointwise_hamiltonian_minimizing p hp
 
-end KirkMedhin.K1.PointwiseObstruction
+end PMPExamples.PointwiseRepresentative

@@ -3,7 +3,7 @@ Copyright (c) 2026 Igor Zubrycki. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Igor Zubrycki
 -/
-import DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond
+import DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.DuBoisReymondLowRegularity
 import DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousDuBoisReymond
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
@@ -21,15 +21,15 @@ acceleration assumption.
 open MeasureTheory Set
 open scoped Interval
 
-namespace KirkMedhin.NonautonomousDuBoisReymondRegression
+namespace NonautonomousDuBoisReymond.Examples.NondifferentiableVelocity
 
-open KirkMedhin.WeakDuBoisReymondRegression KirkMedhin.TimeReparametrization
+open DuBoisReymond.Examples.NondifferentiableVelocity TimeReparametrization
 
 /-- A quadratic velocity penalty with an explicit, nonzero time partial. -/
 def lagrangian (t : ℝ) (_x v : ℝ × ℝ) : ℝ := v.1 ^ 2 - t
 
 /-- The time-dependent density is jointly continuously differentiable. -/
-theorem lagrangian_contDiff : ContDiff ℝ 1 (K3.uncurryLagrangian lagrangian) :=
+theorem lagrangian_contDiff : ContDiff ℝ 1 (uncurryLagrangian lagrangian) :=
   (contDiff_snd.snd.fst.pow 2).sub contDiff_fst
 
 /-- The explicit time term contributes negative one half to the actual action. -/
@@ -123,4 +123,4 @@ theorem energy_hasDerivAt_one (t : ℝ) (ht : t ∈ Ioo 0 1) :
     HasDerivAt (NonautonomousDuBoisReymond.energyCurve lagrangian reference velocity) 1 t := by
   simpa only [timePartial_eq_neg_one, neg_neg] using reference_weak_duBoisReymond.2 t ht
 
-end KirkMedhin.NonautonomousDuBoisReymondRegression
+end NonautonomousDuBoisReymond.Examples.NondifferentiableVelocity

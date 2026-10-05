@@ -22,7 +22,6 @@ set can in particular consist of the two endpoints of a needle interval.
 open MeasureTheory
 open scoped Interval
 
-namespace KirkMedhin
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
 
@@ -49,6 +48,5 @@ theorem IsStateTransition.variationOfConstants_off_countable
   rw [hFTC]
   abel
 
-end KirkMedhin
 
 end

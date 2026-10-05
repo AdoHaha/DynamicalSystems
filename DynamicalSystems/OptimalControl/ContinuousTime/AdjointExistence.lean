@@ -12,7 +12,6 @@ identifies this constructed linear adjoint with the project's Hamiltonian-gradie
 predicate using actual spatial derivatives of the dynamics and running cost.
 -/
 
-namespace K1AdjointExistence
 
 open Set
 open scoped NNReal
@@ -65,7 +64,7 @@ theorem exists_adjointOn_Icc
   simpa only [B, Aext, lext, projIcc_of_mem hT ht,
     neg_apply] using hp t
 
-theorem exists_project_costate_of_spatial_derivatives
+theorem _root_.exists_costate_of_spatial_derivatives
     (prob : ContinuousOCP E U) (x : ℝ → E) (u : ℝ → U)
     (A : ℝ → E →L[ℝ] E) (ell : ℝ → E)
     (hT : 0 ≤ prob.T)
@@ -84,7 +83,7 @@ theorem exists_project_costate_of_spatial_derivatives
     (gradient prob.K (x prob.T))
   refine ⟨p, hpc, hpd, ?_, hpT⟩
   intro t ht
-  have hgrad := K1AdjointPairing.hasGradientAt_hamiltonian
+  have hgrad := hasGradientAt_hamiltonian
     (p := p t) (hL t ht) (hf t ht)
   change HasDerivAt p
     (-gradient (fun y => prob.L t y (u t) + inner ℝ (p t) (prob.f t y (u t)))
@@ -93,4 +92,3 @@ theorem exists_project_costate_of_spatial_derivatives
   convert hpd t ht using 1
   abel
 
-end K1AdjointExistence

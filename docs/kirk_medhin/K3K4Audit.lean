@@ -23,10 +23,10 @@ import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1MinimumPrincipl
 import DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions
 import DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange
 import DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum
-import DynamicalSystemsTest.KirkMedhin.K3IsoperimetricExample
-import DynamicalSystemsTest.KirkMedhin.NonautonomousDuBoisReymond
-import DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond
-import DynamicalSystemsTest.KirkMedhin.WeakEulerLagrangeEndpoint
+import DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.IsoperimetricMultiplier
+import DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.NonautonomousDuBoisReymond
+import DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.DuBoisReymondLowRegularity
+import DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.TwoSidedEndpointDerivative
 import Batteries.Tactic.Lint
 import Lean
 
@@ -63,10 +63,10 @@ run_cmd do
     `DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions,
     `DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange,
     `DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum,
-    `DynamicalSystemsTest.KirkMedhin.K3IsoperimetricExample,
-    `DynamicalSystemsTest.KirkMedhin.NonautonomousDuBoisReymond,
-    `DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond,
-    `DynamicalSystemsTest.KirkMedhin.WeakEulerLagrangeEndpoint]
+    `DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.IsoperimetricMultiplier,
+    `DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.NonautonomousDuBoisReymond,
+    `DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.DuBoisReymondLowRegularity,
+    `DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.TwoSidedEndpointDerivative]
   let owned := env.constants.map₁.fold (init := #[]) fun names name _ =>
     match env.getModuleIdxFor? name with
     | none => names
@@ -107,7 +107,7 @@ run_cmd do
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange
 #lint in DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum
-#lint in DynamicalSystemsTest.KirkMedhin.K3IsoperimetricExample
-#lint in DynamicalSystemsTest.KirkMedhin.NonautonomousDuBoisReymond
-#lint in DynamicalSystemsTest.KirkMedhin.WeakDuBoisReymond
-#lint in DynamicalSystemsTest.KirkMedhin.WeakEulerLagrangeEndpoint
+#lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.IsoperimetricMultiplier
+#lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.NonautonomousDuBoisReymond
+#lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.DuBoisReymondLowRegularity
+#lint in DynamicalSystemsTest.OptimalControl.ContinuousTime.CalculusOfVariations.TwoSidedEndpointDerivative

@@ -17,7 +17,7 @@ on its two closed arcs, without any assumption on the reference outside its hori
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.PiecewiseC1Extensions
+namespace PiecewiseC1Extensions
 
 open TimeReparametrization
 
@@ -145,4 +145,4 @@ theorem exists_global_arcs {x vL vR : ℝ → E} {T τ : ℝ}
     rightArc_zero x vR τ, rightArc_terminal hcorner hvR, arcs_join hcorner hvL,
     eqOn_concatenate hcorner hvL hvR⟩
 
-end KirkMedhin.PiecewiseC1Extensions
+end PiecewiseC1Extensions

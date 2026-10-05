@@ -22,9 +22,9 @@ so the normal-multiplier theorem applies to concrete regular data.
 open MeasureTheory Set
 open scoped Interval
 
-namespace KirkMedhin.K3Example
+namespace IsoperimetricVariation.Examples.NonzeroMultiplier
 
-open KirkMedhin.K3
+
 
 /-- The running cost penalizes squared velocity and rewards signed state. -/
 def runningCost (_t y v : ℝ) : ℝ := v ^ 2 + y
@@ -140,7 +140,7 @@ theorem constraint_regular : ∃ ξ : ℝ → ℝ, ContDiff ℝ 1 ξ ∧ ξ 0 = 
 theorem augmented_firstVariation (lam : ℝ) :
     firstVariation (fun t y v ↦ runningCost t y v + lam * constraintCost t y v)
       terminalCost 1 reference regularDirection = (1 + lam) / 6 := by
-  rw [firstVariation_augmented runningCost constraintCost terminalCost lam 1
+  rw [_root_.firstVariation_add_smul runningCost constraintCost terminalCost lam 1
     reference regularDirection (runningCost_contDiff.of_le (by norm_num))
     (constraintCost_contDiff.of_le (by norm_num))
     (reference_contDiff.of_le (by norm_num)) regularDirection_contDiff,
@@ -169,10 +169,10 @@ theorem constrained_augmentedEulerLagrange :
         terminalCost 1 reference ∧
       eulerLagrange (fun t y v ↦ runningCost t y v + lam * constraintCost t y v)
         1 reference := by
-  obtain ⟨lam, hvan, hEL⟩ := augmentedEulerLagrange_of_isoperimetric
+  obtain ⟨lam, hvan, hEL⟩ := _root_.IsoperimetricVariation.augmentedEulerLagrange_of_isoperimetric
     runningCost constraintCost terminalCost 1 reference runningCost_contDiff
     constraintCost_contDiff terminalCost_contDiff reference_contDiff (by norm_num)
     reference_isMinOn constraint_regular
   exact ⟨lam, multiplier_eq_neg_one lam hvan, hvan, hEL⟩
 
-end KirkMedhin.K3Example
+end IsoperimetricVariation.Examples.NonzeroMultiplier

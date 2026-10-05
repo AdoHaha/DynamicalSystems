@@ -18,7 +18,7 @@ force the two-sided endpoint derivative in the existing `eulerLagrange`.
 
 @[expose] public section
 
-namespace KirkMedhin.WeakCoV.EndpointRegression
+namespace WeakEulerLagrange.Counterexamples.TwoSidedEndpointDerivative
 
 open Set MeasureTheory
 open scoped Interval Topology
@@ -79,7 +79,7 @@ theorem curve_contDiff : ContDiff ℝ 1 curve := by
 noncomputable def kinetic (_t _x v : ℝ) : ℝ := v ^ 2 / 2
 
 /-- The running Lagrangian has stronger regularity than required by the weak theorem. -/
-theorem kinetic_contDiff : ContDiff ℝ 2 (K3.uncurryLagrangian kinetic) := by
+theorem kinetic_contDiff : ContDiff ℝ 2 (uncurryLagrangian kinetic) := by
   change ContDiff ℝ 2 (fun q : ℝ × ℝ × ℝ => q.2.2 ^ 2 / 2)
   fun_prop
 
@@ -175,6 +175,6 @@ theorem curve_hasVanishingFirstVariation :
   rw [heq]
   simp
 
-end KirkMedhin.WeakCoV.EndpointRegression
+end WeakEulerLagrange.Counterexamples.TwoSidedEndpointDerivative
 
 end

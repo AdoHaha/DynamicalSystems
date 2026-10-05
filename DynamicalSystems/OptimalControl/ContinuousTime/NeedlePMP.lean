@@ -14,7 +14,6 @@ variation, Hamiltonian inequality, or separation condition. Those objects and
 conclusions are constructed in the proof.
 -/
 
-namespace K1NeedlePMP
 
 open Set Filter MeasureTheory
 open scoped Topology Interval NNReal
@@ -120,7 +119,7 @@ theorem exists_costate (r : GlobalSmoothNeedleData prob x u) :
         HasDerivAt p (-(r.stateCoefficient t).adjoint (p t) - r.costGradient t) t) ∧
       costateEquation prob.L prob.f prob.T x u p ∧
       transversalityCondition prob.K prob.T x p := by
-  exact K1AdjointExistence.exists_project_costate_of_spatial_derivatives
+  exact exists_costate_of_spatial_derivatives
     prob x u r.stateCoefficient r.costGradient r.horizon_pos.le
     r.stateCoefficient_continuousOn r.costGradient_continuousOn
     (fun t ht => r.has_dynamics_derivative t ht (x t)) r.has_running_gradient
@@ -183,7 +182,7 @@ theorem costSlope_of_constructedNeedles
     (y : ℝ → ℝ → E) (Kv M C : ℝ)
     (hfamily : ∀ᶠ ε in 𝓝[>] (0 : ℝ),
       NeedleIntegralModel.ConstructedNeedle prob x_init x u τ v ε (y ε) Kv M C)
-    (hR : Tendsto (fun ε : ℝ => ε⁻¹ * K1NeedleCost.actualRemainder
+    (hR : Tendsto (fun ε : ℝ => ε⁻¹ * actualNeedleCostRemainder
       (fun t z => prob.f t z (u t)) (fun t z => prob.f t z v)
       (fun t z => prob.L t z (u t)) (fun t z => prob.L t z v) prob.K
       r.stateCoefficient r.costGradient (gradient prob.K (x prob.T))
@@ -205,14 +204,14 @@ theorem costSlope_of_constructedNeedles
     mem_nhdsWithin_of_mem_nhds (Iio_mem_nhds hτ₀)
   have hidentity : ∀ᶠ ε in 𝓝[>] (0 : ℝ),
       continuousTotalCost prob (y ε) (needleControl u τ v ε) - continuousTotalCost prob x u =
-        (∫ t in (τ - ε)..τ, j t) + K1NeedleCost.actualRemainder
+        (∫ t in (τ - ε)..τ, j t) + actualNeedleCostRemainder
           (fun t z => prob.f t z (u t)) (fun t z => prob.f t z v)
           (fun t z => prob.L t z (u t)) (fun t z => prob.L t z v) prob.K
           r.stateCoefficient r.costGradient (gradient prob.K (x prob.T))
           x (y ε) p prob.T τ ε := by
     filter_upwards [hfamily, hεshort, self_mem_nhdsWithin] with ε hf hετ hpos
     have hε : 0 < ε := hpos
-    have hactual := K1NeedleCost.cost_difference_eq_impulse_add_actualRemainder
+    have hactual := cost_difference_eq_impulse_add_actualNeedleCostRemainder
       (fun t z => prob.f t z (u t)) (fun t z => prob.f t z v)
       (fun t z => prob.L t z (u t)) (fun t z => prob.L t z v) prob.K
       r.stateCoefficient r.costGradient (gradient prob.K (x prob.T))
@@ -286,7 +285,7 @@ theorem needleCostate_of_globalIntegralOptimality
     have hK : HasFDerivAt prob.K
         (InnerProductSpace.toDual ℝ E (gradient prob.K (x prob.T))) (x prob.T) :=
       r.terminal_differentiable.hasGradientAt.hasFDerivAt
-    have hRbase := K1NeedleCost.tendsto_scaled_actualFamilyRemainder_of_continuous
+    have hRbase := tendsto_scaled_actualNeedleCostFamilyRemainder_of_continuous
       (F₀ := fun t z => prob.f t z (u t)) (Fv := fun t z => prob.f t z v)
       (L₀ := fun t z => prob.L t z (u t)) (Lv := fun t z => prob.L t z v)
       (DF := r.dynamicsDerivative) (DL := r.runningDerivative)
@@ -299,18 +298,18 @@ theorem needleCostate_of_globalIntegralOptimality
       (fun _ _ => r.nominal_running_continuous.continuousAt)
       (fun _ _ => (r.test_running_continuous v hv).continuousAt)
       hpbound hybound
-    have hR : Tendsto (fun ε : ℝ => ε⁻¹ * K1NeedleCost.actualRemainder
+    have hR : Tendsto (fun ε : ℝ => ε⁻¹ * actualNeedleCostRemainder
         (fun t z => prob.f t z (u t)) (fun t z => prob.f t z v)
         (fun t z => prob.L t z (u t)) (fun t z => prob.L t z v) prob.K
         r.stateCoefficient r.costGradient (gradient prob.K (x prob.T))
         x (y ε) p prob.T τ ε) (𝓝[>] 0) (𝓝 0) := by
-      simpa only [K1NeedleCost.actualRemainder, K1NeedleCost.actualFamilyRemainder,
-        K1NeedleCost.remainder, r.toDual_costGradient,
+      simpa only [actualNeedleCostRemainder, actualNeedleCostFamilyRemainder,
+        needleCostRemainder, r.toDual_costGradient,
         GlobalSmoothNeedleData.stateCoefficient, GlobalSmoothNeedleData.costCovector]
         using hRbase
     have hslope := costSlope_of_constructedNeedles prob x_init x u r p hpc hpd
       hterminal τ hτ₀ hτ v hv y Kv M C hfamily hR
-    exact KirkMedhin.K1.integralOptimal_costSlope_nonneg prob x_init x u hopt
+    exact integralOptimal_costSlope_nonneg prob x_init x u hopt
       y (fun ε => needleControl u τ v ε) (hfamily.mono (fun _ h => h.admissible))
       _ hslope
 
@@ -362,4 +361,3 @@ theorem needleCostate_of_integralOptimality_smooth
       prob p r.horizon_pos.le heq).mp hterminal,
     (NeedleIntegralModel.HamiltonianMinimizing_congr_state prob u p heq).mp hminimum⟩
 
-end K1NeedlePMP

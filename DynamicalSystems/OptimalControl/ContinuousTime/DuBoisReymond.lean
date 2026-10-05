@@ -17,9 +17,9 @@ constant, without differentiating the velocity or assuming Euler–Lagrange.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.DuBoisReymond
+namespace DuBoisReymond
 
-open KirkMedhin.TimeReparametrization
+open TimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -242,9 +242,9 @@ theorem energy_eq_of_cvFunctional_min
       hx hv (hasDerivAt_shifted hx a) hvshift ha.1 hd hjoin hε
   · simpa only [hsum, concatenate_shifted] using hmin
 
-end KirkMedhin.DuBoisReymond
+end DuBoisReymond
 
-#print axioms KirkMedhin.DuBoisReymond.energy_eq_of_all_duration_exchange_min
-#print axioms KirkMedhin.DuBoisReymond.energy_eq_of_cvFunctional_min
-#print axioms KirkMedhin.DuBoisReymond.compensated_eq_of_hat_integral_eq
-#print axioms KirkMedhin.DuBoisReymond.hasDerivAt_neg_of_hat_integral_eq
+#print axioms DuBoisReymond.energy_eq_of_all_duration_exchange_min
+#print axioms DuBoisReymond.energy_eq_of_cvFunctional_min
+#print axioms DuBoisReymond.compensated_eq_of_hat_integral_eq
+#print axioms DuBoisReymond.hasDerivAt_neg_of_hat_integral_eq

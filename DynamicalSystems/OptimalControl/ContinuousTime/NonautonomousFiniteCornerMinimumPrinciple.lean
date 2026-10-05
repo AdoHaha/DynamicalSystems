@@ -17,7 +17,7 @@ reference and its representation only need to coincide on the horizon.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -27,7 +27,7 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 at every represented finite corner, under C1 Lagrangian and continuous velocities. -/
 theorem nonautonomous_weierstrassErdmann_at_every_represented_corner
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {T : ℝ} {A B : E} {x : ℝ → E}
     (hmin : IsMinOn (cvFunctional L K T)
       (fixedEndpointFinitePiecewiseC1Curves T A B) x) :
@@ -48,7 +48,7 @@ theorem nonautonomous_weierstrassErdmann_at_every_represented_corner
   have href := concatenate_mem_fixedEndpointFinitePiecewiseC1Curves
     (.smooth hd₁ hx₁ hv₁) (.smooth hd₂ hx₂ hv₂) hjoin
   have hT := (ctx.feasible href).2.2.duration_pos
-  have hcost := cvFunctional_eq_of_eqOn L K hT hrep
+  have hcost := _root_.cvFunctional_eq_of_eqOn L K hT hrep
   have hm : IsMinOn (cvFunctional (fun t ↦ L (0 + t)) K T)
       (fixedEndpointFinitePiecewiseC1Curves T A B) (F (concatenate d₁ x₁ x₂)) := by
     intro y hy
@@ -60,4 +60,4 @@ theorem nonautonomous_weierstrassErdmann_at_every_represented_corner
   exact weierstrassErdmann_in_timeSpliceContext L K hL hx₁ hv₁ hx₂ hv₂
     hd₁ hd₂ hjoin ctx hm
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

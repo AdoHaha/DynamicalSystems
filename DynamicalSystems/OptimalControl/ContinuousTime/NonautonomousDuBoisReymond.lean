@@ -20,10 +20,10 @@ equation and its integrated form using only continuous velocity.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.NonautonomousDuBoisReymond
+namespace NonautonomousDuBoisReymond
 
-open KirkMedhin.K3 KirkMedhin.TimeReparametrization
-open KirkMedhin.NonautonomousTimeReparametrization KirkMedhin.DuBoisReymond
+open TimeReparametrization
+open NonautonomousTimeReparametrization DuBoisReymond
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -288,7 +288,7 @@ theorem corner_energy_eq_of_weak_dbr_min (L : ℝ → E → E → ℝ)
   rw [hleft, hright] at hz
   linarith
 
-end KirkMedhin.NonautonomousDuBoisReymond
+end NonautonomousDuBoisReymond
 
-#print axioms KirkMedhin.NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
-#print axioms KirkMedhin.NonautonomousDuBoisReymond.corner_energy_eq_of_weak_dbr_min
+#print axioms NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+#print axioms NonautonomousDuBoisReymond.corner_energy_eq_of_weak_dbr_min

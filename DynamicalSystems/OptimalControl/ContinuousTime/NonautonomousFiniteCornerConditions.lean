@@ -17,7 +17,7 @@ energies, while the spatial variations supply momentum matching.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization DuBoisReymond NonautonomousTimeReparametrization
 open NonautonomousDuBoisReymond
@@ -28,7 +28,7 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 finite-piecewise competitors; all inner time variations are constructed. -/
 theorem weak_duBoisReymond_of_finite_cvFunctional_min
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x v : ℝ → E} (hx : ∀ t, HasDerivAt x (v t) t) (hv : Continuous v)
     {T : ℝ} (hT : 0 < T)
     (hmin : IsMinOn (cvFunctional L K T)
@@ -56,7 +56,7 @@ theorem weak_duBoisReymond_of_finite_cvFunctional_min
 both the integrated energy law and the interior nonautonomous energy ODE. -/
 theorem weak_duBoisReymond_in_timeSpliceContext
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x v : ℝ → E} (hx : ∀ t, HasDerivAt x (v t) t) (hv : Continuous v)
     {start d : ℝ} (hd : 0 < d) {t0 T : ℝ} {A B : E}
     {F : (ℝ → E) → ℝ → E}
@@ -81,7 +81,7 @@ theorem weak_duBoisReymond_in_timeSpliceContext
 /-- A nonautonomous actual finite-piecewise minimum implies corner-energy matching.
 The interior energy derivatives and scalar duration minimum are derived in the proof. -/
 theorem corner_energy_eq_of_timeAction_min_weak
-    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L)) (t0 : ℝ)
+    (L : ℝ → E → E → ℝ) (hL : ContDiff ℝ 1 (uncurryLagrangian L)) (t0 : ℝ)
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -123,7 +123,7 @@ theorem corner_energy_eq_of_timeAction_min_weak
 /-- Nonautonomous energy matching at any corner in a finite surrounding context. -/
 theorem corner_energy_eq_in_timeSpliceContext
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -146,7 +146,7 @@ theorem corner_energy_eq_in_timeSpliceContext
 minimum at every finite-context corner, with continuous velocities and no acceleration. -/
 theorem weierstrassErdmann_in_timeSpliceContext
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x₁ v₁ x₂ v₂ : ℝ → E}
     (hx₁ : ∀ t, HasDerivAt x₁ (v₁ t) t) (hv₁ : Continuous v₁)
     (hx₂ : ∀ t, HasDerivAt x₂ (v₂ t) t) (hv₂ : Continuous v₂)
@@ -164,4 +164,4 @@ theorem weierstrassErdmann_in_timeSpliceContext
   ⟨corner_momentum_eq_in_timeSpliceContext L K hL hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin ctx hmin,
     corner_energy_eq_in_timeSpliceContext L K hL hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin ctx hmin⟩
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

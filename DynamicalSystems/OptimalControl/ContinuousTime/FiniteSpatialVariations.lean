@@ -17,7 +17,7 @@ C1 data. Actual join-moving variations then imply momentum matching.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization
 
@@ -31,14 +31,14 @@ theorem contDiff_of_hasDerivAt_continuous {x v : ℝ → E}
 
 /-- An autonomous C1 Lagrangian is jointly C1 after adjoining the time variable. -/
 theorem contDiff_autonomous_lagrangian (L : E → E → ℝ)
-    (hL : ContDiff ℝ 1 L.uncurry) : ContDiff ℝ 1 (K3.uncurryLagrangian (fun _ ↦ L)) :=
+    (hL : ContDiff ℝ 1 L.uncurry) : ContDiff ℝ 1 (uncurryLagrangian (fun _ ↦ L)) :=
   hL.comp contDiff_snd
 
 /-- Integration of the derived interior Euler–Lagrange law gives the true boundary
 first variation, including endpoint directions which need not vanish. -/
 theorem firstVariation_eq_boundary_of_interior_EL
     (L : ℝ → E → E → ℝ) {T : ℝ} {x η : ℝ → E}
-    (hT : 0 ≤ T) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hT : 0 ≤ T) (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     (hx : ContDiff ℝ 1 x) (hη : ContDiff ℝ 1 η)
     (hEL : ∀ t ∈ Ioo 0 T,
       HasDerivAt (fun s ↦ fderiv ℝ (fun v ↦ L s (x s) v) (deriv x s))
@@ -46,8 +46,8 @@ theorem firstVariation_eq_boundary_of_interior_EL
     firstVariation L (fun _ ↦ 0) T x η =
       (fderiv ℝ (fun v ↦ L T (x T) v) (deriv x T)) (η T) -
       (fderiv ℝ (fun v ↦ L 0 (x 0) v) (deriv x 0)) (η 0) := by
-  have hp := K3.continuous_momentumCovector L x hL hx
-  have hq := K3.continuous_stateCovector L x hL hx
+  have hp := continuous_momentumCovector L x hL hx
+  have hq := continuous_stateCovector L x hL hx
   have hc := (hq.clm_apply hη.continuous).add (hp.clm_apply hη.continuous_deriv_one)
   have hd : ∀ t ∈ Ioo 0 T, HasDerivAt
       (fun s ↦ (fderiv ℝ (fun v ↦ L s (x s) v) (deriv x s)) (η s))
@@ -74,7 +74,7 @@ theorem firstVariation_zero_of_finite_min
       (fixedEndpointFinitePiecewiseC1Curves T (x 0) (x T)) x)
     (η : ℝ → E) (hη : ContDiff ℝ 1 η) (hη₀ : η 0 = 0) (hηT : η T = 0) :
     firstVariation (fun _ ↦ L) (fun _ ↦ 0) T x η = 0 := by
-  have hd := WeakCoV.hasDerivAt_cvFunctional_affine
+  have hd := hasDerivAt_cvFunctional_affine
     (fun _ ↦ L) (fun _ ↦ 0) T x η (contDiff_autonomous_lagrangian L hL)
     contDiff_const hx hη hT.le
   have hm : IsLocalMin
@@ -100,7 +100,7 @@ theorem interior_EL_of_finite_min
       (fixedEndpointFinitePiecewiseC1Curves T (x 0) (x T)) x) :
     ∀ t ∈ Ioo 0 T, HasDerivAt (fun s ↦ fderiv ℝ (L (x s)) (deriv x s))
       (fderiv ℝ (fun y ↦ L y (deriv x t)) (x t)) t := by
-  exact WeakCoV.eulerLagrange_hasDerivAt_of_firstVariation_zero hT
+  exact WeakEulerLagrange.eulerLagrange_hasDerivAt_of_firstVariation_zero hT
     (contDiff_autonomous_lagrangian L hL) hx
     (firstVariation_zero_of_finite_min L hL hT hx hmin)
 
@@ -138,10 +138,10 @@ theorem twoArc_firstVariation_zero_of_action_min
       firstVariation (fun _ ↦ L) (fun _ ↦ 0) d₂ x₂ η₂ = 0 := by
   let f := fun ε : ℝ ↦
     action L d₁ (fun t ↦ x₁ t + ε • η₁ t) + action L d₂ (fun t ↦ x₂ t + ε • η₂ t)
-  have h₁ := WeakCoV.hasDerivAt_cvFunctional_affine
+  have h₁ := hasDerivAt_cvFunctional_affine
     (fun _ ↦ L) (fun _ ↦ 0) d₁ x₁ η₁ (contDiff_autonomous_lagrangian L hL)
     contDiff_const hx₁ hη₁ hd₁.le
-  have h₂ := WeakCoV.hasDerivAt_cvFunctional_affine
+  have h₂ := hasDerivAt_cvFunctional_affine
     (fun _ ↦ L) (fun _ ↦ 0) d₂ x₂ η₂ (contDiff_autonomous_lagrangian L hL)
     contDiff_const hx₂ hη₂ hd₂.le
   have hf : HasDerivAt f
@@ -246,4 +246,4 @@ theorem weierstrassErdmann_of_cvFunctional_min_weak
   ⟨corner_momentum_eq_in_finite_context L K hL hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin ctx hmin,
     corner_energy_eq_in_finite_context L K hL hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin ctx hmin⟩
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

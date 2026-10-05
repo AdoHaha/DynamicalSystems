@@ -13,7 +13,6 @@ is explicitly the corrected integral class, and the primitive global branch
 assumptions are visible in the theorem statement.
 -/
 
-namespace KirkMedhin.K1
 
 open Set
 
@@ -50,8 +49,8 @@ theorem integralOptimal_implies_PMP_via_hahnBanach
     exists_geometricNormalPMP_of_primitive_data prob x_init x u hT hopt r₀ rtest hx
       DL Df hDL hDf hDLc hDfc DK hK
   let pcov : ℝ → X →L[ℝ] ℝ := fun t => propagatedStateCovector DK (Φ prob.T t)
-  refine ⟨K1CovectorPMP.vectorCostate pcov, ?_⟩
-  exact K1CovectorPMP.projectPMP_of_covector prob x u pcov
+  refine ⟨vectorCostate pcov, ?_⟩
+  exact pmpConditions_of_covector prob x u pcov
     (fun t => Df t (x t)) (fun t => DL t (x t)) DK hpd hpT
     (fun t ht => hDf t ht (x t)) (fun t ht => hDL t ht (x t)) hK hmin
 
@@ -103,4 +102,3 @@ theorem integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference
     (NeedleIntegralModel.transversalityCondition_congr_state prob p hT.le heq).mp hterminal,
     (NeedleIntegralModel.HamiltonianMinimizing_congr_state prob u p heq).mp hminimum⟩
 
-end KirkMedhin.K1

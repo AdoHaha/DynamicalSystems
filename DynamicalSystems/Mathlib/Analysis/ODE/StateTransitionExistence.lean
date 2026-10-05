@@ -28,7 +28,6 @@ unproved bundled nonautonomous-flow theorem are used.
 open Set
 open scoped NNReal
 
-namespace KirkMedhin
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
@@ -139,6 +138,5 @@ theorem exists_stateTransitionOn_Icc [FiniteDimensional ℝ X]
   · intro t s hs
     simpa only [heq hs] using hPhi.backward t s
 
-end KirkMedhin
 
 end

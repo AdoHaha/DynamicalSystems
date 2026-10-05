@@ -10,7 +10,6 @@ tangents into the optimality-to-cone-to-Hahn–Banach argument. Global Lipschitz
 hypotheses for both dynamics and running cost make the augmented IVPs available.
 -/
 
-namespace KirkMedhin.K1
 
 open Set Filter MeasureTheory
 open scoped Topology NNReal
@@ -41,19 +40,19 @@ variable {prob : ContinuousOCP X U} {w : ℝ → U}
 
 omit [NormedSpace ℝ X] [CompleteSpace X] in
 theorem augmented_lipschitz (r : BolzaBranchRegularity prob w) (t : ℝ) :
-    LipschitzWith (max r.KL r.Kf) (fun y => (augmentedProblem prob).f t y (w t)) := by
-  simpa only [mul_one, Function.comp_def, augmentedProblem] using
+    LipschitzWith (max r.KL r.Kf) (fun y => (_root_.ContinuousOCP.bolzaToMayer prob).f t y (w t)) := by
+  simpa only [mul_one, Function.comp_def, _root_.ContinuousOCP.bolzaToMayer] using
     ((r.cost_lipschitz t).prodMk (r.dynamics_lipschitz t)).comp
       (LipschitzWith.prod_snd (α := ℝ))
 
 omit [NormedSpace ℝ X] [CompleteSpace X] in
 theorem augmented_zero_bound (r : BolzaBranchRegularity prob w) (t : ℝ) :
-    ‖(augmentedProblem prob).f t 0 (w t)‖ ≤ max r.BL r.Bf := by
+    ‖(_root_.ContinuousOCP.bolzaToMayer prob).f t 0 (w t)‖ ≤ max r.BL r.Bf := by
   exact max_le_max (r.cost_zero_bound t) (r.dynamics_zero_bound t)
 
 omit [NormedSpace ℝ X] [CompleteSpace X] in
 theorem augmented_continuous (r : BolzaBranchRegularity prob w) :
-    Continuous (fun q : ℝ × (ℝ × X) => (augmentedProblem prob).f q.1 q.2 (w q.1)) := by
+    Continuous (fun q : ℝ × (ℝ × X) => (_root_.ContinuousOCP.bolzaToMayer prob).f q.1 q.2 (w q.1)) := by
   have hp : Continuous (fun q : ℝ × (ℝ × X) => (q.1, q.2.2)) :=
     continuous_fst.prodMk continuous_snd.snd
   exact (r.cost_continuous.comp hp).prodMk (r.dynamics_continuous.comp hp)
@@ -94,14 +93,14 @@ theorem exists_needle_endpointTangent_of_primitive_data
         (𝓝[>] (0 : ℝ))
         (𝓝 (Φ prob.T τ (prob.L τ (x τ) v - prob.L τ (x τ) (u τ),
           prob.f τ (x τ) v - prob.f τ (x τ) (u τ)))) := by
-  let Y := costLift prob x u
-  let P := augmentedProblem prob
+  let Y := _root_.bolzaCostLift prob x u
+  let P := _root_.ContinuousOCP.bolzaToMayer prob
   let D : ℝ → (ℝ × X) → (ℝ × X) →L[ℝ] (ℝ × X) :=
     fun t y => augmentedLinearCoefficient (DL t y.2) (Df t y.2)
   have hT : 0 ≤ prob.T := hτ₀.le.trans hτ
   have hY : IsIntegralCurve Y (fun t y => P.f t y (u t)) :=
-    isIntegralCurve_costLift prob x u hx r₀.cost_continuous
-  have hYinit : Y 0 = (0, x_init) := by simp [Y, costLift, hinit]
+    _root_.isIntegralCurve_bolzaCostLift prob x u hx r₀.cost_continuous
+  have hYinit : Y 0 = (0, x_init) := by simp [Y, _root_.bolzaCostLift, hinit]
   obtain ⟨M, hM, hforcing⟩ := NeedleIntegralModel.exists_frozen_forcing_bound
     P Y u v hY.continuous r₀.augmented_continuous rv.augmented_continuous
   obtain ⟨Yε, hfamily, hjump⟩ := NeedleIntegralModel.exists_feasible_needle_family
@@ -194,7 +193,7 @@ theorem exists_geometricNormalPMP_of_primitive_data [FiniteDimensional ℝ X]
     (DK : X →L[ℝ] ℝ) (hK : HasFDerivAt prob.K DK (x prob.T)) :
     ∃ (Φ : ℝ → ℝ → (ℝ × X) →L[ℝ] (ℝ × X))
       (q : (ℝ × X) →L[ℝ] ℝ) (α : ℝ),
-      q ≠ 0 ∧ 0 < α ∧ q (1, 0) = α ∧ α⁻¹ • q = terminalDifferential DK ∧
+      q ≠ 0 ∧ 0 < α ∧ q (1, 0) = α ∧ α⁻¹ • q = _root_.bolzaTerminalDifferential DK ∧
       (∀ y ∈ endpointVariationCone (needleEndpointGenerator prob x u Φ), 0 ≤ q y) ∧
       (∀ t ∈ Icc 0 prob.T,
         HasDerivAt (fun s => propagatedStateCovector DK (Φ prob.T s))
@@ -237,11 +236,11 @@ theorem exists_geometricNormalPMP_of_primitive_data [FiniteDimensional ℝ X]
     intro t ht v hv
     let i : NeedleIndex prob := (⟨t, ht⟩, ⟨v, hv⟩)
     have hmem := mem_endpointVariationCone (needleEndpointGenerator prob x u Φ) i
-    have hc : 0 ≤ terminalDifferential DK (needleEndpointGenerator prob x u Φ i) := by
+    have hc : 0 ≤ _root_.bolzaTerminalDifferential DK (needleEndpointGenerator prob x u Φ i) := by
       rw [← hnormalize]
       simp only [smul_apply, smul_eq_mul]
       exact mul_nonneg (inv_nonneg.mpr hα.le) (hcone _ hmem)
-    change 0 ≤ terminalDifferential DK (Φ prob.T t
+    change 0 ≤ _root_.bolzaTerminalDifferential DK (Φ prob.T t
       (prob.L t (x t) v - prob.L t (x t) (u t),
         prob.f t (x t) v - prob.f t (x t) (u t))) at hc
     rwa [augmented_pullback_apply DK (Φ prob.T t) (hcost t ⟨ht.1.le, ht.2⟩)] at hc
@@ -260,4 +259,3 @@ theorem exists_geometricNormalPMP_of_primitive_data [FiniteDimensional ℝ X]
   exact nonneg_on_Icc_of_nonneg_on_Ioc _ prob.T hT hJ
     (fun s hs => hpositive s hs v hv) t ht
 
-end KirkMedhin.K1

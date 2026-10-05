@@ -40,7 +40,7 @@ theorem terminal_tangent_of_constructed_family
     Tendsto (fun ε : ℝ => ε⁻¹ • (xε ε prob.T - x₀ prob.T))
       (𝓝[>] 0)
       (𝓝 (Phi prob.T τ (prob.f τ (x₀ τ) v - prob.f τ (x₀ τ) (u₀ τ)))) := by
-  apply KirkMedhin.terminal_tangent_of_right_ODE
+  apply terminal_tangent_of_right_ODE
     (F := fun t z => prob.f t z (u₀ t)) (D := D) (x := x₀) (y := xε)
     hτ hC hdiag hback hF₀
     hx₀.continuous.continuousOn

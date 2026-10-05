@@ -11,7 +11,6 @@ term is derived by integration and algebra, rather than supplied as a first
 variation hypothesis.
 -/
 
-namespace K1NeedleCost
 
 open Set Filter MeasureTheory
 open scoped Interval Topology
@@ -65,12 +64,12 @@ section InnerProduct
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
 /-- The actual nonlinear errors for one perturbed trajectory, in exactly the
-form estimated by `norm_remainder_le_quadratic`. -/
-noncomputable def actualRemainder
+form estimated by `_root_.norm_needleCostRemainder_le_quadratic`. -/
+noncomputable def _root_.actualNeedleCostRemainder
     (F₀ Fv : ℝ → E → E) (L₀ Lv : ℝ → E → ℝ) (K : E → ℝ)
     (A : ℝ → E →L[ℝ] E) (ell : ℝ → E) (k : E)
     (x y p : ℝ → E) (T τ ε : ℝ) : ℝ :=
-  remainder
+  _root_.needleCostRemainder
     (fun _ => taylorError K (InnerProductSpace.toDual ℝ E k) (x T) (y T))
     (fun _ t => taylorError (L₀ t) (InnerProductSpace.toDual ℝ E (ell t)) (x t) (y t))
     (fun _ t => controlIncrementError (Lv t) (L₀ t) (x t) (y t))
@@ -79,7 +78,7 @@ noncomputable def actualRemainder
 
 /-- Exact cost expansion from actual nominal and switched trajectory equations.
 No Taylor bound or first-order cost formula is a premise of this identity. -/
-theorem cost_difference_eq_impulse_add_actualRemainder
+theorem _root_.cost_difference_eq_impulse_add_actualNeedleCostRemainder
     (F₀ Fv : ℝ → E → E) (L₀ Lv : ℝ → E → ℝ) (K : E → ℝ)
     (A : ℝ → E →L[ℝ] E) (ell : ℝ → E) (k : E)
     (x y p : ℝ → E) (T τ ε : ℝ)
@@ -100,7 +99,7 @@ theorem cost_difference_eq_impulse_add_actualRemainder
         ((∫ t in 0..T, L₀ t (x t)) + K (x T)) =
       (∫ t in (τ - ε)..τ,
         (Lv t (x t) - L₀ t (x t)) + inner ℝ (p t) (Fv t (x t) - F₀ t (x t))) +
-      actualRemainder F₀ Fv L₀ Lv K A ell k x y p T τ ε := by
+      _root_.actualNeedleCostRemainder F₀ Fv L₀ Lv K A ell k x y p T τ ε := by
   have hab : τ - ε ≤ τ := sub_le_self τ hε
   have hT : 0 ≤ T := ha.trans (hab.trans hτ)
   let S := Ico (τ - ε) τ
@@ -158,7 +157,7 @@ theorem cost_difference_eq_impulse_add_actualRemainder
     convert h using 1
     dsimp [b, b₀, bv, S]
     split_ifs <;> abel
-  have hpair := K1AdjointPairing.cost_difference_identity hT hpc.continuousOn
+  have hpair := integral_adjoint_pairing_with_running_term hT hpc.continuousOn
     hdc.continuousOn hp hd hbi hli hci
   have hn : ContinuousOn n (Icc 0 T) := hc₀c.add (hpc.continuousOn.inner hb₀c)
   have hj : Continuous j := (hlvx.sub hl₀x).add (hpc.inner (hfvx.sub hf₀x))
@@ -196,7 +195,7 @@ theorem cost_difference_eq_impulse_add_actualRemainder
   rw [hLHS, hRHS] at hpair
   have hd₀ : d 0 = 0 := by simp [d, hstart]
   rw [hd₀, inner_zero_right, hpT] at hpair
-  have hrem : actualRemainder F₀ Fv L₀ Lv K A ell k x y p T τ ε =
+  have hrem : _root_.actualNeedleCostRemainder F₀ Fv L₀ Lv K A ell k x y p T τ ε =
       (K (y T) - K (x T) - inner ℝ k (d T)) +
         (∫ t in 0..T, n t) + ∫ t in (τ - ε)..τ, q t := by
     rfl
@@ -208,4 +207,3 @@ theorem cost_difference_eq_impulse_add_actualRemainder
 
 end InnerProduct
 
-end K1NeedleCost

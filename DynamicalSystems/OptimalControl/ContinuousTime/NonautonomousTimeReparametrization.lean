@@ -18,9 +18,9 @@ using only continuous state and velocity, without differentiating velocity.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.NonautonomousTimeReparametrization
+namespace NonautonomousTimeReparametrization
 
-open KirkMedhin.K3 KirkMedhin.TimeReparametrization
+open TimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -176,4 +176,4 @@ theorem hasDerivAt_movingArcCost (L : ℝ → E → E → ℝ)
   rw [heq] at hraw
   exact hraw
 
-end KirkMedhin.NonautonomousTimeReparametrization
+end NonautonomousTimeReparametrization

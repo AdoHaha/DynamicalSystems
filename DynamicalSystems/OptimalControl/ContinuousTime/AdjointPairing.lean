@@ -16,7 +16,6 @@ frozen-state control jump plus the nonlinear Taylor remainder. Thus the result
 does not require parameter differentiability of the nonlinear solution map.
 -/
 
-namespace K1AdjointPairing
 
 open Set MeasureTheory
 open scoped Interval
@@ -40,7 +39,7 @@ theorem hasGradientAt_hamiltonian
   rw [inner_add_left, ContinuousLinearMap.adjoint_inner_left]
 
 /-- The forward linear term and backward adjoint term cancel in the pairing. -/
-theorem hasDerivWithinAt_pairing
+theorem _root_.hasDerivWithinAt_adjoint_pairing
     {p d ell b : ℝ → E} {A : ℝ → E →L[ℝ] E} {s : Set ℝ} {t : ℝ}
     (hp : HasDerivWithinAt p (-(A t).adjoint (p t) - ell t) s t)
     (hd : HasDerivWithinAt d ((A t) (d t) + b t) s t) :
@@ -70,14 +69,14 @@ theorem integral_adjoint_pairing
       ∫ t in a..z, inner ℝ (p t) (b t) := by
   have hFTC := intervalIntegral.integral_eq_sub_of_hasDeriv_right_of_le haz
     (hpc.inner hdc)
-    (fun t ht => hasDerivWithinAt_pairing (hp t ht) (hd t ht))
+    (fun t ht => _root_.hasDerivWithinAt_adjoint_pairing (hp t ht) (hd t ht))
     (hbi.sub hli)
   rw [intervalIntegral.integral_sub hbi hli] at hFTC
   linarith
 
 /-- Adding the running-cost expansion gives the exact finite-difference cost
 identity. The forcing `b` can contain both the needle jump and its remainder. -/
-theorem cost_difference_identity
+theorem _root_.integral_adjoint_pairing_with_running_term
     {p d ell b : ℝ → E} {c : ℝ → ℝ} {A : ℝ → E →L[ℝ] E} {a z : ℝ}
     (haz : a ≤ z)
     (hpc : ContinuousOn p (Icc a z))
@@ -96,4 +95,3 @@ theorem cost_difference_identity
   rw [intervalIntegral.integral_add hli hci, intervalIntegral.integral_add hci hbi]
   linarith
 
-end K1AdjointPairing

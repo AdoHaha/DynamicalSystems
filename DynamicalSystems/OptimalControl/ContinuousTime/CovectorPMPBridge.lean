@@ -22,7 +22,6 @@ other two project predicates.
 
 open Set
 
-namespace K1CovectorPMP
 
 variable {E U : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
@@ -87,7 +86,7 @@ theorem HamiltonianMinimizing_of_covector
 
 /-- Complete adapter from the covector conclusions of geometric separation
 to all three existing project PMP predicates. -/
-theorem projectPMP_of_covector
+theorem _root_.pmpConditions_of_covector
     (prob : ContinuousOCP E U) (x : ℝ → E) (u : ℝ → U)
     (q : ℝ → E →L[ℝ] ℝ) (A : ℝ → E →L[ℝ] E) (ell : ℝ → E →L[ℝ] ℝ)
     (k : E →L[ℝ] ℝ)
@@ -109,4 +108,3 @@ theorem projectPMP_of_covector
     transversalityCondition_of_covector prob x q k hqT hK,
     HamiltonianMinimizing_of_covector prob x u q hneedle⟩
 
-end K1CovectorPMP

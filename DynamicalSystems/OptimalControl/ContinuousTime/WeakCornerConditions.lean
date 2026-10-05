@@ -18,7 +18,7 @@ each corner, including corners embedded in arbitrary finite surrounding arcs.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization DuBoisReymond
 
@@ -114,4 +114,4 @@ theorem energy_eq_in_finite_context
   exact energy_eq_of_finite_cvFunctional_min L (fun _ ↦ 0) hL hx hv hd
     (cvFunctional_min_of_action_min L _ rfl hm)
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

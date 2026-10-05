@@ -18,7 +18,7 @@ is needed. The ambient class permits finitely many additional corners.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.FinitePiecewise
+namespace FinitePiecewise
 
 open TimeReparametrization PiecewiseC1Extensions
 
@@ -59,7 +59,7 @@ reference and its actual functional minimum. Its global branches are derived,
 with no acceleration, Euler–Lagrange, energy, or stationarity assumption. -/
 theorem weierstrassErdmann_of_original_piecewiseC1_min
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x vL vR : ℝ → E} {T τ : ℝ}
     (hcorner : IsPiecewiseC₁On x vL vR T τ)
     (hvL : Continuous vL) (hvR : Continuous vR)
@@ -87,7 +87,7 @@ theorem weierstrassErdmann_of_original_piecewiseC1_min
 class and proves both momentum and energy continuity at the actual corner. -/
 theorem weierstrassErdmann_of_piecewiseC1On_min
     (L : ℝ → E → E → ℝ) (K : E → ℝ)
-    (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     {x vL vR : ℝ → E} {T τ : ℝ}
     (hcorner : IsPiecewiseC₁On x vL vR T τ)
     (hvL : Continuous vL) (hvR : Continuous vR)
@@ -114,4 +114,4 @@ theorem autonomous_weierstrassErdmann_of_piecewiseC1On_min
   weierstrassErdmann_of_piecewiseC1On_min (fun _ ↦ L) K
     (contDiff_autonomous_lagrangian L hL) hcorner hvL hvR hmin
 
-end KirkMedhin.FinitePiecewise
+end FinitePiecewise

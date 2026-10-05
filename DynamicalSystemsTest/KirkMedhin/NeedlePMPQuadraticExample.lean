@@ -21,7 +21,7 @@ The running cost is quadratic in the state and is not globally Lipschitz.
 open Set MeasureTheory
 open scoped Interval NNReal
 
-namespace K1QuadraticExample
+namespace PMPExamples.QuadraticCost
 
 /-- Scalar integrator with a quadratic tracking cost and a linear terminal penalty. -/
 def problem : ContinuousOCP ℝ ℝ where
@@ -175,7 +175,7 @@ theorem running_not_globally_lipschitz :
 /-- Every primitive analytic hypothesis of the general theorem is discharged
 for the concrete problem. No PMP conclusion occurs in this certificate. -/
 noncomputable def regularity :
-    K1NeedlePMP.SmoothNeedleData problem referenceState referenceControl where
+    SmoothNeedleData problem referenceState referenceControl where
   horizon_pos := by norm_num [problem]
   nominal_lipschitz := by
     refine ⟨0, 1, fun _ => LipschitzWith.const (-1), ?_⟩
@@ -207,7 +207,7 @@ theorem pmp_from_general_theorem :
       HamiltonianMinimizing problem.L problem.f problem.controlSet problem.T
         referenceState referenceControl p ∧ p 1 ≠ 0 := by
   obtain ⟨p, hcostate, hterminal, hminimum⟩ :=
-    K1NeedlePMP.needleCostate_of_integralOptimality_smooth
+    needleCostate_of_integralOptimality_smooth
       problem 0 referenceState referenceControl regularity reference_optimal
   refine ⟨p, hcostate, hterminal, hminimum, ?_⟩
   have hK : HasDerivAt problem.K 2 (referenceState problem.T) := by
@@ -217,4 +217,4 @@ theorem pmp_from_general_theorem :
   rw [hterminal]
   norm_num
 
-end K1QuadraticExample
+end PMPExamples.QuadraticCost

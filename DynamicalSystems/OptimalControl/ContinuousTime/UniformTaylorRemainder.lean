@@ -14,7 +14,7 @@ public import Mathlib.Analysis.Asymptotics.Lemmas
 
 Continuity of the actual spatial derivative along the compact reference graph
 implies a uniform Taylor estimate for nearby states. Consequently every family
-whose state displacement is uniformly `O(ε)` has a Taylor remainder uniformly
+whose state displacement is uniformly `O(ε)` has a Taylor _root_.needleCostRemainder uniformly
 `o(ε)`. This derives the estimate from derivative data; no modulus or trajectory
 sensitivity is supplied by the caller.
 -/
@@ -24,7 +24,6 @@ sensitivity is supplied by the caller.
 open Set Filter MeasureTheory Asymptotics
 open scoped Topology Interval
 
-namespace K1NeedleCost
 
 section Normed
 
@@ -298,7 +297,7 @@ theorem tendsto_scaled_needle_integral
 shrinking-interval branch correction produces an `o(ε)` total cost error.
 The preceding derivative lemmas establish the smallness hypotheses from
 actual problem data and actual perturbed trajectories. -/
-theorem tendsto_scaled_remainder_of_uniformSmall
+theorem _root_.tendsto_scaled_needleCostRemainder_of_uniformSmall
     {rK : ℝ → ℝ} {rL cL : ℝ → ℝ → ℝ} {rf cf : ℝ → ℝ → E}
     {p : ℝ → E} {T τ P D : ℝ}
     (hT : 0 ≤ T) (hP : 0 ≤ P)
@@ -308,7 +307,7 @@ theorem tendsto_scaled_remainder_of_uniformSmall
     (hf : UniformSmall rf (Icc 0 T))
     (hshort : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ∀ t ∈ Icc (τ - ε) τ,
       ‖cL ε t + inner ℝ (p t) (cf ε t)‖ ≤ D * ε) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * remainder rK rL cL rf cf p T τ ε)
+    Tendsto (fun ε : ℝ => ε⁻¹ * _root_.needleCostRemainder rK rL cL rf cf p T τ ε)
       (𝓝[>] 0) (𝓝 0) := by
   have hnom := hL.add (hf.inner_left hP hp)
   have hnom' : UniformSmall (fun ε t => rL ε t + inner ℝ (p t) (rf ε t))
@@ -319,9 +318,8 @@ theorem tendsto_scaled_remainder_of_uniformSmall
       (𝓝[>] 0) (𝓝 0) := by
     simpa only [smul_eq_mul] using hnom'.tendsto_scaled_integral
   have hshortlim := tendsto_scaled_needle_integral hshort
-  simpa only [remainder, mul_add, zero_add, add_zero] using
+  simpa only [_root_.needleCostRemainder, mul_add, zero_add, add_zero] using
     (hK.add hnomlim).add hshortlim
 
 end InnerProduct
 
-end K1NeedleCost

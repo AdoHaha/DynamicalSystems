@@ -22,7 +22,6 @@ branch is needed for this argument.
 open Set Filter MeasureTheory
 open scoped Topology Interval
 
-namespace K1NeedleCost
 
 section Normed
 
@@ -158,7 +157,7 @@ theorem UniformVanishing.inner_left
 
 /-- A nominal `o(ε)` Taylor error and a uniformly vanishing needle correction
 combine into a total `o(ε)` error after the exact adjoint cancellation. -/
-theorem tendsto_scaled_remainder_of_uniformVanishing
+theorem _root_.tendsto_scaled_needleCostRemainder_of_uniformVanishing
     {rK : ℝ → ℝ} {rL cL : ℝ → ℝ → ℝ} {rf cf : ℝ → ℝ → E}
     {p : ℝ → E} {T τ P : ℝ}
     (hτ : 0 < τ) (hτT : τ ≤ T) (hP : 0 ≤ P)
@@ -166,7 +165,7 @@ theorem tendsto_scaled_remainder_of_uniformVanishing
     (hK : Tendsto (fun ε : ℝ => ε⁻¹ * rK ε) (𝓝[>] 0) (𝓝 0))
     (hL : UniformSmall rL (Icc 0 T)) (hf : UniformSmall rf (Icc 0 T))
     (hcL : UniformVanishing cL (Icc 0 T)) (hcf : UniformVanishing cf (Icc 0 T)) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * remainder rK rL cL rf cf p T τ ε)
+    Tendsto (fun ε : ℝ => ε⁻¹ * _root_.needleCostRemainder rK rL cL rf cf p T τ ε)
       (𝓝[>] 0) (𝓝 0) := by
   have hT : 0 ≤ T := hτ.le.trans hτT
   have hnom := hL.add (hf.inner_left hP hp)
@@ -178,9 +177,8 @@ theorem tendsto_scaled_remainder_of_uniformVanishing
       (𝓝[>] 0) (𝓝 0) := by
     simpa only [smul_eq_mul] using hnom'.tendsto_scaled_integral
   have hshortlim := (hcL.add (hcf.inner_left hP hp)).tendsto_scaled_needle_integral hτ hτT
-  simpa only [remainder, mul_add, zero_add, add_zero] using
+  simpa only [_root_.needleCostRemainder, mul_add, zero_add, add_zero] using
     (hK.add hnomlim).add hshortlim
 
 end InnerProduct
 
-end K1NeedleCost

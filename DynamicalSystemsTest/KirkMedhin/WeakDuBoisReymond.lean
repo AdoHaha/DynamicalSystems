@@ -19,9 +19,9 @@ this actual minimizer without an Euler–Lagrange or acceleration hypothesis.
 open MeasureTheory Set
 open scoped Interval
 
-namespace KirkMedhin.WeakDuBoisReymondRegression
+namespace DuBoisReymond.Examples.NondifferentiableVelocity
 
-open KirkMedhin.TimeReparametrization KirkMedhin.DuBoisReymond
+open TimeReparametrization DuBoisReymond
 
 /-- A nonconstant, nonnegative quadratic Lagrangian on a two-dimensional state. -/
 def lagrangian (_ : ℝ × ℝ) (v : ℝ × ℝ) : ℝ := v.1 ^ 2
@@ -92,8 +92,8 @@ theorem velocity_not_differentiable : ¬ DifferentiableAt ℝ velocity (1 / 2) :
   apply not_differentiableAt_abs_zero
   simpa only [Function.comp_def, add_sub_cancel_right, id_eq] using habs
 
-end KirkMedhin.WeakDuBoisReymondRegression
+end DuBoisReymond.Examples.NondifferentiableVelocity
 
-#print axioms KirkMedhin.WeakDuBoisReymondRegression.reference_optimal
-#print axioms KirkMedhin.WeakDuBoisReymondRegression.energy_conserved
-#print axioms KirkMedhin.WeakDuBoisReymondRegression.velocity_not_differentiable
+#print axioms DuBoisReymond.Examples.NondifferentiableVelocity.reference_optimal
+#print axioms DuBoisReymond.Examples.NondifferentiableVelocity.energy_conserved
+#print axioms DuBoisReymond.Examples.NondifferentiableVelocity.velocity_not_differentiable

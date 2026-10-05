@@ -21,7 +21,7 @@ Two-sided derivatives are obtained at all interior times.
 
 @[expose] public section
 
-namespace KirkMedhin.WeakCoV
+namespace WeakEulerLagrange
 
 open Set Filter MeasureTheory
 open scoped Interval Topology
@@ -233,7 +233,7 @@ theorem momentum_hasDerivAt_of_stationary_continuousOn
 regularity. Momentum differentiability is derived, not assumed. -/
 theorem eulerLagrange_hasDerivWithinAt_of_firstVariation_zero
     {L : ℝ → E → E → ℝ} {K : E → ℝ} {T : ℝ} {x : ℝ → E}
-    (hT : 0 < T) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hT : 0 < T) (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     (hx : ContDiff ℝ 1 x)
     (hstationary : ∀ η : ℝ → E, ContDiff ℝ 1 η → η 0 = 0 → η T = 0 →
       firstVariation L K T x η = 0) :
@@ -242,8 +242,8 @@ theorem eulerLagrange_hasDerivWithinAt_of_firstVariation_zero
         (fun s : ℝ => fderiv ℝ (fun v : E => L s (x s) v) (deriv x s))
         (fderiv ℝ (fun y : E => L t y (deriv x t)) (x t)) (Icc 0 T) t := by
   apply momentum_hasDerivWithinAt_of_stationary hT
-    (K3.continuous_momentumCovector L x hL hx)
-    (K3.continuous_stateCovector L x hL hx)
+    (continuous_momentumCovector L x hL hx)
+    (continuous_stateCovector L x hL hx)
   intro η hη hη₀ hηT
   simpa only [firstVariation, hηT, map_zero, add_zero] using
     hstationary η hη hη₀ hηT
@@ -252,7 +252,7 @@ theorem eulerLagrange_hasDerivWithinAt_of_firstVariation_zero
 derived from first variation under only C1 Lagrangian and reference data. -/
 theorem eulerLagrange_hasDerivAt_of_firstVariation_zero
     {L : ℝ → E → E → ℝ} {K : E → ℝ} {T : ℝ} {x : ℝ → E}
-    (hT : 0 < T) (hL : ContDiff ℝ 1 (K3.uncurryLagrangian L))
+    (hT : 0 < T) (hL : ContDiff ℝ 1 (uncurryLagrangian L))
     (hx : ContDiff ℝ 1 x)
     (hstationary : ∀ η : ℝ → E, ContDiff ℝ 1 η → η 0 = 0 → η T = 0 →
       firstVariation L K T x η = 0) :
@@ -264,6 +264,6 @@ theorem eulerLagrange_hasDerivAt_of_firstVariation_zero
   exact (eulerLagrange_hasDerivWithinAt_of_firstVariation_zero hT hL hx hstationary
     t ⟨ht.1.le, ht.2.le⟩).hasDerivAt (Icc_mem_nhds ht.1 ht.2)
 
-end KirkMedhin.WeakCoV
+end WeakEulerLagrange
 
 end

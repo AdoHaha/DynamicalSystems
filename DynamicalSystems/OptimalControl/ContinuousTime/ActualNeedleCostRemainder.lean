@@ -8,13 +8,13 @@ module
 public import DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder
 
 /-!
-# An actual nonlinear needle remainder from primitive data
+# An actual nonlinear needle _root_.needleCostRemainder from primitive data
 
 This adapter specializes the uniform Taylor and shrinking-interval estimates
 to the original nominal/test dynamics and running costs. Its hypotheses are
 derivatives, continuity, ordinary spatial Lipschitz bounds, a bounded costate,
 and the already-derived uniform `O(ε)` trajectory displacement. The actual
-total remainder divided by `ε` is a conclusion.
+total _root_.needleCostRemainder divided by `ε` is a conclusion.
 -/
 
 @[expose] public section
@@ -22,17 +22,16 @@ total remainder divided by `ε` is a conclusion.
 open Set Filter MeasureTheory
 open scoped Topology Interval NNReal
 
-namespace K1NeedleCost
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 
 /-- The exact Taylor/control-increment expression left by adjoint cancellation.
 Every term is defined from the original dynamics and costs at the actual states. -/
-noncomputable def actualFamilyRemainder
+noncomputable def _root_.actualNeedleCostFamilyRemainder
     (F₀ Fv : ℝ → E → E) (L₀ Lv : ℝ → E → ℝ) (K : E → ℝ)
     (A : ℝ → E →L[ℝ] E) (ell : ℝ → E →L[ℝ] ℝ) (k : E →L[ℝ] ℝ)
     (x : ℝ → E) (y : ℝ → ℝ → E) (p : ℝ → E) (T τ ε : ℝ) : ℝ :=
-  remainder (fun ε => taylorError K k (x T) (y ε T))
+  _root_.needleCostRemainder (fun ε => taylorError K k (x T) (y ε T))
     (fun ε t => taylorError (L₀ t) (ell t) (x t) (y ε t))
     (fun ε t => controlIncrementError (Lv t) (L₀ t) (x t) (y ε t))
     (fun ε t => taylorError (F₀ t) (A t) (x t) (y ε t))
@@ -42,7 +41,7 @@ noncomputable def actualFamilyRemainder
 /-- The full actual error is `o(ε)`. Continuous nominal derivatives suffice;
 no Lipschitz derivative, supplied Taylor modulus, or cost sensitivity is needed.
 The four branch Lipschitz bounds only control the shrinking needle interval. -/
-theorem tendsto_scaled_actualFamilyRemainder
+theorem _root_.tendsto_scaled_actualNeedleCostFamilyRemainder
     {F₀ Fv : ℝ → E → E} {L₀ Lv : ℝ → E → ℝ} {K : E → ℝ}
     {DF : ℝ → E → E →L[ℝ] E} {DL : ℝ → E → E →L[ℝ] ℝ}
     {k : E →L[ℝ] ℝ} {x : ℝ → E} {y : ℝ → ℝ → E} {p : ℝ → E}
@@ -62,7 +61,7 @@ theorem tendsto_scaled_actualFamilyRemainder
     (hLv : ∀ t ∈ Icc 0 T, LipschitzWith Mv (Lv t))
     (hp : ∀ t ∈ Icc 0 T, ‖p t‖ ≤ P)
     (hbound : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ∀ t ∈ Icc 0 T, ‖y ε t - x t‖ ≤ C * ε) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * actualFamilyRemainder F₀ Fv L₀ Lv K
+    Tendsto (fun ε : ℝ => ε⁻¹ * _root_.actualNeedleCostFamilyRemainder F₀ Fv L₀ Lv K
       (fun t => DF t (x t)) (fun t => DL t (x t)) k x y p T τ ε)
       (𝓝[>] 0) (𝓝 0) := by
   have hT : 0 ≤ T := hτ.le.trans hτT
@@ -106,14 +105,14 @@ theorem tendsto_scaled_actualFamilyRemainder
       _ ≤ ((Mv : ℝ) + M₀ + P * ((Kv : ℝ) + K₀)) * (C * ε) :=
         mul_le_mul_of_nonneg_left (hε t htT) (by positivity)
       _ = _ := by ring
-  exact tendsto_scaled_remainder_of_uniformSmall hT hP hp hKlim hLsmall hfsmall hshort
+  exact _root_.tendsto_scaled_needleCostRemainder_of_uniformSmall hT hP hp hKlim hLsmall hfsmall hshort
 
 
-/-- Actual nonlinear remainder under continuous spatial derivatives of the
+/-- Actual nonlinear _root_.needleCostRemainder under continuous spatial derivatives of the
 running costs. No global spatial Lipschitz assumption is imposed on either
 running-cost branch; a uniform local increment bound is derived along the
 compact reference graph. Thus this version includes quadratic state costs. -/
-theorem tendsto_scaled_actualFamilyRemainder_of_C1
+theorem _root_.tendsto_scaled_actualNeedleCostFamilyRemainder_of_C1
     {F₀ Fv : ℝ → E → E} {L₀ Lv : ℝ → E → ℝ} {K : E → ℝ}
     {DF : ℝ → E → E →L[ℝ] E} {DL₀ DLv : ℝ → E → E →L[ℝ] ℝ}
     {k : E →L[ℝ] ℝ} {x : ℝ → E} {y : ℝ → ℝ → E} {p : ℝ → E}
@@ -134,7 +133,7 @@ theorem tendsto_scaled_actualFamilyRemainder_of_C1
     (hFv : ∀ t ∈ Icc 0 T, LipschitzWith Kv (Fv t))
     (hp : ∀ t ∈ Icc 0 T, ‖p t‖ ≤ P)
     (hbound : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ∀ t ∈ Icc 0 T, ‖y ε t - x t‖ ≤ C * ε) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * actualFamilyRemainder F₀ Fv L₀ Lv K
+    Tendsto (fun ε : ℝ => ε⁻¹ * _root_.actualNeedleCostFamilyRemainder F₀ Fv L₀ Lv K
       (fun t => DF t (x t)) (fun t => DL₀ t (x t)) k x y p T τ ε)
       (𝓝[>] 0) (𝓝 0) := by
   have hT : 0 ≤ T := hτ.le.trans hτT
@@ -178,7 +177,7 @@ theorem tendsto_scaled_actualFamilyRemainder_of_C1
         exact (norm_inner_le_norm _ _).trans
           (mul_le_mul (hp t htT) hcf' (norm_nonneg _) hP)
       _ = _ := by ring
-  exact tendsto_scaled_remainder_of_uniformSmall hT hP hp hKlim hLsmall hfsmall hshort
+  exact _root_.tendsto_scaled_needleCostRemainder_of_uniformSmall hT hP hp hKlim hLsmall hfsmall hshort
 
 
 /-- The weakest branch-regularity version: only the nominal spatial
@@ -187,7 +186,7 @@ need joint continuity along the reference graph, because their nonlinear
 control-increment corrections are supported on the shrinking needle interval.
 In particular, fixed-control running costs need not have spatial derivatives
 or global Lipschitz bounds. -/
-theorem tendsto_scaled_actualFamilyRemainder_of_continuous
+theorem _root_.tendsto_scaled_actualNeedleCostFamilyRemainder_of_continuous
     {F₀ Fv : ℝ → E → E} {L₀ Lv : ℝ → E → ℝ} {K : E → ℝ}
     {DF : ℝ → E → E →L[ℝ] E} {DL : ℝ → E → E →L[ℝ] ℝ}
     {k : E →L[ℝ] ℝ} {x : ℝ → E} {y : ℝ → ℝ → E} {p : ℝ → E}
@@ -207,7 +206,7 @@ theorem tendsto_scaled_actualFamilyRemainder_of_continuous
     (hLv : ∀ t ∈ Icc 0 T, ContinuousAt (fun q : ℝ × E => Lv q.1 q.2) (t, x t))
     (hp : ∀ t ∈ Icc 0 T, ‖p t‖ ≤ P)
     (hbound : ∀ᶠ ε in 𝓝[>] (0 : ℝ), ∀ t ∈ Icc 0 T, ‖y ε t - x t‖ ≤ C * ε) :
-    Tendsto (fun ε : ℝ => ε⁻¹ * actualFamilyRemainder F₀ Fv L₀ Lv K
+    Tendsto (fun ε : ℝ => ε⁻¹ * _root_.actualNeedleCostFamilyRemainder F₀ Fv L₀ Lv K
       (fun t => DF t (x t)) (fun t => DL t (x t)) k x y p T τ ε)
       (𝓝[>] 0) (𝓝 0) := by
   have hT : 0 ≤ T := hτ.le.trans hτT
@@ -221,7 +220,6 @@ theorem tendsto_scaled_actualFamilyRemainder_of_continuous
   have hLsmall := uniformSmall_taylorError hC hx hDL hDLc hbound
   have hcf := uniformVanishing_controlIncrementError hx hF₀ hFv hbound
   have hcL := uniformVanishing_controlIncrementError hx hL₀ hLv hbound
-  exact tendsto_scaled_remainder_of_uniformVanishing hτ hτT hP hp hKlim
+  exact _root_.tendsto_scaled_needleCostRemainder_of_uniformVanishing hτ hτT hP hp hKlim
     hLsmall hfsmall hcL hcf
 
-end K1NeedleCost

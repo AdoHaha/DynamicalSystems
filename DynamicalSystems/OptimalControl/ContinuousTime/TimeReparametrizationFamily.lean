@@ -12,7 +12,7 @@ arc costs and transports ambient-family optimality to the scalar local minimum.
 open MeasureTheory Set Filter
 open scoped Topology Interval
 
-namespace KirkMedhin.TimeReparametrization
+namespace TimeReparametrization
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -274,4 +274,4 @@ theorem corner_energy_eq_of_cvFunctional_min (L : E → E → ℝ) (K : E → �
     _ (fun ε hε ↦ durationExchange_mem_fixedEndpointPiecewiseC1Curves
       hx₁ hv₁ hx₂ hv₂ hd₁ hd₂ hjoin hε) hmin
 
-end KirkMedhin.TimeReparametrization
+end TimeReparametrization

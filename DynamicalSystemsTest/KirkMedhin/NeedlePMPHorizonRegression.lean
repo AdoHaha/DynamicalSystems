@@ -9,7 +9,7 @@ has no bound over all real times. This checks that the clamping wrapper removes
 the old global bound-at-zero restriction rather than merely restating it.
 -/
 
-namespace K1HorizonRegression
+namespace PMPExamples.HorizonLocality
 
 open Set
 open scoped NNReal
@@ -29,7 +29,7 @@ def referenceControl (_ : ℝ) : ℝ := -1
 
 /-- The complete compact-time analytic contract is satisfied. -/
 noncomputable def regularity :
-    K1NeedlePMPOnHorizon.SmoothNeedleDataOnHorizon
+    SmoothNeedleDataOnHorizon
       problem referenceState referenceControl where
   horizon_pos := by norm_num [problem]
   nominal_lipschitz := ⟨0, fun t _ => LipschitzWith.const (t + -1)⟩
@@ -55,4 +55,4 @@ theorem no_global_nominal_zero_bound :
   have hlower := le_abs_self (B + 2 + -1)
   linarith
 
-end K1HorizonRegression
+end PMPExamples.HorizonLocality

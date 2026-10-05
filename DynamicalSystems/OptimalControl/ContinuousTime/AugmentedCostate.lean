@@ -10,7 +10,6 @@ preserves a pure accumulated-cost change. Pulling back `(1, DK)` then gives a
 state covector with the full inhomogeneous adjoint equation, including `ℓ`.
 -/
 
-namespace KirkMedhin.K1
 
 open Set
 open scoped Topology
@@ -37,7 +36,7 @@ because the augmented linear coefficient annihilates `(1,0)`. -/
 theorem augmentedTransition_preserves_cost
     (ℓ : ℝ → X →L[ℝ] ℝ) (A : ℝ → X →L[ℝ] X)
     (Φ : ℝ → ℝ → (ℝ × X) →L[ℝ] (ℝ × X))
-    (hΦ : KirkMedhin.IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
+    (hΦ : IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
     (T t : ℝ) : Φ T t (1, 0) = (1, 0) := by
   have hd : ∀ s, HasDerivAt (fun r => Φ T r (1, 0)) 0 s := by
     intro s
@@ -54,12 +53,12 @@ not inserted into an unrelated homogeneous pullback. -/
 theorem augmentedTransition_costate_derivative
     (ℓ : ℝ → X →L[ℝ] ℝ) (A : ℝ → X →L[ℝ] X)
     (Φ : ℝ → ℝ → (ℝ × X) →L[ℝ] (ℝ × X))
-    (hΦ : KirkMedhin.IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
+    (hΦ : IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
     (DK : X →L[ℝ] ℝ) (T t : ℝ) :
     HasDerivAt (fun s => propagatedStateCovector DK (Φ T s))
       (-(ℓ t + (propagatedStateCovector DK (Φ T t)).comp (A t))) t := by
   have hcost := augmentedTransition_preserves_cost ℓ A Φ hΦ T t
-  have hd := (hΦ.terminal_covector_derivative (terminalDifferential DK) T t).clm_comp
+  have hd := (hΦ.terminal_covector_derivative (_root_.bolzaTerminalDifferential DK) T t).clm_comp
     (hasDerivAt_const t (ContinuousLinearMap.inr ℝ ℝ X))
   convert hd using 1
   · rfl
@@ -74,7 +73,7 @@ theorem augmentedTransition_costate_derivative
 theorem augmentedTransition_costate_terminal
     (ℓ : ℝ → X →L[ℝ] ℝ) (A : ℝ → X →L[ℝ] X)
     (Φ : ℝ → ℝ → (ℝ × X) →L[ℝ] (ℝ × X))
-    (hΦ : KirkMedhin.IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
+    (hΦ : IsStateTransition (fun t => augmentedLinearCoefficient (ℓ t) (A t)) Φ)
     (DK : X →L[ℝ] ℝ) (T : ℝ) :
     propagatedStateCovector DK (Φ T T) = DK := by
   ext x
@@ -90,7 +89,7 @@ theorem augmented_costate_derivative_of_backward
     (hcost : Φ t (1, 0) = (1, 0)) :
     HasDerivAt (fun s => propagatedStateCovector DK (Φ s))
       (-(ℓ + (propagatedStateCovector DK (Φ t)).comp A)) t := by
-  have hd := ((hasDerivAt_const t (terminalDifferential DK)).clm_comp hback).clm_comp
+  have hd := ((hasDerivAt_const t (_root_.bolzaTerminalDifferential DK)).clm_comp hback).clm_comp
     (hasDerivAt_const t (ContinuousLinearMap.inr ℝ ℝ X))
   convert hd using 1
   · rfl
@@ -155,7 +154,7 @@ theorem exists_augmented_stateTransitionOn_Icc [CompleteSpace X] [FiniteDimensio
         (-(ℓ t + (propagatedStateCovector DK (Φ b t)).comp (A t))) t) ∧
       propagatedStateCovector DK (Φ b b) = DK := by
   obtain ⟨Φ, hdiag, hforward, hback, hcomp⟩ :=
-    KirkMedhin.exists_stateTransitionOn_Icc hab
+    exists_stateTransitionOn_Icc hab
       (continuousOn_augmentedLinearCoefficient ℓ A (Icc a b) hℓ hA)
   have hcost : ∀ t ∈ Icc a b, Φ b t (1, 0) = (1, 0) := by
     intro t ht
@@ -167,4 +166,3 @@ theorem exists_augmented_stateTransitionOn_Icc [CompleteSpace X] [FiniteDimensio
   · ext x
     simp [propagatedStateCovector, hdiag b]
 
-end KirkMedhin.K1

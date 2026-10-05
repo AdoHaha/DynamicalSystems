@@ -22,7 +22,7 @@ convexity or verification hypotheses are needed for a sufficiency theorem.
 
 @[expose] public section
 
-namespace PMPNotSufficient
+namespace PMPExamples.NotSufficient
 
 open Set MeasureTheory
 open scoped Interval ContDiff
@@ -127,4 +127,4 @@ theorem pmp_does_not_imply_optimality :
   exact ⟨fun _ ↦ 0, reference_costateEquation,
     reference_hamiltonianMinimizing, reference_transversality⟩
 
-end PMPNotSufficient
+end PMPExamples.NotSufficient
