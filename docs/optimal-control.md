@@ -100,7 +100,7 @@ two-sided momentum differentiability at the endpoints.
 - **Import.** `DynamicalSystems.OptimalControl.ContinuousTime.FirstVariationDifferentiation`
 - **Principal declarations.** `hasDerivAt_cvFunctional_affine`;
   `hasStrictFDerivAt_cvFunctional_perturbed`.
-- **Assumptions.** `ContDiff ℝ 1 (uncurryLagrangian L)`, `ContDiff ℝ 1 K`,
+- **Assumptions.** `ContDiff ℝ 1 (uncurryLagrangian L)`, 
   `ContDiff ℝ 1 x` and the perturbation directions, and `0 ≤ T`.  The interval
   integral is differentiated under the integral sign (Mathlib `ParametricIntegral`).
 - **Scope.** Identifies `firstVariation` with the actual one- or two-parameter cost
@@ -119,7 +119,7 @@ two-sided momentum differentiability at the endpoints.
 - **Import.** `DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrangeMinimum`
 - **Principal declaration.**
   `WeakEulerLagrange.eulerLagrange_hasDerivWithinAt_of_fixedEndpoint_min`
-- **Assumptions.** C¹ data: `ContDiff ℝ 1 (uncurryLagrangian L)`, `ContDiff ℝ 1 K`,
+- **Assumptions.** C¹ data: `ContDiff ℝ 1 (uncurryLagrangian L)`, 
   `ContDiff ℝ 1 x`, `0 < T`, and `IsMinOn (cvFunctional L K T) {y | ContDiff ℝ 1 y ∧
   y 0 = x 0 ∧ y T = x T} x`.
 - **Scope.** Concludes the momentum `HasDerivWithinAt` at every `t ∈ Icc 0 T`; the
@@ -193,7 +193,7 @@ two-sided momentum differentiability at the endpoints.
   minimum?
 - **Import.** `DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdmann`
 - **Principal declaration.** `FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min`
-- **Assumptions.** `ContDiff ℝ 1 (uncurryLagrangian L)`, `ContDiff ℝ 1 K`, the
+- **Assumptions.** `ContDiff ℝ 1 (uncurryLagrangian L)`,  the
   original one-corner predicate `IsPiecewiseC₁On x vL vR T τ`, continuous one-sided
   velocities `vL`, `vR`, and a minimum over
   `FinitePiecewise.fixedEndpointFinitePiecewiseC1CurvesOn T (x 0) (x T)`.
