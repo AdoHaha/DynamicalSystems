@@ -11,6 +11,7 @@ public import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 public import Mathlib.Analysis.Calculus.Gradient.Basic
 public import Mathlib.Analysis.Calculus.LocalExtr.Basic
 public import Mathlib.Topology.Order.LocalExtr
+public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Analysis.InnerProductSpace.Dual
 public import Mathlib.Analysis.InnerProductSpace.Calculus
 public import Mathlib.Analysis.InnerProductSpace.LinearMap
@@ -52,18 +53,20 @@ The variational reading of the three PMP conclusions is:
    or, at interior points of the control set, **Hamiltonian stationarity**
    $\partial_u H(t, x(t), u(t), λ(t)) = 0$.
 
-**Derivation gap:** the implication from optimality (`IsOptimalPair`) to the existence
-of such a costate — the control-variation / needle-variation step — is NOT proved here.
-Proving it would require an explicit admissible control-variation family
-(`u* + ε • w` staying in the control set), differentiability of the state flow in the
-control (the linearized ODE), and the Gateaux identification of the cost derivative with
-the first variation (differentiation under the interval integral, out of scope for S4).
+**Derivation location:** the implication from optimality (`IsOptimalPair`) to the
+existence of such a costate — the control-variation / needle-variation step — is not
+proved in this foundation module.  It is supplied downstream by the needle route
+(`DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMP`,
+`…NeedlePMPOnHorizon`) and by the geometric/separation route
+(`…GeometricMinimumPrinciple`).  Those derivations construct an explicit admissible
+control-variation family, differentiate the state flow in the control, and identify the
+cost derivative with the first variation under their stated regularity hypotheses.
 Accordingly the main theorem below is stated as an explicit **assembly schema**: its
 hypotheses are (i) admissibility, (ii) a costate satisfying the adjoint ODE and
 transversality, and (iii) stationarity (resp. minimization) for that same costate, and
 the conclusion packages them. There is deliberately NO `IsOptimalPair` hypothesis
 anywhere in this file. The full needle-variation PMP with arbitrary measurable controls
-and non-smooth sets `U` is out of scope.
+and non-smooth sets `U` remains out of scope.
 
 **Interior vs boundary:** `HamiltonianStationary` is the interior (open-`U`) form of the
 optimality condition. Minimization implies stationarity only at interior points of the
@@ -154,6 +157,22 @@ end Hamiltonian
 section Adjoint
 
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
+
+/-- Spatial differentiation of the control Hamiltonian produces the usual
+linear adjoint expression. This bridges the pairing lemmas to the project's
+gradient-based `costateEquation`. -/
+theorem hasGradientAt_hamiltonian
+    {L : E → ℝ} {f : E → E} {x p ell : E} {A : E →L[ℝ] E}
+    (hL : HasGradientAt L ell x) (hf : HasFDerivAt f A x) :
+    HasGradientAt (fun y => L y + inner ℝ p (f y)) (ell + A.adjoint p) x := by
+  have hlin : HasFDerivAt (fun y => inner ℝ p (f y))
+      ((InnerProductSpace.toDual ℝ E p).comp A) x :=
+    (InnerProductSpace.toDual ℝ E p).hasFDerivAt.comp x hf
+  apply hasGradientAt_iff_hasFDerivAt.mpr
+  convert hL.hasFDerivAt.add hlin using 1
+  ext v
+  change inner ℝ (ell + A.adjoint p) v = inner ℝ ell v + inner ℝ p (A v)
+  rw [inner_add_left, ContinuousLinearMap.adjoint_inner_left]
 
 /-- The costate (adjoint) differential equation along a state trajectory `x` and control `u`:
 the costate arc `λ : ℝ → E` satisfies `λ̇(t) = - ∂ₓH(t, x(t), u(t), λ(t))` for all `t ∈ [0, T]`.
@@ -591,8 +610,10 @@ This is the standard "how to check PMP" statement of Sontag (*Mathematical Contr
 Theory*, 2nd ed., 1998, Ch. 9 §9.2, Theorem 43, and §9.5, Theorem 44) and Liberzon
 (*Calculus of Variations and Optimal Control Theory*, 2012, Ch. 4 §4.1, Theorem 4.1).
 It takes no optimality hypothesis: the variational/needle step from optimality to the
-existence of such a costate is not proved here (see the module-level derivation-gap
-note). Note that `exists_costate_of_lipschitz` above already gives costate existence
+existence of such a costate is not proved in this module; the proved derivations are
+`needleCostate_of_integralOptimality_onHorizon` (finite horizon) and
+`integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference` (geometric
+route). Note that `exists_costate_of_lipschitz` above already gives costate existence
 (without optimality) under regularity hypotheses, so the schema's `hadj` hypothesis is a
 genuine under-claim relative to the file's own machinery. -/
 theorem pmpAssembly [NormedAddCommGroup U] [NormedSpace ℝ U]

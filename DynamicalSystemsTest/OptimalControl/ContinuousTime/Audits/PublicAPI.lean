@@ -1,0 +1,100 @@
+/-
+Copyright (c) 2026 Igor Zubrycki. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Igor Zubrycki
+-/
+import DynamicalSystems.OptimalControl.ContinuousTime.ConstrainedCoVMultipliers
+import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgrammingMinPrincipleFromHJB
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteWeierstrassErdmann
+import DynamicalSystems.OptimalControl.ContinuousTime.GeometricMinimumPrinciple
+import DynamicalSystems.OptimalControl.ContinuousTime.IsoperimetricEulerLagrange
+import DynamicalSystems.OptimalControl.ContinuousTime.MinimumFuel
+import DynamicalSystems.OptimalControl.ContinuousTime.NeedlePMPOnHorizon
+import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdmann
+import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
+
+/-! Public-API probes for the optimal-control theory.
+
+`#check` of the principal public endpoints and assembly bridges: the HJB
+residual bridge, the finite-horizon and geometric PMP derivations, the
+isoperimetric multiplier and its Euler–Lagrange corollaries, the time
+reparametrization cost identities, the minimum-fuel switching laws, and the
+weak du Bois–Reymond / Weierstrass–Erdmann corner endpoints. -/
+
+#check hjbMinimizing_of_residual
+#check hjbCostateEquation_of_residual
+#check hjbPMPAssembly_of_residual
+#check needleCostate_of_integralOptimality_smooth
+#check needleCostate_of_integralOptimality_onHorizon
+#check exists_needle_endpointTangent_of_primitive_data
+#check integralOptimal_normal_covector_of_endpointTangents
+#check exists_normalized_positive_multiple_separating_negative_halfspace
+#check exists_geometricNormalPMP_of_primitive_data
+#check integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference
+#check IsoperimetricVariation.exists_normal_multiplier
+#check IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family
+#check hasStrictFDerivAt_parameterFunctional
+#check IsoperimetricVariation.isoperimetricMultiplier_exists
+#check IsoperimetricVariation.exists_common_isoperimetricMultiplier
+#check IsoperimetricVariation.augmentedEulerLagrangeWithin_of_isoperimetric
+#check IsoperimetricVariation.augmentedEulerLagrange_of_isoperimetric
+#check TimeReparametrization.hasDerivAt_actualCornerCost
+#check TimeReparametrization.cvFunctional_durationExchange
+#check TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves
+-- Legacy strong adapter, NOT the weak-K4 endpoint: it takes velocity
+-- differentiability (`hvd₁`/`hvd₂`) and interior Euler–Lagrange (`hEL₁`/`hEL₂`)
+-- as hypotheses. Weak-K4 acceptance is carried by the `_weak` targets below
+-- (`FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak`,
+-- `FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak`,
+-- `NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min`) plus the
+-- finite-piecewise `FinitePiecewise.weak_duBoisReymond_of_finite_cvFunctional_min`.
+#check TimeReparametrization.corner_energy_eq_of_cvFunctional_min
+#check MinimumFuel.scalar_minimizer_iff_switchingLaw
+#check MinimumFuel.box_minimizer_iff_switchingLaw
+#check MinimumFuel.hamiltonianMinimizing_iff_switchingLaw
+#check FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak
+#check FinitePiecewise.interior_EL_in_finite_context
+#check FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak
+#check FinitePiecewise.weierstrassErdmann_at_every_represented_corner
+#check NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+#check FinitePiecewise.interior_EL_in_timeSpliceContext
+#check FinitePiecewise.weierstrassErdmann_in_timeSpliceContext
+#check FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner
+#check FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min
+#check FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min
+
+#print axioms hjbMinimizing_of_residual
+#print axioms hjbCostateEquation_of_residual
+#print axioms hjbPMPAssembly_of_residual
+#print axioms needleCostate_of_integralOptimality_smooth
+#print axioms needleCostate_of_integralOptimality_onHorizon
+#print axioms exists_needle_endpointTangent_of_primitive_data
+#print axioms integralOptimal_normal_covector_of_endpointTangents
+#print axioms exists_normalized_positive_multiple_separating_negative_halfspace
+#print axioms exists_geometricNormalPMP_of_primitive_data
+#print axioms integralOptimal_implies_PMP_via_hahnBanach_of_integral_reference
+#print axioms IsoperimetricVariation.exists_normal_multiplier
+#print axioms IsoperimetricVariation.exists_firstVariation_multiplier_of_curve_family
+#print axioms hasStrictFDerivAt_parameterFunctional
+#print axioms IsoperimetricVariation.isoperimetricMultiplier_exists
+#print axioms IsoperimetricVariation.exists_common_isoperimetricMultiplier
+#print axioms IsoperimetricVariation.augmentedEulerLagrangeWithin_of_isoperimetric
+#print axioms IsoperimetricVariation.augmentedEulerLagrange_of_isoperimetric
+#print axioms TimeReparametrization.hasDerivAt_actualCornerCost
+#print axioms TimeReparametrization.cvFunctional_durationExchange
+#print axioms TimeReparametrization.durationExchange_mem_fixedEndpointPiecewiseC1Curves
+#print axioms TimeReparametrization.corner_energy_eq_of_cvFunctional_min
+#print axioms MinimumFuel.scalar_minimizer_iff_switchingLaw
+#print axioms MinimumFuel.box_minimizer_iff_switchingLaw
+#print axioms MinimumFuel.hamiltonianMinimizing_iff_switchingLaw
+#print axioms FinitePiecewise.corner_energy_eq_of_cvFunctional_min_weak
+#print axioms FinitePiecewise.interior_EL_in_finite_context
+#print axioms FinitePiecewise.weierstrassErdmann_of_cvFunctional_min_weak
+#print axioms FinitePiecewise.weierstrassErdmann_at_every_represented_corner
+#print axioms NonautonomousDuBoisReymond.weak_duBoisReymond_of_cvFunctional_min
+#print axioms FinitePiecewise.interior_EL_in_timeSpliceContext
+#print axioms FinitePiecewise.weierstrassErdmann_in_timeSpliceContext
+#print axioms
+  FinitePiecewise.nonautonomous_weierstrassErdmann_at_every_represented_corner
+#print axioms FinitePiecewise.weierstrassErdmann_of_piecewiseC1On_min
+#print axioms FinitePiecewise.autonomous_weierstrassErdmann_of_piecewiseC1On_min

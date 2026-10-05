@@ -6,3 +6,8 @@
 
 The goal of the library is to formalize various topics in dynamical systems. This includes stability analysis and bifurcation theory.
 Moreover, we aim to formalize a variety of real-world dynamical systems used as models in engineering and applied sciences.
+
+## Documentation
+
+- Linear control foundations: [`docs/linear-control.md`](docs/linear-control.md)
+- Optimal control concepts: [`docs/optimal-control.md`](docs/optimal-control.md)

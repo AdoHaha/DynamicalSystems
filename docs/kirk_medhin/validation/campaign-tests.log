@@ -1,0 +1,16 @@
+test_k3_full_lift_is_distinct_from_the_multiplier_interface (test_review_boundaries.ContractTests.test_k3_full_lift_is_distinct_from_the_multiplier_interface) ... ok
+test_k4_requires_weak_and_original_predicate_endpoints (test_review_boundaries.ContractTests.test_k4_requires_weak_and_original_predicate_endpoints) ... ok
+test_normal_and_hahn_banach_acceptances_are_independent (test_review_boundaries.ContractTests.test_normal_and_hahn_banach_acceptances_are_independent) ... ok
+test_old_assembly_names_do_not_complete_the_new_tasks (test_review_boundaries.ContractTests.test_old_assembly_names_do_not_complete_the_new_tasks) ... ok
+test_required_worker_context_exists (test_review_boundaries.ContractTests.test_required_worker_context_exists) ... ok
+test_auto_review_option_fails_before_reading_or_dispatching (test_review_boundaries.ReviewBoundaryTests.test_auto_review_option_fails_before_reading_or_dispatching) ... ok
+test_existing_boundaries_prevent_dispatch_in_both_loops (test_review_boundaries.ReviewBoundaryTests.test_existing_boundaries_prevent_dispatch_in_both_loops) ... ok
+test_explicit_reviewed_acceptance_allows_next_task (test_review_boundaries.ReviewBoundaryTests.test_explicit_reviewed_acceptance_allows_next_task) ... ok
+test_failed_worker_stops_without_retry_or_acceptance (test_review_boundaries.ReviewBoundaryTests.test_failed_worker_stops_without_retry_or_acceptance) ... ok
+test_only_accepted_dependencies_unlock_dispatch (test_review_boundaries.ReviewBoundaryTests.test_only_accepted_dependencies_unlock_dispatch) ... ok
+test_passing_worker_leaves_review_packet_in_both_loops (test_review_boundaries.ReviewBoundaryTests.test_passing_worker_leaves_review_packet_in_both_loops) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.015s
+
+OK
