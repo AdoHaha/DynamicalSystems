@@ -1,14 +1,8 @@
-import DynamicalSystems.Mathlib.Analysis.Convex.ContinuousInequalityMultipliers
-import DynamicalSystems.Mathlib.MeasureTheory.PositiveFunctionalMeasure
-import Mathlib.Analysis.BoundedVariation
+import DynamicalSystems.Mathlib.Analysis.Convex.MeasureInequalityMultipliers
+import DynamicalSystems.Mathlib.MeasureTheory.MeasureTail
 
-#print axioms ConvexProgramming.exists_continuousInequality_functional
-#print axioms PositiveFunctional.integral_eq
-
-#check MeasureTheory.integral_eq_zero_iff_of_nonpos_ae
-#check MeasureTheory.integral_eq_zero_iff_of_nonneg_ae
-#check MeasureTheory.integral_pos_iff_support_of_nonneg_ae
-#check MonotoneOn.boundedVariationOn
-#check BoundedVariationOn.neg
-#check MeasureTheory.measureReal_mono
-#check MeasureTheory.measureReal_union
+#print axioms ConvexProgramming.exists_continuousInequality_measure
+#print axioms ConvexProgramming.costMultiplier_pos_of_uniform_slater
+#print axioms MeasureTheory.Measure.boundedVariationOn_tailMass
+#print axioms MeasureTheory.Measure.tailMass_sub
+#print axioms MeasureTheory.Measure.tailMass_sub_openTail

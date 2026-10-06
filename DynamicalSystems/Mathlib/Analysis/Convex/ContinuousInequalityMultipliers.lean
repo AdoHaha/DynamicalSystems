@@ -24,9 +24,7 @@ separator or Lagrangian minimum is assumed. The cost multiplier may vanish.
 @[expose] public section
 
 open Set
-
 namespace ConvexProgramming
-
 variable {τ X : Type*} [TopologicalSpace τ] [CompactSpace τ]
 
 /-- Upward epigraph of actual objective differences and constraint residuals.
@@ -35,6 +33,7 @@ def continuousConstraintEpigraph (S : Set X) (J : X → ℝ) (G : X → C(τ, �
     (x₀ : X) : Set (ℝ × C(τ, ℝ)) :=
   {z | ∃ x ∈ S, J x - J x₀ ≤ z.1 ∧ G x ≤ z.2}
 
+omit [CompactSpace τ] in
 /-- An intermediate mixing interface; the convex-programming entry point
 below discharges it from the original objective and constraint functions. -/
 theorem convex_continuousConstraintEpigraph_of_mixing
@@ -64,9 +63,9 @@ theorem continuousConstraintEpigraph_nonempty_interior
   refine ⟨e, mem_interior_iff_mem_nhds.mpr (Metric.mem_nhds_iff.mpr
     ⟨1 / 2, by norm_num, ?_⟩)⟩
   intro z hz
-  have hz' : ‖z - e‖ < (1 : ℝ) / 2 := by simpa only [dist_eq_norm] using hz
-  have hz₁ : ‖z.1 - 1‖ < (1 : ℝ) / 2 :=
-    lt_of_le_of_lt (le_max_left _ _) hz'
+  have hz' : ‖z - e‖ < (1 : ℝ) / 2 := by
+    simpa only [Metric.mem_ball, dist_eq_norm] using hz
+  have hz₁ : ‖z.1 - 1‖ < (1 : ℝ) / 2 := lt_of_le_of_lt (le_max_left _ _) hz'
   have hz₂ : ‖z.2 - ContinuousMap.const τ 1‖ < (1 : ℝ) / 2 :=
     lt_of_le_of_lt (le_max_right _ _) hz'
   refine ⟨x₀, hx₀, ?_, ?_⟩
@@ -145,7 +144,9 @@ theorem exists_continuousInequality_functional_of_mixing
   · by_contra hn
     push Not at hn
     apply hq
-    ext z
+    apply ContinuousLinearMap.ext
+    intro z
+    change q z = 0
     rw [hsplit, hn.1, hn.2]
     simp
   · intro x hx
@@ -156,8 +157,8 @@ theorem exists_continuousInequality_functional_of_mixing
 
 variable [AddCommGroup X] [Module ℝ X]
 
-/-- Convex-programming entry point: all epigraph/mixing conditions are proved
-from the original convex set, convex objective, and pointwise convex constraints. -/
+/-- Convex-programming entry point: mixing is discharged from the original
+convex set, convex objective, and pointwise convex constraints. -/
 theorem exists_continuousInequality_functional
     {S : Set X} (hS : Convex ℝ S) (J : X → ℝ) (G : X → C(τ, ℝ)) (x₀ : X)
     (hJ : ConvexOn ℝ S J) (hG : ∀ t, ConvexOn ℝ S (fun x => G x t))
