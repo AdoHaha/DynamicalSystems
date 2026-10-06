@@ -70,3 +70,6 @@ quota failure is still not a completed external review.
 
 Precise inputs, outputs and remaining nonlinear boundaries are in
 [K6_AFFINE_NECESSITY.md](K6_AFFINE_NECESSITY.md).
+
+Affine K6 proof checkpoint: local commit `259894b` on
+`codex/remaining-optimal-control-proofs`; no push or dev merge.

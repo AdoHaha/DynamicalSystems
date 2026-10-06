@@ -527,5 +527,3 @@ theorem indexed_propagated_jump (κ : Ω → ℝ) (hκ : Continuous κ)
 end Indexed
 
 end MeasureAdjoint
-
-
