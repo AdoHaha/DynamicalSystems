@@ -1,0 +1,37 @@
+name: Check state-constraint proofs
+on:
+  push:
+    branches: ['codex/optimal-control-extensions']
+    paths:
+      - 'DynamicalSystems/**'
+      - 'DynamicalSystemsTest/StateConstraints.lean'
+      - 'scripts/check_state_constraints.sh'
+      - '.github/workflows/state-constraint-proofs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: state-constraint-proofs-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+          test: false
+          lint: false
+      - name: Compile state-constraint proofs and tests
+        run: bash scripts/check_state_constraints.sh
+      - name: Inspect reusable pinned BV and integral declarations
+        if: always()
+        run: |
+          grep -nE 'theorem.*(boundedVariation|integral.*Iic|continuous.*integral)|lemma.*(boundedVariation|continuous.*integral)' \
+            .lake/packages/mathlib/Mathlib/MeasureTheory/Integral/Bochner/*.lean \
+            .lake/packages/mathlib/Mathlib/MeasureTheory/Integral/DominatedConvergence.lean \
+            .lake/packages/mathlib/Mathlib/Analysis/BoundedVariation.lean \
+            .lake/packages/mathlib/Mathlib/Topology/EMetricSpace/BoundedVariation.lean \
+            .lake/packages/mathlib/Mathlib/MeasureTheory/VectorMeasure/BoundedVariation.lean || true

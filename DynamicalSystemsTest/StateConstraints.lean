@@ -1,0 +1,11 @@
+import DynamicalSystems.Mathlib.Analysis.Convex.ContinuousInequalityMultipliers
+import DynamicalSystems.Mathlib.MeasureTheory.PositiveFunctionalMeasure
+
+#print axioms ConvexProgramming.exists_continuousInequality_functional
+#print axioms PositiveFunctional.integral_eq
+
+#check MeasureTheory.integral_eq_zero_iff_of_nonpos_ae
+#check MeasureTheory.integral_eq_zero_iff_of_nonneg_ae
+#check MeasureTheory.integral_pos_iff_support_of_nonneg_ae
+#check Antitone.boundedVariationOn
+#check MonotoneOn.boundedVariationOn
