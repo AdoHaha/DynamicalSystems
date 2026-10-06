@@ -162,8 +162,10 @@ import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement
 import DynamicalSystems.Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+import DynamicalSystems.Mathlib.MeasureTheory.MeasurableArgmin
 import DynamicalSystems.Mathlib.MeasureTheory.MeasureTail
 import DynamicalSystems.Mathlib.MeasureTheory.PositiveFunctionalMeasure
+import DynamicalSystems.Mathlib.MeasureTheory.RelaxedHamiltonianMinimum
 import DynamicalSystems.Mathlib.MeasureTheory.VectorMeasureTail
 import DynamicalSystems.Mathlib.MeasureTheory.WeakL2Compactness
 import DynamicalSystems.Mathlib.Topology.Antitone
