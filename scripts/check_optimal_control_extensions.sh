@@ -33,3 +33,4 @@ if grep -E 'sorryAx|Lean.ofReduceBool' "$log"; then
   echo 'Unexpected axiom in extension regression audit.' >&2
   exit 1
 fi
+bash scripts/check_state_constraint_pmp.sh
