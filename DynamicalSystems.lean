@@ -124,8 +124,12 @@ import DynamicalSystems.Mathlib.Analysis.Analytic.FiniteZeros
 import DynamicalSystems.Mathlib.Analysis.Asymptotics.Uniform
 import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
+import DynamicalSystems.Mathlib.Analysis.Calculus.IntegralAffineVariation
 import DynamicalSystems.Mathlib.Analysis.Calculus.IsStrictLocalMax
 import DynamicalSystems.Mathlib.Analysis.Calculus.TaylorRemainder
+import DynamicalSystems.Mathlib.Analysis.Convex.AbnormalSeparation
+import DynamicalSystems.Mathlib.Analysis.Convex.ContinuousInequalityMultipliers
+import DynamicalSystems.Mathlib.Analysis.Convex.MeasureInequalityMultipliers
 import DynamicalSystems.Mathlib.Analysis.LocallyConvex.Separation
 import DynamicalSystems.Mathlib.Analysis.ODE.Adjoint
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
@@ -140,6 +144,7 @@ import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistence
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceContinuation
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceGrowth
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
+import DynamicalSystems.Mathlib.Analysis.ODE.MeasureAdjoint
 import DynamicalSystems.Mathlib.Analysis.ODE.NeedleDisplacement
 import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransition
@@ -152,6 +157,9 @@ import DynamicalSystems.Mathlib.Dynamics.Basic
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.Calculus
 import DynamicalSystems.Mathlib.LinearAlgebra.Matrix.SchurComplement
 import DynamicalSystems.Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+import DynamicalSystems.Mathlib.MeasureTheory.MeasureTail
+import DynamicalSystems.Mathlib.MeasureTheory.PositiveFunctionalMeasure
+import DynamicalSystems.Mathlib.MeasureTheory.VectorMeasureTail
 import DynamicalSystems.Mathlib.Topology.Antitone
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.Mathlib.Topology.LipschitzPaths
@@ -171,6 +179,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.CovectorPMPBridge
 import DynamicalSystems.OptimalControl.ContinuousTime.DuBoisReymond
 import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgramming
 import DynamicalSystems.OptimalControl.ContinuousTime.DynamicProgrammingMinPrincipleFromHJB
+import DynamicalSystems.OptimalControl.ContinuousTime.EndpointMultipliers
 import DynamicalSystems.OptimalControl.ContinuousTime.EulerLagrangeStationarity
 import DynamicalSystems.OptimalControl.ContinuousTime.Existence
 import DynamicalSystems.OptimalControl.ContinuousTime.FiniteWeierstrassErdmann
@@ -182,11 +191,17 @@ import DynamicalSystems.OptimalControl.ContinuousTime.GeometricMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.GeometricNeedlePMP
 import DynamicalSystems.OptimalControl.ContinuousTime.HJBResidualBridge
 import DynamicalSystems.OptimalControl.ContinuousTime.IntegralAdmissibility
+import DynamicalSystems.OptimalControl.ContinuousTime.IntegralControlPath
+import DynamicalSystems.OptimalControl.ContinuousTime.IntegratorStateMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.InverseOptimality
 import DynamicalSystems.OptimalControl.ContinuousTime.IsoperimetricEulerLagrange
 import DynamicalSystems.OptimalControl.ContinuousTime.LagrangianCovectorRegularity
+import DynamicalSystems.OptimalControl.ContinuousTime.LinearGrowthControlExistence
 import DynamicalSystems.OptimalControl.ContinuousTime.LinearQuadratic
 import DynamicalSystems.OptimalControl.ContinuousTime.LinearSwitching
+import DynamicalSystems.OptimalControl.ContinuousTime.LinearTerminalCost
+import DynamicalSystems.OptimalControl.ContinuousTime.LocalizedControlExistence
+import DynamicalSystems.OptimalControl.ContinuousTime.MeasurableHamiltonian
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumFuel
 import DynamicalSystems.OptimalControl.ContinuousTime.MinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.NeedleCostIdentity
@@ -212,6 +227,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdm
 import DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
 import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedControls
 import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedTrajectories
+import DynamicalSystems.OptimalControl.ContinuousTime.StateConstraintMultipliers
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeOptimal
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily
