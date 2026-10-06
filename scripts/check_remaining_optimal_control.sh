@@ -33,6 +33,7 @@ modules=(
   OptimalControl.ContinuousTime.VelocityPenaltyMinimizer
   OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
+  OptimalControl.ContinuousTime.StateMultiplierCurve
   Mathlib.Topology.ClusterPointLimit
 )
 files=()
