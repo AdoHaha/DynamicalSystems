@@ -2,22 +2,28 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Explicit targets ensure development modules are checked even before they are
-# added to the umbrella import. Reject source-level proof escapes as well.
 files=(
   DynamicalSystems/Mathlib/Analysis/Analytic/FiniteZeros.lean
   DynamicalSystems/OptimalControl/ContinuousTime/LinearSwitching.lean
   DynamicalSystems/OptimalControl/ContinuousTime/FiniteSwitching.lean
+  DynamicalSystems/OptimalControl/ContinuousTime/RelaxedControls.lean
+  DynamicalSystems/OptimalControl/ContinuousTime/BarycentricRecovery.lean
+  DynamicalSystems/OptimalControl/ContinuousTime/OccupationIntegral.lean
   DynamicalSystemsTest/FiniteSwitching.lean
+  DynamicalSystemsTest/RelaxedControls.lean
 )
 if grep -nE '\b(sorry|admit|axiom|proof_wanted|native_decide)\b' "${files[@]}"; then
   echo 'Forbidden proof escape in extension files.' >&2
   exit 1
 fi
-lake build DynamicalSystems.OptimalControl.ContinuousTime.FiniteSwitching
+lake build DynamicalSystems.OptimalControl.ContinuousTime.FiniteSwitching \
+  DynamicalSystems.OptimalControl.ContinuousTime.BarycentricRecovery \
+  DynamicalSystems.OptimalControl.ContinuousTime.OccupationIntegral
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
-lake env lean DynamicalSystemsTest/FiniteSwitching.lean | tee "$log"
+for test in FiniteSwitching RelaxedControls; do
+  lake env lean "DynamicalSystemsTest/$test.lean" | tee -a "$log"
+done
 if grep -E 'sorryAx|Lean.ofReduceBool' "$log"; then
   echo 'Unexpected axiom in extension regression audit.' >&2
   exit 1
