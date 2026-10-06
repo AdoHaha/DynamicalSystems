@@ -21,6 +21,7 @@ modules=(
   Mathlib.MeasureTheory.PositiveFunctionalMeasure
   Mathlib.MeasureTheory.VectorMeasureTail
   OptimalControl.ContinuousTime.EndpointMultipliers
+  OptimalControl.ContinuousTime.EndpointTransversalityConditions
   OptimalControl.ContinuousTime.IntegralControlPath
   OptimalControl.ContinuousTime.IntegratorStateMinimumPrinciple
   OptimalControl.ContinuousTime.LinearGrowthControlExistence
