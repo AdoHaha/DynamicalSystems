@@ -7,8 +7,10 @@ module
 
 public import Mathlib.Analysis.LocallyConvex.Separation
 public import Mathlib.Topology.ContinuousMap.Compact
+public import Mathlib.Topology.ContinuousMap.Ordered
 public import Mathlib.Topology.Algebra.Module.ContinuousLinearMap.PiProd
-public import Mathlib.Tactic
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.Ring
 
 /-!
 # Necessary multipliers for continuously indexed convex inequalities
@@ -27,15 +29,14 @@ namespace ConvexProgramming
 
 variable {τ X : Type*} [TopologicalSpace τ] [CompactSpace τ]
 
-/-- Upward epigraph of the actual objective difference and constraint residual.
-The residual is not shifted by its reference value: this retains slackness. -/
+/-- Upward epigraph of actual objective differences and constraint residuals.
+The residual is not shifted by its reference value, retaining slackness. -/
 def continuousConstraintEpigraph (S : Set X) (J : X → ℝ) (G : X → C(τ, ℝ))
     (x₀ : X) : Set (ℝ × C(τ, ℝ)) :=
   {z | ∃ x ∈ S, J x - J x₀ ≤ z.1 ∧ G x ≤ z.2}
 
-/-- The upward epigraph is convex as soon as actual candidates can be mixed
-with no greater objective and constraint residual. This is an intermediate
-interface; convex programming and control adapters discharge it. -/
+/-- An intermediate mixing interface; the convex-programming entry point
+below discharges it from the original objective and constraint functions. -/
 theorem convex_continuousConstraintEpigraph_of_mixing
     (S : Set X) (J : X → ℝ) (G : X → C(τ, ℝ)) (x₀ : X)
     (hmix : ∀ x ∈ S, ∀ y ∈ S, ∀ a b : ℝ, 0 ≤ a → 0 ≤ b → a + b = 1 →
@@ -45,6 +46,7 @@ theorem convex_continuousConstraintEpigraph_of_mixing
   obtain ⟨z, hz, hjz, hgz⟩ := hmix x hx y hy a b ha hb hab
   refine ⟨z, hz, ?_, ?_⟩
   · change J z - J x₀ ≤ a * p.1 + b * q.1
+    have hJ₀ : a * J x₀ + b * J x₀ = J x₀ := by rw [← add_mul, hab, one_mul]
     nlinarith [mul_nonneg ha (sub_nonneg.mpr hjx),
       mul_nonneg hb (sub_nonneg.mpr hjy)]
   · intro t
@@ -52,14 +54,15 @@ theorem convex_continuousConstraintEpigraph_of_mixing
     exact (hgz t).trans (add_le_add (mul_le_mul_of_nonneg_left (hgx t) ha)
       (mul_le_mul_of_nonneg_left (hgy t) hb))
 
-/-- The slack epigraph has interior. Feasible-set interior and a Slater point
-are deliberately not assumed here. -/
+/-- The slack epigraph has interior. Neither feasible-set interior nor a
+Slater point is assumed. -/
 theorem continuousConstraintEpigraph_nonempty_interior
     (S : Set X) (J : X → ℝ) (G : X → C(τ, ℝ)) (x₀ : X)
     (hx₀ : x₀ ∈ S) (hg₀ : G x₀ ≤ 0) :
     (interior (continuousConstraintEpigraph S J G x₀)).Nonempty := by
   let e : ℝ × C(τ, ℝ) := (1, ContinuousMap.const τ 1)
-  refine ⟨e, Metric.mem_interior_iff.mpr ⟨1 / 2, by norm_num, ?_⟩⟩
+  refine ⟨e, mem_interior_iff_mem_nhds.mpr (Metric.mem_nhds_iff.mpr
+    ⟨1 / 2, by norm_num, ?_⟩)⟩
   intro z hz
   have hz' : ‖z - e‖ < (1 : ℝ) / 2 := by simpa only [dist_eq_norm] using hz
   have hz₁ : ‖z.1 - 1‖ < (1 : ℝ) / 2 :=
@@ -84,7 +87,7 @@ theorem zero_notMem_interior_continuousConstraintEpigraph
     (hopt : ∀ x ∈ S, G x ≤ 0 → J x₀ ≤ J x) :
     (0 : ℝ × C(τ, ℝ)) ∉ interior (continuousConstraintEpigraph S J G x₀) := by
   intro h
-  obtain ⟨ε, hε, hball⟩ := Metric.mem_interior_iff.mp h
+  obtain ⟨ε, hε, hball⟩ := Metric.mem_nhds_iff.mp (mem_interior_iff_mem_nhds.mp h)
   have hm : ((-ε / 2 : ℝ), (0 : C(τ, ℝ))) ∈ Metric.ball 0 ε := by
     rw [Metric.mem_ball, dist_zero_right, Prod.norm_def]
     simp only [norm_zero, Real.norm_eq_abs]
@@ -116,22 +119,26 @@ theorem exists_continuousInequality_functional_of_mixing
   have hsupport : ∀ z ∈ C, 0 ≤ q z := by
     intro z hz
     have h := hsep z hz
-    simpa only [map_zero, q, ContinuousLinearMap.neg_apply, neg_nonneg] using h
+    change 0 ≤ -l z
+    simpa only [map_zero, neg_nonneg] using h
   let α : ℝ := q (1, 0)
   let Λ : C(τ, ℝ) →L[ℝ] ℝ := q.comp (ContinuousLinearMap.inr ℝ ℝ C(τ, ℝ))
   have hsplit : ∀ z : ℝ × C(τ, ℝ), q z = α * z.1 + Λ z.2 := by
     intro z
     have he : z = z.1 • (1, (0 : C(τ, ℝ))) + (0, z.2) := by ext <;> simp
-    rw [he, map_add, map_smul]
-    change z.1 * α + Λ z.2 = α * z.1 + Λ z.2
-    ring
+    calc
+      q z = q (z.1 • (1, (0 : C(τ, ℝ))) + (0, z.2)) := congrArg q he
+      _ = α * z.1 + Λ z.2 := by
+        rw [map_add, map_smul]
+        change z.1 * α + Λ z.2 = α * z.1 + Λ z.2
+        ring
   have hα : 0 ≤ α := hsupport (1, 0) ⟨x₀, hx₀, by simp, hg₀⟩
   have hΛ : ∀ g : C(τ, ℝ), 0 ≤ g → 0 ≤ Λ g := by
     intro g hg
     exact hsupport (0, g) ⟨x₀, hx₀, by simp, hg₀.trans hg⟩
   have hcomp : Λ (G x₀) = 0 := by
     apply le_antisymm
-    · have h := hΛ (-(G x₀)) (neg_nonneg.mpr hg₀)
+    · have h := hΛ (-(G x₀)) (fun t => neg_nonneg.mpr (hg₀ t))
       simpa only [map_neg, neg_nonneg] using h
     · exact hsupport (0, G x₀) ⟨x₀, hx₀, by simp, le_rfl⟩
   refine ⟨α, Λ, hα, ?_, hΛ, hcomp, ?_⟩
@@ -149,7 +156,7 @@ theorem exists_continuousInequality_functional_of_mixing
 
 variable [AddCommGroup X] [Module ℝ X]
 
-/-- Convex programming entry point: all epigraph/mixing conditions are proved
+/-- Convex-programming entry point: all epigraph/mixing conditions are proved
 from the original convex set, convex objective, and pointwise convex constraints. -/
 theorem exists_continuousInequality_functional
     {S : Set X} (hS : Convex ℝ S) (J : X → ℝ) (G : X → C(τ, ℝ)) (x₀ : X)

@@ -7,6 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
 public import Mathlib.Topology.ContinuousMap.Compact
+public import Mathlib.Topology.ContinuousMap.Ordered
 
 /-! # Positive continuous functionals on a compact space as finite measures -/
 
@@ -28,7 +29,7 @@ def toCompactlySupported (Λ : C(τ, ℝ) →L[ℝ] ℝ)
   map_smul' c f := by exact map_smul Λ _ _
   monotone' := by
     intro f g hfg
-    have h := hΛ (g.toContinuousMap - f.toContinuousMap) (sub_nonneg.mpr hfg)
+    have h := hΛ (g.toContinuousMap - f.toContinuousMap) (fun t => sub_nonneg.mpr (hfg t))
     simpa only [map_sub, sub_nonneg] using h
 
 /-- The representing measure is constructed, not supplied. -/
@@ -41,7 +42,7 @@ instance (Λ : C(τ, ℝ) →L[ℝ] ℝ) (hΛ : ∀ g, 0 ≤ g → 0 ≤ Λ g) :
   unfold measure RealRMK.rieszMeasure
   infer_instance
 
-/-- Riesz representation for every continuous real function on the compact domain. -/
+/-- Riesz representation for every continuous function on the compact domain. -/
 theorem integral_eq (Λ : C(τ, ℝ) →L[ℝ] ℝ)
     (hΛ : ∀ g, 0 ≤ g → 0 ≤ Λ g) (g : C(τ, ℝ)) :
     (∫ t, g t ∂measure Λ hΛ) = Λ g := by
