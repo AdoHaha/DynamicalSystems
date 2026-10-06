@@ -28,6 +28,7 @@ modules=(
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MeasurableHamiltonian
   OptimalControl.ContinuousTime.EpsilonOptimality
+  OptimalControl.ContinuousTime.VelocityEpsilonOptimality
   OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
 )

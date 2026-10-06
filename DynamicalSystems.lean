@@ -123,6 +123,7 @@ import DynamicalSystems.Linear.TransferRealizationEquality
 import DynamicalSystems.Mathlib.Analysis.Analytic.FiniteZeros
 import DynamicalSystems.Mathlib.Analysis.Asymptotics.Uniform
 import DynamicalSystems.Mathlib.Analysis.BoundedVariation.Add
+import DynamicalSystems.Mathlib.Analysis.BoundedVariation.HellySelection
 import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IntegralAffineVariation
@@ -245,6 +246,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamil
 import DynamicalSystems.OptimalControl.ContinuousTime.Tracking
 import DynamicalSystems.OptimalControl.ContinuousTime.UniformNeedleRemainder
 import DynamicalSystems.OptimalControl.ContinuousTime.UniformTaylorRemainder
+import DynamicalSystems.OptimalControl.ContinuousTime.VelocityEpsilonOptimality
 import DynamicalSystems.OptimalControl.ContinuousTime.VelocityTrajectories
 import DynamicalSystems.OptimalControl.ContinuousTime.WeakCornerConditions
 import DynamicalSystems.OptimalControl.ContinuousTime.WeakEulerLagrange
