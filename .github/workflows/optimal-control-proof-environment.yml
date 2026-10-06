@@ -1,0 +1,44 @@
+name: Prepare optimal-control proof environment
+
+# Development-only aid for the named work branch. The artifacts contain only
+# the public source tree, public dependency caches and the Lean distribution.
+# Git metadata (including checkout credentials) is explicitly excluded.
+on:
+  push:
+    branches: ['codex/optimal-control-extensions']
+    paths: ['.github/workflows/optimal-control-proof-environment.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+      - name: Archive public proof environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/optimal-control-proof-env
+          lean --version | tee /tmp/optimal-control-proof-env/VERSION.txt
+          tar --exclude='.git' --exclude='*.c' --exclude='*.o' \
+            -I 'zstd -3 -T2' -cf /tmp/optimal-control-proof-env/workspace.tar.zst .
+          tar -I 'zstd -3 -T2' -cf /tmp/optimal-control-proof-env/toolchain.tar.zst \
+            -C "$(lean --print-prefix)" .
+          ls -lh /tmp/optimal-control-proof-env
+      - name: Upload public proof environment
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimal-control-proof-environment
+          path: /tmp/optimal-control-proof-env
+          compression-level: 0
+          retention-days: 2
