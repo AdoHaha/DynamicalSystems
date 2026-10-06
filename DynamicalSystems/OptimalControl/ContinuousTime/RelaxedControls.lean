@@ -47,6 +47,15 @@ instance (ρ : RelaxedControl τ U ν) : IsProbabilityMeasure ρ.measure :=
 theorem fst_measure (ρ : RelaxedControl τ U ν) : ρ.measure.fst = ν.toMeasure := by
   exact congrArg ProbabilityMeasure.toMeasure ρ.2
 
+/-- Occupation measures have exactly the prescribed time marginal on
+rectangles with unrestricted control coordinate. -/
+theorem measure_prod_univ (ρ : RelaxedControl τ U ν) {s : Set τ} (hs : MeasurableSet s) :
+    ρ.measure (s ×ˢ univ) = ν.toMeasure s := by
+  rw [← ρ.fst_measure, Measure.fst, Measure.map_apply measurable_fst hs]
+  congr 1
+  ext z
+  simp
+
 /-- Every measurable ordinary control embeds by its actual graph measure. -/
 noncomputable def ofControl (ν : ProbabilityMeasure τ) (u : τ → U) (hu : Measurable u) :
     RelaxedControl τ U ν := by
@@ -63,6 +72,19 @@ theorem integral_ofControl {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E
     (f : τ × U → E) (hf : AEStronglyMeasurable f (ofControl ν u hu).measure) :
     (∫ z, f z ∂(ofControl ν u hu).measure) = ∫ t, f (t, u t) ∂ν := by
   exact integral_map (measurable_id.prodMk hu).aemeasurable hf
+
+/-- The ordinary graph embedding respects actual time restrictions. -/
+theorem setIntegral_ofControl {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (ν : ProbabilityMeasure τ) (u : τ → U) (hu : Measurable u)
+    {s : Set τ} (hs : MeasurableSet s) (g : τ × U → E)
+    (hg : AEStronglyMeasurable g (ofControl ν u hu).measure) :
+    (∫ z in s ×ˢ univ, g z ∂(ofControl ν u hu).measure) = ∫ t in s, g (t, u t) ∂ν := by
+  have he := setIntegral_map (hs.prod MeasurableSet.univ) hg
+    (measurable_id.prodMk hu).aemeasurable
+  have hp : (fun t => (t, u t)) ⁻¹' (s ×ˢ univ) = s := by
+    ext t
+    simp
+  simpa only [hp, measure, ofControl, ProbabilityMeasure.toMeasure_map] using he
 
 /-- A constant ordinary control witnesses nonemptiness whenever at least one
 control value exists. No topological assumptions are needed for this fact. -/
