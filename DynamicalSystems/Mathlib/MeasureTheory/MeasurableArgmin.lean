@@ -27,7 +27,8 @@ The selector is the limit of centres chosen by the "first index that keeps the a
 rule on a dense sequence at shrinking radii `2⁻ⁿ` (the Kuratowski–Ryll-Nardzewski scheme specialised
 to a compact metric control set). Mathlib has no such measurable-argmin selection theorem.
 This is the selection step behind the Hamiltonian minimum for relaxed controls
-(Bressan–Piccoli §11.3, §11.6, equation (11.6.13)); see
+(Berkovitz & Medhin, *Nonlinear Optimal Control Theory*, CRC 2012, §11.3, §11.6,
+equation (11.6.13)); see
 `DynamicalSystems.Mathlib.MeasureTheory.RelaxedHamiltonianMinimum`.
 -/
 

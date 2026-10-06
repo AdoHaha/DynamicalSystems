@@ -31,7 +31,8 @@ function `G` integrable for the time marginal (a Hamiltonian integrand).
   `DynamicalSystems.RelaxedHamiltonian.ae_forall_integral_condKernel_le`: if `ν` minimises
   `∫ h dν` among measures with the same time marginal, then for `ν.fst`-a.e. `t` the fibre
   average satisfies `∫ h(t,·) d(k t) = min_u h(t,u)` and hence `≤ h(t, v)` for **every** `v`
-  on one common a.e. set (Bressan–Piccoli §11.6, equation (11.6.13); §11.4 Hamiltonian minimum).
+  on one common a.e. set (Berkovitz & Medhin, *Nonlinear Optimal Control Theory*,
+  CRC 2012, §11.6, equation (11.6.13); §11.4 Hamiltonian minimum).
 * `DynamicalSystems.RelaxedHamiltonian.ae_ae_le_of_optimal`: the fibre `k t` is supported on the
   argmin of `h t`, for a.e. `t`.
 -/
