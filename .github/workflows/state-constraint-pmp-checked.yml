@@ -1,0 +1,36 @@
+name: Check state-constraint PMP
+
+on:
+  push:
+    branches: ['codex/state-constraint-pmp-checked']
+    paths:
+      - 'DynamicalSystems/**'
+      - 'DynamicalSystemsTest/**'
+      - 'scripts/check_state_constraint_pmp.sh'
+      - '.github/workflows/state-constraint-pmp-checked.yml'
+      - 'lean-toolchain'
+      - 'lakefile.toml'
+      - 'lake-manifest.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checked-state-constraint-pmp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+      - name: Compile proofs and regression axiom checks
+        run: bash scripts/check_state_constraint_pmp.sh
