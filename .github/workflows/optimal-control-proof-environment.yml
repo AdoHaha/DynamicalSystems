@@ -1,0 +1,92 @@
+name: Prepare optimal-control proof environment
+
+# Temporary development aid. Only public sources, caches and Lean binaries.
+# Excluding all .git directories also excludes checkout credentials.
+on:
+  push:
+    branches: ['codex/optimal-control-extensions']
+    paths: ['.github/workflows/optimal-control-proof-environment.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+      - name: Archive public proof environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/optimal-control-proof-env
+          lean --version | tee /tmp/optimal-control-proof-env/VERSION.txt
+          tar --exclude='.git' --exclude='*.c' --exclude='*.o' \
+            -I 'zstd -3 -T2' -cf /tmp/optimal-control-proof-env/workspace.tar.zst .
+          tar -I 'zstd -3 -T2' -cf /tmp/optimal-control-proof-env/toolchain.tar.zst \
+            -C "$(lean --print-prefix)" .
+          tar -cf - -C /tmp/optimal-control-proof-env . | \
+            split -b 440M -d - /tmp/proofenv-bundle.part
+          sha256sum /tmp/proofenv-bundle.part*
+          test ! -f /tmp/proofenv-bundle.part08
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part00
+          path: /tmp/proofenv-bundle.part00
+          compression-level: 0
+          retention-days: 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part01
+          path: /tmp/proofenv-bundle.part01
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part02
+          path: /tmp/proofenv-bundle.part02
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part03
+          path: /tmp/proofenv-bundle.part03
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part04
+          path: /tmp/proofenv-bundle.part04
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part05
+          path: /tmp/proofenv-bundle.part05
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part06
+          path: /tmp/proofenv-bundle.part06
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proofenv-part07
+          path: /tmp/proofenv-bundle.part07
+          compression-level: 0
+          retention-days: 2
+          if-no-files-found: ignore
