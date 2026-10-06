@@ -1,0 +1,43 @@
+name: Check optimal-control extensions
+
+on:
+  push:
+    branches: ['codex/optimal-control-extensions']
+    paths:
+      - 'DynamicalSystems/**'
+      - 'DynamicalSystemsTest/**'
+      - 'DynamicalSystems.lean'
+      - 'scripts/check_optimal_control_extensions.sh'
+      - '.github/workflows/optimal-control-extensions.yml'
+      - 'lean-toolchain'
+      - 'lakefile.toml'
+      - 'lake-manifest.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: optimal-control-extensions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lean proofs and axiom audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: leanprover/lean-action@v1
+        with:
+          build: true
+          lint: false
+      - name: Check extension regression tests
+        run: |
+          if test -f scripts/check_optimal_control_extensions.sh; then
+            bash scripts/check_optimal_control_extensions.sh
+          else
+            echo 'Checkpoint only: extension test script has not been added yet.'
+          fi
+      - name: Audit library axioms
+        run: lake exe axiom-audit
