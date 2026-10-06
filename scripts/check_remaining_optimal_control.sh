@@ -27,6 +27,8 @@ modules=(
   OptimalControl.ContinuousTime.LinearTerminalCost
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MeasurableHamiltonian
+  OptimalControl.ContinuousTime.EpsilonOptimality
+  OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
 )
 files=()
