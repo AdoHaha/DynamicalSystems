@@ -28,9 +28,12 @@ modules=(
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MeasurableHamiltonian
   OptimalControl.ContinuousTime.EpsilonOptimality
+  OptimalControl.ContinuousTime.PenaltyBoundaryPositivity
   OptimalControl.ContinuousTime.VelocityEpsilonOptimality
+  OptimalControl.ContinuousTime.VelocityPenaltyMinimizer
   OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
+  Mathlib.Topology.ClusterPointLimit
 )
 files=()
 targets=()

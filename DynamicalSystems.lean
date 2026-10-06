@@ -167,6 +167,7 @@ import DynamicalSystems.Mathlib.MeasureTheory.PositiveFunctionalMeasure
 import DynamicalSystems.Mathlib.MeasureTheory.VectorMeasureTail
 import DynamicalSystems.Mathlib.MeasureTheory.WeakL2Compactness
 import DynamicalSystems.Mathlib.Topology.Antitone
+import DynamicalSystems.Mathlib.Topology.ClusterPointLimit
 import DynamicalSystems.Mathlib.Topology.LimitSet
 import DynamicalSystems.Mathlib.Topology.LipschitzPaths
 import DynamicalSystems.NonSmooth.ChainRule
@@ -231,6 +232,7 @@ import DynamicalSystems.OptimalControl.ContinuousTime.NonautonomousTimeReparamet
 import DynamicalSystems.OptimalControl.ContinuousTime.OccupationIntegral
 import DynamicalSystems.OptimalControl.ContinuousTime.OptimalityGeometry
 import DynamicalSystems.OptimalControl.ContinuousTime.OrdinaryControlExistence
+import DynamicalSystems.OptimalControl.ContinuousTime.PenaltyBoundaryPositivity
 import DynamicalSystems.OptimalControl.ContinuousTime.PenaltyTermsContinuity
 import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1Extensions
 import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdmann
