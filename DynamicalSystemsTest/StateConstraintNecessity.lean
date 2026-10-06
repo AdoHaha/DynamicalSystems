@@ -1,3 +1,4 @@
+import DynamicalSystems.OptimalControl.ContinuousTime.StateConstrainedMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.IntegratorStateMinimumPrinciple
 
 #print axioms OptimalControl.ConvexStateControlProblem.convex_dynamicsAdmissible
@@ -7,3 +8,9 @@ import DynamicalSystems.OptimalControl.ContinuousTime.IntegratorStateMinimumPrin
 #print axioms OptimalControl.ConvexStateControlProblem.exists_integrator_state_pmp
 #print axioms OptimalControl.ConvexStateControlProblem.integratorCostate_increment
 #print axioms OptimalControl.ConvexStateControlProblem.integratorCostate_terminal
+
+#print axioms OptimalControl.ConvexStateControlProblem.exists_stateConstrainedPMP_of_affine_convex_minimum
+#print axioms OptimalControl.ConvexStateControlProblem.stateMeasure_initial_fiber_eq_zero
+#print axioms MeasureAdjoint.integral_firstVariation_pairing
+#print axioms MeasureAdjoint.boundedVariation_indexed_tail
+#print axioms BoundedVariationOn.add

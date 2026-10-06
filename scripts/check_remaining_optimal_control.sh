@@ -3,6 +3,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 modules=(
+  Mathlib.Analysis.BoundedVariation.Add
+  Mathlib.Analysis.ODE.AffineIntegralResponse
+  Mathlib.Analysis.ODE.MeasureAdjointBalance
+  Mathlib.Analysis.ODE.MeasureAdjointPairing
+  OptimalControl.ContinuousTime.AffineControlPath
+  OptimalControl.ContinuousTime.AffineStateMinimumPrinciple
+  OptimalControl.ContinuousTime.StateConstrainedMinimumPrinciple
+  OptimalControl.ContinuousTime.StateControlAdjointPairing
+  OptimalControl.ContinuousTime.StateControlFirstVariation
   Mathlib.Analysis.Calculus.IntegralAffineVariation
   Mathlib.Analysis.Convex.AbnormalSeparation
   Mathlib.Analysis.Convex.ContinuousInequalityMultipliers
@@ -26,7 +35,8 @@ for module in "${modules[@]}"; do
   files+=("DynamicalSystems/${module//./\/}.lean")
   targets+=("DynamicalSystems.$module")
 done
-tests=(StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
+tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
+  StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
   LinearGrowthExistence
   Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms)
 for test in "${tests[@]}"; do

@@ -122,6 +122,7 @@ import DynamicalSystems.Linear.TransferPoleStability
 import DynamicalSystems.Linear.TransferRealizationEquality
 import DynamicalSystems.Mathlib.Analysis.Analytic.FiniteZeros
 import DynamicalSystems.Mathlib.Analysis.Asymptotics.Uniform
+import DynamicalSystems.Mathlib.Analysis.BoundedVariation.Add
 import DynamicalSystems.Mathlib.Analysis.Calculus.Barbalat
 import DynamicalSystems.Mathlib.Analysis.Calculus.Flow
 import DynamicalSystems.Mathlib.Analysis.Calculus.IntegralAffineVariation
@@ -132,6 +133,7 @@ import DynamicalSystems.Mathlib.Analysis.Convex.ContinuousInequalityMultipliers
 import DynamicalSystems.Mathlib.Analysis.Convex.MeasureInequalityMultipliers
 import DynamicalSystems.Mathlib.Analysis.LocallyConvex.Separation
 import DynamicalSystems.Mathlib.Analysis.ODE.Adjoint
+import DynamicalSystems.Mathlib.Analysis.ODE.AffineIntegralResponse
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Global
 import DynamicalSystems.Mathlib.Analysis.ODE.Caratheodory.Picard
@@ -145,6 +147,8 @@ import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceContinuation
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceGrowth
 import DynamicalSystems.Mathlib.Analysis.ODE.GlobalExistenceLinear
 import DynamicalSystems.Mathlib.Analysis.ODE.MeasureAdjoint
+import DynamicalSystems.Mathlib.Analysis.ODE.MeasureAdjointBalance
+import DynamicalSystems.Mathlib.Analysis.ODE.MeasureAdjointPairing
 import DynamicalSystems.Mathlib.Analysis.ODE.NeedleDisplacement
 import DynamicalSystems.Mathlib.Analysis.ODE.RadialTruncation
 import DynamicalSystems.Mathlib.Analysis.ODE.StateTransition
@@ -168,6 +172,8 @@ import DynamicalSystems.NonSmooth.Clarke
 import DynamicalSystems.NonSmooth.Lyapunov
 import DynamicalSystems.OptimalControl.ContinuousTime.ActualNeedleCostRemainder
 import DynamicalSystems.OptimalControl.ContinuousTime.AdjointExistence
+import DynamicalSystems.OptimalControl.ContinuousTime.AffineControlPath
+import DynamicalSystems.OptimalControl.ContinuousTime.AffineStateMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.AugmentedCostate
 import DynamicalSystems.OptimalControl.ContinuousTime.BarycentricRecovery
 import DynamicalSystems.OptimalControl.ContinuousTime.BolzaAugmentation
@@ -227,7 +233,10 @@ import DynamicalSystems.OptimalControl.ContinuousTime.PiecewiseC1WeierstrassErdm
 import DynamicalSystems.OptimalControl.ContinuousTime.ReferenceExtension
 import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedControls
 import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedTrajectories
+import DynamicalSystems.OptimalControl.ContinuousTime.StateConstrainedMinimumPrinciple
 import DynamicalSystems.OptimalControl.ContinuousTime.StateConstraintMultipliers
+import DynamicalSystems.OptimalControl.ContinuousTime.StateControlAdjointPairing
+import DynamicalSystems.OptimalControl.ContinuousTime.StateControlFirstVariation
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeOptimal
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrization
 import DynamicalSystems.OptimalControl.ContinuousTime.TimeReparametrizationFamily

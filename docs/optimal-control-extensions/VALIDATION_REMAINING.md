@@ -49,3 +49,24 @@ Independent agent reviews found no semantic blockers within the documented scope
 The external agy reviewer was unavailable because of its account quota. Local
 compilation and agent reviews do not close general nonlinear PMP, general K6,
 minimum-time K7 or nonconvex K2/K8 selection.
+
+## Affine-convex K6 continuation
+
+The updated `scripts/check_remaining_optimal_control.sh` passed after adding all
+nine new production modules to the umbrella build and checking all four new
+regression files. No new production warnings were emitted. The new principal
+`exists_stateConstrainedPMP_of_affine_convex_minimum` and strict-initial-fiber
+corollary have standard-axiom audits. The script's strict whitelist passes.
+
+The actual nonzero-A optimum regression invokes the full theorem. Separate
+singular nonlinear variation/pairing tests agree; nonzero-A additive-adjoint
+regressions retain interior and terminal atoms and prove failure of AC. The
+actual-optimality forced interior-atom regression remains passing.
+
+Independent reviews cover first variation, indexed pairing, the final necessity
+assembly and its regression. Review reports under the parent workspace distinguish
+reviewer-owned files from independently reviewed files. The prior external agy
+quota failure is still not a completed external review.
+
+Precise inputs, outputs and remaining nonlinear boundaries are in
+[K6_AFFINE_NECESSITY.md](K6_AFFINE_NECESSITY.md).
