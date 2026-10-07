@@ -1,0 +1,8 @@
+import DynamicalSystems.Mathlib.Analysis.Convex.MeasureInequalityMultipliers
+import DynamicalSystems.Mathlib.MeasureTheory.MeasureTail
+
+#print axioms ConvexProgramming.exists_continuousInequality_measure
+#print axioms ConvexProgramming.costMultiplier_pos_of_uniform_slater
+#print axioms MeasureTheory.Measure.boundedVariationOn_tailMass
+#print axioms MeasureTheory.Measure.tailMass_sub
+#print axioms MeasureTheory.Measure.tailMass_sub_openTail
