@@ -100,7 +100,9 @@ end Problem
 /-- **The `ε → 0` passage for a family of tube minimisers: Theorem 11.6.3 (i)–(v).**
 Conclusion (i) holds with `Λ(0⁺) := rightMultiplier P.horizon Λ 0` (`= Λ 0` under
 Assumption 11.4.1, the collar hypothesis `hcollar`), and `Λ` is constant near `0` and vanishes
-near `T`. -/
+near `T`. Complementarity: `Λ` is constant on every interval where `G(·, γ₀) < 0`
+(`supp dΛ ⊂ {G = 0}`). Non-triviality: under the rank hypothesis `hrank` (`∂₂T` surjective, a
+normality condition) the multipliers `(Ψ, Λ, λ⁰)` do not all vanish. -/
 theorem exists_boundedStateMaximumPrinciple_of_family (P : Problem E V W) (D : P.SmoothData)
     (hD : P.DerivativeContinuity D)
     {G : ℝ → E → ℝ} {Gx : ℝ → E → E →L[ℝ] ℝ}
@@ -112,6 +114,8 @@ theorem exists_boundedStateMaximumPrinciple_of_family (P : Problem E V W) (D : P
     {γ₀ : VelocityTrajectory P} {ρ₀ : P.Relaxed}
     (hcollar : ∃ δ : ℝ, 0 < δ ∧ δ < P.horizon ∧ ∀ t ∈ Icc (0 : ℝ) P.horizon,
       (t < δ ∨ P.horizon - δ < t) → G t (γ₀.value t) < 0)
+    (hrank : Function.Surjective ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+      (γ₀.value 0, γ₀.value P.horizon)).comp (ContinuousLinearMap.inr ℝ E E)))
     (F : BoundedStateFamily P D G Gx Gxd γ₀ ρ₀) :
     ∃ (Ψ : ℝ → E →L[ℝ] ℝ) (Λ : ℝ → ℝ) (β : (W →L[ℝ] ℝ) × (E →L[ℝ] ℝ)) (lam0 : ℝ)
       (_hΛ : AntitoneOn Λ (Icc (0 : ℝ) P.horizon)),
@@ -137,7 +141,11 @@ theorem exists_boundedStateMaximumPrinciple_of_family (P : Problem E V W) (D : P
             - (Ψ t - Λ t • Gx t (γ₀.value t)) (P.dynamics t (γ₀.value t) (v : V))) ∧
       (∃ δ' : ℝ, 0 < δ' ∧ (∀ t ∈ Icc (0 : ℝ) δ', Λ t = Λ 0) ∧
         ∀ t ∈ Icc (P.horizon - δ') P.horizon, Λ t = 0) ∧
-      rightMultiplier P.horizon Λ 0 = Λ 0 := by
+      rightMultiplier P.horizon Λ 0 = Λ 0 ∧
+      (∀ α β : ℝ, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+        (∀ r ∈ Icc α β, G r (γ₀.value r) < 0) → ∀ t ∈ Icc α β, Λ t = Λ α) ∧
+      ¬ ((∀ t ∈ Icc (0 : ℝ) P.horizon, Ψ t = 0) ∧ (∀ t ∈ Icc (0 : ℝ) P.horizon, Λ t = 0) ∧
+        lam0 = 0) := by
   classical
   have hTp := P.horizon_pos
   have hT0 := hTp.le
@@ -298,7 +306,45 @@ theorem exists_boundedStateMaximumPrinciple_of_family (P : Problem E V W) (D : P
       rw [hk.2 t ht, mul_zero]
     · exact rightMultiplier_eq_of_const (fun t ht => ⟨ht.1, by linarith [ht.2]⟩) hconst
         (s := 0) ⟨le_rfl, hδ4⟩
-  refine ⟨Ψ, Λ, β, lam0, hΛ, hBV, hAC, hnn, hΛT, h0, h1, hnorm, hint, hinit, hterm, ?_, hcol⟩
+  /- complementarity: `Λ` is constant where the limit path is strictly slack -/
+  have hcomp : ∀ α β : ℝ, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+      (∀ r ∈ Icc α β, G r (γ₀.value r) < 0) → ∀ t ∈ Icc α β, Λ t = Λ α := by
+    intro α β hα hβ hslack t ht
+    have hsub : Icc α β ⊆ Icc (0 : ℝ) P.horizon := fun r hr => ⟨hα.1.trans hr.1, hr.2.trans hβ.2⟩
+    obtain ⟨η, hη, hηG⟩ := exists_slack_radius hG (isCompact_Icc (a := α) (b := β))
+      (γ₀.continuousOn_value.mono hsub) hslack
+    refine tendsto_nhds_unique (hΛc t (hsub ht)) ((hΛc α hα).congr' ?_)
+    filter_upwards [hψt.eventually (hunif η hη)] with k hk
+    rw [F.complementary (ψ k) α β hα hβ (fun r hr => hηG r hr _ (hk r (hsub hr))) t ht]
+  /- non-triviality: the degenerate witness is excluded by surjectivity of `∂₂T` -/
+  have hnt : ¬ ((∀ t ∈ Icc (0 : ℝ) P.horizon, Ψ t = 0) ∧
+      (∀ t ∈ Icc (0 : ℝ) P.horizon, Λ t = 0) ∧ lam0 = 0) := by
+    rintro ⟨hΨ0, hΛ0, hl0⟩
+    have hr : tubeDr (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)) β = 0 := by
+      have := hterm
+      rw [hΨ0 _ hIccT] at this
+      exact (neg_eq_zero.1 this.symm)
+    have hb1 : β.1 = 0 := by
+      refine ContinuousLinearMap.ext fun w => ?_
+      obtain ⟨e, he⟩ := hrank w
+      have key : β.1 ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+          (γ₀.value 0, γ₀.value P.horizon)) (ContinuousLinearMap.inr ℝ E E e)) = 0 :=
+        congrArg (fun f => f e) hr
+      have he' : (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+          (γ₀.value 0, γ₀.value P.horizon)) (ContinuousLinearMap.inr ℝ E E e) = w := he
+      rw [he'] at key
+      simpa using key
+    have hi := hinit
+    rw [hΨ0 0 hIcc0, hΛ0 0 hIcc0, zero_smul, zero_add] at hi
+    have hb2 : β.2 = 0 := by
+      have := congrArg (fun f => f) hi.symm
+      simpa [tubeDl, hb1] using this
+    have hβ : β = 0 := Prod.ext hb1 hb2
+    rw [hΨ0 _ hIccT, hΛ0 0 hIcc0, hβ, hl0] at hnorm
+    simp at hnorm
+  refine ⟨Ψ, Λ, β, lam0, hΛ, hBV, hAC, hnn, hΛT, h0, h1, hnorm, hint, hinit, hterm, ?_, hcol.1,
+    hcol.2, hcomp, hnt⟩
   /- Part B: conclusion (v) -/
   have hMpos : ∀ k, 0 < M k := fun k => lt_of_lt_of_le one_pos (hM k)
   have hlamsys : ∀ k, ∀ t ∈ Icc (0 : ℝ) P.horizon, 0 ≤ F.lam k t ∧ F.lam k t ≤ F.lam k 0 :=
@@ -433,7 +479,9 @@ theorem exists_boundedStateMaximumPrinciple_of_family (P : Problem E V W) (D : P
   exact mul_le_mul_of_nonneg_left key (inv_nonneg.2 hT0)
 
 /-- **Theorem 11.6.3 for the bounded-state ODE problem.** Conclusion (i) holds with
-`Λ(0⁺) := rightMultiplier P.horizon Λ 0` (`= Λ 0` under Assumption 11.4.1, `hcollar`). -/
+`Λ(0⁺) := rightMultiplier P.horizon Λ 0` (`= Λ 0` under Assumption 11.4.1, `hcollar`).
+Complementarity: `Λ` is constant on every interval where `G(·, γ₀) < 0` (`supp dΛ ⊂ {G = 0}`).
+Non-triviality: under `hrank` (`∂₂T` surjective, a normality condition) `(Ψ, Λ, λ⁰) ≠ 0`. -/
 theorem exists_boundedStateMaximumPrinciple (P : Problem E V W) (D : P.SmoothData)
     (hD : P.DerivativeContinuity D)
     {G : ℝ → E → ℝ} {Gx : ℝ → E → E →L[ℝ] ℝ}
@@ -451,7 +499,9 @@ theorem exists_boundedStateMaximumPrinciple (P : Problem E V W) (D : P.SmoothDat
       (t < δ ∨ P.horizon - δ < t) → G t (γ₀.value t) < 0)
     (hND : ∃ ε₁ : ℝ, 0 < ε₁ ∧ ∀ ε : ℝ, 0 < ε → ε ≤ ε₁ →
       ∀ (γ : VelocityTrajectory P) (ρ : P.Relaxed), InVelocityControlTube P γ₀ ρ₀ ε γ ρ →
-        ∀ t ∈ Icc (0 : ℝ) P.horizon, Gx t (γ.value t) ≠ 0) :
+        ∀ t ∈ Icc (0 : ℝ) P.horizon, Gx t (γ.value t) ≠ 0)
+    (hrank : Function.Surjective ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+      (γ₀.value 0, γ₀.value P.horizon)).comp (ContinuousLinearMap.inr ℝ E E))) :
     ∃ (Ψ : ℝ → E →L[ℝ] ℝ) (Λ : ℝ → ℝ) (β : (W →L[ℝ] ℝ) × (E →L[ℝ] ℝ)) (lam0 : ℝ)
       (_hΛ : AntitoneOn Λ (Icc (0 : ℝ) P.horizon)),
       eVariationOn Ψ (Icc (0 : ℝ) P.horizon) ≠ ⊤ ∧
@@ -476,9 +526,13 @@ theorem exists_boundedStateMaximumPrinciple (P : Problem E V W) (D : P.SmoothDat
             - (Ψ t - Λ t • Gx t (γ₀.value t)) (P.dynamics t (γ₀.value t) (v : V))) ∧
       (∃ δ' : ℝ, 0 < δ' ∧ (∀ t ∈ Icc (0 : ℝ) δ', Λ t = Λ 0) ∧
         ∀ t ∈ Icc (P.horizon - δ') P.horizon, Λ t = 0) ∧
-      rightMultiplier P.horizon Λ 0 = Λ 0 := by
+      rightMultiplier P.horizon Λ 0 = Λ 0 ∧
+      (∀ α β : ℝ, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+        (∀ r ∈ Icc α β, G r (γ₀.value r) < 0) → ∀ t ∈ Icc α β, Λ t = Λ α) ∧
+      ¬ ((∀ t ∈ Icc (0 : ℝ) P.horizon, Ψ t = 0) ∧ (∀ t ∈ Icc (0 : ℝ) P.horizon, Λ t = 0) ∧
+        lam0 = 0) := by
   obtain ⟨F⟩ := exists_boundedStateFamily P D hD hG hGP hGreg hGx hGdc hω₁ hω₂ hEnd hT γ₀ ρ₀
     hopt hγ₀m hND
-  exact exists_boundedStateMaximumPrinciple_of_family P D hD hG hGreg hGx hGdc hT hcollar F
+  exact exists_boundedStateMaximumPrinciple_of_family P D hD hG hGreg hGx hGdc hT hcollar hrank F
 
 end OptimalControl.BoundedState

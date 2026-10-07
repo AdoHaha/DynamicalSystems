@@ -192,7 +192,9 @@ theorem exists_epsilonCostateSystem_of_penalisedMultiplierLimit
         (∀ t ∈ Icc (0 : ℝ) (δ / 2), lam t = lam 0) ∧
           ∀ t ∈ Icc (P.horizon - δ / 2) P.horizon, lam t = 0) ∧
       (∀ᵐ t ∂(timeMeasure P.horizon), (2 * K) • innerSL ℝ (γ.velocity t - F t (γ.value t))
-        = Φ t - lam t • Gx t (γ.value t) - (2 : ℝ) • innerSL ℝ (γ.velocity t - γ₀.velocity t)) := by
+        = Φ t - lam t • Gx t (γ.value t) - (2 : ℝ) • innerSL ℝ (γ.velocity t - γ₀.velocity t)) ∧
+      (∀ α β : ℝ, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+        (∀ r ∈ Icc α β, G r (γ.value r) < 0) → ∀ t ∈ Icc α β, lam t = lam α) := by
   classical
   obtain ⟨φ, lam, hφ, htend, hanti, hbd, hlamT, hder, h0, hTT, hmom, hcompl, hend⟩ := hlim
   have hT0 : 0 ≤ P.horizon := P.horizon_pos.le
@@ -295,7 +297,7 @@ theorem exists_epsilonCostateSystem_of_penalisedMultiplierLimit
   have hΨm : AEStronglyMeasurable (fun r => Φ r - lam r • Gx r (γ.value r))
       (volume.restrict (Ioc (0 : ℝ) P.horizon)) :=
     ((intervalIntegrable_iff_integrableOn_Ioc_of_le hT0).1 hΨI).aestronglyMeasurable
-  refine ⟨Φ, lam, ?_, fun t ht => (hbd t ht).2, ?_, ?_⟩
+  refine ⟨Φ, lam, ?_, fun t ht => (hbd t ht).2, ?_, ?_, hcompl⟩
   · refine
       { integrable_cx := intervalIntegrable_comp_value γ hreg.measurable_cx (fun R => ?_)
         integrable_gd := hgdI

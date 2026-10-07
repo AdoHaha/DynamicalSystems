@@ -345,7 +345,10 @@ def IsStateMultiplierCurve (P : Problem E V W) (lam : P.Time → ℝ) : Prop :=
 conditional law of the reference relaxed control minimizes the modified
 Hamiltonian over every probability measure on the control set, almost
 everywhere in time.  Establishing this from an integral minimum over relaxed
-controls is the genuinely new analytic step of Phase D and is not proved here.
+controls is done in `HamiltonianMinimumAe.lean`
+(`ae_hamiltonian_le_of_hamiltonianIntegral_le`), and the `ε → 0` passage in
+`HamiltonianMinimumLimit.lean`; the end-to-end statement is
+`exists_boundedStateMaximumPrinciple`.
 
 Docstring citation: Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
 (CRC 2012), (11.6.13) and Theorem 11.6.3 (v). -/
@@ -454,8 +457,8 @@ noncomputable def endpointScale (K : ℝ) : ℝ := 2 * K
 
 /-! ## A.e. localization of a Hamiltonian integral minimum (11.6.13)
 
-The relaxed form over `ρ₀.kernel t` is the genuinely new analytic step of
-Phase D and is reported as blocked.  The ordinary-control localization below is
+The relaxed form over `ρ₀.kernel t` is proved in `HamiltonianMinimumAe.lean`
+(`ae_hamiltonian_le_of_hamiltonianIntegral_le`).  The ordinary-control localization below is
 the exact Mathlib reuse named by the design
 (`MeasurableHamiltonian.ae_hamiltonian_minimizing_of_integral_minimizing`), and
 is the mechanism from which the a.e. pointwise (v) is obtained once the

@@ -85,6 +85,10 @@ structure BoundedStateFamily (P : Problem E V W) (D : P.SmoothData) (G : ℝ →
       (t < δ ∨ P.horizon - δ < t) → G t ((γ k).value t) < 0) →
     (∀ t ∈ Icc (0 : ℝ) (δ / 2), lam k t = lam k 0) ∧
       ∀ t ∈ Icc (P.horizon - δ / 2) P.horizon, lam k t = 0
+  /-- Complementarity at level `ε_k`: `λ_k` is constant on every interval where the path is
+  strictly slack (Lemma 11.3.9). -/
+  complementary : ∀ k (α β : ℝ), α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+    (∀ r ∈ Icc α β, G r ((γ k).value r) < 0) → ∀ t ∈ Icc α β, lam k t = lam k α
   momentum : ∀ k, ∀ᵐ t ∂(timeMeasure P.horizon),
     (2 * K k) • innerSL ℝ ((γ k).velocity t - P.averagedDynamics (ρe k) t ((γ k).value t))
       = Φ k t - lam k t • Gx t ((γ k).value t)
@@ -139,7 +143,7 @@ theorem exists_boundedStateFamily (P : Problem E V W) (D : P.SmoothData)
     exists_epsilonCostateSystem_of_penalisedMultiplierLimit
       (P.pointwiseDefectRegularity D hD (ρe k) γ₀.velocity hγ₀m γ₀.memLp_velocity (K k)
         (hK k).le) hGx hT (seq k) (hlim k)
-  choose Φ lam hsys _ hcol hmom using hbr
+  choose Φ lam hsys _ hcol hmom hcomp using hbr
   exact ⟨{
     ε := ε
     ε_pos := hεpos
@@ -158,6 +162,7 @@ theorem exists_boundedStateFamily (P : Problem E V W) (D : P.SmoothData)
     initial_lt := hinit
     system := hsys
     collar := fun δ hδ hδT k hs => hcol k δ hδ hδT hs
+    complementary := fun k α β hα hβ hs => hcomp k α β hα hβ hs
     momentum := hmom }⟩
 
 end OptimalControl.BoundedState
