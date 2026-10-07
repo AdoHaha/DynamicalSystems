@@ -14,11 +14,14 @@ public import DynamicalSystems.OptimalControl.ContinuousTime.StateMultiplierStie
 Berkovitz & Medhin, *Nonlinear Optimal Control Theory* (CRC 2012), Theorem 11.8.4
 (equations (11.8.6)–(11.8.10); printed pp. 329–332).
 
-This module proves the *sufficiency* direction of the maximum principle for the bounded-state
-optimal control problem with state constraints `G(t, x) ≤ 0`.  While the unconstrained /
-affine-endpoint Mangasarian core (`OptimalControl.BoundedState.MaximumPrincipleSufficiency`, R6a)
-handled `Λ ≡ 0`, this module treats the full state-constrained problem of Berkovitz & Medhin
-Theorem 11.8.4.
+This module proves the **convex / Mangasarian sufficiency form** of the maximum principle for the
+bounded-state optimal control problem with state constraints `G(t, x) ≤ 0`.  While the unconstrained
+/ affine-endpoint Mangasarian core (`OptimalControl.BoundedState.MaximumPrincipleSufficiency`, R6a)
+handled `Λ ≡ 0`, this module incorporates the state-constraint multiplier shift `Λ ∇G` of Berkovitz
+& Medhin Theorem 11.8.4.  It **assumes** the maximum-principle multiplier data `(Φ, Λ, β, λ⁰)` of
+Theorem 11.8.2 (costate equation, transversality, complementarity) and an affine endpoint constraint
+`T`; the *existence* of that data is not derived here — that is the necessary-condition direction
+(`exists_boundedStateMaximumPrinciple`, BM Theorem 11.6.3).
 
 The theorem takes as hypotheses an admissible reference pair `(γ₀, u₀)` together with the
 maximum-principle multiplier data `(Φ, Λ, β, λ⁰)`:
@@ -369,7 +372,13 @@ at weight `λ⁰ > 0`:
 * the endpoint constraint `T` is affine at the reference;
 * `Λ ≥ 0` is nonincreasing on `[0, t₁]` with `Λ(t₁) = 0`;
 * along each admissible path, `G(·, γ)` is an absolutely continuous primitive of `∇G(·, γ)·γ'`;
-* complementarity holds at the reference: `∫_{(0, t₁]} G(·, γ₀) dΛ ≥ 0` (so `= 0`).
+* complementarity holds at the reference in the `μ = −dΛ` convention: `0 ≤ ∫_{(0, t₁]} G(·, γ₀) dμ`
+  (equivalently `∫_{(0, t₁]} G(·, γ₀) dΛ = 0`, since `G(·, γ₀) ≤ 0`).
+
+Note on sign conventions: `stateConstrainedHamiltonian` uses `−(Φ − Λ∇G)·f`, i.e. the `Λ∇G` shift
+enters with a `+` (consistent with BM and with R1's `exists_boundedStateMaximumPrinciple`);
+`EpsilonOptimality.modifiedHamiltonian` writes the shift as `−(Ψ + Λ∇G)·f`, so the two differ only
+by the sign convention on the constraint multiplier, not in content.
 
 Then `(γ₀, u₀)` is a relaxed minimum on the velocity trajectory carrier. -/
 theorem isVelocityRelaxedMinimum_of_boundedStateExtremal_of_convex_stateConstrained
