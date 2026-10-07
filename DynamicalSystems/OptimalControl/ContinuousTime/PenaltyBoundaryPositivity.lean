@@ -113,19 +113,10 @@ variable {E V W : Type*}
 namespace Problem
 
 omit [FiniteDimensional ℝ E] [CompleteSpace E] [FiniteDimensional ℝ V] [BorelSpace V] in
-/-- The relaxed-control total-variation distance is nonnegative. -/
+/-- The relaxed-control distance is nonnegative. -/
 theorem relaxedControlDistance_nonneg (P : Problem E V W) (ρ σ : P.Relaxed) :
-    0 ≤ relaxedControlDistance P ρ σ := by
-  rw [relaxedControlDistance]
-  refine le_csSup ?_ ⟨∅, MeasurableSet.empty, by simp⟩
-  refine ⟨2, ?_⟩
-  rintro d ⟨A, -, rfl⟩
-  have h1 : ρ.measure.real A ≤ 1 := measureReal_le_one
-  have h2 : σ.measure.real A ≤ 1 := measureReal_le_one
-  have h3 : 0 ≤ ρ.measure.real A := measureReal_nonneg
-  have h4 : 0 ≤ σ.measure.real A := measureReal_nonneg
-  rw [abs_le]
-  constructor <;> linarith
+    0 ≤ relaxedControlDistance P ρ σ :=
+  RelaxedControl.kernelDistance_nonneg ρ σ
 
 /-- The primitive path attached to a product-domain datum. -/
 noncomputable def lpPath (P : Problem E V W)
@@ -468,15 +459,10 @@ theorem exists_penalty_scale_of_boundary_positivity (P : Problem E V W) (ε : �
   nlinarith [hJlim, hopt_a, sq_pos_of_pos hε]
 
 omit [FiniteDimensional ℝ E] [CompleteSpace E] [FiniteDimensional ℝ V] [BorelSpace V] in
-/-- The total-variation distance of a relaxed control from itself is zero. -/
+/-- The distance of a relaxed control from itself is zero. -/
 theorem relaxedControlDistance_self (P : Problem E V W) (ρ : P.Relaxed) :
-    relaxedControlDistance P ρ ρ = 0 := by
-  have hset : {d : ℝ | ∃ A : Set (P.Time × P.Control), MeasurableSet A ∧
-      d = |ρ.measure.real A - ρ.measure.real A|} = {0} := by
-    ext d; constructor
-    · rintro ⟨A, -, rfl⟩; simp
-    · intro hd; exact ⟨∅, MeasurableSet.empty, by simpa using hd⟩
-  rw [relaxedControlDistance, hset, csSup_singleton]
+    relaxedControlDistance P ρ ρ = 0 :=
+  RelaxedControl.kernelDistance_self ρ
 
 /-- At an admissible reference the penalty `F_K` takes the reference cost value. -/
 theorem velocityPenalized_self (P : Problem E V W) (K ε : ℝ) (γ₀ : VelocityTrajectory P)

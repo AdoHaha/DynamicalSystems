@@ -676,7 +676,8 @@ theorem PenalisedMultiplierLimit.exists_stieltjesCostateForm
     exact multiplierMeasure_Ioo_eq_zero_of_const hT hanti hαβ
       (fun r hr => ⟨hα.1.trans hr.1, hr.2.trans hβ.2⟩) (hcompl α β hα hβ hslack)
   · intro hslack
-    obtain ⟨δ, hδ, hconst0, hconstT⟩ := hend hslack
+    obtain ⟨δ, hδ, hδT, hsl⟩ := hslack
+    obtain ⟨hconst0, hconstT⟩ := hend δ hδ hδT hsl
     have hTpos := P.horizon_pos
     set δ₂ := min (δ / 2) (P.horizon / 2) with hδ₂
     have hδ₂pos : 0 < δ₂ := lt_min (by linarith) (by linarith)

@@ -187,10 +187,12 @@ theorem exists_epsilonCostateSystem_of_penalisedMultiplierLimit
         (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
           (γ.value 0, γ.value P.horizon)) Φ lam) ∧
       (∀ t ∈ Icc (0 : ℝ) P.horizon, lam t ≤ M) ∧
-      ((∃ δ : ℝ, 0 < δ ∧ δ < P.horizon ∧ ∀ t ∈ Icc (0 : ℝ) P.horizon,
+      (∀ δ : ℝ, 0 < δ → δ < P.horizon → (∀ t ∈ Icc (0 : ℝ) P.horizon,
           (t < δ ∨ P.horizon - δ < t) → G t (γ.value t) < 0) →
-        ∃ δ : ℝ, 0 < δ ∧ (∀ t ∈ Icc (0 : ℝ) δ, lam t = lam 0) ∧
-          ∀ t ∈ Icc (P.horizon - δ) P.horizon, lam t = 0) := by
+        (∀ t ∈ Icc (0 : ℝ) (δ / 2), lam t = lam 0) ∧
+          ∀ t ∈ Icc (P.horizon - δ / 2) P.horizon, lam t = 0) ∧
+      (∀ᵐ t ∂(timeMeasure P.horizon), (2 * K) • innerSL ℝ (γ.velocity t - F t (γ.value t))
+        = Φ t - lam t • Gx t (γ.value t) - (2 : ℝ) • innerSL ℝ (γ.velocity t - γ₀.velocity t)) := by
   classical
   obtain ⟨φ, lam, hφ, htend, hanti, hbd, hlamT, hder, h0, hTT, hmom, hcompl, hend⟩ := hlim
   have hT0 : 0 ≤ P.horizon := P.horizon_pos.le
@@ -293,7 +295,7 @@ theorem exists_epsilonCostateSystem_of_penalisedMultiplierLimit
   have hΨm : AEStronglyMeasurable (fun r => Φ r - lam r • Gx r (γ.value r))
       (volume.restrict (Ioc (0 : ℝ) P.horizon)) :=
     ((intervalIntegrable_iff_integrableOn_Ioc_of_le hT0).1 hΨI).aestronglyMeasurable
-  refine ⟨Φ, lam, ?_, fun t ht => (hbd t ht).2, ?_⟩
+  refine ⟨Φ, lam, ?_, fun t ht => (hbd t ht).2, ?_, ?_⟩
   · refine
       { integrable_cx := intervalIntegrable_comp_value γ hreg.measurable_cx (fun R => ?_)
         integrable_gd := hgdI
@@ -388,9 +390,11 @@ theorem exists_epsilonCostateSystem_of_penalisedMultiplierLimit
         ContinuousLinearMap.comp_apply, ContinuousLinearMap.coe_fst',
         ContinuousLinearMap.flip_apply, ContinuousLinearMap.compL_apply, smul_eq_mul]
       rfl
-  · intro hslack
-    obtain ⟨δ, hδ, hconst0, hconstT⟩ := hend hslack
-    exact ⟨δ / 2, by linarith, hconst0, hconstT⟩
+  · intro δ hδ hδT hslack
+    exact hend δ hδ hδT hslack
+  · filter_upwards [hmom'] with r hr
+    rw [← hr, pointwiseDefectVelocityCovector]
+    abel
 
 end Problem
 

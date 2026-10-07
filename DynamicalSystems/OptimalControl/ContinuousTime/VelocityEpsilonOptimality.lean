@@ -97,15 +97,7 @@ theorem self_mem_InVelocityControlTube (P : Problem E V W) {γ₀ : VelocityTraj
     (hstate : ∀ t : P.Time, P.stateConstraint t (γ₀.value t) ≤ 0) :
     InVelocityControlTube P γ₀ ρ₀ ε γ₀ ρ₀ := by
   refine ⟨self_mem_InVelocityTube γ₀ hε hstate, ?_⟩
-  have hset : {d : ℝ | ∃ A : Set (P.Time × P.Control), MeasurableSet A ∧
-      d = |ρ₀.measure.real A - ρ₀.measure.real A|} = {0} := by
-    ext d
-    constructor
-    · rintro ⟨A, hA, rfl⟩
-      simp
-    · intro hd
-      exact ⟨∅, MeasurableSet.empty, by simpa using hd⟩
-  rw [relaxedControlDistance, hset, csSup_singleton]
+  rw [relaxedControlDistance, RelaxedControl.kernelDistance_self]
   exact hε
 
 end Problem

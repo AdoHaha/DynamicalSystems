@@ -791,7 +791,8 @@ theorem exists_limit_of_epsilonCostateSystems {T : ℝ} (hT : 0 < T)
       AEStronglyMeasurable Φ (volume.restrict (Ioc (0 : ℝ) T)) ∧
       AEStronglyMeasurable lam (volume.restrict (Ioc (0 : ℝ) T)) ∧
       IntervalIntegrable (fun r => lam0 • cx₀ r - A₀ r (Φ r - lam r • g₀ r) + lam r • gd₀ r)
-        volume 0 T := by
+        volume 0 T ∧
+      ∃ B : ℝ, ∀ k, ∀ t ∈ Icc (0 : ℝ) T, ‖(1 / (s (ψ k)).norm' T) • (s (ψ k)).Φ t‖ ≤ B := by
   have hT0 : 0 ≤ T := hT.le
   have h0 : (0 : ℝ) ∈ Icc (0 : ℝ) T := ⟨le_rfl, hT0⟩
   have hTm : T ∈ Icc (0 : ℝ) T := ⟨hT0, le_rfl⟩
@@ -867,7 +868,7 @@ theorem exists_limit_of_epsilonCostateSystems {T : ℝ} (hT : 0 < T)
     (fun k => hB _) hΦψ hlamψ hmψ
   refine ⟨ψ, Φ, lam, p.2, p.1, hψ, hΦψ, hlamψ, hβψ, hmψ,
     ne_top_of_le_ne_top ENNReal.ofReal_ne_top hΦvar, ?_, ?_, ?_, hp.1.1, hp.1.2, ?_, hpass.2.2.2,
-    ?_, ?_, hpass.1, hpass.2.1, hpass.2.2.1⟩
+    ?_, ?_, hpass.1, hpass.2.1, hpass.2.2.1, ⟨B, fun k => hB _⟩⟩
   · -- `λ` is nonincreasing
     exact fun x hx y hy hxy => le_of_tendsto_of_tendsto' (hlamψ y hy) (hlamψ x hx) fun k =>
       mul_le_mul_of_nonneg_left ((hs _).antitone hx hy hxy) ((hs _).inv_norm'_pos hT0).le

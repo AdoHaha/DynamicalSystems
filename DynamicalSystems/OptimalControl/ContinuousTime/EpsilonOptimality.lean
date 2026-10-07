@@ -5,6 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedKernelDistance
 public import DynamicalSystems.OptimalControl.ContinuousTime.RelaxedTrajectories
 public import DynamicalSystems.OptimalControl.ContinuousTime.MeasurableHamiltonian
 public import DynamicalSystems.Mathlib.Analysis.Calculus.IntegralAffineVariation
@@ -237,21 +238,32 @@ def ConstraintNondegenerate (P : Problem E V W) (D : P.SmoothData)
   ∃ ε₂ : ℝ, 0 < ε₂ ∧ ∀ (t : P.Time) (y : E),
     dist y (x t) < ε₂ → stateConstraintNormal P D x t ≠ 0
 
-/-- The total-variation distance between two relaxed controls, used to render
-the book's `‖ν - ν₀‖_L` control distance.
+/-- The kernel-wise control distance of two relaxed controls, the book's
+`‖ν − ν₀‖_L = ess-sup_t |ν_t − ν₀t|(Ω)` (see `RelaxedControl.kernelDistance` and
+`RelaxedControl.kernelDistance_le_iff_ae`).  It dominates the total variation of the joint
+occupation measures.
 
 Docstring citation: Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
 (CRC 2012), (11.3.2). -/
 noncomputable def relaxedControlDistance (P : Problem E V W)
     (ρ σ : P.Relaxed) : ℝ :=
-  sSup {d : ℝ | ∃ A : Set (P.Time × P.Control), MeasurableSet A ∧
-    d = |ρ.measure.real A - σ.measure.real A|}
+  RelaxedControl.kernelDistance ρ σ
+
+omit [FiniteDimensional ℝ E] in
+/-- **Weak lower semicontinuity of the relaxed-control distance** (the `ε‖ν − ν₀‖_L` term of the
+penalty `F_K`).
+
+Book citation: Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
+(CRC 2012), (11.3.2) and (11.3.6). -/
+theorem lowerSemicontinuous_relaxedControlDistance (P : Problem E V W) (σ : P.Relaxed) :
+    LowerSemicontinuous fun ρ : P.Relaxed => relaxedControlDistance P ρ σ :=
+  RelaxedControl.lowerSemicontinuous_kernelDistance σ
 
 /-- The book's tube `B(ε)` around the reference pair.
 
 The velocity clause is rendered by the control-averaged field `realizedVelocity`
 (equal a.e. to `φ'` for actual relaxed trajectories); the control clause is the
-total-variation distance `relaxedControlDistance`.
+kernel-wise distance `relaxedControlDistance`.
 
 Docstring citation: Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
 (CRC 2012), (11.3.2) and §11.6. -/
@@ -396,15 +408,7 @@ theorem self_mem_InTube {P : Problem E V W} {D : P.SmoothData}
     rw [hzero]
     exact sq_nonneg ε
   · simpa using hε
-  · have hset : {d : ℝ | ∃ A : Set (P.Time × P.Control), MeasurableSet A ∧
-        d = |ρ₀.measure.real A - ρ₀.measure.real A|} = {0} := by
-      ext d
-      constructor
-      · rintro ⟨A, hA, rfl⟩
-        simp
-      · intro hd
-        exact ⟨∅, MeasurableSet.empty, by simpa using hd⟩
-    rw [relaxedControlDistance, hset, csSup_singleton]
+  · rw [relaxedControlDistance, RelaxedControl.kernelDistance_self]
     exact hε
 
 omit [FiniteDimensional ℝ E] in

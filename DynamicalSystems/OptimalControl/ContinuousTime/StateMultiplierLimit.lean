@@ -465,9 +465,9 @@ def PenalisedMultiplierLimit {L : ℝ → E → E → ℝ} (Lx Lv : ℝ → E �
           (fun r => Gxd r (γL.value r) (1, γL.velocity r)) t - lam t • Gx t (γL.value t)) ∧
       (∀ α β : ℝ, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
         (∀ r ∈ Icc α β, G r (γL.value r) < 0) → ∀ t ∈ Icc α β, lam t = lam α) ∧
-      ((∃ δ : ℝ, 0 < δ ∧ δ < P.horizon ∧ ∀ t ∈ Icc (0 : ℝ) P.horizon,
+      (∀ δ : ℝ, 0 < δ → δ < P.horizon → (∀ t ∈ Icc (0 : ℝ) P.horizon,
           (t < δ ∨ P.horizon - δ < t) → G t (γL.value t) < 0) →
-        ∃ δ : ℝ, 0 < δ ∧ (∀ t ∈ Icc (0 : ℝ) (δ / 2), lam t = lam 0) ∧
+        (∀ t ∈ Icc (0 : ℝ) (δ / 2), lam t = lam 0) ∧
           ∀ t ∈ Icc (P.horizon - δ / 2) P.horizon, lam t = 0)
 
 /-- **The `j → ∞` limit of the penalised costate equations for an active state constraint
@@ -648,8 +648,8 @@ theorem exists_stateMultiplier_limit_of_penalisedMinimisers
   · exact ae_hasDerivAt_of_eq_primitive hT (haintL.add hlamint) hprim
   · simp [limitStateCostate]
   · exact hterminal
-  · rintro ⟨δ, hδ, hδT, hslack⟩
-    refine ⟨δ, hδ, ?_, ?_⟩
+  · intro δ hδ hδT hslack
+    refine ⟨?_, ?_⟩
     · intro t ht
       exact hcompl 0 (δ / 2) h00 ⟨by linarith, by linarith⟩ (fun r hr => hslack r
         ⟨hr.1, by linarith [hr.2]⟩ (Or.inl (by linarith [hr.2]))) t ht

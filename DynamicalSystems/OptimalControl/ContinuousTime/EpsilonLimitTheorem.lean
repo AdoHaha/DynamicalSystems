@@ -204,7 +204,13 @@ theorem exists_theorem_11_6_3_conclusions (γ₀ : VelocityTrajectory P)
       (∀ᵐ t ∂(timeMeasure P.horizon), Ψ t - Λ t • g₀ t = -(tubeDr DT₀ β)
         - (∫ r in t..P.horizon, (lam0 • cx₀ r
             - (ContinuousLinearMap.compL ℝ E E ℝ).flip (Fx₀ r) (Ψ r - Λ r • g₀ r)))
-        - ∫ s in Ioc t P.horizon, g₀ s ∂(multiplierMeasure P.horizon_pos.le hΛ)) := by
+        - ∫ s in Ioc t P.horizon, g₀ s ∂(multiplierMeasure P.horizon_pos.le hΛ)) ∧
+      ∃ M : ℕ → ℝ, (∀ k, 1 ≤ M k) ∧ Tendsto (fun k => 1 / M k) atTop (𝓝 lam0) ∧
+        (∀ t ∈ Icc (0 : ℝ) P.horizon,
+          Tendsto (fun k => (1 / M k) • Φ (ψ k) t) atTop (𝓝 (Ψ t))) ∧
+        (∀ t ∈ Icc (0 : ℝ) P.horizon,
+          Tendsto (fun k => (1 / M k) * lam (ψ k) t) atTop (𝓝 (Λ t))) ∧
+        ∃ B : ℝ, ∀ k, ∀ t ∈ Icc (0 : ℝ) P.horizon, ‖(1 / M k) • Φ (ψ k) t‖ ≤ B := by
   classical
   have hT := P.horizon_pos
   have hT0 := hT.le
@@ -254,8 +260,8 @@ theorem exists_theorem_11_6_3_conclusions (γ₀ : VelocityTrajectory P)
     refine h2.congr fun k => ?_
     simp only [hs, tubeCostateSystem]
     rw [norm_smul, innerSL_apply_norm, Real.norm_of_nonneg (by norm_num : (0 : ℝ) ≤ 2)]
-  obtain ⟨ψ, Ψ, Λ, β, lam0, hψ, -, -, -, -, hBV, hanti, hnn, hΛT, h0, h1, hnorm, hint, hinit,
-      hterm, hΨm, hΛm, hΨI⟩ := exists_limit_of_epsilonCostateSystems hT s hsys (C := C) hcx hA
+  obtain ⟨ψ, Ψ, Λ, β, lam0, hψ, hΦc, hΛc, -, hl0c, hBV, hanti, hnn, hΛT, h0, h1, hnorm, hint, hinit,
+      hterm, hΨm, hΛm, hΨI, hBd⟩ := exists_limit_of_epsilonCostateSystems hT s hsys (C := C) hcx hA
     (fun k t ht => hg k t ht) hgd (A₀ := fun r => (ContinuousLinearMap.compL ℝ E E ℝ).flip (Fx₀ r))
     (g₀ := g₀) (gd₀ := gd₀) (Dl₀ := tubeDl DT₀) (Dr₀ := tubeDr DT₀) hcx₀ hgd₀ hA₀m hg₀m hA₀ hg₀
     hcxlim hAlim hgdlim hdeflim hglim hιlim
@@ -263,9 +269,10 @@ theorem exists_theorem_11_6_3_conclusions (γ₀ : VelocityTrajectory P)
   refine ⟨ψ, Ψ, Λ, β, lam0, hanti, hψ, hBV, ?_, hnn, hΛT, h0, h1, hnorm, hint, hinit, hterm, hΨm,
     hΛm, ?_⟩
   · exact absolutelyContinuousOnInterval_of_eq_primitive hT0 hΨI hint
-  · exact adjointLaw_stieltjes hT0 hanti hnn hΛT (A₀ := fun r =>
+  · refine ⟨adjointLaw_stieltjes hT0 hanti hnn hΛT (A₀ := fun r =>
       (ContinuousLinearMap.compL ℝ E E ℝ).flip (Fx₀ r)) hgd₀ hg₀ac hΨI hint
-      hinit hterm
+      hinit hterm, fun k => (s (ψ k)).norm' P.horizon, fun k =>
+        (hsys (ψ k)).one_le_norm' hT0, hl0c, hΦc, hΛc, hBd⟩
 
 end Problem
 

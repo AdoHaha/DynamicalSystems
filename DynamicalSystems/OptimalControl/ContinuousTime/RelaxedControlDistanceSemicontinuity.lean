@@ -5,7 +5,6 @@ Authors: Igor Zubrycki
 -/
 module
 
-public import DynamicalSystems.OptimalControl.ContinuousTime.EpsilonOptimality
 public import Mathlib.MeasureTheory.Measure.Portmanteau
 public import Mathlib.MeasureTheory.Measure.Regular
 public import Mathlib.Topology.Semicontinuity.Basic
@@ -130,31 +129,5 @@ theorem lowerSemicontinuous_sSup_abs_measureReal_sub (σ : ProbabilityMeasure Ω
   linarith
 
 end Generic
-
-namespace BoundedState.Problem
-
-variable {E V W : Type*}
-  [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E] [CompleteSpace E]
-  [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
-  [NormedAddCommGroup W] [NormedSpace ℝ W]
-  [MeasurableSpace V] [BorelSpace V]
-
-omit [FiniteDimensional ℝ E] [CompleteSpace E] in
-/-- **Weak lower semicontinuity of the relaxed-control distance.**  On the
-compact space of relaxed controls (weak topology inherited from probability
-measures on `time × Ω`), `ρ ↦ relaxedControlDistance P ρ σ` is lower
-semicontinuous.  This is the `ε‖ν − ν₀‖_L` term of the penalty `F_K`.
-
-Book citation: Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
-(CRC 2012), (11.3.2) and (11.3.6). -/
-theorem lowerSemicontinuous_relaxedControlDistance (P : Problem E V W) (σ : P.Relaxed) :
-    LowerSemicontinuous fun ρ : P.Relaxed => relaxedControlDistance P ρ σ := by
-  have h := lowerSemicontinuous_sSup_abs_measureReal_sub (Ω := P.Time × P.Control) σ.1
-  intro ρ y hy
-  exact ((continuous_subtype_val (p := fun μ : ProbabilityMeasure (P.Time × P.Control) =>
-    μ.map Prod.fst = horizonProbability P.horizon P.horizon_pos)).tendsto ρ).eventually
-    (h ρ.1 y hy)
-
-end BoundedState.Problem
 
 end OptimalControl
