@@ -28,6 +28,7 @@ modules=(
   OptimalControl.ContinuousTime.LinearTerminalCost
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MaximumPrincipleSufficiency
+  OptimalControl.ContinuousTime.StateConstrainedSufficiency
   OptimalControl.ContinuousTime.MeasurableHamiltonian
   OptimalControl.ContinuousTime.EpsilonOptimality
   OptimalControl.ContinuousTime.ControlAveragedRegularity
