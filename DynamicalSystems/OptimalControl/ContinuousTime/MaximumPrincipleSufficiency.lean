@@ -6,51 +6,64 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.OptimalControl.ContinuousTime.BoundedStateMaximumPrinciple
-public import DynamicalSystems.OptimalControl.ContinuousTime.StateMultiplierStieltjes
 public import DynamicalSystems.OptimalControl.ContinuousTime.VelocityPointwiseBoundaryPositivity
 public import DynamicalSystems.Mathlib.Analysis.Calculus.ACIntegrationByParts
 public import DynamicalSystems.OptimalControl.ContinuousTime.StateControlFirstVariation
 
 /-!
-# Sufficiency of the bounded-state maximum principle
+# Mangasarian sufficiency of the maximum principle (unconstrained / affine endpoint)
 
-Berkovitz & Medhin, *Nonlinear Optimal Control Theory* (CRC 2012), Theorem 11.8.2 and
-Theorem 11.8.4.
+Berkovitz & Medhin, *Nonlinear Optimal Control Theory* (CRC 2012), Theorem 11.8.2 and the
+unconstrained / affine-endpoint core of Theorem 11.8.4.
 
-This module closes the trajectory-level sufficiency question for the state-constrained
-bounded-state problem.  The bounded-state maximum principle
+This module proves the *sufficiency* direction of the maximum principle for the bounded-state
+problem in the **unconstrained / affine-endpoint** case.  The bounded-state maximum principle
 (`OptimalControl.BoundedState.exists_boundedStateMaximumPrinciple`) is a *necessary* condition:
-it assumes optimality and produces the multiplier triple `(Ψ, Λ, β, λ⁰)` together with the
-costate equation, the endpoint transversality conditions, the pointwise minimum principle and
-complementarity.  Theorem 11.8.4 turns the *same* PMP data into a *sufficient* condition under a
-convexity hypothesis on the modified Hamiltonian.
+it assumes optimality and produces the multiplier data together with the costate equation, the
+endpoint transversality conditions, the pointwise minimum principle and complementarity.  A
+sufficiency theorem may not consume that output (it would be circular); instead it takes the
+maximum-principle data `(p, λ⁰, H)` as explicit hypotheses and, under convexity of the modified
+Hamiltonian, concludes that the extremal is optimal.
 
-The mathematical content is the algebraic identity (11.8.6)–(11.8.10): writing `p = Ψ − Λ∇G` for
-the momentum and
-`H(t, x, u) = λ⁰ f⁰(t, x, u) − p(t) · f(t, x, u)`
-for the `λ⁰`-weighted modified Hamiltonian, the first-order convex support inequality,
-the costate equation `p' = Hₓ`, the minimum principle `H_u(φ₀, u₀)(u − u₀) ≥ 0` and integration
-by parts along the absolutely continuous paths give, for every admissible relaxed competitor,
-`J(φ₀, u₀) − J(φ, u) ≤ −∫ G(φ) dΛ ≤ 0`.
-No limit passages, weak topologies or measurable selectors are used.
+The mathematical content is the algebraic identity (11.8.6)–(11.8.10): with momentum `p` and
+`H(t, x, u) = λ⁰ f⁰(t, x, u) − p(t) · f(t, x, u)`, the first-order convex support inequality,
+the costate equation `p' = Hₓ`, the minimum principle `H_u(φ₀, u₀)(u − u₀) ≥ 0` over the
+admissible control set, and integration by parts along the absolutely continuous paths give, for
+every admissible relaxed competitor,
+`J(φ₀, u₀) − J(φ, u) ≤ −t₁⁻¹ (p(t₁)Δφ(t₁) − p(0)Δφ(0)) ≤ 0`,
+the final non-negativity using the terminal transversality condition, the fixed initial state and
+the assumption that the endpoint constraint is affine at the reference (so that `∂₂T·Δφ`
+vanishes on the joint constraint).  No limit passages, weak topologies or measurable selectors are
+used.
+
+**Scope.**  This is the unconstrained Mangasarian core.  The state-constrained Theorem 11.8.4 of
+Berkovitz & Medhin — with the state constraint `G ≤ 0`, the multiplier `Λ`, the complementarity
+term `−∫ G dΛ ≥ 0` and the adjoint terms `Λ∇G`, `dΛ` — is the separate slice **R6b**; it is *not*
+claimed here, and the state-multiplier machinery is not imported.
+
+The covector `momentumHamiltonian` is the `Ψ`-only (`Λ ≡ 0`) specialisation of
+`EpsilonOptimality.modifiedHamiltonian`, the state-constrained modified Hamiltonian
+`λ⁰ f⁰ − (Ψ + Λ∇G)·f`; see the docstring of `Problem.momentumHamiltonian`.
 
 Book citations live in docstrings only.
 
 ## Main results
 
-* `relaxedCost_eq_kernel`: disintegration of the relaxed cost into the conditional kernel.
-* `relaxedCost_ofControl`: the cost of an ordinary control.
-* `relaxedCost_le_of_convex_momentumHamiltonian`: the algebraic sufficiency inequality
-  (Berkovitz & Medhin Theorem 11.8.4).
-* `isRelaxedMinimum_of_boundedStateExtremal_of_convex`: the headline sufficiency theorem.
+* `integral_transversalityPairing_eq`: the boundary identity
+  `∫R = t₁⁻¹ (p(t₁)Δφ(t₁) − p(0)Δφ(0))`, assembled from the integration-by-parts lemmas
+  `integral_momentum_velocity_eq` and `integral_pd_value_eq`.
+* `isVelocityRelaxedMinimum_of_extremal_of_convex_of_affineEndpoint`: the headline Mangasarian
+  sufficiency theorem, with terminal transversality and an affine endpoint constraint.
+* `isRelaxedMinimum_of_isVelocityRelaxedMinimum`: the Volterra-carrier bridge.
+* `relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex`: the algebraic intermediate
+  `∫R ≤ λ⁰ (J(φ) − J(φ₀))`.
 
 ## Implementation notes
 
-The momentum carrier is the library's `VelocityTrajectory`, so the integration by parts along the
+The momentum carrier is the library's `VelocityTrajectory`, so integration by parts along the
 path only assumes absolute continuity of the state and `L²` of its velocity — never `C¹`.  The
-constraint multiplier enters only through the complementarity inequality
-`∫ G d(multiplierMeasure) ≤ 0` of `StateMultiplierStieltjes`; this is the `−∫ G dΛ` term of the
-book.
+constraint multiplier does not appear: the state constraint enters only through the admissibility
+predicate `IsRelaxedAdmissible` (every competitor satisfies `G(φ) ≤ 0`).
 -/
 
 @[expose] public section
@@ -70,8 +83,13 @@ variable {E V W : Type*}
 namespace Problem
 
 /-- The `λ⁰`-weighted modified Hamiltonian of the sufficiency theorem (Berkovitz & Medhin,
-*Nonlinear Optimal Control Theory* (CRC 2012), Theorem 11.8.2/11.8.4): with momentum `p` (the
-momentum form of the costate), `H(t, x, u) = λ⁰ f⁰(t, x, u) − p(t) · f(t, x, u)`. -/
+*Nonlinear Optimal Control Theory* (CRC 2012), Theorem 11.8.2; the affine-endpoint sufficiency
+core): with momentum `p` (the momentum form of the costate),
+`H(t, x, u) = λ⁰ f⁰(t, x, u) − p(t) · f(t, x, u)`.
+
+This is the `Ψ`-only (`Λ ≡ 0`) specialisation of `Problem.modifiedHamiltonian`, the
+state-constrained modified Hamiltonian `λ⁰ f⁰ − (Ψ + Λ∇G)·f` of the bounded-state maximum
+principle; setting `Λ ≡ 0` gives `λ⁰ f⁰ − Ψ·f`, i.e. `momentumHamiltonian` with `p = Ψ`. -/
 noncomputable def momentumHamiltonian (P : Problem E V W) (lam0 : ℝ)
     (p : ℝ → E →L[ℝ] ℝ) (t : P.Time) (z : E × V) : ℝ :=
   lam0 * P.runningCost t z.1 z.2 - p t (P.dynamics t z.1 z.2)
@@ -230,8 +248,8 @@ theorem hamiltonian_integral_lower_bound (P : Problem E V W) (H : P.Time → E �
     (x : P.Trajectory) (ρ : P.Relaxed) (y : E) (u₀ : P.Control) (t : P.Time)
     {pd : ℝ → E →L[ℝ] ℝ}
     (hcostate_t : (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inl ℝ E V) = pd (t : ℝ))
-    (hpmp_t : ∀ v : V,
-      (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inr ℝ E V) (v - (u₀ : V)) ≥ 0)
+    (hpmp_t : ∀ v : P.Control,
+      (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inr ℝ E V) ((v : V) - (u₀ : V)) ≥ 0)
     (hHint : Integrable (fun u : P.Control => H t (x t, (u : V))) (ρ.kernel t)) :
     H t (y, (u₀ : V)) + pd (t : ℝ) (x t - y)
       ≤ ∫ u : P.Control, H t (x t, (u : V)) ∂ρ.kernel t := by
@@ -278,7 +296,7 @@ theorem hamiltonian_integral_lower_bound (P : Problem E V W) (H : P.Time → E �
     exact integral_congr_ae (Eventually.of_forall fun u => hsplit u)
   have hnonneg : 0 ≤ ∫ u : P.Control,
       (Hd t (y, (u₀ : V))) (0, (u : V) - (u₀ : V)) ∂ρ.kernel t :=
-    integral_nonneg fun u => hpmp_t (u : V)
+    integral_nonneg fun u => hpmp_t u
   have hcostate_apply : (Hd t (y, (u₀ : V))) (x t - y, 0) = pd (t : ℝ) (x t - y) := by
     have h := congrArg (fun L : E →L[ℝ] ℝ => L (x t - y)) hcostate_t
     simpa [ContinuousLinearMap.comp_apply] using h
@@ -296,8 +314,8 @@ theorem momentumHamiltonian_cost_lower_bound (P : Problem E V W) (lam0 : ℝ)
     (hconv : ∀ t, ConvexOn ℝ univ (fun w : E × V => H t w))
     (x : P.Trajectory) (ρ : P.Relaxed) (y : E) (u₀ : P.Control) (t : P.Time)
     (hcostate_t : (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inl ℝ E V) = pd (t : ℝ))
-    (hpmp_t : ∀ v : V,
-      (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inr ℝ E V) (v - (u₀ : V)) ≥ 0) :
+    (hpmp_t : ∀ v : P.Control,
+      (Hd t (y, (u₀ : V))).comp (ContinuousLinearMap.inr ℝ E V) ((v : V) - (u₀ : V)) ≥ 0) :
     H t (y, (u₀ : V)) + pd (t : ℝ) (x t - y) + p t (Problem.realizedVelocity P x ρ t)
       ≤ ∫ u : P.Control, lam0 * P.runningCost t (x t) (u : V) ∂ρ.kernel t := by
   have hHint : Integrable (fun u : P.Control => H t (x t, (u : V))) (ρ.kernel t) := by
@@ -507,6 +525,98 @@ theorem integrable_pd_value (P : Problem E V W) (γ : VelocityTrajectory P)
   exact Problem.integrable_horizonProbability_coe P
     ((intervalIntegrable_iff_integrableOn_Ioc_of_le hT).1 hii)
 
+/-- The momentum pairing with the velocity of a velocity trajectory is integrable for the
+normalised time marginal. -/
+theorem integrable_momentum_velocity (P : Problem E V W) (γ : VelocityTrajectory P)
+    {p pd : ℝ → E →L[ℝ] ℝ}
+    (hp_int : IntervalIntegrable pd volume 0 P.horizon)
+    (hp : ∀ t ∈ Icc (0 : ℝ) P.horizon, p t = p 0 + ∫ r in (0 : ℝ)..t, pd r) :
+    Integrable (fun t : P.Time => p t (γ.velocity t))
+      (horizonProbability P.horizon P.horizon_pos).toMeasure := by
+  have hT : (0 : ℝ) ≤ P.horizon := P.horizon_pos.le
+  have hp_cont : ContinuousOn p (Icc (0 : ℝ) P.horizon) :=
+    continuousOn_of_primitive hT hp_int hp
+  have hpv_int : IntervalIntegrable (fun s => p s (γ.velocity s)) volume 0 P.horizon :=
+    intervalIntegrable_clm_apply_of_continuousOn' hT hp_cont γ.velocity_intervalIntegrable
+  exact Problem.integrable_horizonProbability_coe P
+    ((intervalIntegrable_iff_integrableOn_Ioc_of_le hT).1 hpv_int)
+
+/-- **Boundary identity for the integrated transversality pairing.**  Combining the two
+integration-by-parts identities `integral_momentum_velocity_eq` (competitor and reference) with
+the primitive costate pairing `integral_pd_value_eq`, the integrated pairing collapses to the
+endpoint difference
+`∫R = t₁⁻¹ (p(t₁)(φ(t₁)−φ₀(t₁)) − p(0)(φ(0)−φ₀(0)))`.
+This is the identity (11.8.10) of Berkovitz & Medhin, *Nonlinear Optimal Control Theory*
+(CRC 2012), §11.8, at the velocity-carrier level. -/
+theorem integral_transversalityPairing_eq (P : Problem E V W)
+    (γ₀ γ : VelocityTrajectory P) (u₀ : P.Time → P.Control) (ρ : P.Relaxed)
+    (hvel₀ : (fun t : P.Time => γ₀.velocity t)
+        =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
+          fun t : P.Time => P.dynamics t (γ₀.value t) (u₀ t))
+    (hvel : (fun t : P.Time => Problem.realizedVelocity P (toBoundedPath γ) ρ t)
+        =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
+          fun t : P.Time => γ.velocity t)
+    (p pd : ℝ → E →L[ℝ] ℝ)
+    (hp_int : IntervalIntegrable pd volume 0 P.horizon)
+    (hp : ∀ t ∈ Set.Icc (0 : ℝ) P.horizon, p t = p 0 + ∫ r in (0 : ℝ)..t, pd r) :
+    (∫ t : P.Time, (pd t ((toBoundedPath γ) t - γ₀.value t)
+        + p t (Problem.realizedVelocity P (toBoundedPath γ) ρ t)
+        - p t (P.dynamics t (γ₀.value t) (u₀ t)))
+      ∂(horizonProbability P.horizon P.horizon_pos).toMeasure)
+    = P.horizon⁻¹ * (p P.horizon (γ.value P.horizon - γ₀.value P.horizon)
+        - p 0 (γ.value 0 - γ₀.value 0)) := by
+  let ν := horizonProbability P.horizon P.horizon_pos
+  have hpd_sub : Integrable (fun t : P.Time => pd t (γ.value t - γ₀.value t)) ν.toMeasure :=
+    integrable_pd_value_sub P γ₀ hp_int γ
+  have hpv : Integrable (fun t : P.Time => p t (γ.velocity t)) ν.toMeasure :=
+    integrable_momentum_velocity P γ hp_int hp
+  have hpv₀ : Integrable (fun t : P.Time => p t (γ₀.velocity t)) ν.toMeasure :=
+    integrable_momentum_velocity P γ₀ hp_int hp
+  have hpdγ : Integrable (fun t : P.Time => pd t (γ.value t)) ν.toMeasure :=
+    integrable_pd_value P γ hp_int
+  have hpdγ₀ : Integrable (fun t : P.Time => pd t (γ₀.value t)) ν.toMeasure :=
+    integrable_pd_value P γ₀ hp_int
+  have hcongr : (∫ t : P.Time, (pd t ((toBoundedPath γ) t - γ₀.value t)
+        + p t (Problem.realizedVelocity P (toBoundedPath γ) ρ t)
+        - p t (P.dynamics t (γ₀.value t) (u₀ t))) ∂ν.toMeasure)
+      = ∫ t : P.Time, (pd t (γ.value t - γ₀.value t) + p t (γ.velocity t)
+          - p t (γ₀.velocity t)) ∂ν.toMeasure := by
+    apply integral_congr_ae
+    filter_upwards [hvel, hvel₀] with t hv hv₀
+    rw [toBoundedPath_apply, hv, hv₀]
+  rw [hcongr]
+  let A : P.Time → ℝ := fun t => pd t (γ.value t - γ₀.value t)
+  let B : P.Time → ℝ := fun t => p t (γ.velocity t)
+  let C : P.Time → ℝ := fun t => p t (γ₀.velocity t)
+  have hA : Integrable A ν.toMeasure := hpd_sub
+  have hB : Integrable B ν.toMeasure := hpv
+  have hC : Integrable C ν.toMeasure := hpv₀
+  have hsub_pd : (∫ t : P.Time, A t ∂ν.toMeasure)
+      = (∫ t : P.Time, pd t (γ.value t) ∂ν.toMeasure)
+        - ∫ t : P.Time, pd t (γ₀.value t) ∂ν.toMeasure := by
+    rw [← integral_sub hpdγ hpdγ₀]
+    apply integral_congr_ae
+    filter_upwards with t
+    exact map_sub (pd t) (γ.value t) (γ₀.value t)
+  have hsplit : (∫ t : P.Time, (A t + B t - C t) ∂ν.toMeasure)
+      = (∫ t : P.Time, pd t (γ.value t) ∂ν.toMeasure)
+        - (∫ t : P.Time, pd t (γ₀.value t) ∂ν.toMeasure)
+        + (∫ t : P.Time, p t (γ.velocity t) ∂ν.toMeasure)
+        - (∫ t : P.Time, p t (γ₀.velocity t) ∂ν.toMeasure) := by
+    have h1 : (∫ t : P.Time, (A t + B t - C t) ∂ν.toMeasure)
+        = (∫ t : P.Time, (A t + B t) ∂ν.toMeasure)
+          - ∫ t : P.Time, C t ∂ν.toMeasure :=
+      integral_sub (hA.add hB) hC
+    have h2 : (∫ t : P.Time, (A t + B t) ∂ν.toMeasure)
+        = (∫ t : P.Time, A t ∂ν.toMeasure) + ∫ t : P.Time, B t ∂ν.toMeasure :=
+      integral_add hA hB
+    rw [h1, h2, hsub_pd]
+  rw [hsplit, integral_pd_value_eq P γ hp_int, integral_pd_value_eq P γ₀ hp_int,
+    integral_momentum_velocity_eq P γ hp_int hp,
+    integral_momentum_velocity_eq P γ₀ hp_int hp]
+  rw [map_sub, map_sub]
+  ring
+
 /-- Trajectory-level relaxed minimality on the velocity carrier: the reference pair is admissible
 and no admissible velocity-trajectory competitor has smaller relaxed cost.  This is the natural
 carrier for the sufficiency proof, since it carries an explicit velocity for integration by
@@ -521,22 +631,13 @@ def IsVelocityRelaxedMinimum (P : Problem E V W) (γ₀ : VelocityTrajectory P)
 /-- **The algebraic sufficiency identity of Berkovitz & Medhin (11.8.6)–(11.8.10).**  Under the
 joint convexity of the modified Hamiltonian and the costate/minimum-principle data of Theorem
 11.8.2, the relaxed cost difference dominates the integrated momentum pairing
-`∫ (p'·(φ−φ₀) + p·φ' − p·f(φ₀,u₀))`.  Adding the transversality boundary identity
-(see the report) yields the sufficiency conclusion. -/
+`∫ (p'·(φ−φ₀) + p·φ' − p·f(φ₀,u₀))`.  The boundary identity
+`integral_transversalityPairing_eq` turns this into the affine-endpoint sufficiency theorem
+`isVelocityRelaxedMinimum_of_extremal_of_convex_of_affineEndpoint`. -/
 theorem relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex
     (P : Problem E V W) (γ₀ : VelocityTrajectory P) (u₀ : P.Time → P.Control)
     (hu₀ : Measurable u₀)
-    (hadm₀ : P.IsRelaxedAdmissible (toBoundedPath γ₀)
-      (RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ hu₀))
-    (hvel₀ : (fun t : P.Time => γ₀.velocity t)
-        =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
-          fun t : P.Time => P.dynamics t (γ₀.value t) (u₀ t))
-    (hvel : ∀ (γ : VelocityTrajectory P) (ρ : P.Relaxed),
-      P.IsRelaxedAdmissible (toBoundedPath γ) ρ →
-        (fun t : P.Time => Problem.realizedVelocity P (toBoundedPath γ) ρ t)
-          =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
-            fun t : P.Time => γ.velocity t)
-    (lam0 : ℝ) (hlam0 : 0 < lam0)
+    (lam0 : ℝ)
     (p pd : ℝ → E →L[ℝ] ℝ)
     (H : P.Time → E × V → ℝ) (Hd : P.Time → E × V → (E × V) →L[ℝ] ℝ)
     (hH : ∀ t z, H t z = P.momentumHamiltonian lam0 p t z)
@@ -546,8 +647,10 @@ theorem relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex
     (hp : ∀ t ∈ Set.Icc (0 : ℝ) P.horizon, p t = p 0 + ∫ r in (0 : ℝ)..t, pd r)
     (hcostate : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure,
       pd t = (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inl ℝ E V))
-    (hpmp : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure, ∀ v : V,
-      (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inr ℝ E V) (v - (u₀ t : V)) ≥ 0) :
+    (hpmp : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure,
+      ∀ v : P.Control,
+      (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inr ℝ E V)
+        ((v : V) - (u₀ t : V)) ≥ 0) :
     ∀ (γ : VelocityTrajectory P) (ρ : P.Relaxed),
       P.IsRelaxedAdmissible (toBoundedPath γ) ρ →
         (∫ t : P.Time, (pd t ((toBoundedPath γ) t - γ₀.value t)
@@ -611,19 +714,78 @@ theorem relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex
   rw [mul_sub, hcostγ, hcostγ₀, ← h2]
   exact h1
 
-/-- **Sufficiency of the bounded-state maximum principle (Berkovitz & Medhin, Theorem 11.8.4).**
+/-- **The velocity-realisation bridge.**  On the admissible graph the realised (control-averaged)
+velocity agrees with the carrier velocity almost everywhere for the normalised time marginal.
+This transports `velocity_ae_eq_realizedVelocityOnLine_of_isRelaxedAdmissible` (stated for the
+unnormalised horizon measure on the line) to the horizon probability on the compact time type. -/
+theorem realizedVelocity_ae_eq_velocity_of_isRelaxedAdmissible (P : Problem E V W)
+    (γ : VelocityTrajectory P) (ρ : P.Relaxed)
+    (hadm : P.IsRelaxedAdmissible (toBoundedPath γ) ρ) :
+    (fun t : P.Time => Problem.realizedVelocity P (toBoundedPath γ) ρ t)
+      =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
+        fun t : P.Time => γ.velocity t := by
+  have hae := Problem.velocity_ae_eq_realizedVelocityOnLine_of_isRelaxedAdmissible P γ ρ hadm
+  have haeIcc : γ.velocity =ᵐ[volume.restrict (Icc (0 : ℝ) P.horizon)]
+      Problem.realizedVelocityOnLine P (toBoundedPath γ) ρ := by
+    rw [← Measure.restrict_congr_set Ioc_ae_eq_Icc]
+    exact hae
+  have haeIcc' : ∀ᵐ x ∂volume.restrict (Icc (0 : ℝ) P.horizon),
+      γ.velocity x = Problem.realizedVelocityOnLine P (toBoundedPath γ) ρ x := haeIcc
+  rw [ae_restrict_iff_subtype measurableSet_Icc] at haeIcc'
+  have haes : ∀ᵐ (x : P.Time) ∂((ENNReal.ofReal P.horizon)⁻¹ • horizonVolume P.horizon),
+      γ.velocity ↑x = Problem.realizedVelocityOnLine P (toBoundedPath γ) ρ ↑x :=
+    Measure.ae_smul_measure haeIcc' ((ENNReal.ofReal P.horizon)⁻¹)
+  filter_upwards [haes] with t ht
+  rw [Problem.realizedVelocityOnLine, Set.projIcc_val] at ht
+  exact ht.symm
+
+/-- **Boundary non-negativity from terminal transversality and an affine endpoint constraint.**
+If the terminal costate is the endpoint multiplier `p(t₁) = −β ∂₂T`, the endpoint constraint is
+affine for `T(x,y) = ∂T(x₀,y₀)·(x−x₀, y−y₀)`, and both the reference and the competitor satisfy
+`T = 0` with the same initial state, then the integrated transversality pairing is non-negative.
+The affine hypothesis is what makes `∂₂T·Δφ` vanish on the joint constraint. -/
+theorem boundaryPairing_nonneg_of_affineEndpoint
+    (P : Problem E V W) (γ₀ γ : VelocityTrajectory P) (p : ℝ → E →L[ℝ] ℝ)
+    (β : W →L[ℝ] ℝ)
+    (hinit₀ : γ₀.value 0 = P.initial) (hinit : γ.value 0 = P.initial)
+    (hterm : p P.horizon = -β.comp
+      ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)).comp (ContinuousLinearMap.inr ℝ E E)))
+    (hT_affine : ∀ x y : E, P.endpointConstraint x y =
+      (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)) (x - γ₀.value 0, y - γ₀.value P.horizon))
+    (hTγ : P.endpointConstraint (γ.value 0) (γ.value P.horizon) = 0) :
+    0 ≤ p P.horizon (γ.value P.horizon - γ₀.value P.horizon)
+        - p 0 (γ.value 0 - γ₀.value 0) := by
+  have hinit_eq : γ.value 0 - γ₀.value 0 = 0 := by rw [hinit, hinit₀, sub_self]
+  have hD : (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)) (0, γ.value P.horizon - γ₀.value P.horizon) = 0 := by
+    have h1 := hT_affine (γ.value 0) (γ.value P.horizon)
+    rw [hTγ] at h1
+    rw [hinit_eq] at h1
+    exact h1.symm
+  have hpair : p P.horizon (γ.value P.horizon - γ₀.value P.horizon)
+      = - β ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+          (γ₀.value 0, γ₀.value P.horizon))
+            (0, γ.value P.horizon - γ₀.value P.horizon)) := by
+    rw [hterm]
+    rfl
+  rw [hinit_eq, map_zero, sub_zero, hpair, hD, map_zero, neg_zero]
+
+/-- **Mangasarian sufficiency of the maximum principle (unconstrained / affine endpoint).**
 
 Let `(φ₀, u₀)` be an admissible ordinary relaxed pair carrying the maximum-principle data
 `(p, H)` at weight `λ⁰ > 0`: `H = λ⁰ f⁰ − p·f` is jointly convex in `(x,u)`, its derivative
-`Hd` has state part `pd = ∂ₓH` and nonnegative control directional derivative at the reference,
-and `p` is a primitive of `pd`.  If the integrated transversality pairing `∫R` is nonnegative for
-every admissible competitor, then `(φ₀, u₀)` is a velocity-carrier relaxed minimum
-(`IsVelocityRelaxedMinimum`).
+`Hd` has state part `pd = ∂ₓH` and nonnegative control directional derivative at the reference
+over the admissible control set, and `p` is a primitive of `pd`.  If the terminal costate is
+related to a multiplier `β` by `p(t₁) = −β ∂₂T` and the endpoint constraint is affine at the
+reference, then `(φ₀, u₀)` is a relaxed minimum on the velocity carrier.
 
-The proof combines the convexity/costate identity
-`relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex` with the transversality
-hypothesis; the integrated pairing is exactly the boundary term of (11.8.10). -/
-theorem isVelocityRelaxedMinimum_of_boundedStateExtremal_of_convex
+The proof derives the boundary identity `∫R = t₁⁻¹(p(t₁)Δφ(t₁) − p(0)Δφ(0))`
+(`integral_transversalityPairing_eq`), then uses the fixed initial state and the affine endpoint
+constraint to show the boundary pairing is non-negative, and concludes with the convexity/costate
+intermediate `relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex`. -/
+theorem isVelocityRelaxedMinimum_of_extremal_of_convex_of_affineEndpoint
     (P : Problem E V W) (γ₀ : VelocityTrajectory P) (u₀ : P.Time → P.Control)
     (hu₀ : Measurable u₀)
     (hadm₀ : P.IsRelaxedAdmissible (toBoundedPath γ₀)
@@ -631,11 +793,6 @@ theorem isVelocityRelaxedMinimum_of_boundedStateExtremal_of_convex
     (hvel₀ : (fun t : P.Time => γ₀.velocity t)
         =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
           fun t : P.Time => P.dynamics t (γ₀.value t) (u₀ t))
-    (hvel : ∀ (γ : VelocityTrajectory P) (ρ : P.Relaxed),
-      P.IsRelaxedAdmissible (toBoundedPath γ) ρ →
-        (fun t : P.Time => Problem.realizedVelocity P (toBoundedPath γ) ρ t)
-          =ᵐ[(horizonProbability P.horizon P.horizon_pos).toMeasure]
-            fun t : P.Time => γ.velocity t)
     (lam0 : ℝ) (hlam0 : 0 < lam0)
     (p pd : ℝ → E →L[ℝ] ℝ)
     (H : P.Time → E × V → ℝ) (Hd : P.Time → E × V → (E × V) →L[ℝ] ℝ)
@@ -646,26 +803,80 @@ theorem isVelocityRelaxedMinimum_of_boundedStateExtremal_of_convex
     (hp : ∀ t ∈ Set.Icc (0 : ℝ) P.horizon, p t = p 0 + ∫ r in (0 : ℝ)..t, pd r)
     (hcostate : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure,
       pd t = (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inl ℝ E V))
-    (hpmp : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure, ∀ v : V,
-      (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inr ℝ E V) (v - (u₀ t : V)) ≥ 0)
-    (htransv : ∀ (γ : VelocityTrajectory P) (ρ : P.Relaxed),
-      P.IsRelaxedAdmissible (toBoundedPath γ) ρ →
-        0 ≤ ∫ t : P.Time, (pd t ((toBoundedPath γ) t - γ₀.value t)
-          + p t (Problem.realizedVelocity P (toBoundedPath γ) ρ t)
-          - p t (P.dynamics t (γ₀.value t) (u₀ t)))
-          ∂(horizonProbability P.horizon P.horizon_pos).toMeasure) :
+    (hpmp : ∀ᵐ (t : P.Time) ∂(horizonProbability P.horizon P.horizon_pos).toMeasure,
+      ∀ v : P.Control,
+      (Hd t (γ₀.value t, u₀ t)).comp (ContinuousLinearMap.inr ℝ E V)
+        ((v : V) - (u₀ t : V)) ≥ 0)
+    (β : W →L[ℝ] ℝ)
+    (hp_term : p P.horizon = -β.comp
+      ((fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)).comp (ContinuousLinearMap.inr ℝ E E)))
+    (hT_affine : ∀ x y : E, P.endpointConstraint x y =
+      (fderiv ℝ (fun q : E × E => P.endpointConstraint q.1 q.2)
+        (γ₀.value 0, γ₀.value P.horizon)) (x - γ₀.value 0, y - γ₀.value P.horizon)) :
     IsVelocityRelaxedMinimum P γ₀
       (RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ hu₀) := by
   refine ⟨hadm₀, ?_⟩
   intro γ ρ hadm
-  have h := relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex P γ₀ u₀ hu₀ hadm₀
-    hvel₀ hvel lam0 hlam0 p pd H Hd hH hHd hconv hp_int hp hcostate hpmp γ ρ hadm
-  have hb := htransv γ ρ hadm
+  have hvel := realizedVelocity_ae_eq_velocity_of_isRelaxedAdmissible P γ ρ hadm
+  have h := relaxedCost_sub_lowerBound_of_boundedStateExtremal_of_convex P γ₀ u₀ hu₀
+    lam0 p pd H Hd hH hHd hconv hp_int hp hcostate hpmp γ ρ hadm
+  have hinit₀ : γ₀.value 0 = P.initial := by
+    have h0 := IsRelaxedTrajectory.initial hadm₀.1
+    simpa [toBoundedPath_apply, timeZero] using h0
+  have hinit : γ.value 0 = P.initial := by
+    have h0 := IsRelaxedTrajectory.initial hadm.1
+    simpa [toBoundedPath_apply, timeZero] using h0
+  have hTγ : P.endpointConstraint (γ.value 0) (γ.value P.horizon) = 0 := by
+    have h0 := hadm.2.1
+    simpa [toBoundedPath_apply, timeZero, timeEnd] using h0
+  have hboundary := integral_transversalityPairing_eq P γ₀ γ u₀ ρ hvel₀ hvel p pd hp_int hp
+  have hpair : 0 ≤ p P.horizon (γ.value P.horizon - γ₀.value P.horizon)
+      - p 0 (γ.value 0 - γ₀.value 0) :=
+    boundaryPairing_nonneg_of_affineEndpoint P γ₀ γ p β hinit₀ hinit hp_term hT_affine hTγ
+  have hb : 0 ≤ ∫ t : P.Time, (pd t ((toBoundedPath γ) t - γ₀.value t)
+      + p t (Problem.realizedVelocity P (toBoundedPath γ) ρ t)
+      - p t (P.dynamics t (γ₀.value t) (u₀ t)))
+      ∂(horizonProbability P.horizon P.horizon_pos).toMeasure := by
+    rw [hboundary]
+    exact mul_nonneg (inv_nonneg.mpr P.horizon_pos.le) hpair
   have hnonneg : 0 ≤ lam0 * (P.relaxedCost (toBoundedPath γ) ρ
       - P.relaxedCost (toBoundedPath γ₀)
           (RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ hu₀)) := by
     linarith [h, hb]
   exact sub_nonneg.mp (nonneg_of_mul_nonneg_right hnonneg hlam0)
+
+/-- **The Volterra-carrier bridge.**  Minimality on the velocity carrier implies minimality on
+the library's Volterra trajectory carrier: every admissible Volterra competitor is the path of a
+velocity trajectory (built from its control-averaged velocity class), so the velocity-carrier
+comparison covers it. -/
+theorem isRelaxedMinimum_of_isVelocityRelaxedMinimum (P : Problem E V W)
+    (γ₀ : VelocityTrajectory P) (ρ₀ : P.Relaxed)
+    (h : IsVelocityRelaxedMinimum P γ₀ ρ₀) :
+    P.IsRelaxedMinimum (toBoundedPath γ₀) ρ₀ := by
+  refine ⟨h.1, ?_⟩
+  intro y σ hadm
+  obtain ⟨htrail, hend, hstate⟩ := hadm
+  let γ := VelocityTrajectory.ofLp P P.initial (Problem.realizedVelocityLp P y σ)
+  have hpath : toBoundedPath γ = y := by
+    have hpath0 := γ.toBoundedPath_eq_primitiveBoundedPath
+    rw [VelocityTrajectory.toLp_ofLp] at hpath0
+    ext t
+    rw [hpath0, primitiveBoundedPath_apply, Problem.primitiveValue_realizedVelocityLp]
+    have hvol := htrail t
+    simp only [Problem.relaxedDynamics] at hvol
+    rw [Problem.horizon_smul_setIntegral_eq_intervalIntegral_realizedVelocityOnLine P y σ t]
+      at hvol
+    exact hvol.symm
+  have hadmγ : P.IsRelaxedAdmissible (toBoundedPath γ) σ := by
+    refine ⟨?_, ?_, ?_⟩
+    · rwa [hpath]
+    · rwa [hpath]
+    · intro t
+      rw [hpath]
+      exact hstate t
+  have hmin := h.2 γ σ hadmγ
+  rwa [hpath] at hmin
 
 end Sufficiency
 
