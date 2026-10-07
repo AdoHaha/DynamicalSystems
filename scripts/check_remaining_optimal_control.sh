@@ -29,6 +29,7 @@ modules=(
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MeasurableHamiltonian
   OptimalControl.ContinuousTime.EpsilonOptimality
+  OptimalControl.ContinuousTime.ControlAveragedRegularity
   OptimalControl.ContinuousTime.PenaltyBoundaryPositivity
   OptimalControl.ContinuousTime.VelocityEpsilonOptimality
   OptimalControl.ContinuousTime.VelocityPenaltyMinimizer
