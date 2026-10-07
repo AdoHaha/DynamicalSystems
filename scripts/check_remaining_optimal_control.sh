@@ -32,6 +32,7 @@ modules=(
   OptimalControl.ContinuousTime.PenaltyBoundaryPositivity
   OptimalControl.ContinuousTime.VelocityEpsilonOptimality
   OptimalControl.ContinuousTime.VelocityPenaltyMinimizer
+  OptimalControl.ContinuousTime.VelocityPointwisePenaltyMinimizer
   OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
   OptimalControl.ContinuousTime.StateMultiplierCurve
