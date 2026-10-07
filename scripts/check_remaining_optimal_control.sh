@@ -38,6 +38,19 @@ modules=(
   OptimalControl.ContinuousTime.VelocityTrajectories
   OptimalControl.ContinuousTime.StateConstraintMultipliers
   OptimalControl.ContinuousTime.StateMultiplierCurve
+  Mathlib.Analysis.BoundedVariation.HellySelection
+  Mathlib.Analysis.Calculus.ACIntegrationByParts
+  Mathlib.Analysis.Calculus.ACEulerLagrange
+  Mathlib.MeasureTheory.MeasurableArgmin
+  Mathlib.MeasureTheory.RelaxedHamiltonianMinimum
+  Mathlib.MeasureTheory.WeakL2Compactness
+  OptimalControl.ContinuousTime.StatePenalisedVelocityFunctional
+  OptimalControl.ContinuousTime.StateMultiplierCostate
+  OptimalControl.ContinuousTime.StateMultiplierLimit
+  OptimalControl.ContinuousTime.StateMultiplierMassBound
+  OptimalControl.ContinuousTime.VelocityEndpointTransversality
+  OptimalControl.ContinuousTime.VelocityPointwiseEndpointConditions
+  OptimalControl.ContinuousTime.VelocityPointwiseMinimizerEndpointConditions
   Mathlib.Topology.ClusterPointLimit
 )
 files=()
