@@ -1,0 +1,9 @@
+import DynamicalSystems.OptimalControl.ContinuousTime.MinimumTimeMaximumPrinciple
+
+/-! Axiom audit for the minimum-time maximum principle headlines. -/
+
+#print axioms OptimalControl.BoundedState.minimumTimeMaximumPrinciple
+#print axioms OptimalControl.BoundedState.hamiltonian_conserved_of_autonomous
+#print axioms OptimalControl.BoundedState.minimumTimeHamiltonian_eq_zero_of_conserved
+#print axioms OptimalControl.BoundedState.timeOptimalHamiltonianMinimizer_bangBang
+#print axioms OptimalControl.BoundedState.minimumTimeHamiltonian_terminal_eq_zero_of_freeTerminalTime
