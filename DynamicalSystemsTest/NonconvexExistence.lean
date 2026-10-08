@@ -78,6 +78,7 @@ example : ∃ x u, twoPointProblem.OrdinaryAdmissible x u ∧
 
 #print axioms OptimalControl.exists_measurable_purifyingControl
 #print axioms OptimalControl.integratedVelocityCost_mem
-#print axioms OptimalControl.BoundedContinuousProblem.exists_ordinary_minimizer_of_convex_velocityCost
+#print axioms
+  OptimalControl.BoundedContinuousProblem.exists_ordinary_minimizer_of_convex_velocityCost
 #print axioms OptimalControl.LinearGrowthProblem.exists_ordinaryMinimizer_of_convex_velocity
 #print axioms OptimalControl.LinearGrowthProblem.ordinary_min_eq_relaxed_min_of_convex_velocity

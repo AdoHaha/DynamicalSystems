@@ -263,7 +263,7 @@ theorem exists_ordinary_minimizer_of_convex_velocityCost (P : BoundedContinuousP
     ∃ x u, P.OrdinaryAdmissible x u ∧
       ∀ y v, P.OrdinaryAdmissible y v → P.ordinaryCost x u ≤ P.ordinaryCost y v := by
   obtain ⟨x₀, u₀, h₀⟩ := hfeasible
-  letI : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
+  have : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
   obtain ⟨x, ρ, hx, hmin⟩ := P.exists_relaxed_minimizer
     ⟨x₀, RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ h₀.1,
       h₀.to_relaxed⟩
@@ -410,7 +410,7 @@ theorem exists_ordinaryMinimizer_of_convex_velocity (P : LinearGrowthProblem E U
     ∃ x u, P.OrdinaryAdmissible x u ∧
       ∀ y v, P.OrdinaryAdmissible y v → P.ordinaryCost x u ≤ P.ordinaryCost y v := by
   obtain ⟨x₀, u₀, h₀⟩ := hfeasible
-  letI : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
+  have : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
   obtain ⟨x, ρ, hx, hmin⟩ := P.exists_relaxed_minimizer_global
     ⟨x₀, RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ h₀.1,
       h₀.to_relaxed⟩
@@ -439,7 +439,7 @@ theorem ordinary_min_eq_relaxed_min_of_convex_velocity (P : LinearGrowthProblem 
             (RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u hu.1) ≤
           P.relaxedCost y σ) := by
   obtain ⟨x₀, u₀, h₀⟩ := hfeasible
-  letI : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
+  have : Nonempty U := ⟨u₀ (timeZero P.horizon P.horizon_pos.le)⟩
   obtain ⟨x, ρ, hx, hmin⟩ := P.exists_relaxed_minimizer_global
     ⟨x₀, RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u₀ h₀.1,
       h₀.to_relaxed⟩
