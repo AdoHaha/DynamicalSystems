@@ -29,6 +29,7 @@ modules=(
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MaximumPrincipleSufficiency
   OptimalControl.ContinuousTime.StateConstrainedSufficiency
+  OptimalControl.ContinuousTime.UnconstrainedMaximumPrinciple
   OptimalControl.ContinuousTime.MeasurableHamiltonian
   OptimalControl.ContinuousTime.EpsilonOptimality
   OptimalControl.ContinuousTime.ControlAveragedRegularity
@@ -63,7 +64,7 @@ for module in "${modules[@]}"; do
 done
 tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
-  LinearGrowthExistence
+  LinearGrowthExistence UnconstrainedMaximumPrinciple
   Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
