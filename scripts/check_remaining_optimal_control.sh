@@ -54,6 +54,7 @@ modules=(
   OptimalControl.ContinuousTime.VelocityEndpointTransversality
   OptimalControl.ContinuousTime.VelocityPointwiseEndpointConditions
   OptimalControl.ContinuousTime.VelocityPointwiseMinimizerEndpointConditions
+  OptimalControl.ContinuousTime.MinimumTimeMaximumPrinciple
   Mathlib.Topology.ClusterPointLimit
 )
 files=()
@@ -64,7 +65,7 @@ for module in "${modules[@]}"; do
 done
 tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
-  LinearGrowthExistence UnconstrainedMaximumPrinciple
+  LinearGrowthExistence UnconstrainedMaximumPrinciple MinimumTimeMaximumPrinciple
   Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
