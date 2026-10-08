@@ -1,0 +1,8 @@
+import DynamicalSystems.OptimalControl.ContinuousTime.UnconstrainedMaximumPrinciple
+
+/-! Axiom audit for the unconstrained maximum principle headlines. -/
+
+#print axioms OptimalControl.BoundedState.exists_unconstrainedMaximumPrinciple_of_relaxed_minimum
+#print axioms OptimalControl.BoundedState.hamiltonianIntegral_le_of_ae_hamiltonian_le
+#print axioms OptimalControl.BoundedState.isRelaxedAdmissible_iff_of_inactiveStateConstraint
+#print axioms OptimalControl.BoundedState.isStatePenaltyProfile_smoothHinge
