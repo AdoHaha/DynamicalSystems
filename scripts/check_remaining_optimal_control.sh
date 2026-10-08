@@ -26,6 +26,7 @@ modules=(
   OptimalControl.ContinuousTime.IntegratorStateMinimumPrinciple
   OptimalControl.ContinuousTime.LinearGrowthControlExistence
   OptimalControl.ContinuousTime.NonconvexControlExistence
+  OptimalControl.ContinuousTime.CesariExistence
   OptimalControl.ContinuousTime.LinearTerminalCost
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MaximumPrincipleSufficiency
