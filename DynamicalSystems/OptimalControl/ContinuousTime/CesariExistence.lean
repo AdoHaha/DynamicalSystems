@@ -6,17 +6,30 @@ Authors: Igor Zubrycki
 module
 
 public import DynamicalSystems.OptimalControl.ContinuousTime.NonconvexControlExistence
-public import DynamicalSystems.Mathlib.MeasureTheory.WeakL2Compactness
 public import Mathlib.Analysis.Convex.Topology
+public import Mathlib.Analysis.LocallyConvex.WeakSpace
 public import Mathlib.Order.Interval.Set.Basic
 public import Mathlib.Topology.MetricSpace.Pseudo.Basic
 
 /-!
-# Cesari Existence for Optimal Control (Berkovitz & Medhin Theorem 5.4.4)
+# Cesari Property and Lower Closure for Optimal Control
 
-This file formalizes the Cesari existence theory for optimal control problems
-under noncompact constraint sets, following Berkovitz & Medhin, *Nonlinear
-Optimal Control Theory*, Chapter 5, §5.4.
+This file formalises the Cesari machinery for optimal control problems under
+noncompact constraint sets, following Berkovitz & Medhin, *Nonlinear Optimal
+Control Theory*, Chapter 5, §5.4. It provides the relaxed velocity–cost
+epigraph, the Cesari tube/hull/core, the weak Cesari property (Property (Q)),
+the reduction **Lemma 5.4.3**, and the abstract **lower-closure lemmas** for
+strong and weak limits.
+
+## Scope
+
+**BM Theorem 5.4.4's existence argument is not formalised here** (see slice R4c).
+The genuine Cesari route — selecting a compact/equi-absolutely-continuous
+minimising sequence, forming Mazur convex combinations, passing to an a.e.
+limit and applying a Fatou/liminf argument that consumes Property (Q) — is
+absent. The existence corollary below is a consequence of the convex-velocity
+theorem of slice R4a; the weak Cesari hypothesis there only yields a re-exported
+by-product.
 
 ## Main concepts
 
@@ -48,16 +61,11 @@ Optimal Control Theory*, Chapter 5, §5.4.
    - `mem_cesariCore_of_weak_tendsto`: specialization to weakly convergent sequences in
      locally convex spaces via Mazur's theorem (`Convex.toWeakSpace_closure`).
 
-5. **Headline existence theorems (BM Theorem 5.4.4)**:
-   - `exists_relaxedMinimizer_of_weakCesariProperty`: existence of an optimal relaxed
-     pair under the weak Cesari property of `Q⁺_r`.
-   - `exists_ordinaryMinimizer_of_weakCesariProperty`: existence of an optimal ordinary
-     pair when `Q⁺_r` has the weak Cesari property and `Q⁺(t, x)` is convex.
-   - `exists_optimalPair_of_weakCesariProperty`: headline existence theorem yielding
-     an ordinary pair that is simultaneously optimal for both the ordinary and relaxed
-     problems (BM Theorem 5.4.4, printed p. 127).
-   - `ordinary_min_eq_relaxed_min_of_weakCesariProperty`: relaxation identity
-     `min J_ord = min J_rel`.
+5. **Convex-velocity corollary (not BM Theorem 5.4.4)**:
+   - `exists_optimalPair_of_convex_velocity_with_weakCesari_byproduct`: an ordinary pair
+     simultaneously optimal for the ordinary and relaxed problems, obtained from the
+     convex-velocity theorem of slice R4a, with the weak Cesari property of `Q⁺`
+     re-exported as a by-product. This is *not* the Cesari existence theorem.
 -/
 
 @[expose] public section
@@ -395,44 +403,22 @@ theorem integratedVelocityCost_mem_of_convex_of_weakCesariProperty
 
 end RelaxedOccupationEpigraph
 
-section HeadlineExistence
+section ConvexVelocityCorollary
 
 variable {E U : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [FiniteDimensional ℝ E]
   [MeasurableSpace E] [BorelSpace E]
   [MetricSpace U] [MeasurableSpace U] [BorelSpace U] [CompactSpace U] [StandardBorelSpace U]
 
-omit [MeasurableSpace E] [BorelSpace E] [StandardBorelSpace U] in
-/-- **Berkovitz & Medhin Theorem 5.4.4 (Relaxed Existence)**:
-If the relaxed velocity–cost map `Q⁺_r(t,x)` satisfies the weak Cesari property, then there
-exists an optimal relaxed pair `(x, ρ)` for the relaxed problem. -/
-theorem exists_relaxedMinimizer_of_weakCesariProperty
-    (P : LinearGrowthProblem E U)
-    (_hcesari : ∀ t x, HasWeakCesariProperty (relaxedVelocityCostSet P.dynamics P.runningCost) t x)
-    (hfeasible : ∃ x ρ, P.RelaxedAdmissible x ρ) :
-    ∃ x ρ, P.RelaxedAdmissible x ρ ∧
-      ∀ y σ, P.RelaxedAdmissible y σ → P.relaxedCost x ρ ≤ P.relaxedCost y σ :=
-  P.exists_relaxed_minimizer_global hfeasible
-
 omit [StandardBorelSpace U] in
-/-- **Berkovitz & Medhin Theorem 5.4.4 (Ordinary Existence under Convexity)**:
-If the relaxed velocity–cost map `Q⁺_r` satisfies the weak Cesari property and the ordinary
-epigraph `Q⁺(t,x)` is convex at all points, then there exists an ordinary admissible pair
-`(x, u)` that is optimal for the ordinary control problem. -/
-theorem exists_ordinaryMinimizer_of_weakCesariProperty
-    (P : LinearGrowthProblem E U)
-    (_hcesari : ∀ t x, HasWeakCesariProperty (relaxedVelocityCostSet P.dynamics P.runningCost) t x)
-    (hconv : ∀ t x, Convex ℝ (velocityCostSet P.dynamics P.runningCost t x))
-    (hfeasible : ∃ x u, P.OrdinaryAdmissible x u) :
-    ∃ x u, P.OrdinaryAdmissible x u ∧
-      ∀ y v, P.OrdinaryAdmissible y v → P.ordinaryCost x u ≤ P.ordinaryCost y v :=
-  P.exists_ordinaryMinimizer_of_convex_velocity hconv hfeasible
+/-- Corollary of the convex-velocity existence theorem of slice R4a. Under convexity of the
+ordinary epigraph `Q⁺(t,x)`, together with the weak Cesari property of `Q⁺_r`, there exists an
+ordinary admissible pair `(x, u)` simultaneously optimal for the ordinary and relaxed problems,
+and the weak Cesari property of `Q⁺` is re-exported as a by-product.
 
-omit [StandardBorelSpace U] in
-/-- **Berkovitz & Medhin Theorem 5.4.4 (Simultaneous Ordinary and Relaxed Optimality)**:
-Under the weak Cesari property of `Q⁺_r` and convexity of `Q⁺(t,x)`, there exists an ordinary
-admissible pair `(x, u)` that is simultaneously optimal for both the ordinary problem and the
-relaxed problem. -/
-theorem exists_optimalPair_of_weakCesariProperty
+This is **not** BM Theorem 5.4.4: existence and optimality are produced by
+`ordinary_min_eq_relaxed_min_of_convex_velocity`; the weak Cesari hypothesis only supplies the
+by-product conjunct. -/
+theorem exists_optimalPair_of_convex_velocity_with_weakCesari_byproduct
     (P : LinearGrowthProblem E U)
     (hcesari : ∀ t x, HasWeakCesariProperty (relaxedVelocityCostSet P.dynamics P.runningCost) t x)
     (hconv : ∀ t x, Convex ℝ (velocityCostSet P.dynamics P.runningCost t x))
@@ -451,25 +437,6 @@ theorem exists_optimalPair_of_weakCesariProperty
     P.ordinary_min_eq_relaxed_min_of_convex_velocity hconv hfeasible
   exact ⟨x, u, hu, hcesari_ord, hord, hrel⟩
 
-omit [StandardBorelSpace U] in
-/-- **Convexity Relaxation Identity under Weak Cesari Property**:
-The ordinary optimal cost equals the relaxed optimal cost under the weak Cesari property
-and epigraph convexity. -/
-theorem ordinary_min_eq_relaxed_min_of_weakCesariProperty
-    (P : LinearGrowthProblem E U)
-    (hcesari : ∀ t x, HasWeakCesariProperty (relaxedVelocityCostSet P.dynamics P.runningCost) t x)
-    (hconv : ∀ t x, Convex ℝ (velocityCostSet P.dynamics P.runningCost t x))
-    (hfeasible : ∃ x u, P.OrdinaryAdmissible x u) :
-    ∃ x u, ∃ hu : P.OrdinaryAdmissible x u,
-      (∀ y v, P.OrdinaryAdmissible y v → P.ordinaryCost x u ≤ P.ordinaryCost y v) ∧
-      (∀ y σ, P.RelaxedAdmissible y σ →
-        P.relaxedCost x
-            (RelaxedControl.ofControl (horizonProbability P.horizon P.horizon_pos) u hu.1) ≤
-          P.relaxedCost y σ) := by
-  obtain ⟨x, u, hu, _, hord, hrel⟩ :=
-    exists_optimalPair_of_weakCesariProperty P hcesari hconv hfeasible
-  exact ⟨x, u, hu, hord, hrel⟩
-
-end HeadlineExistence
+end ConvexVelocityCorollary
 
 end OptimalControl
