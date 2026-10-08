@@ -148,17 +148,53 @@ theorem integrableOn_stateConstraint_of_regularity
     IntegrableOn (fun t ↦ G t (x t)) (Icc a b) μ := by
   obtain ⟨R, hR⟩ := isCompact_Icc.exists_bound_of_continuousOn hx
   obtain ⟨C, _, hC⟩ := hreg.bounded R
-  have hm := hreg.measurable_G.comp_aemeasurable
+  have hm : AEMeasurable (fun t ↦ G t (x t)) (μ.restrict (Icc a b)) :=
+    hreg.measurable_G.comp_aemeasurable
     (aemeasurable_id.prodMk (hx.aemeasurable measurableSet_Icc))
   refine IntegrableOn.of_bound isCompact_Icc.measure_lt_top hm.aestronglyMeasurable C ?_
   filter_upwards [ae_restrict_mem measurableSet_Icc] with t ht
   simpa only [Real.norm_eq_abs] using (hC t (x t) (hR t ht)).1
 
-variable {V W : Type*} [FiniteDimensional ℝ E] [CompleteSpace E]
+end Integrability
+
+section GradientIntegrability
+
+variable {E V W : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
+  [MeasurableSpace E] [BorelSpace E] [FiniteDimensional ℝ E] [CompleteSpace E]
   [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
   [NormedAddCommGroup W] [InnerProductSpace ℝ W]
   [MeasurableSpace V] [BorelSpace V]
   {P : Problem E V W}
+  {G : ℝ → E → ℝ} {Gx : ℝ → E → E →L[ℝ] ℝ}
+
+omit [MeasurableSpace E] [BorelSpace E] in
+/-- Integral complementarity for an admissible reference trajectory from the
+interval constancy and terminal collar returned by `exists_boundedStateMaximumPrinciple`.
+The collar radius need only be positive, as in that theorem's conclusion. -/
+theorem integral_stateConstraint_eq_zero_of_multiplier_const_on_slack
+    (γ : VelocityTrajectory P) (ρ : P.Relaxed)
+    (hadm : P.IsRelaxedAdmissible (toBoundedPath γ) ρ)
+    (hG : Continuous fun p : ℝ × E ↦ G p.1 p.2)
+    (hGP : ∀ (t : P.Time) (y : E), P.stateConstraint t y = G t y)
+    (lam : ℝ → ℝ) (hanti : AntitoneOn lam (Icc (0 : ℝ) P.horizon))
+    (hslack : ∀ α β, α ∈ Icc (0 : ℝ) P.horizon → β ∈ Icc (0 : ℝ) P.horizon →
+      (∀ r ∈ Icc α β, G r (γ.value r) < 0) → ∀ t ∈ Icc α β, lam t = lam α)
+    (hcollar : ∃ δ : ℝ, 0 < δ ∧ ∀ t ∈ Icc (P.horizon - δ) P.horizon, lam t = 0) :
+    (∫ t in Ioc 0 P.horizon, G t (γ.value t)
+      ∂multiplierMeasure P.horizon_pos.le hanti) = 0 := by
+  obtain ⟨δ₀, hδ₀, hcollar⟩ := hcollar
+  let δ := min (δ₀ / 2) (P.horizon / 2)
+  have hδ : 0 < δ := lt_min (by linarith) (by linarith [P.horizon_pos])
+  have hδT : δ < P.horizon := (min_le_right _ _).trans_lt (by linarith [P.horizon_pos])
+  have hδ₀le : δ ≤ δ₀ := (min_le_left _ _).trans (by linarith)
+  have hg : ContinuousOn (fun t ↦ G t (γ.value t)) (Icc (0 : ℝ) P.horizon) :=
+    hG.comp_continuousOn (continuousOn_id.prodMk γ.continuousOn_value)
+  have hgn : ∀ t ∈ Icc (0 : ℝ) P.horizon, G t (γ.value t) ≤ 0 := by
+    intro t ht
+    have h := hadm.2.2 ⟨t, ht⟩
+    simpa only [toBoundedPath_apply, hGP] using h
+  exact integral_constraint_eq_zero_of_const_on_slack P.horizon_pos hanti hg hgn hslack
+    δ hδ hδT fun t ht ↦ hcollar t ⟨by linarith [ht.1], ht.2⟩
 
 /-- The state-gradient/velocity pairing is interval integrable under
 `StateConstraintRegularity`; no separate integrability hypothesis is needed. -/
@@ -169,7 +205,7 @@ theorem intervalIntegrable_stateGradient_velocity_of_regularity
     intro R
     obtain ⟨C, _, hC⟩ := hreg.bounded R
     exact ⟨C, fun t y hy ↦ (hC t y hy).2⟩
-  have hgint := intervalIntegrable_comp_value γ hreg.measurable_Gx hb
+  have hgint := Problem.intervalIntegrable_comp_value γ hreg.measurable_Gx hb
   obtain ⟨R, hR⟩ := isCompact_Icc.exists_bound_of_continuousOn γ.continuousOn_value
   obtain ⟨C, _, hC⟩ := hreg.bounded R
   rw [intervalIntegrable_iff_integrableOn_Ioc_of_le P.horizon_pos.le]
@@ -196,13 +232,14 @@ theorem intervalIntegrable_multiplier_stateGradient_velocity_of_regularity
   have hk := (intervalIntegrable_iff_integrableOn_Ioc_of_le P.horizon_pos.le).mp
     (intervalIntegrable_stateGradient_velocity_of_regularity hreg γ)
   have hm : AEStronglyMeasurable lam (volume.restrict (Ioc (0 : ℝ) P.horizon)) := by
-    have hm := ((monotone_multiplierExtension P.horizon_pos.le hanti).measurable.neg)
-      .aestronglyMeasurable
+    have hmeas : Measurable (fun t ↦ -multiplierExtension P.horizon lam t) :=
+      (monotone_multiplierExtension P.horizon_pos.le hanti).measurable.neg
+    have hm := hmeas.aestronglyMeasurable (μ := volume)
     apply hm.restrict.congr
     filter_upwards [ae_restrict_mem measurableSet_Ioc] with t ht
     rw [multiplierExtension_of_mem ⟨ht.1.le, ht.2⟩, neg_neg]
   rw [intervalIntegrable_iff_integrableOn_Ioc_of_le P.horizon_pos.le]
-  refine hk.bdd_mul hm (C := |lam 0| + |lam P.horizon|) ?_
+  refine hk.bdd_mul hm (c := |lam 0| + |lam P.horizon|) ?_
   filter_upwards [ae_restrict_mem measurableSet_Ioc] with t ht
   rw [Real.norm_eq_abs, abs_le]
   have hI : t ∈ Icc (0 : ℝ) P.horizon := ⟨ht.1.le, ht.2⟩
@@ -211,6 +248,6 @@ theorem intervalIntegrable_multiplier_stateGradient_velocity_of_regularity
   constructor <;> linarith [neg_abs_le (lam P.horizon), le_abs_self (lam 0),
     abs_nonneg (lam 0), abs_nonneg (lam P.horizon)]
 
-end Integrability
+end GradientIntegrability
 
 end OptimalControl.BoundedState

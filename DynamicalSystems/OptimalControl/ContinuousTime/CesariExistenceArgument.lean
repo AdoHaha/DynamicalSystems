@@ -21,9 +21,10 @@ Velocity combinations converge strongly; cost combinations need only have a fini
 nonnegative liminf. A cost-dependent subsequence and the weak Cesari property recover
 feasibility. Fatou gives the cost bound and almost-everywhere finiteness.
 
+Common Mazur weights and a.e. convergence are constructed from weak Lp convergence.
 The extraction of an equi-absolutely-continuous trajectory subsequence, weak L¹
-derivative convergence, common Mazur weights, and measurable relaxed recovery are
-not asserted here. In particular this module does not yet prove existence of a
+derivative convergence, and measurable relaxed recovery are not asserted here.
+In particular this module does not yet prove existence of a
 relaxed minimizer under the full noncompact hypotheses of Theorem 5.4.4.
 -/
 

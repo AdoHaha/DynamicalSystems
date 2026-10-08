@@ -27,6 +27,7 @@ modules=(
   OptimalControl.ContinuousTime.LinearGrowthControlExistence
   OptimalControl.ContinuousTime.NonconvexControlExistence
   OptimalControl.ContinuousTime.CesariExistence
+  OptimalControl.ContinuousTime.CesariExistenceArgument
   OptimalControl.ContinuousTime.LinearTerminalCost
   OptimalControl.ContinuousTime.LocalizedControlExistence
   OptimalControl.ContinuousTime.MaximumPrincipleSufficiency
@@ -47,6 +48,7 @@ modules=(
   Mathlib.Analysis.Calculus.ACIntegrationByParts
   Mathlib.Analysis.Calculus.ACEulerLagrange
   Mathlib.MeasureTheory.MeasurableArgmin
+  Mathlib.MeasureTheory.MeasurableSigmaCompactLift
   Mathlib.MeasureTheory.RelaxedHamiltonianMinimum
   Mathlib.MeasureTheory.WeakL2Compactness
   OptimalControl.ContinuousTime.StatePenalisedVelocityFunctional
@@ -57,6 +59,8 @@ modules=(
   OptimalControl.ContinuousTime.VelocityPointwiseEndpointConditions
   OptimalControl.ContinuousTime.VelocityPointwiseMinimizerEndpointConditions
   OptimalControl.ContinuousTime.MinimumTimeMaximumPrinciple
+  OptimalControl.ContinuousTime.MinimumTimeTransversality
+  OptimalControl.ContinuousTime.StateConstraintComplementarity
   Mathlib.Topology.ClusterPointLimit
 )
 files=()
@@ -68,7 +72,7 @@ done
 tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
   LinearGrowthExistence NonconvexExistence UnconstrainedMaximumPrinciple MinimumTimeMaximumPrinciple
-  Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms)
+  Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms HardOptimalControl)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
 done
@@ -79,6 +83,24 @@ fi
 lake build "${targets[@]}" DynamicalSystems
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
+hard_modules=(
+  Mathlib/MeasureTheory/MeasurableSigmaCompactLift
+  OptimalControl/ContinuousTime/CesariExistenceArgument
+  OptimalControl/ContinuousTime/MinimumTimeTransversality
+  OptimalControl/ContinuousTime/StateConstraintComplementarity
+)
+for module in "${hard_modules[@]}"; do
+  file="DynamicalSystems/$module.lean"
+  if rg -n '@\[\s*nolint|set_option.*linter' "$file"; then
+    echo 'Forbidden linter suppression in hard extension files.' >&2
+    exit 1
+  fi
+  lake env lean "$file" 2>&1 | tee -a "$log"
+done
+if rg 'warning:' "$log"; then
+  echo 'Warning in hard extension files.' >&2
+  exit 1
+fi
 for test in "${tests[@]}"; do
   lake env lean "DynamicalSystemsTest/$test.lean" | tee -a "$log"
 done
