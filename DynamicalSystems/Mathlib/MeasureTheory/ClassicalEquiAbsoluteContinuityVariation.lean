@@ -136,7 +136,7 @@ theorem EquiAbsolutelyContinuousOn.sum_variation_le
   refine ⟨δ, hδ, ?_⟩
   intro i κ inst s t hst hdisj hlength
   let P (j : κ) := ℕ × {u : ℕ → ℝ // Monotone u ∧ ∀ k, u k ∈ Icc (s j) (t j)}
-  letI (j : κ) : Nonempty (P j) :=
+  let (j : κ) : Nonempty (P j) :=
     ⟨⟨0, ⟨fun _ ↦ s j, monotone_const, fun _ ↦ ⟨le_rfl, (hst j).2.1⟩⟩⟩⟩
   change (∑ j, ⨆ p : P j,
     ∑ k ∈ Finset.range p.1, edist (x i (p.2.1 (k + 1))) (x i (p.2.1 k))) ≤ _
@@ -181,8 +181,9 @@ theorem EquiAbsolutelyContinuousOn.sum_variation_le
     rw [Fintype.sum_sigma]
     apply Finset.sum_le_sum
     intro j _
-    simp only [S, T, Fin.sum_univ_eq_sum_range]
-    rw [telescope]
+    dsimp only [S, T]
+    rw [Fin.sum_univ_eq_sum_range
+      (fun k ↦ (p j).2.1 (k + 1) - (p j).2.1 k), telescope]
     exact sub_le_sub ((p j).2.2.2 _).2 ((p j).2.2.2 _).1
   have hbound := H i (Σ j, Fin (p j).1) S T hST hSTdisj
     (hSTlength.trans_lt hlength)
@@ -190,8 +191,13 @@ theorem EquiAbsolutelyContinuousOn.sum_variation_le
     (∑ j, ∑ k ∈ Finset.range (p j).1,
         edist (x i ((p j).2.1 (k + 1))) (x i ((p j).2.1 k))) =
         ∑ q : Σ j, Fin (p j).1, ENNReal.ofReal ‖x i (T q) - x i (S q)‖ := by
-      simp only [Fintype.sum_sigma, S, T, Fin.sum_univ_eq_sum_range,
-        edist_dist, dist_eq_norm]
+      rw [Fintype.sum_sigma]
+      apply Finset.sum_congr rfl
+      intro j _
+      dsimp only [S, T]
+      rw [Fin.sum_univ_eq_sum_range
+        (fun k ↦ ENNReal.ofReal ‖x i ((p j).2.1 (k + 1)) - x i ((p j).2.1 k)‖)]
+      simp only [edist_dist, dist_eq_norm]
     _ = ENNReal.ofReal (∑ q : Σ j, Fin (p j).1, ‖x i (T q) - x i (S q)‖) := by
       rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
     _ ≤ ENNReal.ofReal ε := ENNReal.ofReal_le_ofReal hbound.le
