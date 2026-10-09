@@ -1,20 +1,18 @@
 {
-  "checkpoint": 9,
+  "checkpoint": "bm544-resume-20261009-01",
   "targets": [
+    "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityVariation",
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull"
   ],
   "files": [
-    "BM544ApiProbe.lean",
-    "DynamicalSystems/Mathlib/Analysis/Convex/FiniteCaratheodory.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedConvexHull.lean",
-    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuity.lean"
+    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityVariation.lean",
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean",
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedConvexHull.lean"
   ],
   "axioms": [
-    "DynamicalSystems.ConvexAnalysis.exists_fin_convexCombination_of_mem_convexHull",
-    "OptimalControl.finiteRelaxedVelocityCostSet_subset_convexHull",
-    "OptimalControl.convexHull_subset_finiteRelaxedVelocityCostSet",
-    "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull",
-    "OptimalControl.finiteRelaxedVelocityCostSet_subset_of_convex"
+    "DynamicalSystems.ClassicalEquiAC.withDensity_enorm_Ioc_eq_eVariationOn",
+    "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull"
   ],
   "stop": false
 }
