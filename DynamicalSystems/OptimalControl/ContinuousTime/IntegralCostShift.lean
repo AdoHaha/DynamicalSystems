@@ -36,7 +36,7 @@ noncomputable def lowerCostPrimitive (a b : ℝ) (β : ℝ → ℝ) (t : ℝ) : 
 be continuous or lower semicontinuous. -/
 theorem continuous_lowerCostPrimitive {a b : ℝ} {β : ℝ → ℝ}
     (hβ : IntegrableOn β (Icc a b)) : Continuous (lowerCostPrimitive a b β) :=
-  intervalIntegral.continuous_primitive (fun _ _ ↦ hβ.intervalIntegrable) a
+  intervalIntegral.continuous_primitive (fun _ _ ↦ Integrable.intervalIntegrable hβ) a
 
 /-- The primitive difference is the lower-bound integral over the actual
 moving interval, not over the whole ambient interval. -/
@@ -45,7 +45,8 @@ theorem lowerCostPrimitive_sub {a b l r : ℝ} (hal : a ≤ l) (hrb : r ≤ b)
     lowerCostPrimitive a b β r - lowerCostPrimitive a b β l =
       ∫ z in Icc l r, β z := by
   simp only [lowerCostPrimitive]
-  rw [intervalIntegral.integral_interval_sub_left hβ.intervalIntegrable hβ.intervalIntegrable,
+  rw [intervalIntegral.integral_interval_sub_left
+      (Integrable.intervalIntegrable hβ) (Integrable.intervalIntegrable hβ),
     intervalIntegral.integral_of_le hlr, Measure.restrict_restrict measurableSet_Ioc,
     inter_eq_left.mpr (show Ioc l r ⊆ Icc a b from
       fun z hz ↦ ⟨hal.trans hz.1.le, hz.2.trans hrb⟩)]
@@ -65,8 +66,10 @@ theorem lowerSemicontinuousOn_compensatedTerminalCost {E : Type*} [TopologicalSp
     (hg : LowerSemicontinuousOn g B) :
     LowerSemicontinuousOn (compensatedTerminalCost a b β g) B := by
   have hF := continuous_lowerCostPrimitive hβ
-  exact hg.add ((hF.comp (by fun_prop)).sub (hF.comp (by fun_prop))).continuousOn.
-    lowerSemicontinuousOn
+  have hchange : Continuous (fun p : ℝ × E × ℝ × E ↦
+      lowerCostPrimitive a b β p.2.2.1 - lowerCostPrimitive a b β p.1) :=
+    (hF.comp (by fun_prop)).sub (hF.comp (by fun_prop))
+  exact hg.add hchange.continuousOn.lowerSemicontinuousOn
 
 /-- Exact invariance of the terminal-plus-running objective under the
 integrable lower-bound shift and zero extension. -/
