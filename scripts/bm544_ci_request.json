@@ -1,20 +1,21 @@
 {
-  "checkpoint": "bm544-resume-20261009-03",
+  "checkpoint": "bm544-resume-20261009-04",
   "targets": [
     "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityVariation",
+    "DynamicalSystems.Mathlib.MeasureTheory.MeasureContinuityFromSemiring",
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull"
   ],
   "files": [
     "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityVariation.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedConvexHull.lean"
+    "DynamicalSystems/Mathlib/MeasureTheory/MeasureContinuityFromSemiring.lean",
+    "DynamicalSystemsTest/EquiACApiProbe.lean"
   ],
   "axioms": [
     "DynamicalSystems.ClassicalEquiAC.withDensity_enorm_Ioc_eq_eVariationOn",
     "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_variation_le",
     "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le",
-    "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull"
+    "DynamicalSystems.MeasureContinuity.measure_le_of_small_on_semiring"
   ],
   "stop": false
 }
