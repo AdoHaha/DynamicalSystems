@@ -4,7 +4,9 @@ name: Prepare optimal-control proof environment
 # Excluding all .git directories also excludes checkout credentials.
 on:
   push:
-    branches: ['codex/optimal-control-extensions']
+    branches:
+      - 'codex/optimal-control-extensions'
+      - 'remaining-optimal-control-r4c-worker'
     paths: ['.github/workflows/optimal-control-proof-environment.yml']
   workflow_dispatch:
 permissions:
