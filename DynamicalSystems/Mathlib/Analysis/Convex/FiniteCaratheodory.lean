@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Analysis.Convex.Caratheodory
 public import Mathlib.LinearAlgebra.AffineSpace.FiniteDimensional
+public import Mathlib.Data.Real.Basic
 
 /-!
 # Carathéodory representations with an exact number of slots
