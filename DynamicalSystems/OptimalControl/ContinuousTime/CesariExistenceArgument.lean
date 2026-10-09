@@ -197,6 +197,60 @@ theorem mem_of_weakCesariProperty_of_tail_combinations
   filter_upwards [eventually_ge_atTop N] with j hj
   exact subset_closure ((convexHull_mono (image_mono (Ici_subset_Ici.mpr hj))) (hz j))
 
+/-- Cesari lower closure ignores any finite prefix of infeasible epigraph points.
+Reindexing the feasible tail reduces this to the existing lower-closure theorem.
+This is the eventual membership needed inside a limiting moving time interval. -/
+theorem mem_of_weakCesariProperty_of_eventually_mem_of_tail_convexHull
+    (Q : T → E → Set F) (t : T) (x : E) (xs : ℕ → E) (ws : ℕ → F) (z : F)
+    (hcesari : HasWeakCesariProperty Q t x) (hx : Tendsto xs atTop (𝓝 x))
+    (hw : ∀ᶠ i in atTop, ws i ∈ Q t (xs i))
+    (hz : ∀ N, z ∈ closure (convexHull ℝ (ws '' Ici N))) : z ∈ Q t x := by
+  obtain ⟨N, hN⟩ := eventually_atTop.mp hw
+  apply mem_of_weakCesariProperty_of_tail_convexHull Q t x
+    (fun i ↦ xs (i + N)) (fun i ↦ ws (i + N)) hcesari
+    (hx.comp (tendsto_add_atTop_nat N))
+    (fun i ↦ hN (i + N) (Nat.le_add_left N i)) z
+  intro M
+  have himage : (fun i ↦ ws (i + N)) '' Ici M = ws '' Ici (M + N) := by
+    ext y
+    constructor
+    · rintro ⟨i, hi, rfl⟩
+      exact ⟨i + N, Nat.add_le_add_right hi N, rfl⟩
+    · rintro ⟨i, hi, rfl⟩
+      change M + N ≤ i at hi
+      have hNi : N ≤ i := by omega
+      refine ⟨i - N, (show M ≤ i - N by omega), ?_⟩
+      change ws (i - N + N) = ws i
+      rw [Nat.sub_add_cancel hNi]
+  rw [himage]
+  exact hz (M + N)
+
+/-- Cesari lower closure with epigraph membership only eventually at each time.
+The finite infeasible prefix may depend on time. This is the moving-interval
+version of BM Theorem 5.4.4, Step 3; property (Q) remains load-bearing. -/
+theorem velocityCost_liminf_mem_of_weakCesariProperty_of_eventually_mem
+    (Q : T → E → Set (F × ℝ)) (t : T) (x : E) (xs : ℕ → E)
+    (ws : ℕ → F × ℝ) (v : ℕ → F) (c : ℕ → ℝ) (vlim : F)
+    (hcesari : HasWeakCesariProperty Q t x)
+    (hx : Tendsto xs atTop (𝓝 x)) (hw : ∀ᶠ i in atTop, ws i ∈ Q t (xs i))
+    (hcombo : ∀ j, (v j, c j) ∈ convexHull ℝ (ws '' Ici j))
+    (hv : Tendsto v atTop (𝓝 vlim)) (hc : ∀ j, 0 ≤ c j)
+    (hfinite : liminf (fun j ↦ ENNReal.ofReal (c j)) atTop ≠ ∞) :
+    (vlim, (liminf (fun j ↦ ENNReal.ofReal (c j)) atTop).toReal) ∈ Q t x := by
+  obtain ⟨k, hkcost, hk⟩ :=
+    exists_seq_tendsto_liminf (u := fun j ↦ ENNReal.ofReal (c j)) (f := atTop)
+  have hcost : Tendsto (fun j ↦ c (k j)) atTop
+      (𝓝 (liminf (fun j ↦ ENNReal.ofReal (c j)) atTop).toReal) := by
+    simpa only [Function.comp_def, ENNReal.toReal_ofReal (hc _)] using
+      (ENNReal.tendsto_toReal hfinite).comp hkcost
+  refine mem_of_weakCesariProperty_of_eventually_mem_of_tail_convexHull
+    Q t x xs ws _ hcesari hx hw ?_
+  intro N
+  refine isClosed_closure.mem_of_tendsto ((hv.comp hk).prodMk_nhds hcost) ?_
+  filter_upwards [hk.eventually (eventually_ge_atTop N)] with j hj
+  exact subset_closure
+    ((convexHull_mono (image_mono (Ici_subset_Ici.mpr hj))) (hcombo (k j)))
+
 /-- The pointwise liminf step of Theorem 5.4.4, Step 3. Only the velocity converges;
 the nonnegative costs can oscillate or diverge along other subsequences. The finite
 cost liminf selects its own subsequence, which still has escaping tail support. -/
@@ -209,18 +263,8 @@ theorem velocityCost_liminf_mem_of_weakCesariProperty
     (hv : Tendsto v atTop (𝓝 vlim)) (hc : ∀ j, 0 ≤ c j)
     (hfinite : liminf (fun j ↦ ENNReal.ofReal (c j)) atTop ≠ ∞) :
     (vlim, (liminf (fun j ↦ ENNReal.ofReal (c j)) atTop).toReal) ∈ Q t x := by
-  obtain ⟨k, hkcost, hk⟩ :=
-    exists_seq_tendsto_liminf (u := fun j ↦ ENNReal.ofReal (c j)) (f := atTop)
-  have hcost : Tendsto (fun j ↦ c (k j)) atTop
-      (𝓝 (liminf (fun j ↦ ENNReal.ofReal (c j)) atTop).toReal) := by
-    simpa only [Function.comp_def, ENNReal.toReal_ofReal (hc _)] using
-      (ENNReal.tendsto_toReal hfinite).comp hkcost
-  refine mem_of_weakCesariProperty_of_tail_convexHull Q t x xs ws hcesari hx hw _ ?_
-  intro N
-  refine isClosed_closure.mem_of_tendsto ((hv.comp hk).prodMk_nhds hcost) ?_
-  filter_upwards [hk.eventually (eventually_ge_atTop N)] with j hj
-  exact subset_closure
-    ((convexHull_mono (image_mono (Ici_subset_Ici.mpr hj))) (hcombo (k j)))
+  exact velocityCost_liminf_mem_of_weakCesariProperty_of_eventually_mem Q t x xs ws v c vlim
+    hcesari hx (Eventually.of_forall hw) hcombo hv hc hfinite
 
 end Pointwise
 
@@ -228,6 +272,35 @@ section Integral
 
 variable {T E F : Type*} [MeasurableSpace T] {μ : Measure T}
   [PseudoMetricSpace E] [NormedAddCommGroup F] [NormedSpace ℝ F]
+
+/-- Cesari lower closure with epigraph membership only eventually at each time.
+The finite infeasible prefix may depend on time. This is the moving-interval
+version of BM Theorem 5.4.4, Step 3; property (Q) remains load-bearing. -/
+theorem ae_velocityCost_liminf_mem_and_lintegral_le_of_eventually_mem
+    (Q : T → E → Set (F × ℝ)) (x : T → E) (xs : ℕ → T → E)
+    (ws : ℕ → T → F × ℝ) (v : ℕ → T → F) (c : ℕ → T → ℝ) (vlim : T → F)
+    (hcesari : ∀ᵐ t ∂μ, HasWeakCesariProperty Q t (x t))
+    (hx : ∀ᵐ t ∂μ, Tendsto (fun i ↦ xs i t) atTop (𝓝 (x t)))
+    (hw : ∀ᵐ t ∂μ, ∀ᶠ i in atTop, ws i t ∈ Q t (xs i t))
+    (hcombo : ∀ j, ∀ᵐ t ∂μ,
+      (v j t, c j t) ∈ convexHull ℝ ((fun i ↦ ws i t) '' Ici j))
+    (hv : ∀ᵐ t ∂μ, Tendsto (fun j ↦ v j t) atTop (𝓝 (vlim t)))
+    (hc : ∀ j, ∀ᵐ t ∂μ, 0 ≤ c j t)
+    (hmeas : ∀ j, AEMeasurable (fun t ↦ ENNReal.ofReal (c j t)) μ)
+    (B : ℝ≥0∞) (hB : B ≠ ∞)
+    (hbound : liminf (fun j ↦ ∫⁻ t, ENNReal.ofReal (c j t) ∂μ) atTop ≤ B) :
+    (∀ᵐ t ∂μ,
+      (vlim t, (liminf (fun j ↦ ENNReal.ofReal (c j t)) atTop).toReal) ∈ Q t (x t)) ∧
+      (∫⁻ t, liminf (fun j ↦ ENNReal.ofReal (c j t)) atTop ∂μ) ≤ B := by
+  have hfatou := (lintegral_liminf_le' hmeas).trans hbound
+  have hfin := ae_lt_top' (AEMeasurable.liminf hmeas)
+    (ne_top_of_le_ne_top hB hfatou)
+  refine ⟨?_, hfatou⟩
+  filter_upwards [hcesari, hx, hw, ae_all_iff.mpr hcombo,
+    hv, ae_all_iff.mpr hc, hfin] with t ht hxt hwt hct hvt hnn hft
+  exact velocityCost_liminf_mem_of_weakCesariProperty_of_eventually_mem Q t (x t)
+    (fun i ↦ xs i t) (fun i ↦ ws i t) (fun j ↦ v j t) (fun j ↦ c j t)
+    (vlim t) ht hxt hwt hct hvt hnn hft.ne
 
 /-- The Cesari–Fatou lower-closure step of Theorem 5.4.4. A finite upper bound on
 the liminf of the integral costs ensures the pointwise cost liminf is finite a.e.;
@@ -249,28 +322,21 @@ theorem ae_velocityCost_liminf_mem_and_lintegral_le
     (∀ᵐ t ∂μ,
       (vlim t, (liminf (fun j ↦ ENNReal.ofReal (c j t)) atTop).toReal) ∈ Q t (x t)) ∧
       (∫⁻ t, liminf (fun j ↦ ENNReal.ofReal (c j t)) atTop ∂μ) ≤ B := by
-  have hfatou := (lintegral_liminf_le' hmeas).trans hbound
-  have hfin := ae_lt_top' (AEMeasurable.liminf hmeas)
-    (ne_top_of_le_ne_top hB hfatou)
-  refine ⟨?_, hfatou⟩
-  filter_upwards [hcesari, hx, ae_all_iff.mpr hw, ae_all_iff.mpr hcombo,
-    hv, ae_all_iff.mpr hc, hfin] with t ht hxt hwt hct hvt hnn hft
-  exact velocityCost_liminf_mem_of_weakCesariProperty Q t (x t)
-    (fun i ↦ xs i t) (fun i ↦ ws i t) (fun j ↦ v j t) (fun j ↦ c j t)
-    (vlim t) ht hxt hwt hct hvt hnn hft.ne
+  apply ae_velocityCost_liminf_mem_and_lintegral_le_of_eventually_mem
+    Q x xs ws v c vlim hcesari hx ?_
+    hcombo hv hc hmeas B hB hbound
+  exact (ae_all_iff.mpr hw).mono fun t ht ↦ Eventually.of_forall ht
 
-/-- The full common-weights Cesari–Fatou step (Theorem 5.4.4, Step 3).
-The original costs have minimizing integrals, and the same finite tail weights are
-used for velocities and costs. Only the velocity combinations must converge a.e.
-The conclusion constructs an integrable feasible cost majorant with no increase
-in total cost. Trajectory extraction and measurable control recovery remain separate. -/
-theorem exists_integrable_cost_epigraph_of_cesari_combinations
+/-- Cesari lower closure with epigraph membership only eventually at each time.
+The finite infeasible prefix may depend on time. This is the moving-interval
+version of BM Theorem 5.4.4, Step 3; property (Q) remains load-bearing. -/
+theorem exists_integrable_cost_epigraph_of_cesari_combinations_of_eventually_mem
     (Q : T → E → Set (F × ℝ)) (x : T → E) (xs : ℕ → T → E)
     (w : ℕ → T → F) (c : ℕ → T → ℝ) (vlim : T → F)
     (s : ℕ → Finset ℕ) (a : ℕ → ℕ → ℝ) (γ : ℝ)
     (hcesari : ∀ᵐ t ∂μ, HasWeakCesariProperty Q t (x t))
     (hx : ∀ᵐ t ∂μ, Tendsto (fun i ↦ xs i t) atTop (𝓝 (x t)))
-    (hw : ∀ i, ∀ᵐ t ∂μ, (w i t, c i t) ∈ Q t (xs i t))
+    (hw : ∀ᵐ t ∂μ, ∀ᶠ i in atTop, (w i t, c i t) ∈ Q t (xs i t))
     (hc : ∀ i, ∀ᵐ t ∂μ, 0 ≤ c i t) (hci : ∀ i, Integrable (c i) μ)
     (hcost : Tendsto (fun i ↦ ∫ t, c i t ∂μ) atTop (𝓝 γ))
     (ha : ∀ j i, i ∈ s j → 0 ≤ a j i)
@@ -323,7 +389,7 @@ theorem exists_integrable_cost_epigraph_of_cesari_combinations
     apply Prod.ext
     · simp [v, Prod.fst_sum]
     · simp [d, Prod.snd_sum]
-  obtain ⟨hmem, hfatou⟩ := ae_velocityCost_liminf_mem_and_lintegral_le Q x xs
+  obtain ⟨hmem, hfatou⟩ := ae_velocityCost_liminf_mem_and_lintegral_le_of_eventually_mem Q x xs
     (fun i t ↦ (w i t, c i t)) v d vlim hcesari hx hw hcombo hv hdnonneg hdmeas
     (ENNReal.ofReal γ) ENNReal.ofReal_ne_top hdbound.le
   let L t := liminf (fun j ↦ ENNReal.ofReal (d j t)) atTop
@@ -335,6 +401,56 @@ theorem exists_integrable_cost_epigraph_of_cesari_combinations
   rw [integral_toReal hLmeas hLae]
   simpa only [ENNReal.toReal_ofReal hγ] using
     (ENNReal.toReal_mono ENNReal.ofReal_ne_top hfatou)
+
+/-- The full common-weights Cesari–Fatou step (Theorem 5.4.4, Step 3).
+The original costs have minimizing integrals, and the same finite tail weights are
+used for velocities and costs. Only the velocity combinations must converge a.e.
+The conclusion constructs an integrable feasible cost majorant with no increase
+in total cost. Trajectory extraction and measurable control recovery remain separate. -/
+theorem exists_integrable_cost_epigraph_of_cesari_combinations
+    (Q : T → E → Set (F × ℝ)) (x : T → E) (xs : ℕ → T → E)
+    (w : ℕ → T → F) (c : ℕ → T → ℝ) (vlim : T → F)
+    (s : ℕ → Finset ℕ) (a : ℕ → ℕ → ℝ) (γ : ℝ)
+    (hcesari : ∀ᵐ t ∂μ, HasWeakCesariProperty Q t (x t))
+    (hx : ∀ᵐ t ∂μ, Tendsto (fun i ↦ xs i t) atTop (𝓝 (x t)))
+    (hw : ∀ i, ∀ᵐ t ∂μ, (w i t, c i t) ∈ Q t (xs i t))
+    (hc : ∀ i, ∀ᵐ t ∂μ, 0 ≤ c i t) (hci : ∀ i, Integrable (c i) μ)
+    (hcost : Tendsto (fun i ↦ ∫ t, c i t ∂μ) atTop (𝓝 γ))
+    (ha : ∀ j i, i ∈ s j → 0 ≤ a j i)
+    (hsum : ∀ j, ∑ i ∈ s j, a j i = 1)
+    (htail : ∀ j i, i ∈ s j → j ≤ i)
+    (hv : ∀ᵐ t ∂μ, Tendsto (fun j ↦ ∑ i ∈ s j, a j i • w i t)
+      atTop (𝓝 (vlim t))) :
+    ∃ costLimit : T → ℝ, Integrable costLimit μ ∧
+      (∀ᵐ t ∂μ, (vlim t, costLimit t) ∈ Q t (x t)) ∧
+      (∫ t, costLimit t ∂μ) ≤ γ := by
+  apply exists_integrable_cost_epigraph_of_cesari_combinations_of_eventually_mem
+    Q x xs w c vlim s a γ
+    hcesari hx ?_ hc hci hcost ha hsum htail hv
+  exact (ae_all_iff.mpr hw).mono fun t ht ↦ Eventually.of_forall ht
+
+/-- Cesari lower closure with epigraph membership only eventually at each time.
+The finite infeasible prefix may depend on time. This is the moving-interval
+version of BM Theorem 5.4.4, Step 3; property (Q) remains load-bearing. -/
+theorem exists_integrable_cost_epigraph_of_weak_Lp_tendsto_of_eventually_mem
+    {p : ℝ≥0∞} [Fact (1 ≤ p)]
+    (Q : T → E → Set (F × ℝ)) (x : T → E) (xs : ℕ → T → E)
+    (w : ℕ → Lp F p μ) (c : ℕ → T → ℝ) (vlim : Lp F p μ) (γ : ℝ)
+    (hcesari : ∀ᵐ t ∂μ, HasWeakCesariProperty Q t (x t))
+    (hx : ∀ᵐ t ∂μ, Tendsto (fun i ↦ xs i t) atTop (𝓝 (x t)))
+    (hw : ∀ᵐ t ∂μ, ∀ᶠ i in atTop, (w i t, c i t) ∈ Q t (xs i t))
+    (hc : ∀ i, ∀ᵐ t ∂μ, 0 ≤ c i t) (hci : ∀ i, Integrable (c i) μ)
+    (hcost : Tendsto (fun i ↦ ∫ t, c i t ∂μ) atTop (𝓝 γ))
+    (hweak : Tendsto (fun j ↦ toWeakSpace ℝ (Lp F p μ) (w j)) atTop
+      (𝓝 (toWeakSpace ℝ (Lp F p μ) vlim))) :
+    ∃ costLimit : T → ℝ, Integrable costLimit μ ∧
+      (∀ᵐ t ∂μ, (vlim t, costLimit t) ∈ Q t (x t)) ∧
+      (∫ t, costLimit t ∂μ) ≤ γ := by
+  obtain ⟨s, a, ha, hsum, htail, hv⟩ :=
+    exists_weights_ae_tendsto_of_weak_Lp_tendsto w vlim hweak
+  exact exists_integrable_cost_epigraph_of_cesari_combinations_of_eventually_mem
+    Q x xs (fun i ↦ w i)
+    c vlim s a γ hcesari hx hw hc hci hcost ha hsum htail hv
 
 /-- Cesari integral lower closure from weak Lp velocity convergence and minimizing
 cost integrals (Theorem 5.4.4, Step 3, using Lemmas 5.3.6–5.3.7).
@@ -356,10 +472,9 @@ theorem exists_integrable_cost_epigraph_of_weak_Lp_tendsto
     ∃ costLimit : T → ℝ, Integrable costLimit μ ∧
       (∀ᵐ t ∂μ, (vlim t, costLimit t) ∈ Q t (x t)) ∧
       (∫ t, costLimit t ∂μ) ≤ γ := by
-  obtain ⟨s, a, ha, hsum, htail, hv⟩ :=
-    exists_weights_ae_tendsto_of_weak_Lp_tendsto w vlim hweak
-  exact exists_integrable_cost_epigraph_of_cesari_combinations Q x xs (fun i ↦ w i)
-    c vlim s a γ hcesari hx hw hc hci hcost ha hsum htail hv
+  apply exists_integrable_cost_epigraph_of_weak_Lp_tendsto_of_eventually_mem Q x xs w c vlim γ
+    hcesari hx ?_ hc hci hcost hweak
+  exact (ae_all_iff.mpr hw).mono fun t ht ↦ Eventually.of_forall ht
 
 end Integral
 
