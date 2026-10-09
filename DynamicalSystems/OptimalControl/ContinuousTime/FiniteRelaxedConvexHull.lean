@@ -42,8 +42,14 @@ theorem finiteRelaxedVelocityCostSet_subset_convexHull (N : ℕ)
   · intro i
     exact ⟨u.2 i, hu.2.2 i, rfl, le_add_of_nonneg_right hslack⟩
   · apply Prod.ext
-    · simpa [finiteRelaxedVelocity] using hvel
-    · change (∑ i, u.1 i * (c (t, x, u.2 i) + (p.2 - q))) = p.2
+    · change (LinearMap.fst ℝ E ℝ)
+        (∑ i, u.1 i • (f (t, x, u.2 i), c (t, x, u.2 i) + (p.2 - q))) = p.1
+      rw [map_sum]
+      simpa [finiteRelaxedVelocity] using hvel
+    · change (LinearMap.snd ℝ E ℝ)
+        (∑ i, u.1 i • (f (t, x, u.2 i), c (t, x, u.2 i) + (p.2 - q))) = p.2
+      rw [map_sum]
+      change (∑ i, u.1 i * (c (t, x, u.2 i) + (p.2 - q))) = p.2
       simp only [mul_add, Finset.sum_add_distrib, ← Finset.sum_mul, hu.2.1, one_mul]
       change q + (p.2 - q) = p.2
       ring
@@ -65,13 +71,17 @@ theorem convexHull_subset_finiteRelaxedVelocityCostSet [FiniteDimensional ℝ E]
     exists_fin_convexCombination_of_mem_convexHull hp N hdim
   choose atoms hgraph hvel hcost using hz
   refine ⟨(w, atoms), ⟨hw, hsum, hgraph⟩, ?_, ?_⟩
-  · have h := congrArg Prod.fst heq
+  · have h := congrArg (LinearMap.fst ℝ E ℝ) heq
+    rw [map_sum] at h
     simpa [finiteRelaxedVelocity, ← hvel] using h
   · change (∑ i, w i * c (t, x, atoms i)) ≤ p.2
     calc
       _ ≤ ∑ i, w i * (z i).2 :=
         Finset.sum_le_sum (fun i _ ↦ mul_le_mul_of_nonneg_left (hcost i) (hw i))
-      _ = p.2 := by simpa using congrArg Prod.snd heq
+      _ = p.2 := by
+        have h := congrArg (LinearMap.snd ℝ E ℝ) heq
+        rw [map_sum] at h
+        simpa using h
 
 /-- The `d + 2`-atom constrained epigraph agrees exactly with the convex hull of
 its ordinary counterpart; no closure or additional fiber assumption is hidden
