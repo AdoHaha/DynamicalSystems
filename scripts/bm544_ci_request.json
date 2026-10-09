@@ -1,5 +1,5 @@
 {
-  "checkpoint": "bm544-resume-20261009-01",
+  "checkpoint": "bm544-resume-20261009-02",
   "targets": [
     "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityVariation",
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
@@ -12,6 +12,8 @@
   ],
   "axioms": [
     "DynamicalSystems.ClassicalEquiAC.withDensity_enorm_Ioc_eq_eVariationOn",
+    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_variation_le",
+    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le",
     "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull"
   ],
   "stop": false
