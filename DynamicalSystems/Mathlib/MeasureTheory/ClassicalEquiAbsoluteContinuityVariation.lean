@@ -117,4 +117,111 @@ theorem withDensity_enorm_Ioc_eq_eVariationOn [NoAtoms μ]
     _ = eVariationOn x.rightLim (Ioc a b) := hBV.variation_vectorMeasure_Ioc
     _ = eVariationOn x (Ioc a b) := by rw [hr]
 
+/-- The classical modulus controls the sum of the *full variations* on a finite
+family of disjoint intervals. All the refining partitions are flattened into
+one finite family before the modulus is applied. Thus oscillations cannot
+cancel, and the modulus is still independent of the trajectory index. -/
+theorem EquiAbsolutelyContinuousOn.sum_variation_le
+    {ι : Type*} {x : ι → ℝ → E} {l r : ι → ℝ}
+    (hx : EquiAbsolutelyContinuousOn x l r) {ε : ℝ} (hε : 0 < ε) :
+    ∃ δ : ℝ, 0 < δ ∧
+      ∀ (i : ι) (κ : Type) [Fintype κ] (s t : κ → ℝ),
+        (∀ j, l i ≤ s j ∧ s j ≤ t j ∧ t j ≤ r i) →
+        Pairwise (fun j k ↦ Disjoint (Ioc (s j) (t j)) (Ioc (s k) (t k))) →
+        (∑ j, (t j - s j)) < δ →
+        (∑ j, eVariationOn (x i) (Icc (s j) (t j))) ≤ ENNReal.ofReal ε := by
+  classical
+  obtain ⟨δ, hδ, H⟩ := hx ε hε
+  refine ⟨δ, hδ, ?_⟩
+  intro i κ inst s t hst hdisj hlength
+  let P (j : κ) := ℕ × {u : ℕ → ℝ // Monotone u ∧ ∀ k, u k ∈ Icc (s j) (t j)}
+  letI (j : κ) : Nonempty (P j) :=
+    ⟨⟨0, ⟨fun _ ↦ s j, monotone_const, fun _ ↦ ⟨le_rfl, (hst j).2.1⟩⟩⟩⟩
+  change (∑ j, ⨆ p : P j,
+    ∑ k ∈ Finset.range p.1, edist (x i (p.2.1 (k + 1))) (x i (p.2.1 k))) ≤ _
+  rw [finsetSum_iSup_pi]
+  apply iSup_le
+  intro p
+  let S (q : Σ j, Fin (p j).1) := (p q.1).2.1 q.2.val
+  let T (q : Σ j, Fin (p j).1) := (p q.1).2.1 (q.2.val + 1)
+  have hST (q : Σ j, Fin (p j).1) : l i ≤ S q ∧ S q ≤ T q ∧ T q ≤ r i := by
+    exact ⟨(hst q.1).1.trans ((p q.1).2.2.2 _).1,
+      (p q.1).2.2.1 (Nat.le_succ _),
+      ((p q.1).2.2.2 _).2.trans (hst q.1).2.2⟩
+  have hSTdisj : Pairwise (fun q q' : Σ j, Fin (p j).1 ↦
+      Disjoint (Ioc (S q) (T q)) (Ioc (S q') (T q'))) := by
+    rintro ⟨j, k⟩ ⟨j', k'⟩ hne
+    by_cases hj : j = j'
+    · subst j'
+      have hk : k ≠ k' := by
+        intro h
+        subst k'
+        exact hne rfl
+      have horder : k.val + 1 ≤ k'.val ∨ k'.val + 1 ≤ k.val := by
+        have : k.val ≠ k'.val := fun h ↦ hk (Fin.ext h)
+        omega
+      apply Set.disjoint_left.mpr
+      intro y hy hy'
+      rcases horder with h | h
+      · have hm := (p j).2.2.1 h
+        exact (not_lt_of_ge (hy.2.trans hm)) hy'.1
+      · have hm := (p j).2.2.1 h
+        exact (not_lt_of_ge (hy'.2.trans hm)) hy.1
+    · apply (hdisj hj).mono
+      · exact Ioc_subset_Ioc ((p j).2.2.2 _).1 ((p j).2.2.2 _).2
+      · exact Ioc_subset_Ioc ((p j').2.2.2 _).1 ((p j').2.2.2 _).2
+  have telescope (u : ℕ → ℝ) (n : ℕ) :
+      (∑ k ∈ Finset.range n, (u (k + 1) - u k)) = u n - u 0 := by
+    induction n with
+    | zero => simp
+    | succ n ih => rw [Finset.sum_range_succ, ih]; ring
+  have hSTlength : (∑ q : Σ j, Fin (p j).1, (T q - S q)) ≤
+      ∑ j, (t j - s j) := by
+    rw [Fintype.sum_sigma]
+    apply Finset.sum_le_sum
+    intro j _
+    simp only [S, T, Fin.sum_univ_eq_sum_range]
+    rw [telescope]
+    exact sub_le_sub ((p j).2.2.2 _).2 ((p j).2.2.2 _).1
+  have hbound := H i (Σ j, Fin (p j).1) S T hST hSTdisj
+    (hSTlength.trans_lt hlength)
+  calc
+    (∑ j, ∑ k ∈ Finset.range (p j).1,
+        edist (x i ((p j).2.1 (k + 1))) (x i ((p j).2.1 k))) =
+        ∑ q : Σ j, Fin (p j).1, ENNReal.ofReal ‖x i (T q) - x i (S q)‖ := by
+      simp only [Fintype.sum_sigma, S, T, Fin.sum_univ_eq_sum_range,
+        edist_dist, dist_eq_norm]
+    _ = ENNReal.ofReal (∑ q : Σ j, Fin (p j).1, ‖x i (T q) - x i (S q)‖) := by
+      rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
+    _ ≤ ENNReal.ofReal ε := ENNReal.ofReal_le_ofReal hbound.le
+
+/-- Classical equi-absolute continuity bounds finite disjoint sums of integrals
+of velocity norms, with one common modulus. This is the interval version of
+uniform integrability, derived from the actual integral laws. -/
+theorem EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le [NoAtoms μ]
+    {ι : Type*} {x v : ι → ℝ → E} {l r : ι → ℝ}
+    (hx : EquiAbsolutelyContinuousOn x l r) (hv : ∀ i, Integrable (v i) μ)
+    (hcont : ∀ i, Continuous (x i))
+    (hlaw : ∀ i s t, s ≤ t → x i t - x i s = ∫ z in Ioc s t, v i z ∂μ)
+    {ε : ℝ} (hε : 0 < ε) :
+    ∃ δ : ℝ, 0 < δ ∧
+      ∀ (i : ι) (κ : Type) [Fintype κ] (s t : κ → ℝ),
+        (∀ j, l i ≤ s j ∧ s j ≤ t j ∧ t j ≤ r i) →
+        Pairwise (fun j k ↦ Disjoint (Ioc (s j) (t j)) (Ioc (s k) (t k))) →
+        (∑ j, (t j - s j)) < δ →
+        (∑ j, μ.withDensity (fun z ↦ ‖v i z‖ₑ) (Ioc (s j) (t j))) ≤
+          ENNReal.ofReal ε := by
+  obtain ⟨δ, hδ, H⟩ := hx.sum_variation_le hε
+  refine ⟨δ, hδ, ?_⟩
+  intro i κ inst s t hst hdisj hlength
+  calc
+    _ = ∑ j, eVariationOn (x i) (Ioc (s j) (t j)) := by
+      apply Finset.sum_congr rfl
+      intro j _
+      exact withDensity_enorm_Ioc_eq_eVariationOn (x i) (v i) (hv i) (hcont i)
+        (hlaw i) (s j) (t j)
+    _ ≤ ∑ j, eVariationOn (x i) (Icc (s j) (t j)) := by
+      exact Finset.sum_le_sum (fun j _ ↦ eVariationOn.mono _ Ioc_subset_Icc_self)
+    _ ≤ ENNReal.ofReal ε := H i κ s t hst hdisj hlength
+
 end DynamicalSystems.ClassicalEquiAC
