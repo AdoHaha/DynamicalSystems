@@ -1,0 +1,26 @@
+import DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityUniformIntegrable
+import DynamicalSystems.Mathlib.MeasureTheory.EquiIntegrableTrajectories
+import Mathlib.MeasureTheory.Integral.DominatedConvergence
+
+open Set MeasureTheory
+open scoped Topology BoundedContinuousFunction
+
+#check ContinuousOn.comp_continuous
+#check continuousOn_iff_continuous_restrict
+#check BoundedContinuousFunction.mkOfCompact
+#check ContinuousMap.toBoundedContinuousFunction
+#check Integrable.toL1
+#check Integrable.toL1_coeFn
+#check MemLp.toLp
+#check MemLp.coeFn_toLp
+#check integrable_indicator_iff
+#check integral_indicator
+#check intervalIntegral.continuous_primitive
+#check intervalIntegral.integral_interval_sub_left
+#check IsCompact.bddBelow_image
+#check IsCompact.exists_isMinOn
+#check LowerSemicontinuousOn.bddBelow_image
+#check LowerSemicontinuousOn.add
+#check LowerSemicontinuousOn.add_continuousOn
+#check IsCompact.isBoundedUnder_le
+#check LowerSemicontinuousOn.isBoundedUnder_le
