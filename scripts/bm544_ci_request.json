@@ -1,5 +1,5 @@
 {
-  "checkpoint": "bm544-resume-20261009-02",
+  "checkpoint": "bm544-resume-20261009-03",
   "targets": [
     "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityVariation",
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
