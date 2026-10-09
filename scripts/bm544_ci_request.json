@@ -1,20 +1,11 @@
 {
-  "checkpoint": "bm544-resume-20261009-09",
-  "targets": [
-    "DynamicalSystems.OptimalControl.ContinuousTime.IntegralCostShift",
-    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedAdmissible"
-  ],
-  "files": [
-    "DynamicalSystems/Mathlib/MeasureTheory/IntegralTrajectoryExtension.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/IntegralCostShift.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedAdmissible.lean"
-  ],
+  "checkpoint": "bm544-resume-20261009-10",
+  "targets": ["DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedSourceSequence"],
+  "files": ["DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedSourceSequence.lean"],
   "axioms": [
-    "DynamicalSystems.ClassicalEquiAC.unifIntegrable_zeroExtension_of_equiAC",
-    "OptimalControl.lowerSemicontinuousOn_compensatedTerminalCost",
-    "OptimalControl.compensated_objective_eq",
-    "OptimalControl.FiniteRelaxedAdmissiblePair.extendedPath_intervalIntegral_law",
-    "OptimalControl.unifIntegrable_extendedVelocityLp_of_equiAC"
+    "OptimalControl.FiniteRelaxedAdmissiblePair.shifted_epigraph_mem",
+    "OptimalControl.FiniteRelaxedAdmissiblePair.shifted_objective_eq",
+    "OptimalControl.mem_compact_of_tendsto_extendedPaths"
   ],
   "stop": false
 }
