@@ -1,0 +1,38 @@
+import DynamicalSystems.Mathlib.MeasureTheory.EquiIntegrableTrajectories
+import DynamicalSystems.Mathlib.MeasureTheory.MeasurableEpigraphLift
+import DynamicalSystems.Mathlib.MeasureTheory.WeakL1Compactness
+import DynamicalSystems.OptimalControl.ContinuousTime.CesariCompactnessArgument
+
+open DynamicalSystems.EquiIntegrableTrajectories
+open DynamicalSystems.MeasurableLift
+open DynamicalSystems.WeakL1
+open OptimalControl
+
+#print axioms uniformIntegrable_of_unifIntegrable_on_interval
+#print axioms equicontinuous_of_unifIntegrable_integral_law
+#print axioms exists_uniform_tendsto_subseq_of_unifIntegrable_integral_law
+#print axioms setIntegralCLM
+#print axioms setIntegralCLM_apply
+#print axioms setIntegral_eq_of_weak_clusterPoint_of_tendsto
+#print axioms eq_of_setIntegral_Ioc_eq
+#print axioms weak_L1_tendsto_of_unifIntegrable_of_integral_law_limit
+#print axioms exists_uniform_limit_weak_L1_clusterPoint_integral_law
+#print axioms exists_uniform_limit_weak_L1_tendsto_integral_law
+#print axioms exists_measurable_ae_lift_of_continuous_sigmaCompact
+#print axioms constrainedVelocityCostSet
+#print axioms exists_measurable_control_of_constrained_epigraph
+#print axioms norm_le_of_weak_tendsto
+#print axioms dual_apply_eq_of_weak_clusterPoint_of_tendsto
+#print axioms exists_weak_clusterPoint_of_uniform_norm_approximation
+#print axioms l2ToL1
+#print axioms l2ToL1_coeFn
+#print axioms isCompact_weak_l2ToL1_closedBall
+#print axioms exists_weak_L1_clusterPoint_of_uniformIntegrable
+#print axioms intervalPathValue
+#print axioms intervalPathValue_of_mem
+#print axioms exists_limit_trajectory_cost_epigraph_of_unifIntegrable
+#print axioms measurable_intervalPathValue
+#print axioms exists_limit_control_of_unifIntegrable_constrained_epigraph
+#print axioms IsConstrainedIntegralPair
+#print axioms constrainedIntegralCostValues
+#print axioms exists_integralMinimizer_of_weakCesariProperty

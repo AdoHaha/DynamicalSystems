@@ -26,6 +26,7 @@ modules=(
   OptimalControl.ContinuousTime.IntegratorStateMinimumPrinciple
   OptimalControl.ContinuousTime.LinearGrowthControlExistence
   OptimalControl.ContinuousTime.NonconvexControlExistence
+  OptimalControl.ContinuousTime.CesariCompactnessArgument
   OptimalControl.ContinuousTime.CesariExistence
   OptimalControl.ContinuousTime.CesariExistenceArgument
   OptimalControl.ContinuousTime.LinearTerminalCost
@@ -48,8 +49,11 @@ modules=(
   Mathlib.Analysis.Calculus.ACIntegrationByParts
   Mathlib.Analysis.Calculus.ACEulerLagrange
   Mathlib.MeasureTheory.MeasurableArgmin
+  Mathlib.MeasureTheory.MeasurableEpigraphLift
   Mathlib.MeasureTheory.MeasurableSigmaCompactLift
   Mathlib.MeasureTheory.RelaxedHamiltonianMinimum
+  Mathlib.MeasureTheory.EquiIntegrableTrajectories
+  Mathlib.MeasureTheory.WeakL1Compactness
   Mathlib.MeasureTheory.WeakL2Compactness
   OptimalControl.ContinuousTime.StatePenalisedVelocityFunctional
   OptimalControl.ContinuousTime.StateMultiplierCostate
@@ -72,7 +76,8 @@ done
 tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
   LinearGrowthExistence NonconvexExistence UnconstrainedMaximumPrinciple MinimumTimeMaximumPrinciple
-  Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms HardOptimalControl)
+  Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms HardOptimalControl
+  R4CCompactness)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
 done
@@ -84,6 +89,10 @@ lake build "${targets[@]}" DynamicalSystems
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 hard_modules=(
+  Mathlib/MeasureTheory/MeasurableEpigraphLift
+  Mathlib/MeasureTheory/WeakL1Compactness
+  Mathlib/MeasureTheory/EquiIntegrableTrajectories
+  OptimalControl/ContinuousTime/CesariCompactnessArgument
   Mathlib/MeasureTheory/MeasurableSigmaCompactLift
   OptimalControl/ContinuousTime/CesariExistenceArgument
   OptimalControl/ContinuousTime/MinimumTimeTransversality
