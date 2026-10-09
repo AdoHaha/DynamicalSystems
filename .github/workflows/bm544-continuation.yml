@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
         with:
-          path: .lake
+          path: ./.lake
           key: lake-Linux-X64-990f78aa2c8e39289163fc83d33df5badefea899cb1504f4132b57613fb70cb1-c920fc785ba808409f60383e107bb3cb714a0f43fde7305644c1882b0031faa6-0f095025b75054c74efd7eb3642250c27f9e2395
       - name: Install the repository's Lean toolchain
         shell: bash
@@ -33,6 +33,15 @@ jobs:
           sh /tmp/elan-init.sh -y --default-toolchain none > /tmp/elan-install.log 2>&1
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
           "$HOME/.elan/bin/lean" --version
+      - name: Ensure pinned mathlib cache is available
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake exe cache get > /tmp/mathlib-cache.log 2>&1 || {
+            tail -80 /tmp/mathlib-cache.log
+            exit 1
+          }
+          tail -5 /tmp/mathlib-cache.log
       - name: Check explicit proof batches at their exact source commits
         env:
           GH_TOKEN: ${{ github.token }}
