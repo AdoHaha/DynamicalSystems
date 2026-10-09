@@ -1,16 +1,20 @@
 {
-  "checkpoint": "bm544-resume-20261009-08",
-  "targets": ["DynamicalSystems.OptimalControl.ContinuousTime.IntegralCostShift"],
+  "checkpoint": "bm544-resume-20261009-09",
+  "targets": [
+    "DynamicalSystems.OptimalControl.ContinuousTime.IntegralCostShift",
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedAdmissible"
+  ],
   "files": [
     "DynamicalSystems/Mathlib/MeasureTheory/IntegralTrajectoryExtension.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/IntegralCostShift.lean"
+    "DynamicalSystems/OptimalControl/ContinuousTime/IntegralCostShift.lean",
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedAdmissible.lean"
   ],
   "axioms": [
-    "DynamicalSystems.ClassicalEquiAC.constantExtension_integral_law",
     "DynamicalSystems.ClassicalEquiAC.unifIntegrable_zeroExtension_of_equiAC",
     "OptimalControl.lowerSemicontinuousOn_compensatedTerminalCost",
     "OptimalControl.compensated_objective_eq",
-    "OptimalControl.ae_nonneg_zeroExtension_sub"
+    "OptimalControl.FiniteRelaxedAdmissiblePair.extendedPath_intervalIntegral_law",
+    "OptimalControl.unifIntegrable_extendedVelocityLp_of_equiAC"
   ],
   "stop": false
 }
