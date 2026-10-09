@@ -43,6 +43,7 @@ private theorem finsetSum_iSup_pi {κ : Type*} [Fintype κ] {P : κ → Type*}
       intro p q
       refine ⟨fun i ↦ if f i (p i) ≤ f i (q i) then q i else p i, ?_⟩
       intro i
+      dsimp only
       split_ifs with h
       · exact ⟨h, le_rfl⟩
       · exact ⟨le_rfl, (le_total (f i (p i)) (f i (q i))).resolve_left h⟩)
@@ -66,7 +67,7 @@ theorem eVariationOn_le_lintegral_enorm_of_integral_law
       apply Finset.sum_congr rfl
       intro i _
       rw [edist_eq_enorm_sub, hlaw _ _ (hu (Nat.le_succ i)),
-        Measure.withDensityᵥ_apply hv measurableSet_Ioc]
+        withDensityᵥ_apply hv measurableSet_Ioc]
     _ ≤ ∑ i ∈ Finset.range n, ν (Ioc (u i) (u (i + 1))) := by
       apply Finset.sum_le_sum
       intro i _
@@ -78,7 +79,7 @@ theorem eVariationOn_le_lintegral_enorm_of_integral_law
       simp only [Function.onFun]
       grind [Monotone]
     _ ≤ ν univ := measure_mono (subset_univ _)
-    _ = ∫⁻ t, ‖v t‖ₑ ∂μ := by simp [ν, Measure.withDensity_apply]
+    _ = ∫⁻ t, ‖v t‖ₑ ∂μ := by simp [ν, withDensity_apply]
 
 /-- The integral law proves bounded variation; it is not an additional
 compactness assumption on the trajectory. -/
@@ -91,7 +92,7 @@ theorem boundedVariationOn_of_integral_law (x v : ℝ → E) (hv : Integrable v 
 /-- For a continuous trajectory with an integrable velocity, interval total
 variation is exactly the integral of the velocity norm. This identity retains
 all oscillations and is the quantitative no-cancellation step. -/
-theorem withDensity_enorm_Ioc_eq_eVariationOn [NoAtoms μ]
+theorem withDensity_enorm_Ioc_eq_eVariationOn [NullSingletonClass μ]
     (x v : ℝ → E) (hv : Integrable v μ) (hx : Continuous x)
     (hlaw : ∀ s t, s ≤ t → x t - x s = ∫ z in Ioc s t, v z ∂μ) (a b : ℝ) :
     μ.withDensity (fun t ↦ ‖v t‖ₑ) (Ioc a b) = eVariationOn x (Ioc a b) := by
@@ -108,7 +109,7 @@ theorem withDensity_enorm_Ioc_eq_eVariationOn [NoAtoms μ]
     apply VectorMeasure.ext_of_Icc _ _
     intro s t hst
     rw [hBV.vectorMeasure_Icc hst, hr, hl,
-      Measure.withDensityᵥ_apply hv measurableSet_Icc, integral_Icc_eq_integral_Ioc]
+      withDensityᵥ_apply hv measurableSet_Icc, integral_Icc_eq_integral_Ioc]
     exact hlaw s t hst
   calc
     _ = (μ.withDensityᵥ v).variation (Ioc a b) := by
@@ -198,7 +199,7 @@ theorem EquiAbsolutelyContinuousOn.sum_variation_le
 /-- Classical equi-absolute continuity bounds finite disjoint sums of integrals
 of velocity norms, with one common modulus. This is the interval version of
 uniform integrability, derived from the actual integral laws. -/
-theorem EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le [NoAtoms μ]
+theorem EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le [NullSingletonClass μ]
     {ι : Type*} {x v : ι → ℝ → E} {l r : ι → ℝ}
     (hx : EquiAbsolutelyContinuousOn x l r) (hv : ∀ i, Integrable (v i) μ)
     (hcont : ∀ i, Continuous (x i))
