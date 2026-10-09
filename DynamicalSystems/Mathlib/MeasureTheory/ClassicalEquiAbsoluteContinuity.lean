@@ -89,7 +89,7 @@ def EquiAbsolutelyContinuousOn (x : ι → ℝ → E) (l r : ι → ℝ) : Prop 
     ∀ (i : ι) (κ : Type) [Fintype κ] (s t : κ → ℝ),
       (∀ j, l i ≤ s j ∧ s j ≤ t j ∧ t j ≤ r i) →
       Pairwise (fun j k ↦ Disjoint (Ioc (s j) (t j)) (Ioc (s k) (t k))) →
-      (∑ j, t j - s j) < δ → (∑ j, ‖x i (t j) - x i (s j)‖) < ε
+      (∑ j : κ, (t j - s j)) < δ → (∑ j : κ, ‖x i (t j) - x i (s j)‖) < ε
 
 /-- Constant extension from each active interval preserves the same classical
 modulus on a common interval. Clipping preserves disjointness and only
