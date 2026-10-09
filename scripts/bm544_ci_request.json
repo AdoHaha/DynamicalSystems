@@ -1,13 +1,18 @@
 {
-  "checkpoint": 1,
+  "checkpoint": 2,
   "targets": [
-    "DynamicalSystems.Mathlib.MeasureTheory.MeasurableRelativeEpigraphLift"
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph"
   ],
   "files": [
-    "DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean"
+    "DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean",
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean"
   ],
   "axioms": [
-    "DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn"
+    "DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn",
+    "OptimalControl.continuousOn_finiteRelaxedVelocity",
+    "OptimalControl.exists_integrable_control_of_constrained_epigraph_of_continuousOn",
+    "OptimalControl.exists_measurable_finiteRelaxedControl_of_epigraph_of_continuousOn",
+    "OptimalControl.exists_integrable_finiteRelaxedControl_of_integrable_lowerBound_of_continuousOn"
   ],
   "stop": false
 }
