@@ -1,11 +1,12 @@
 {
-  "checkpoint": 3,
+  "checkpoint": 4,
   "targets": [
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph"
   ],
   "files": [
     "DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean"
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean",
+    "BM544ApiProbe.lean"
   ],
   "axioms": [
     "DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn",
