@@ -118,6 +118,7 @@ theorem withDensity_enorm_Ioc_eq_eVariationOn [NullSingletonClass μ]
     _ = eVariationOn x.rightLim (Ioc a b) := hBV.variation_vectorMeasure_Ioc
     _ = eVariationOn x (Ioc a b) := by rw [hr]
 
+omit [NormedSpace ℝ E] [CompleteSpace E] in
 /-- The classical modulus controls the sum of the *full variations* on a finite
 family of disjoint intervals. All the refining partitions are flattened into
 one finite family before the modulus is applied. Thus oscillations cannot
