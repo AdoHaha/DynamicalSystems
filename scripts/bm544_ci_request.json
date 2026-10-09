@@ -1,19 +1,20 @@
 {
-  "checkpoint": 5,
+  "checkpoint": 6,
   "targets": [
-    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph"
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull"
   ],
   "files": [
-    "DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean",
-    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph.lean",
+    "DynamicalSystems/Mathlib/Analysis/Convex/FiniteCaratheodory.lean",
+    "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedConvexHull.lean",
     "BM544ApiProbe.lean"
   ],
   "axioms": [
-    "DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn",
-    "OptimalControl.continuousOn_finiteRelaxedVelocity",
-    "OptimalControl.exists_integrable_control_of_constrained_epigraph_of_continuousOn",
-    "OptimalControl.exists_measurable_finiteRelaxedControl_of_epigraph_of_continuousOn",
-    "OptimalControl.exists_integrable_finiteRelaxedControl_of_integrable_lowerBound_of_continuousOn"
+    "DynamicalSystems.ConvexAnalysis.exists_fin_convexCombination_of_mem_convexHull",
+    "OptimalControl.finiteRelaxedVelocityCostSet_subset_convexHull",
+    "OptimalControl.convexHull_subset_finiteRelaxedVelocityCostSet",
+    "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull",
+    "OptimalControl.finiteRelaxedVelocityCostSet_subset_of_convex"
   ],
   "stop": false
 }
