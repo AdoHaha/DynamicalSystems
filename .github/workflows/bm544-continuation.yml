@@ -1,0 +1,55 @@
+name: BM544 continuation proof checks
+
+on:
+  push:
+    branches: ['remaining-optimal-control-r4c-worker']
+    paths: ['.github/workflows/bm544-continuation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bm544-continuation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  proofs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: .lake
+          key: lake-Linux-X64-990f78aa2c8e39289163fc83d33df5badefea899cb1504f4132b57613fb70cb1-c920fc785ba808409f60383e107bb3cb714a0f43fde7305644c1882b0031faa6-0f095025b75054c74efd7eb3642250c27f9e2395
+      - name: Install the repository's Lean toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -sSf \
+            https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            -o /tmp/elan-init.sh
+          sh /tmp/elan-init.sh -y --default-toolchain none > /tmp/elan-install.log 2>&1
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+      - name: Build and audit relative-domain selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake build DynamicalSystems.Mathlib.MeasureTheory.MeasurableRelativeEpigraphLift
+          lake env lean -DwarningAsError=true \
+            DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean
+          cat > BM544Audit.lean <<'LEAN'
+          import DynamicalSystems.Mathlib.MeasureTheory.MeasurableRelativeEpigraphLift
+          #print axioms DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn
+          LEAN
+          lake env lean BM544Audit.lean | tee /tmp/bm544-audit.log
+          python3 - <<'PY'
+          import re
+          text = open('/tmp/bm544-audit.log').read()
+          records = re.findall(r'depends on axioms:\s*\[([^]]*)\]', text)
+          assert records, 'Missing audit records'
+          allowed = {'propext', 'Classical.choice', 'Quot.sound'}
+          for record in records:
+              assert {x.strip() for x in record.split(',') if x.strip()} <= allowed, record
+          PY
