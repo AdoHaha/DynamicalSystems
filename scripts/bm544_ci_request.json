@@ -1,5 +1,5 @@
 {
-  "checkpoint": 2,
+  "checkpoint": 3,
   "targets": [
     "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph"
   ],
