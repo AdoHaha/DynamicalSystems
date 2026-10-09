@@ -19,7 +19,7 @@ lower bound is not subtracted before applying the topological selector.
 
 @[expose] public section
 
-open Set Filter MeasureTheory Topology
+open Set Filter MeasureTheory Topology DynamicalSystems.MeasurableLift
 open scoped BigOperators
 
 namespace OptimalControl
@@ -68,7 +68,7 @@ theorem exists_integrable_control_of_constrained_epigraph_of_continuousOn
     (hlower : ∀ᵐ t ∂μ, ∀ u, (τ t, x t, u) ∈ C → β t ≤ c (τ t, x t, u))
     (hμ : μ ≠ 0)
     (hepi : ∀ᵐ t ∂μ, (v t, costLimit t) ∈
-      DynamicalSystems.MeasurableLift.constrainedVelocityCostSet C f c (τ t) (x t)) :
+      constrainedVelocityCostSet C f c (τ t) (x t)) :
     ∃ u : A → U, Measurable u ∧
       (∀ᵐ t ∂μ, (τ t, x t, u t) ∈ C) ∧
       (∀ᵐ t ∂μ, f (τ t, x t, u t) = v t) ∧
@@ -80,15 +80,15 @@ theorem exists_integrable_control_of_constrained_epigraph_of_continuousOn
   have hvr : v =ᵐ[μ] vrep := hv.aestronglyMeasurable.ae_eq_mk
   have hcr : costLimit =ᵐ[μ] crep := hcost.aestronglyMeasurable.ae_eq_mk
   have hepirep : ∀ᵐ t ∂μ, (vrep t, crep t) ∈
-      DynamicalSystems.MeasurableLift.constrainedVelocityCostSet C f c (τ t) (x t) := by
+      constrainedVelocityCostSet C f c (τ t) (x t) := by
     filter_upwards [hepi, hvr, hcr] with t ht hvt hct
     rwa [← hvt, ← hct]
   obtain ⟨u, hu, hreal⟩ :=
-    DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn
+    exists_measurable_control_of_constrained_epigraph_of_continuousOn
       C f c hC hf hc τ x vrep crep hτ hx hv.aestronglyMeasurable.measurable_mk
       hcost.aestronglyMeasurable.measurable_mk hμ hepirep
   have hgraph : ∀ᵐ t ∂μ, (τ t, x t, u t) ∈ C := hreal.mono fun _ ht ↦ ht.1
-  have hvel : ∀ᵐ t ∂μ, f (τ t, x t, u t) = v t := by
+  have hvel : (fun t ↦ f (τ t, x t, u t)) =ᵐ[μ] v := by
     filter_upwards [hreal, hvr] with t ht hvt
     exact ht.2.1.trans hvt.symm
   have hdom : ∀ᵐ t ∂μ, c (τ t, x t, u t) ≤ costLimit t := by
@@ -124,7 +124,7 @@ theorem exists_measurable_finiteRelaxedControl_of_epigraph_of_continuousOn (N : 
     (hτ : Measurable τ) (hx : Measurable x) (hv : Measurable v)
     (hcost : Measurable costLimit) (hμ : μ ≠ 0)
     (hepi : ∀ᵐ t ∂μ, (v t, costLimit t) ∈
-      DynamicalSystems.MeasurableLift.constrainedVelocityCostSet
+      constrainedVelocityCostSet
         (finiteRelaxedControlGraph N C) (finiteRelaxedVelocity N f)
         (finiteRelaxedRunningCost N c) (τ t) (x t)) :
     ∃ (weights : A → Fin N → ℝ) (atoms : A → Fin N → U),
@@ -134,7 +134,7 @@ theorem exists_measurable_finiteRelaxedControl_of_epigraph_of_continuousOn (N : 
         (∑ i, weights t i • f (τ t, x t, atoms t i)) = v t ∧
         (∑ i, weights t i * c (τ t, x t, atoms t i)) ≤ costLimit t := by
   obtain ⟨u, hu, hreal⟩ :=
-    DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn
+    exists_measurable_control_of_constrained_epigraph_of_continuousOn
       (finiteRelaxedControlGraph N C) (finiteRelaxedVelocity N f)
       (finiteRelaxedRunningCost N c) (isClosed_finiteRelaxedControlGraph N C hC)
       (continuousOn_finiteRelaxedVelocity N C f hf)
@@ -156,7 +156,7 @@ theorem exists_integrable_finiteRelaxedControl_of_integrable_lowerBound_of_conti
     (hlower : ∀ᵐ t ∂μ, ∀ u, (τ t, x t, u) ∈ C → β t ≤ c (τ t, x t, u))
     (hμ : μ ≠ 0)
     (hepi : ∀ᵐ t ∂μ, (v t, costLimit t) ∈
-      DynamicalSystems.MeasurableLift.constrainedVelocityCostSet
+      constrainedVelocityCostSet
         (finiteRelaxedControlGraph N C) (finiteRelaxedVelocity N f)
         (finiteRelaxedRunningCost N c) (τ t) (x t)) :
     ∃ u : A → FiniteRelaxedControl N U, Measurable u ∧
