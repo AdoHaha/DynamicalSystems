@@ -1,22 +1,10 @@
 {
-  "checkpoint": "bm544-resume-20261009-05",
+  "checkpoint": "bm544-resume-20261009-06",
   "targets": [
     "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityUniformIntegrable",
-    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph",
-    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull"
+    "DynamicalSystems.Mathlib.MeasureTheory.EquiIntegrableTrajectories"
   ],
-  "files": [
-    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityVariation.lean",
-    "DynamicalSystems/Mathlib/MeasureTheory/MeasureContinuityFromSemiring.lean",
-    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityUniformIntegrable.lean"
-  ],
-  "axioms": [
-    "DynamicalSystems.ClassicalEquiAC.withDensity_enorm_Ioc_eq_eVariationOn",
-    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_variation_le",
-    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.sum_withDensity_enorm_le",
-    "DynamicalSystems.MeasureContinuity.measure_le_of_small_on_semiring",
-    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.unifIntegrable_Ioc",
-    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.unifIntegrable_Icc"
-  ],
+  "files": ["BM544ExtensionApiProbe.lean"],
+  "axioms": [],
   "stop": false
 }
