@@ -1,23 +1,20 @@
 {
-  "checkpoint": 8,
+  "checkpoint": 9,
   "targets": [
-    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull",
-    "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuity"
+    "DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedConvexHull"
   ],
   "files": [
+    "BM544ApiProbe.lean",
     "DynamicalSystems/Mathlib/Analysis/Convex/FiniteCaratheodory.lean",
     "DynamicalSystems/OptimalControl/ContinuousTime/FiniteRelaxedConvexHull.lean",
-    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuity.lean",
-    "BM544ApiProbe.lean"
+    "DynamicalSystems/Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuity.lean"
   ],
   "axioms": [
     "DynamicalSystems.ConvexAnalysis.exists_fin_convexCombination_of_mem_convexHull",
     "OptimalControl.finiteRelaxedVelocityCostSet_subset_convexHull",
     "OptimalControl.convexHull_subset_finiteRelaxedVelocityCostSet",
     "OptimalControl.finiteRelaxedVelocityCostSet_eq_convexHull",
-    "OptimalControl.finiteRelaxedVelocityCostSet_subset_of_convex",
-    "DynamicalSystems.ClassicalEquiAC.Ioc_clampTime",
-    "DynamicalSystems.ClassicalEquiAC.EquiAbsolutelyContinuousOn.clamp"
+    "OptimalControl.finiteRelaxedVelocityCostSet_subset_of_convex"
   ],
   "stop": false
 }
