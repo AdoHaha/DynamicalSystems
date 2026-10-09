@@ -1,5 +1,6 @@
 name: BM544 continuation proof checks
 
+# Resume the remaining analytic bridges from the October 9 branch tip.
 on:
   push:
     branches: ['remaining-optimal-control-r4c-worker']
