@@ -63,6 +63,7 @@ section Integrals
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
+omit [NormedSpace ℝ E] in
 /-- An integrable original density has an integrable zero extension on the
 whole real line; ambient integrability is not a new source assumption. -/
 theorem integrable_zeroExtension {l r : ℝ} {v : ℝ → E}
@@ -73,7 +74,7 @@ theorem integrable_zeroExtension {l r : ℝ} {v : ℝ → E}
 theorem integral_zeroExtension_restrict {a b l r : ℝ} (hal : a ≤ l) (hrb : r ≤ b)
     (v : ℝ → E) :
     (∫ z, zeroExtension l r v z ∂volume.restrict (Icc a b)) = ∫ z in Icc l r, v z := by
-  rw [integral_Icc_eq_integral_Ioc]
+  conv_rhs => rw [integral_Icc_eq_integral_Ioc]
   change (∫ z, (Ioc l r).indicator v z ∂volume.restrict (Icc a b)) = _
   rw [integral_indicator measurableSet_Ioc, Measure.restrict_restrict measurableSet_Ioc,
     inter_eq_left.mpr (show Ioc l r ⊆ Icc a b from
