@@ -7,7 +7,7 @@ module
 
 public import Mathlib.Analysis.Convex.Caratheodory
 public import Mathlib.LinearAlgebra.AffineSpace.FiniteDimensional
-public import Mathlib.Data.Real.Basic
+public import Mathlib.Basic.Real.Basic
 
 /-!
 # Carathéodory representations with an exact number of slots
@@ -39,13 +39,13 @@ theorem exists_fin_convexCombination_of_mem_convexHull
   classical
   obtain ⟨ι, inst, z, w, hz, hind, hw, hsum, heq⟩ :=
     eq_pos_convex_span_of_mem_convexHull hx
-  letI := inst
+  let : Fintype ι := inst
   have hcard : Fintype.card ι ≤ N :=
     hind.card_le_finrank_succ.trans
       ((Nat.add_le_add_right (Submodule.finrank_le _) 1).trans hN)
   have hι : Nonempty ι := by
     by_contra h
-    letI : IsEmpty ι := not_nonempty_iff.mp h
+    let : IsEmpty ι := not_nonempty_iff.mp h
     simp at hsum
   let i₀ : ι := Classical.choice hι
   let e := (Fintype.equivFin ι).symm
