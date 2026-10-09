@@ -1,0 +1,25 @@
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedEpigraph
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedExistence
+import DynamicalSystems.OptimalControl.ContinuousTime.CesariCostShift
+
+open OptimalControl
+
+#print axioms FiniteRelaxedControl
+#print axioms finiteRelaxedControlGraph
+#print axioms finiteRelaxedVelocity
+#print axioms finiteRelaxedRunningCost
+#print axioms lowerSemicontinuousOn_mul_continuous_nonneg
+#print axioms isClosed_controlGraph_of_upperHemicontinuous
+#print axioms isClosed_finiteRelaxedControlGraph
+#print axioms continuous_finiteRelaxedVelocity
+#print axioms lowerSemicontinuousOn_finiteRelaxedRunningCost
+#print axioms finiteRelaxedRunningCost_nonneg
+#print axioms finiteRelaxedRunningCost_ge_of_lowerBound
+#print axioms exists_measurable_finiteRelaxedControl_of_epigraph
+#print axioms aestronglyMeasurable_cost_of_ae_mem_closed_graph
+#print axioms exists_integrable_finiteRelaxedControl_of_integrable_lowerBound
+#print axioms exists_integrable_finiteRelaxedControl_of_epigraph
+#print axioms exists_limit_finiteRelaxedControl_of_unifIntegrable
+#print axioms hasWeakCesariProperty_image_affineIsometryEquiv
+#print axioms shiftedVelocityCostSet
+#print axioms hasWeakCesariProperty_shiftedVelocityCostSet

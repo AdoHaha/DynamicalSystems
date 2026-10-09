@@ -28,6 +28,9 @@ modules=(
   OptimalControl.ContinuousTime.LinearGrowthControlExistence
   OptimalControl.ContinuousTime.NonconvexControlExistence
   OptimalControl.ContinuousTime.CesariCompactnessArgument
+  OptimalControl.ContinuousTime.CesariCostShift
+  OptimalControl.ContinuousTime.FiniteRelaxedEpigraph
+  OptimalControl.ContinuousTime.FiniteRelaxedExistence
   OptimalControl.ContinuousTime.CesariExistence
   OptimalControl.ContinuousTime.CesariExistenceArgument
   OptimalControl.ContinuousTime.CesariMovingInterval
@@ -79,7 +82,7 @@ tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
   LinearGrowthExistence NonconvexExistence UnconstrainedMaximumPrinciple MinimumTimeMaximumPrinciple
   Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms HardOptimalControl
-  R4CCompactness R4CMovingInterval)
+  R4CCompactness R4CMovingInterval R4CFiniteRelaxed)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
 done
@@ -91,6 +94,9 @@ lake build "${targets[@]}" DynamicalSystems
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 hard_modules=(
+  OptimalControl/ContinuousTime/CesariCostShift
+  OptimalControl/ContinuousTime/FiniteRelaxedEpigraph
+  OptimalControl/ContinuousTime/FiniteRelaxedExistence
   Mathlib/MeasureTheory/MovingIntervalCompactness
   OptimalControl/ContinuousTime/CesariMovingInterval
   Mathlib/MeasureTheory/MeasurableEpigraphLift
