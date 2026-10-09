@@ -1,0 +1,13 @@
+{
+  "checkpoint": 1,
+  "targets": [
+    "DynamicalSystems.Mathlib.MeasureTheory.MeasurableRelativeEpigraphLift"
+  ],
+  "files": [
+    "DynamicalSystems/Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift.lean"
+  ],
+  "axioms": [
+    "DynamicalSystems.MeasurableLift.exists_measurable_control_of_constrained_epigraph_of_continuousOn"
+  ],
+  "stop": false
+}
