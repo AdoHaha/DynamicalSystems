@@ -51,7 +51,7 @@ section Selection
 variable {A T E U : Type*} [MeasurableSpace A] {μ : Measure A}
   [MetricSpace T] [MeasurableSpace T] [BorelSpace T]
   [SigmaCompactSpace T] [SecondCountableTopology T]
-  [NormedAddCommGroup E] [NormedSpace ℝ E] [MeasurableSpace E] [BorelSpace E]
+  [NormedAddCommGroup E] [MeasurableSpace E] [BorelSpace E]
   [SigmaCompactSpace E] [SecondCountableTopology E]
   [MetricSpace U] [MeasurableSpace U] [BorelSpace U] [SigmaCompactSpace U]
 
@@ -114,6 +114,8 @@ theorem exists_integrable_control_of_constrained_epigraph_of_continuousOn
       linarith
   exact ⟨u, hu, hgraph, hvel, hv.congr hvel.symm, hrunint,
     integral_mono_ae hrunint hcost hdom⟩
+
+variable [NormedSpace ℝ E]
 
 /-- Actual measurable simplex weights and admissible atoms are selected under
 relative continuity of the original dynamics. -/
