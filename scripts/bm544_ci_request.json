@@ -1,10 +1,11 @@
 {
-  "checkpoint": "bm544-resume-20261009-06",
-  "targets": [
-    "DynamicalSystems.Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityUniformIntegrable",
-    "DynamicalSystems.Mathlib.MeasureTheory.EquiIntegrableTrajectories"
+  "checkpoint": "bm544-resume-20261009-07",
+  "targets": ["DynamicalSystems.Mathlib.MeasureTheory.IntegralTrajectoryExtension"],
+  "files": ["DynamicalSystems/Mathlib/MeasureTheory/IntegralTrajectoryExtension.lean"],
+  "axioms": [
+    "DynamicalSystems.ClassicalEquiAC.constantExtension_integral_law",
+    "DynamicalSystems.ClassicalEquiAC.integral_zeroExtension_restrict",
+    "DynamicalSystems.ClassicalEquiAC.unifIntegrable_zeroExtension_of_equiAC"
   ],
-  "files": ["BM544ExtensionApiProbe.lean"],
-  "axioms": [],
   "stop": false
 }
