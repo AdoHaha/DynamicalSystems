@@ -5,6 +5,7 @@ Authors: Igor Zubrycki
 -/
 module
 
+public import DynamicalSystems.Mathlib.MeasureTheory.MovingIntervalStateConstraints
 public import DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedAdmissible
 public import DynamicalSystems.OptimalControl.ContinuousTime.IntegralCostShift
 
@@ -20,6 +21,7 @@ preserved at the limiting endpoints, not only at interior times.
 
 open Set MeasureTheory Filter
 open DynamicalSystems.ClassicalEquiAC
+open DynamicalSystems.EquiIntegrableTrajectories
 open scoped Topology BoundedContinuousFunction
 
 namespace OptimalControl
@@ -74,7 +76,8 @@ theorem shifted_epigraph_mem (β : ℝ → ℝ) :
     ∀ᵐ t ∂volume.restrict (Icc P.a P.b),
       t ∈ Ioo (p.startTime : ℝ) (p.endTime : ℝ) →
         (p.extendedVelocityLp t, p.shiftedCost β t) ∈
-          shiftedVelocityCostSet (P.relaxedEpigraph N) β t (intervalPathValue p.extendedPath t) := by
+          shiftedVelocityCostSet (P.relaxedEpigraph N) β t
+            (intervalPathValue p.extendedPath t) := by
   have HG : ∀ᵐ t ∂volume, t ∈ Icc (p.startTime : ℝ) (p.endTime : ℝ) →
       (t, p.path t, p.control t) ∈ finiteRelaxedControlGraph N P.controlGraph :=
     (ae_restrict_iff' measurableSet_Icc).mp p.graph_mem
@@ -89,18 +92,22 @@ theorem shifted_epigraph_mem (β : ℝ → ℝ) :
   have hvel : p.extendedVelocityLp t = p.velocity t := by
     rw [hv]
     exact indicator_of_mem hioc _
-  have hcost : p.shiftedCost β t = p.cost t - β t := indicator_of_mem hioc _
+  have hcost : p.shiftedCost β t = p.cost t - β t := by
+    change (Ioc (p.startTime : ℝ) (p.endTime : ℝ)).indicator
+      (fun z ↦ p.cost z - β z) t = p.cost t - β t
+    exact indicator_of_mem hioc _
   apply (mem_shiftedVelocityCostSet_iff _ _ _ _ _).mpr
   rw [hpath, hvel, hcost, sub_add_cancel]
   exact ⟨p.control t, hg hicc, rfl, le_rfl⟩
 
 end FiniteRelaxedAdmissiblePair
 
+omit [NormedSpace ℝ E] in
 /-- A bundled interval path has a continuous ambient representative on its
 own closed interval, although its zero extension need not be globally continuous. -/
 theorem continuousOn_intervalPathValue {a b : ℝ} (x : Icc a b →ᵇ E) :
     ContinuousOn (intervalPathValue x) (Icc a b) := by
-  rw [continuousOn_iff_continuous_restrict]
+  rw [continuousOn_iff_continuous_domRestrict]
   have heq : (Icc a b).domRestrict (intervalPathValue x) = (x : Icc a b → E) := by
     funext t
     exact intervalPathValue_of_mem x t t.property
@@ -121,15 +128,12 @@ theorem mem_compact_of_tendsto_extendedPaths
     (hr : Tendsto (fun n ↦ (p (k n)).endTime) atTop (𝓝 r))
     (t : Icc P.a P.b) (ht : (t : ℝ) ∈ Icc (l : ℝ) (r : ℝ)) :
     ((t : ℝ), x t) ∈ R := by
-  have hl' := (continuous_subtype_val.tendsto l).comp hl
-  have hr' := (continuous_subtype_val.tendsto r).comp hr
-  have hclamp : Tendsto
-      (fun n ↦ clampTime (p (k n)).startTime (p (k n)).endTime t)
-      atTop (𝓝 (t : ℝ)) := by
-    convert hl'.max (hr'.min tendsto_const_nhds) using 1
-    exact (clampTime_eq_self ht).symm
-  apply hR.isClosed.mem_of_tendsto (hclamp.prodMk_nhds (hx.eval_const t))
-  exact Eventually.of_forall fun n ↦ hstate (k n) _
-    (clampTime_mem_Icc _ _ _ (p (k n)).time_lt.le)
+  exact mem_closed_timeStateSet_of_uniform_tendsto_endpoints
+      (fun n ↦ (p (k n)).extendedPath) x
+      (fun n ↦ (p (k n)).startTime) (fun n ↦ (p (k n)).endTime) l r
+      hx hl hr (fun n ↦ (p (k n)).time_lt.le) R hR.isClosed
+      (fun n s hs ↦ by
+        rw [(p (k n)).extendedPath_eq s hs]
+        exact hstate (k n) s hs) t ht
 
 end OptimalControl

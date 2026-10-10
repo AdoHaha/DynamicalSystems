@@ -3,6 +3,18 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 modules=(
+  OptimalControl.ContinuousTime.CesariRelaxedMinimizer
+  OptimalControl.ContinuousTime.IntegralCostShift
+  OptimalControl.ContinuousTime.FiniteRelaxedRelativeEpigraph
+  OptimalControl.ContinuousTime.FiniteRelaxedConvexHull
+  OptimalControl.ContinuousTime.FiniteRelaxedAdmissible
+  Mathlib.MeasureTheory.MeasurableRelativeEpigraphLift
+  Mathlib.MeasureTheory.MeasureContinuityFromSemiring
+  Mathlib.MeasureTheory.IntegralTrajectoryExtension
+  Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityUniformIntegrable
+  Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuityVariation
+  Mathlib.MeasureTheory.ClassicalEquiAbsoluteContinuity
+  Mathlib.Analysis.Convex.FiniteCaratheodory
   Mathlib.Analysis.BoundedVariation.Add
   Mathlib.Analysis.ODE.AffineIntegralResponse
   Mathlib.Analysis.ODE.MeasureAdjointBalance
@@ -19,6 +31,7 @@ modules=(
   Mathlib.Analysis.ODE.MeasureAdjoint
   Mathlib.MeasureTheory.MeasureTail
   Mathlib.MeasureTheory.MovingIntervalCompactness
+  Mathlib.MeasureTheory.MovingIntervalStateConstraints
   Mathlib.MeasureTheory.PositiveFunctionalMeasure
   Mathlib.MeasureTheory.VectorMeasureTail
   OptimalControl.ContinuousTime.EndpointMultipliers
@@ -31,6 +44,7 @@ modules=(
   OptimalControl.ContinuousTime.CesariCostShift
   OptimalControl.ContinuousTime.FiniteRelaxedEpigraph
   OptimalControl.ContinuousTime.FiniteRelaxedExistence
+  OptimalControl.ContinuousTime.FiniteRelaxedSourceSequence
   OptimalControl.ContinuousTime.CesariExistence
   OptimalControl.ContinuousTime.CesariExistenceArgument
   OptimalControl.ContinuousTime.CesariMovingInterval
@@ -82,18 +96,71 @@ tests=(AffineIntegralResponse AffineStateNecessity MeasureAdjointBalance
   StateControlFirstVariation StateConstraints StateConstraintNecessity MeasureAdjoint EndpointMultipliers
   LinearGrowthExistence NonconvexExistence UnconstrainedMaximumPrinciple MinimumTimeMaximumPrinciple
   Mathlib/Analysis/Calculus/IntegralAffineVariation StateConstraintAtoms HardOptimalControl
-  R4CCompactness R4CMovingInterval R4CFiniteRelaxed)
+  R4CCompactness R4CMovingInterval R4CFiniteRelaxed R4CStateConstraints R4CMinimizer)
 for test in "${tests[@]}"; do
   files+=("DynamicalSystemsTest/$test.lean")
 done
-if rg -n '\b(sorry|admit|axiom|proof_wanted|native_decide)\b' "${files[@]}"; then
-  echo 'Forbidden proof escape in remaining extension files.' >&2
-  exit 1
-fi
+# Scan Lean code, excluding nested block comments and line comments. In particular,
+# prose such as "constraints admit a realization" is not the `admit` tactic.
+python3 - "${files[@]}" <<'PROOF_SCAN'
+import re
+import sys
+for path in sys.argv[1:]:
+    source = open(path).read()
+    code = []
+    i, depth, quoted = 0, 0, False
+    while i < len(source):
+        if depth:
+            if source.startswith("/-", i):
+                depth += 1
+                i += 2
+            elif source.startswith("-/", i):
+                depth -= 1
+                i += 2
+            else:
+                code.append("\n" if source[i] == "\n" else " ")
+                i += 1
+        elif quoted:
+            code.append(source[i])
+            if source[i] == "\\" and i + 1 < len(source):
+                i += 1
+                code.append(source[i])
+            elif source[i] == '"':
+                quoted = False
+            i += 1
+        elif source.startswith("/-", i):
+            depth = 1
+            code.append(" ")
+            i += 2
+        elif source.startswith("--", i):
+            end = source.find("\n", i)
+            i = len(source) if end < 0 else end
+        else:
+            code.append(source[i])
+            quoted = source[i] == '"'
+            i += 1
+    match = re.search(r"\b(sorry|admit|axiom|proof_wanted|native_decide)\b", "".join(code))
+    if match:
+        raise SystemExit(f"Forbidden proof escape in {path}: {match.group()}")
+PROOF_SCAN
 lake build "${targets[@]}" DynamicalSystems
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 hard_modules=(
+  OptimalControl/ContinuousTime/CesariRelaxedMinimizer
+  OptimalControl/ContinuousTime/IntegralCostShift
+  OptimalControl/ContinuousTime/FiniteRelaxedRelativeEpigraph
+  OptimalControl/ContinuousTime/FiniteRelaxedConvexHull
+  OptimalControl/ContinuousTime/FiniteRelaxedAdmissible
+  Mathlib/MeasureTheory/MeasurableRelativeEpigraphLift
+  Mathlib/MeasureTheory/MeasureContinuityFromSemiring
+  Mathlib/MeasureTheory/IntegralTrajectoryExtension
+  Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityUniformIntegrable
+  Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuityVariation
+  Mathlib/MeasureTheory/ClassicalEquiAbsoluteContinuity
+  Mathlib/Analysis/Convex/FiniteCaratheodory
+  Mathlib/MeasureTheory/MovingIntervalStateConstraints
+  OptimalControl/ContinuousTime/FiniteRelaxedSourceSequence
   OptimalControl/ContinuousTime/CesariCostShift
   OptimalControl/ContinuousTime/FiniteRelaxedEpigraph
   OptimalControl/ContinuousTime/FiniteRelaxedExistence

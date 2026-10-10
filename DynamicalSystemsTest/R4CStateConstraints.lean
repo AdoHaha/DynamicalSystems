@@ -1,0 +1,11 @@
+import DynamicalSystems.Mathlib.MeasureTheory.MovingIntervalStateConstraints
+import DynamicalSystems.OptimalControl.ContinuousTime.FiniteRelaxedSourceSequence
+
+open DynamicalSystems.EquiIntegrableTrajectories
+open OptimalControl
+
+#print axioms mem_closed_timeStateSet_of_uniform_tendsto_endpoints
+#print axioms mem_compact_of_tendsto_extendedPaths
+#print axioms FiniteRelaxedAdmissiblePair.shifted_epigraph_mem
+#print axioms FiniteRelaxedAdmissiblePair.shifted_objective_eq
+#print axioms unifIntegrable_extendedVelocityLp_of_equiAC

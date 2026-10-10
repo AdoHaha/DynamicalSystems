@@ -1,23 +1,23 @@
-# GPT Pro handoff: finish Berkovitz–Medhin Theorem 5.4.4 in Lean
+# BM 5.4.4 handoff — completed on October 10, 2026
 
-## Task to continue
+## Current status
 
-Complete the genuine relaxed-existence theorem
-`exists_relaxedMinimizer_of_weakCesariProperty`, matching Berkovitz–Medhin,
-*Nonlinear Optimal Control Theory* (2012), Theorem **5.4.4**. The earlier reference
-“5.4.4.4” meant this theorem. Reuse the proved weak-L1, moving-interval,
-Cesari/Mazur/Fatou, and concrete finite-atomic realization results below.
+The handoff has been executed. The branch now contains
+`OptimalControl.exists_relaxedMinimizer_of_weakCesariProperty` and
+`exists_ordinaryMinimizer_of_weakCesariProperty_of_convex`, assembled in
+`OptimalControl/ContinuousTime/CesariRelaxedMinimizer.lean` from actual admissible
+classical equi-AC minimizing pairs. Weak Cesari property is used in the limiting
+epigraph closure; the original integrable lower-cost shift is restored, and
+minimality is proved against every actual competitor.
 
-**Status: partial. The full headline is neither proved nor declared.** The latest
-result constructs a limiting finite relaxed control with actual integral dynamics
-and an objective bound from supplied extended analytic sequence data. It does
-not yet instantiate those data from the book's admissible minimizing sequence,
-handle the whole integrable cost shift, or prove global minimality.
+The second session's helpers through `ecbfd7b` and the supplied clamped
+all-time state-constraint draft are reused and locally validated. The reports
+`R4C_BM544_COMPLETION_REPORT.md` and `R4C_STATE_BRIDGE_REPORT.md` record the
+proof chain and repository checks. A public occupation-measure adapter and
+H2/H3/H4 remain separate work; BM 5.4.4 uses the finite-atomic representation.
 
-This document is self-contained as a research/proof handoff. If you have no
-repository access, request the Lean modules listed below and the relevant book
-sections, or provide detailed mathematical bridge proofs and Lean-ready lemma
-statements. Do not present uncompiled suggested code as a verified proof.
+**The remaining text is the archived handoff at `c89f5b3`. Its missing-lemma
+lists are historical, not current instructions or current proof status.**
 
 ## Checkout and history
 
